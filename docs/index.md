@@ -32,6 +32,7 @@
 - [异步任务与队列](generated/explanation/async-worker.md) — 说明基于队列的异步任务调度与执行模型。（解释；生成）
 - [数据源插件体系与 sqlite vtab](generated/explanation/datasource-plugin.md) — 说明数据源插件体系与 sqlite 虚拟表机制的配合方式。（解释；生成）
 - [AI Agent 功能架构详解](curated/explanation/agent-architecture.md) — 用白话讲解 AI 助手的数据结构、数据流转、流程图与抽象设计关系，面向初级研发。（解释；策展）
+- [AI 助手自定义 SSE 事件协议](curated/explanation/ai-assistant-sse-schema.md) — 定义 AI 助手的领域事件信封、内容块、事件目录、历史回放与断线续播契约。（解释；策展）
 - [LLM Agent + RAG 设计](generated/explanation/agent-rag-design.md) — 说明 LLM Agent 编排与 RAG 检索的整体设计。（解释；生成）
 - [Agent 工具契约](generated/explanation/agent-tools.md) — 约定 Agent 可调用工具的入参、出参与错误契约。（解释；生成）
 - [管理端分层与视图 In/Out 解耦](generated/explanation/manager-layering.md) — 说明管理端分层结构以及视图层 In/Out 解耦约束。（解释；生成）
@@ -99,6 +100,7 @@
 - [异步任务与队列](generated/explanation/async-worker.md) — 说明基于队列的异步任务调度与执行模型。
 - [数据源插件体系与 sqlite vtab](generated/explanation/datasource-plugin.md) — 说明数据源插件体系与 sqlite 虚拟表机制的配合方式。
 - [AI Agent 功能架构详解](curated/explanation/agent-architecture.md) — 用白话讲解 AI 助手的数据结构、数据流转、流程图与抽象设计关系，面向初级研发。
+- [AI 助手自定义 SSE 事件协议](curated/explanation/ai-assistant-sse-schema.md) — 定义 AI 助手的领域事件信封、内容块、事件目录、历史回放与断线续播契约。
 - [LLM Agent + RAG 设计](generated/explanation/agent-rag-design.md) — 说明 LLM Agent 编排与 RAG 检索的整体设计。
 - [Agent 工具契约](generated/explanation/agent-tools.md) — 约定 Agent 可调用工具的入参、出参与错误契约。
 - [管理端分层与视图 In/Out 解耦](generated/explanation/manager-layering.md) — 说明管理端分层结构以及视图层 In/Out 解耦约束。

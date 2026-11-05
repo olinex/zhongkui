@@ -22,7 +22,8 @@ Package worker 提供异步任务的消费侧编排：把各业务域的任务�
 - `tag_event.TagEventDetectTask` / `TagEventSuppressTask` / `TagEventCleanupTask`：标签事件检测、 抑制评估与无效记录清理；
 - mail.MailSendTask（mail:send）：系统级邮件直发，按系统 smtp 配置直接投递，不经数据库通知 渠道与目标；
 - notify.SendGroupTask / SendTargetTask：通用通知的组发送与单目标直投；
-- knowledge.ParseTask（ai:doc:parse）：知识文档导入解析，拉取解密 S3 原件、抽取文本、切块 向量化并收敛文档状态。
+- knowledge.ParseTask（ai:doc:parse）：知识文档导入解析，拉取解密 S3 原件、抽取文本、切块 向量化并收敛文档状态；
+- periodicreport.TaskDispatch（periodic-report:plan:dispatch）/ TaskPlanRun（periodic-report:plan:run）/ TaskRunCleanup（periodic-report:run:cleanup）：周期性报告计划的到期扫描分发、生成与生命周期清理。
 
 同时登记两个分布式 TCP 流处理器工厂（flow.ProcIpv4Tcp / flow.ProcIpv6Tcp）。任务类型常量均 由其所属子包声明（如 knowledge.ParseTask），本包只引用，保证「投递侧与消费侧」共享同一字面量。
 

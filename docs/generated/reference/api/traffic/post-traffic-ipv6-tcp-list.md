@@ -105,8 +105,8 @@
 
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
-| timestampFrom | views.timestampFromIpv6TcpListGetFilterByItem | 是 | required | - | - |
-| timestampTo | views.timestampToIpv6TcpListGetFilterByItem | 是 | required | - | - |
+| timestampFrom | views.timestampFromIpv6TcpListGetFilterByItem | - | - | - | - |
+| timestampTo | views.timestampToIpv6TcpListGetFilterByItem | - | - | - | - |
 | createdAtFrom | views.createdAtFromIpv6TcpListGetFilterByItem | 是 | required | - | - |
 | createdAtTo | views.createdAtToIpv6TcpListGetFilterByItem | 是 | required | - | - |
 
@@ -128,14 +128,14 @@
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
 | action | string | 是 | required,oneof=gte | - | - |
-| value | time.Time | 是 | required | - | - |
+| value | time.Time | - | - | - | - |
 
 ### filterBy.timestampTo（views.timestampToIpv6TcpListGetFilterByItem）
 
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
 | action | string | 是 | required,oneof=lte | - | - |
-| value | time.Time | 是 | required | - | - |
+| value | time.Time | - | - | - | - |
 
 ### filterBy.createdAtFrom（views.createdAtFromIpv6TcpListGetFilterByItem）
 

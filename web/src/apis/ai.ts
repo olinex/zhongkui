@@ -9,32 +9,28 @@ import { X_JWT_HEADER_NAME } from "./@types/base";
 
 import type { SearchIn } from "@/components/@types/table";
 import type { FlexIDs } from "./@types/admin";
+import type { AssistantEventUnion } from "./@types/assistant";
 import type {
-  AgentOutput,
-  AgentAssistantInputRerunIn,
-  AgentAssistantInputRerunOut,
+  AgentChatIn,
+  AgentInteractionReopenIn,
   AgentMemoryStatusIn,
   AgentMessageTruncateIn,
-  AgentMessageBlockOut,
   AgentPromptOptimizeIn,
   AgentSessionBranchIn,
   AgentSessionCompactIn,
   AgentSessionCreateIn,
   AgentSessionRenameIn,
   AgentSessionValveIn,
-  AgentStageEvent,
-  AgentStreamIn,
-  CompressDeltaPayload,
-  CompressDonePayload,
-  CompressStartPayload,
+  AgentSkillCreateIn,
+  AgentSkillStatusIn,
+  AgentSkillUpdateIn,
+  AssistantActionRequest,
   DryRunStageEvent,
   EvalStage,
   KnowledgeDocumentCreateIn,
   KnowledgeDocumentUpdateIn,
   RetrievalDryRunIn,
   RetrievalDryRunOut,
-  ToolRequestPayload,
-  ToolResultIn,
 } from "./@types/ai";
 
 // ---- 知识库文档 ----
@@ -270,36 +266,6 @@ export function agentMessageTruncate(id: number, data: AgentMessageTruncateIn): 
   });
 }
 
-// agentAssistantInputRerun 回退到一条助手待输入回合（问卷作答 / 工具授权）：定位该回合的助手锚点消息，
-// 删除其后的全部消息并把关联运行现场重置为待输入，出参按回合种类给出问卷各轮载荷（供前端预填重开）或
-// 待审批调用清单（供前端重建审批面板），授权 / 重答后经 agentToolResultStream 原样回传续跑。
-export function agentAssistantInputRerun(
-  sessionID: number,
-  data: AgentAssistantInputRerunIn,
-): AxiosPromise<AgentAssistantInputRerunOut> {
-  return request.post(`/ai/agent/${sessionID}/input/rerun`, data, {
-    headers: getJwtHeader(),
-  });
-}
-
-// agentSessionCompactStream 启动 POST /ai/session/${id}/compact 的 SSE 流式压缩：
-// 依次下发 compress_start / compress_delta / compress_done（无 id 行），正常以 EOF 收敛；
-// 越界等本地化 JSON 404 由 streamSSE 的错误回调上报。返回中止函数。
-export function agentSessionCompactStream(
-  id: number,
-  data: AgentSessionCompactIn,
-  handlers: AgentStreamHandlers,
-): () => void {
-  return streamSSE(
-    "POST",
-    `/ai/session/${id}/compact`,
-    data,
-    (event) => dispatchAgentEvent(event, handlers),
-    (msg) => handlers.onError?.(msg),
-    () => handlers.onComplete?.(),
-  );
-}
-
 // ---- 长期记忆 ----
 export function agentMemoryListGet(data: SearchIn): AxiosPromise {
   return request.post("/ai/memory/list", data, {
@@ -339,6 +305,66 @@ export function agentMemoryStatusSet(id: number, data: AgentMemoryStatusIn): Axi
   });
 }
 
+// ---- AI 技能 ----
+export function agentSkillListGet(data: SearchIn): AxiosPromise {
+  return request.post("/ai/skill/list", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function agentSkillListOptions(): AxiosPromise {
+  return request.options("/ai/skill/list", {
+    headers: getJwtHeader(),
+  });
+}
+
+// agentSkillOptionsGet 拉取聊天框技能选择器选项：合并跨命名空间内置技能与当前命名空间已启用技能
+export function agentSkillOptionsGet(): AxiosPromise {
+  return request.post("/ai/skill/options", {}, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function agentSkillDetailGet(id: number): AxiosPromise {
+  return request.post(
+    `/ai/skill/${id}/get`,
+    {},
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}
+
+// agentSkillCreate 创建技能：周期能力、输入字段与固定参数随请求一次落库。
+export function agentSkillCreate(data: AgentSkillCreateIn): AxiosPromise {
+  return request.post("/ai/skill/create", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+// agentSkillUpdate 更新技能：全部定义字段整体覆盖。
+export function agentSkillUpdate(id: number, data: AgentSkillUpdateIn): AxiosPromise {
+  return request.post(`/ai/skill/${id}/update`, data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function agentSkillDelete(ids: FlexIDs): AxiosPromise {
+  return request.post(
+    "/ai/skill/delete",
+    { ids },
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}
+
+export function agentSkillStatusSet(id: number, data: AgentSkillStatusIn): AxiosPromise {
+  return request.post(`/ai/skill/${id}/status`, data, {
+    headers: getJwtHeader(),
+  });
+}
+
 // ---- AI 状态 ----
 // agentStatusGet 查询 AI 助手状态；显式传入 sessionID 时请求体携带该会话 ID，
 // 后端据此在出参中回带该会话的在途运行态（AgentStatusOut.liveRun，无在途运行时为 null）。
@@ -349,41 +375,6 @@ export function agentStatusGet(sessionID?: number): AxiosPromise {
 }
 
 // ---- 流式响应（SSE，原生 fetch 实现）----
-// Agent 生成流式处理器：delta 为答案增量文本，stage 为工具调用阶段状态事件
-// （toolCall / toolResult 的 start/done/failed，含工具名），done 为最终完整结果，
-// toolRequest 为模型请求调用平台原生接口（需前端人工审批执行后经 tool-result 续跑）。
-export interface AgentStreamHandlers {
-  // onSeq 每个带 id 的 SSE 事件到达时回调其序号（seq）；供前端持久化续播游标，
-  // 与事件类型分发并行（无论事件是否被消费都会回调）
-  onSeq?: (seq: number) => void;
-  onDelta?: (delta: string) => void;
-  // onReasoning 思考过程增量（reasoning 事件）：与正文增量并行累积，供折叠区块实时呈现
-  onReasoning?: (delta: string) => void;
-  onStage?: (stage: AgentStageEvent) => void;
-  // onBlock 内容块事件（block 事件）：负载 {seq, kind, payload}，块创建与收敛各下发一次；前端据此按
-  // seq 归并出本消息的有序内容块（消息体的唯一展示来源，与刷新后的出参 blocks 同源）
-  onBlock?: (ev: AgentMessageBlockOut) => void;
-  onToolRequest?: (req: ToolRequestPayload) => void;
-  // onState 交互状态事件（state 事件）：负载 {state, substate}，为会话交互状态的唯一权威来源。
-  // 前端据此驱动输入闸门 / 停止按钮 / 授权与问卷面板 / 运行子状态标识 / 锁定提示，
-  // 不再自行推断「是否运行中 / 是否等待审批」。
-  onState?: (state: string, substate: string) => void;
-  // 上下文压缩开始：携带压缩原因、压缩前占用 token、有效档位容量与触发阈值
-  onCompressStart?: (payload: CompressStartPayload) => void;
-  // 上下文压缩摘要增量：摘要生成的实时增量文本
-  onCompressDelta?: (payload: CompressDeltaPayload) => void;
-  // 上下文压缩完成：携带折叠条数与压缩前后信息
-  onCompressDone?: (payload: CompressDonePayload) => void;
-  onDone?: (out: AgentOutput) => void;
-  // onError 流以错误收尾：msg 为后端本地化摘要；phase 为 error 事件携带的运行生命周期终态阶段
-  // （failed/cancelled，取值来自后端枚举类 agentRunPhase），供前端区分「失败」与「已取消」并据此
-  // 展示中断提示；非 error 事件触发的传输层错误（如开流失败）无 phase。
-  onError?: (msg: string, phase?: string) => void;
-  // onComplete 流正常结束（EOF）时回调（主动中止不触发）：挂起流以逐条 tool_request 结束后
-  // 正常 EOF，前端据此确认本轮挂起调用已全部送达，再统一判定是否可整体提交
-  onComplete?: () => void;
-}
-
 // 检索试运行流式处理器：stage 为阶段状态事件（start/done/failed），
 // delta 为该阶段的模型增量原始输出，done 为最终完整结果（含调用元信息）。
 export interface RetrievalDryRunStreamHandlers {
@@ -531,128 +522,193 @@ function dispatchEventBlock(block: string, onEvent: (event: SSERawEvent) => void
   }
 }
 
-// dispatchAgentEvent 分发 Agent SSE 事件：生成流与审批续跑流事件类型完全一致，
-// 故两者共用同一段分发逻辑，避免复制两遍。带 id 的事件先回调 onSeq（持久化续播游标），
-// 再按类型分发；事件类型未知时仍会回调 onSeq（游标不丢）。
-function dispatchAgentEvent(event: SSERawEvent, handlers: AgentStreamHandlers): void {
-  if (event.id !== undefined) {
-    handlers.onSeq?.(event.id);
-  }
-  switch (event.type) {
-    case "delta":
-      handlers.onDelta?.((event.data as { delta: string }).delta);
-      break;
-    // 思考过程增量事件：负载 {delta}，与正文 delta 同为增量文本，独立分发到 onReasoning
-    case "reasoning":
-      handlers.onReasoning?.((event.data as { delta: string }).delta);
-      break;
-    // 工具调用阶段事件：后端在工具调用轮仅上报阶段状态（不带增量输出），
-    // 形状与检索试运行的 stage 事件一致，故沿用同一分发路径
-    case "stage":
-      handlers.onStage?.(event.data as AgentStageEvent);
-      break;
-    // 内容块事件：负载 {seq, kind, payload}，块的创建与收敛各下发一次，是消息体的唯一展示来源
-    case "block":
-      handlers.onBlock?.(event.data as AgentMessageBlockOut);
-      break;
-    // 挂起事件：模型请求调用平台原生接口，流随后正常 EOF（不发 done / error），
-    // 前端须置为「等待审批」态而非失败
-    case "tool_request":
-      handlers.onToolRequest?.(event.data as ToolRequestPayload);
-      break;
-    // 交互状态事件：负载 {state, substate}，为会话交互状态的唯一权威来源；前端据此驱动 UI
-    case "state": {
-      const payload = event.data as { state: string; substate: string };
-      handlers.onState?.(payload.state, payload.substate);
-      break;
-    }
-    // 上下文压缩事件（compress_start / compress_delta / compress_done）：手动压缩流为无 id
-    // 事件，不触发 onSeq，仅按类型分发
-    case "compress_start":
-      handlers.onCompressStart?.(event.data as CompressStartPayload);
-      break;
-    case "compress_delta":
-      handlers.onCompressDelta?.(event.data as CompressDeltaPayload);
-      break;
-    case "compress_done":
-      handlers.onCompressDone?.(event.data as CompressDonePayload);
-      break;
-    case "done":
-      handlers.onDone?.(event.data as AgentOutput);
-      break;
-    case "error": {
-      // error 事件负载同时携带运行生命周期终态阶段（failed/cancelled），供前端据此展示中断提示
-      const payload = event.data as { error: string; phase?: string };
-      handlers.onError?.(payload.error, payload.phase);
-      break;
-    }
-    default:
-      break;
-  }
-}
-
-// agentStreamGenerate 启动 POST /ai/agent/${sessionID}/stream 的 SSE 流式生成，
-// 返回中止函数；调用方（组件卸载等）可随时调用中止。
-export function agentStreamGenerate(
+// agentInteractionReopen 「重新审批 / 重新回答」：POST /ai/agent/:sessionID/interaction/reopen。把
+// 会话回退到该次审批 / 问卷交互的待处理状态（删除该交互之后的回答、重置交互卡片），不重跑整轮回答；
+// 调用方随后经 /render 重放历史即可再次看到批准 / 拒绝按钮或待作答问卷。
+export function agentInteractionReopen(
   sessionID: number,
-  data: AgentStreamIn,
-  handlers: AgentStreamHandlers,
-): () => void {
-  return streamSSE(
-    "POST",
-    `/ai/agent/${sessionID}/stream`,
-    data,
-    (event) => dispatchAgentEvent(event, handlers),
-    (msg) => handlers.onError?.(msg),
-    () => handlers.onComplete?.(),
-  );
+  data: AgentInteractionReopenIn,
+): AxiosPromise {
+  return request.post(`/ai/agent/${sessionID}/interaction/reopen`, data, {
+    headers: getJwtHeader(),
+  });
 }
 
-// agentStreamResume 续播某会话的在途运行：GET /ai/agent/${sessionID}/stream?after=<seq>，
-// 先回放序号 > after 的已落库事件，再接实时流；运行已结束则回放后补 done/error 并关闭。
-// 事件语义与生成流一致（复用 dispatchAgentEvent）。返回中止函数。
-export function agentStreamResume(
+// ---- 领域事件流（SSE）----
+// AssistantStreamHandlers 流式处理器：onEvent 为逐条领域事件；onSeq 为可选的 SSE `id:`
+// 续播游标（快照 / 连接级控制事件不携带）；onError 为开流失败；onComplete 为正常 EOF。
+export interface AssistantStreamHandlers {
+  onEvent?: (event: AssistantEventUnion) => void;
+  onSeq?: (seq: number) => void;
+  onError?: (msg: string) => void;
+  onComplete?: () => void;
+}
+
+// streamAssistantSSE 启动一条事件流（POST 携带 JSON 体；GET 用于 /render 与 /events），
+// 按行解析 `id:` / `data:`，逐条分发领域事件；204（无在途运行）按正常 EOF 处理。
+function streamAssistantSSE(
+  method: "POST" | "GET",
+  path: string,
+  body: unknown,
+  handlers: AssistantStreamHandlers,
+): () => void {
+  const controller = new AbortController();
+
+  const run = async (): Promise<void> => {
+    const store = useAppStore();
+    try {
+      const rsp = await fetch(`${current_base_url()}${path}`, {
+        method,
+        signal: controller.signal,
+        headers: {
+          [HttpHeader.CONTENT_TYPE]: "application/json",
+          [HttpHeader.ACCEPT]: "text/event-stream",
+          [HttpHeader.ACCEPT_LANGUAGE]: store.language,
+          [HttpHeader.CONTENT_LANGUAGE]: store.language,
+          [HttpHeader.NAMESPACE]: encodeURIComponent(store.namespace),
+          [X_JWT_HEADER_NAME]: localManager.getJwt() || "",
+        },
+        body: method === "POST" ? JSON.stringify(body) : undefined,
+      });
+      if (rsp.status === 204) {
+        handlers.onComplete?.();
+        return;
+      }
+      if (!rsp.ok) {
+        handlers.onError?.(await responseErrorText(rsp));
+        return;
+      }
+      if (!rsp.body) {
+        handlers.onError?.("Request failed: empty response body");
+        return;
+      }
+      const reader = rsp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let pendingSeq: number | undefined;
+      const consumeLine = (line: string): void => {
+        const trimmed = line.trim();
+        if (
+          !trimmed ||
+          trimmed.startsWith(":") ||
+          trimmed.startsWith("event:") ||
+          trimmed.startsWith("retry:")
+        ) {
+          return;
+        }
+        if (trimmed.startsWith("id:")) {
+          const parsed = Number(trimmed.slice("id:".length).trim());
+          if (Number.isFinite(parsed)) {
+            pendingSeq = parsed;
+          }
+          return;
+        }
+        if (!trimmed.startsWith("data:")) {
+          return;
+        }
+        const payload = trimmed.slice("data:".length).trim();
+        if (!payload || payload === "[DONE]") {
+          pendingSeq = undefined;
+          return;
+        }
+        let event: AssistantEventUnion;
+        try {
+          event = JSON.parse(payload) as AssistantEventUnion;
+        } catch {
+          pendingSeq = undefined;
+          return;
+        }
+        if (pendingSeq !== undefined) {
+          handlers.onSeq?.(pendingSeq);
+          pendingSeq = undefined;
+        }
+        handlers.onEvent?.(event);
+      };
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        buffer += decoder.decode(value, { stream: true });
+        let sep = buffer.indexOf("\n");
+        while (sep !== -1) {
+          consumeLine(buffer.slice(0, sep));
+          buffer = buffer.slice(sep + 1);
+          sep = buffer.indexOf("\n");
+        }
+      }
+      if (buffer.trim()) {
+        consumeLine(buffer);
+      }
+      handlers.onComplete?.();
+    } catch (err) {
+      if (controller.signal.aborted) {
+        return;
+      }
+      handlers.onError?.(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  void run();
+  return () => controller.abort();
+}
+
+// assistantChatStream 启动一轮对话：POST /ai/agent/:sessionID/chat（事件流）。
+export function assistantChatStream(
+  sessionID: number,
+  data: AgentChatIn,
+  handlers: AssistantStreamHandlers,
+): () => void {
+  return streamAssistantSSE("POST", `/ai/agent/${sessionID}/chat`, data, handlers);
+}
+
+// assistantRenderStream 读取历史快照（snapshot.begin/message/end + 在途实时事件）。
+export function assistantRenderStream(
+  sessionID: number,
+  handlers: AssistantStreamHandlers,
+): () => void {
+  return streamAssistantSSE("GET", `/ai/agent/${sessionID}/render`, undefined, handlers);
+}
+
+// assistantActionStream 提交审批 / 问卷动作并续跑（事件流）。
+export function assistantActionStream(
+  sessionID: number,
+  data: AssistantActionRequest,
+  handlers: AssistantStreamHandlers,
+): () => void {
+  return streamAssistantSSE("POST", `/ai/agent/${sessionID}/action`, data, handlers);
+}
+
+// assistantEventsStream 运行中重连：GET /ai/agent/:sessionID/events?after=<seq>（事件流）。
+export function assistantEventsStream(
   sessionID: number,
   after: number,
-  handlers: AgentStreamHandlers,
+  handlers: AssistantStreamHandlers,
 ): () => void {
-  return streamSSE(
+  return streamAssistantSSE(
     "GET",
-    `/ai/agent/${sessionID}/stream?after=${encodeURIComponent(String(Math.max(0, Math.floor(after))))}`,
+    `/ai/agent/${sessionID}/events?after=${encodeURIComponent(String(Math.max(0, Math.floor(after))))}`,
     undefined,
-    (event) => dispatchAgentEvent(event, handlers),
-    (msg) => handlers.onError?.(msg),
-    () => handlers.onComplete?.(),
+    handlers,
   );
 }
 
-// agentRunCancel 显式停止某会话的在途运行：POST /ai/agent/${sessionID}/run/cancel，
-// 服务端立即取消该运行（区别于仅断连接的 detach）。
-export function agentRunCancel(sessionID: number): AxiosPromise {
+// assistantCompactStream 手动压缩上下文：POST /ai/session/:id/compact（message.compress 事件）。
+export function assistantCompactStream(
+  id: number,
+  data: AgentSessionCompactIn,
+  handlers: AssistantStreamHandlers,
+): () => void {
+  return streamAssistantSSE("POST", `/ai/session/${id}/compact`, data, handlers);
+}
+
+export function agentAbort(sessionID: number): AxiosPromise {
   return request.post(
-    `/ai/agent/${sessionID}/run/cancel`,
+    `/ai/agent/${sessionID}/abort`,
     {},
     {
       headers: getJwtHeader(),
     },
-  );
-}
-
-// agentToolResultStream 启动 POST /ai/agent/${sessionID}/tool-result 的 SSE 续跑流：
-// 回传本轮全部待审批调用的执行结果后继续生成，事件类型与生成流完全一致（复用
-// dispatchAgentEvent），并可能再次出现 tool_request 再次挂起。返回中止函数。
-export function agentToolResultStream(
-  sessionID: number,
-  data: ToolResultIn,
-  handlers: AgentStreamHandlers,
-): () => void {
-  return streamSSE(
-    "POST",
-    `/ai/agent/${sessionID}/tool-result`,
-    data,
-    (event) => dispatchAgentEvent(event, handlers),
-    (msg) => handlers.onError?.(msg),
-    () => handlers.onComplete?.(),
   );
 }
 

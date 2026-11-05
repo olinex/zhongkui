@@ -264,7 +264,7 @@ const anchorTimes = computed<DateTime[]>(() => {
   return out;
 });
 
-// buildSearchIn 构造 stack/list 查询：traceID 必填 + 双时间范围（延续 raw 列表防全表扫描约定）
+// buildSearchIn 构造 stack/list 查询：traceID 必填 + createdAt 范围（分区裁剪），timestamp 同时提供以按采集时间精确过滤
 const buildSearchIn = (): SearchIn => {
   const t = props.transport ?? {};
   let start = DateTime.now().minus({ day: 1 });

@@ -11,15 +11,7 @@
         :project-fields="projectFields"
         model-name="notificationGroup"
       >
-        <!-- 默认分组列：默认分组以彩色 chip 高亮展示 -->
-        <template #cell-isDefault="{ value }">
-          <v-chip v-if="value" color="primary">
-            {{ $t("model.notificationGroup.field.isDefault") }}
-          </v-chip>
-          <template v-else>
-            {{ $t("model.__base.value.no") }}
-          </template>
-        </template>
+        <!-- 默认分组为布尔列：由自适应单元格统一渲染布尔图标，与全站布尔展示一致 -->
       </search-table>
 
       <!-- 删除确认对话框：单条删除与批量删除共用 -->
@@ -89,7 +81,7 @@
                   v-model="createDescription"
                   v-bind="createDescriptionProps"
                   :label="$t('model.notificationGroup.field.description')"
-                  rows="1"
+                  rows="3"
                 />
               </v-col>
             </v-row>
@@ -182,7 +174,7 @@
                   v-bind="updateDescriptionProps"
                   :label="$t('model.notificationGroup.field.description')"
                   :disabled="!editable"
-                  rows="1"
+                  rows="3"
                 />
               </v-col>
             </v-row>

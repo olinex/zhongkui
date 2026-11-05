@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/creasty/defaults"
 	"github.com/robfig/cron/v3"
 	. "github.com/smartystreets/goconvey/convey"
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
@@ -69,8 +70,14 @@ func TestComputeCronTriggers(t *testing.T) {
 			So(next.Equal(at(9, 0)), ShouldBeTrue)
 		})
 
-		Convey("禁用积压补投：不生成历史触发点，stamp 直接推进到下一次未来触发点", func() {
+		Convey("禁用积压补投：跳过历史触发点，仅投递不晚于当前时刻的最近一次触发点", func() {
 			triggers, next := ComputeCronTriggers(at(8, 0), at(10, 30), hourly, BacklogPolicy{Enabled: false})
+			equalTriggers(triggers, at(10, 0))
+			So(next.Equal(at(10, 0)), ShouldBeTrue)
+		})
+
+		Convey("禁用积压补投且尚未到点：不触发且 stamp 保持不变", func() {
+			triggers, next := ComputeCronTriggers(at(11, 0), at(10, 30), hourly, BacklogPolicy{Enabled: false})
 			So(triggers, ShouldBeNil)
 			So(next.Equal(at(11, 0)), ShouldBeTrue)
 		})
@@ -94,6 +101,26 @@ func TestComputeCronTriggers(t *testing.T) {
 			equalTriggers(triggers, at(9, 0), at(10, 0), at(11, 0))
 			So(next.Equal(at(11, 0)), ShouldBeTrue)
 		})
+	})
+}
+
+// TestSchedulerTaskConfigBacklogDefault 验证积压补投开关的默认值与显式声明语义。
+// 任务配置在导入 etcd 前会经 defaults.Set 补默认值：默认值必须与零值一致，
+// 否则配置文件中显式声明的 false 会被当成零值覆盖回默认值（历史上因此导致
+// backlog 关闭的任务在 worker 启动时仍补投大量历史任务）。
+func TestSchedulerTaskConfigBacklogDefault(t *testing.T) {
+	Convey("BacklogEnabled 默认关闭且显式声明不被覆盖", t, func() {
+		var cfg SchedulerTaskConfig
+		So(defaults.Set(&cfg), ShouldBeNil)
+		So(cfg.BacklogEnabled, ShouldBeFalse)
+
+		cfg = SchedulerTaskConfig{BacklogEnabled: false}
+		So(defaults.Set(&cfg), ShouldBeNil)
+		So(cfg.BacklogEnabled, ShouldBeFalse)
+
+		cfg = SchedulerTaskConfig{BacklogEnabled: true}
+		So(defaults.Set(&cfg), ShouldBeNil)
+		So(cfg.BacklogEnabled, ShouldBeTrue)
 	})
 }
 

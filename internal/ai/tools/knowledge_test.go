@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	// 第三方
-	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
@@ -47,7 +46,7 @@ func knowledgeRuntimeCtx(searcher KnowledgeSearcher, snippetLimit int) context.C
 
 // TestKnowledgeSearch_MissingRuntime 覆盖未注入运行期或检索器为 nil 时返回英文错误。
 func TestKnowledgeSearch_MissingRuntime(t *testing.T) {
-	run := &knowledgeSearchTool{}
+	run := knowledgeSearchTool
 	args := `{"query":"how to write a rule"}`
 
 	if _, err := run.InvokableRun(context.Background(), args); err == nil {
@@ -72,7 +71,7 @@ func TestKnowledgeSearch_EmptyQuery(t *testing.T) {
 	for name, args := range cases {
 		t.Run(name, func(t *testing.T) {
 			s := &fakeKnowledgeSearcher{}
-			if _, err := (&knowledgeSearchTool{}).InvokableRun(knowledgeRuntimeCtx(s, 0), args); err == nil {
+			if _, err := knowledgeSearchTool.InvokableRun(knowledgeRuntimeCtx(s, 0), args); err == nil {
 				t.Fatal("error = nil, want a rejection")
 			}
 			if s.calls != 0 {
@@ -89,7 +88,7 @@ func TestKnowledgeSearch_Hits(t *testing.T) {
 		{DocumentID: "doc-1", Title: "规则编写", ChunkIndex: 2, Content: "先定义主体", Score: 0.875},
 		{DocumentID: "doc-2", Title: "部署", ChunkIndex: 0, Content: "启动服务", Score: 0.5},
 	}}
-	out, err := (&knowledgeSearchTool{}).InvokableRun(knowledgeRuntimeCtx(s, 0), `{"query":"  how to write a rule  "}`)
+	out, err := knowledgeSearchTool.InvokableRun(knowledgeRuntimeCtx(s, 0), `{"query":"  how to write a rule  "}`)
 	if err != nil {
 		t.Fatalf("InvokableRun error = %v", err)
 	}
@@ -120,7 +119,7 @@ func TestKnowledgeSearch_Hits(t *testing.T) {
 // 非空且无错误。
 func TestKnowledgeSearch_EmptyResult(t *testing.T) {
 	s := &fakeKnowledgeSearcher{hits: nil}
-	out, err := (&knowledgeSearchTool{}).InvokableRun(knowledgeRuntimeCtx(s, 0), `{"query":"nothing matches"}`)
+	out, err := knowledgeSearchTool.InvokableRun(knowledgeRuntimeCtx(s, 0), `{"query":"nothing matches"}`)
 	if err != nil {
 		t.Fatalf("InvokableRun error = %v", err)
 	}
@@ -146,7 +145,7 @@ func TestKnowledgeSearch_SnippetTruncation(t *testing.T) {
 	search := func(limit int) knowledgeSearchResult {
 		t.Helper()
 		s := &fakeKnowledgeSearcher{hits: []KnowledgeHit{{DocumentID: "d", Content: long}}}
-		out, err := (&knowledgeSearchTool{}).InvokableRun(knowledgeRuntimeCtx(s, limit), `{"query":"q"}`)
+		out, err := knowledgeSearchTool.InvokableRun(knowledgeRuntimeCtx(s, limit), `{"query":"q"}`)
 		if err != nil {
 			t.Fatalf("InvokableRun(limit=%d) error = %v", limit, err)
 		}
@@ -170,7 +169,7 @@ func TestKnowledgeSearch_SnippetTruncation(t *testing.T) {
 func TestKnowledgeSearch_CompleteNotTruncated(t *testing.T) {
 	long := "一二三四五六七八九十"
 	s := &fakeKnowledgeSearcher{hits: []KnowledgeHit{{DocumentID: "d", Content: long, Complete: true}}}
-	out, err := (&knowledgeSearchTool{}).InvokableRun(knowledgeRuntimeCtx(s, 3), `{"query":"q"}`)
+	out, err := knowledgeSearchTool.InvokableRun(knowledgeRuntimeCtx(s, 3), `{"query":"q"}`)
 	if err != nil {
 		t.Fatalf("InvokableRun error = %v", err)
 	}
@@ -186,7 +185,7 @@ func TestKnowledgeSearch_CompleteNotTruncated(t *testing.T) {
 // TestKnowledgeSearch_Format 覆盖可选分区：合法分区透传给检索器，非法分区被拒且不触发检索。
 func TestKnowledgeSearch_Format(t *testing.T) {
 	s := &fakeKnowledgeSearcher{}
-	tool := &knowledgeSearchTool{}
+	tool := knowledgeSearchTool
 	if _, err := tool.InvokableRun(knowledgeRuntimeCtx(s, 0), `{"query":"q","format":"native_api"}`); err != nil {
 		t.Fatalf("InvokableRun(native_api) error = %v", err)
 	}
@@ -205,7 +204,7 @@ func TestKnowledgeSearch_Format(t *testing.T) {
 // TestKnowledgeSearch_Info 覆盖 Info：工具名为 knowledge_search；参数 schema 中 query 存在、类型
 // 为 string 且必填；format 可选且枚举限定四类生成分区；不存在 namespace / docIDs / topK 之类越权入参。
 func TestKnowledgeSearch_Info(t *testing.T) {
-	info, err := (&knowledgeSearchTool{}).Info(context.Background())
+	info, err := knowledgeSearchTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -271,6 +270,3 @@ func TestKnowledgeSearch_BuildResolves(t *testing.T) {
 
 // 仅用于确认假替身满足接口（编译期断言）。
 var _ KnowledgeSearcher = (*fakeKnowledgeSearcher)(nil)
-
-// 仅用于确认工具满足 eino 的可调用工具接口（编译期断言）。
-var _ tool.InvokableTool = (*knowledgeSearchTool)(nil)

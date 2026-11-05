@@ -396,6 +396,7 @@ type ETLPipelineInspectorTaskListIn struct {
     views.Pagination        // 嵌入分页参数
     Queue            string `json:"queue" binding:"required"`                                                                     // 队列名称（必须）
     State            string `json:"state" binding:"required,oneof=pending active aggregating scheduled retry archived completed"` // 任务状态（必须，只能是预定义值）
+    Type             string `json:"type" binding:"omitempty,enum=taskType"`                                                       // 任务类型筛选（可选，取值见 taskType 枚举类）
     Group            string `json:"group"`                                                                                        // 任务分组标识符（可选）
 }
 ```
@@ -403,10 +404,13 @@ type ETLPipelineInspectorTaskListIn struct {
 <a name="ETLPipelineInspectorTaskListOut"></a>
 ## type ETLPipelineInspectorTaskListOut
 
-ETLPipelineInspectorTaskListOut 是任务列表查询的输出类型别名 返回指定状态的任务信息列表
+ETLPipelineInspectorTaskListOut 是任务列表查询的输出结构。 Items 为当前页任务，Total 为当前队列 / 状态 / 任务类型筛选下的任务总数， 使前端分页与筛选保持同一口径。
 
 ```go
-type ETLPipelineInspectorTaskListOut = []*PipelineTaskInfo
+type ETLPipelineInspectorTaskListOut struct {
+    Items []*PipelineTaskInfo `json:"items"` // 当前页任务列表
+    Total int                 `json:"total"` // 过滤后的任务总数
+}
 ```
 
 <a name="EtlSchedulerTaskIn"></a>

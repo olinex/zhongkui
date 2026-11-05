@@ -4,6 +4,7 @@ import i18n from "@/utils/i18n";
 // 类型
 import type { EnumEntryOut } from "@/apis/enums";
 import type { ApiMeta } from "@/components/@types/meta";
+import { fieldMetaOfMeta } from "@/utils/meta";
 
 // EnumClass 枚举类名常量（与后端 enum 注册表类名一一对应，消费点统一引用避免手写字面量）
 export const EnumClass = {
@@ -24,6 +25,7 @@ export const EnumClass = {
   llmSlot: "llmSlot",
   mcpTransport: "mcpTransport",
   llmToolSource: "llmToolSource",
+  agentSkillSource: "agentSkillSource",
   evalStage: "evalStage",
   evalStageStatus: "evalStageStatus",
   diagnosisCategory: "diagnosisCategory",
@@ -32,6 +34,8 @@ export const EnumClass = {
   documentFormat: "documentFormat",
   knowledgeDocStatus: "knowledgeDocStatus",
   agentKind: "agentKind",
+  // 对话模型接口形态（归属 internal/pkg/llm）：chat / responses
+  llmAPIMode: "llmAPIMode",
   memoryKind: "memoryKind",
   memoryStatus: "memoryStatus",
   // 客户端工具调用的审核重要级（归属 internal/ai）与会话级审核阀门（归属 internal/models/ai）
@@ -40,6 +44,10 @@ export const EnumClass = {
   // 会话交互主状态 / 子状态（归属 internal/models/ai）：状态唯一权威来源，label 由后端枚举注册表下发
   agentInteractionState: "agentInteractionState",
   agentInteractionSubstate: "agentInteractionSubstate",
+  // 报告运行状态（归属 internal/models/ai）：running / success / failed
+  periodicReportRunStatus: "periodicReportRunStatus",
+  // 任务类型（归属 internal/worker）：取值空间为任务处理器注册表
+  taskType: "taskType",
 } as const;
 
 // currentLang 当前语言（i18n locale value，如 zh-Hans / en）
@@ -48,7 +56,7 @@ const currentLang = (): string => String(i18n.global.locale.value);
 // enumFieldTypeOfMeta 从列表接口自省响应（MetaOut）的 bodyOutput 中取字段的枚举类名（enumType）；
 // 未注册枚举或字段不存在时返回 undefined，前端据此回退为普通文本筛选项。
 export const enumFieldTypeOfMeta = (meta: ApiMeta | undefined, field: string): string | undefined =>
-  meta?.POST?.bodyOutput?.fields.find((f) => f.name === field)?.enumType;
+  fieldMetaOfMeta(meta, field)?.enumType;
 
 // ensureEnum 确保某枚举类已按当前语言缓存（页面挂载/选项构造前调用；store 内部在途去重）
 export const ensureEnum = (type: string): Promise<void> =>

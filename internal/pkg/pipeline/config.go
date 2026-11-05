@@ -17,8 +17,7 @@ import (
 
 const (
 	// Prefix 配置前缀，用于在配置文件中标识任务队列相关配置。
-	// 例如，完整的配置路径为 "pipeline.<queue_name>.<config_field>"。
-	// 保留 "pipeline" 原值以兼容既有配置文件与运行环境。
+	// 完整的配置路径为 "pipeline.<queue_name>.<config_field>"。
 	Prefix = "pipeline"
 )
 
@@ -60,9 +59,10 @@ type SchedulerTaskConfig struct {
 
 	// BacklogEnabled 是否补投积压期间错过的历史触发点。
 	// 长时间停机或游标异常会形成积压 (last, now]；为 false 时跳过全部积压，
-	// 不生成任何历史任务，并直接推进游标到下一次未来触发点（cron）或当前网格点（interval）。
-	// 默认值: true（补投积压，保持与既有语义一致）
-	BacklogEnabled bool `mapstructure:"backlogEnabled" json:"backlog_enabled" default:"true" comment:"是否补投积压期间错过的历史触发点，false 时跳过全部积压"` // 是否补投积压
+	// 仅投递不晚于当前时刻的最近一次触发点（cron）或当前网格点（interval）。
+	// 默认值: false（不补投）。注意本字段默认值必须与零值一致：任务配置在导入 etcd 前会经
+	// defaults.Set 补默认值，若默认写成 true，配置文件中显式声明的 false 会被当成零值覆盖回 true。
+	BacklogEnabled bool `mapstructure:"backlogEnabled" json:"backlog_enabled" default:"false" comment:"是否补投积压期间错过的历史触发点，false 时跳过全部积压，默认关闭"` // 是否补投积压
 
 	// BacklogWindow 历史触发点的最大回溯窗口期。
 	// 大于 0 时仅补投 [now-BacklogWindow, now] 内的触发点，更早的积压直接丢弃并推进游标；

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"zhongkuisec.com/zhongkui/internal/pkg/errgroupx"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // Group 统一编排多个 Service 的启动与关闭生命周期。
@@ -35,13 +36,14 @@ func (g *Group) Run(ctx context.Context) error {
 	wg, ctx := errgroupx.WithContext(ctx)
 	for _, svc := range g.services {
 		if n, ok := svc.(Named); ok {
-			wg.GoNamed(n.Name(), func() error {
-				defer svc.Shutdown(ctx)
+			wg.GoNamed(n.Name(), func() (err error) {
+				// 关闭失败同样要上报，不能被 Start 的结果吞掉；defer 保证 panic 时也会关闭。
+				defer func() { err = errors.Join(err, svc.Shutdown(ctx)) }()
 				return svc.Start(ctx)
 			})
 		} else {
-			wg.Go(func() error {
-				defer svc.Shutdown(ctx)
+			wg.Go(func() (err error) {
+				defer func() { err = errors.Join(err, svc.Shutdown(ctx)) }()
 				return svc.Start(ctx)
 			})
 		}

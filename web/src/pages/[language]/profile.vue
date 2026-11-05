@@ -38,6 +38,7 @@
                     v-model="description"
                     v-bind="descriptionProps"
                     :label="$t('model.accessKey.field.description')"
+                    rows="3"
                   />
                 </v-col>
               </v-row>

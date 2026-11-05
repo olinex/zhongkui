@@ -48,8 +48,19 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		)
 		// 创建标签规则 - 创建新的标签识别规则（归属当前请求命名空间）
 		tagRuleGroup.POST("/create", TagRuleCreate)
-		// 创建标签规则元信息
-		views.RegisterApi(tagRuleGroup, "/create", "创建标签规则 - 创建新的标签识别规则（归属当前请求命名空间）", views.WithMethod(http.MethodPost, views.WithBodyInput[TagRuleCreateIn]()))
+		// 创建标签规则元信息：写入能力，供 AI 在「风险标签 Rego 规则共创」流程中经 api_invoke
+		// 在用户审批后创建规则；名称在当前命名空间同模型分组内唯一，新建默认启用。
+		views.RegisterApi(tagRuleGroup, "/create", "创建标签规则 - 创建新的标签识别规则（归属当前请求命名空间）",
+			views.WithMethod(http.MethodPost, views.WithBodyInput[TagRuleCreateIn]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.rule.create",
+				Domain:    "tag",
+				Intent:    "创建标签规则（写入，需用户在审批卡片上确认）",
+				Entities:  []string{"tag_rules"},
+				Access:    capability.AccessWrite,
+				Invokable: true,
+			}),
+		)
 		// 标签规则详情查询 - 根据ID获取规则详细信息
 		tagRuleGroup.POST("/:id/get", TagRuleDetailGet)
 		// 标签规则详情元信息
@@ -94,10 +105,10 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 			views.WithCapability(views.CapabilityMeta{
 				ID:        "tag.rule.validate",
 				Domain:    "tag",
-				Intent:    "校验标签规则 Rego 语法（不落库）",
+				Intent:    "校验标签规则 Rego 语法与契约（不落库）",
 				Entities:  []string{},
 				Access:    capability.AccessRead,
-				Invokable: false,
+				Invokable: true,
 			}),
 		)
 		// 标签规则单规则 dry-run - 对一条候选规则评估 JSON 输入文档，输出运行细节
@@ -111,7 +122,7 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 				Intent:    "对单条候选标签规则执行 dry-run（不落库）",
 				Entities:  []string{},
 				Access:    capability.AccessRead,
-				Invokable: false,
+				Invokable: true,
 			}),
 		)
 		// 标签规则规则组 dry-run - 对一组候选规则评估 JSON 输入文档，输出逐规则与合并标签
@@ -157,7 +168,7 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 				Intent:    "查看标签规则目标模型的字段元信息",
 				Entities:  []string{},
 				Access:    capability.AccessRead,
-				Invokable: false,
+				Invokable: true,
 			}),
 		)
 		// 标签规则目标模型样例 - 返回当前命名空间下的系统样例列表，缺失时懒供给
@@ -185,7 +196,7 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 				Intent:    "查看 Rego 自定义内置函数",
 				Entities:  []string{},
 				Access:    capability.AccessRead,
-				Invokable: false,
+				Invokable: true,
 			}),
 		)
 		// 标签规则 sqlite 语句元信息 - 返回当前命名空间已注册数据源 schema，供 Rego 编辑器 SQL 补全/提示
@@ -199,7 +210,7 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 				Intent:    "查看当前命名空间已注册数据源的 schema",
 				Entities:  []string{"datasources"},
 				Access:    capability.AccessRead,
-				Invokable: false,
+				Invokable: true,
 			}),
 		)
 	}

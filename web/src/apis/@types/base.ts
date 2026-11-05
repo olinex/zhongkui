@@ -30,7 +30,8 @@ export enum Status {
   NoRequest,
 }
 
-// CustomCode 业务自定义错误码，区分基础错误码与业务错误码两段。
+// CustomCode 业务自定义错误码：基础错误码 1000-1099，业务错误码按领域区间分配
+// （1100-1199 通用与账户 / 1200-1299 标签 / 1300-1399 AI 助手 / 1400-1499 平台与运维）。
 export enum CustomCode {
   CodeUnknown = 1000,
   // 基础错误码
@@ -47,6 +48,6 @@ export enum CustomCode {
   CodeUsernamePasswordCheckFailed = 1100,
   CodeOldPasswordCheckFailed = 1101,
   CodeUsernameOrEmailAlreadyExist = 1102,
-  CodeFrontendConfigConflict = 1108,
-  CodeFrontendConfigSyncDisabled = 1109,
+  CodeFrontendConfigConflict = 1400,
+  CodeFrontendConfigSyncDisabled = 1401,
 }

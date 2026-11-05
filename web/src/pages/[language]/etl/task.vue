@@ -15,10 +15,18 @@
                 />
               </v-col>
               <v-col cols="auto">
+                <!-- 任务类型筛选：首项「全部类型」表示不过滤，避免空值时输入框无显示值 -->
+                <v-select
+                  v-model="taskTypeFilter"
+                  :label="$t('model.task.field.type')"
+                  :items="taskTypeFilterOptions"
+                />
+              </v-col>
+              <v-col cols="auto">
                 <v-select
                   v-model="taskState"
                   :label="$t('model.task.field.state')"
-                  :items="taskTypeOptions"
+                  :items="taskStateOptions"
                 />
               </v-col>
             </v-row>
@@ -65,6 +73,7 @@
           </v-row>
         </v-container>
       </v-card>
+
       <confirm-dialog
         ref="confirmStateDeleteTaskDialogRef"
         :title="$t(`model.task.name`)"
@@ -232,6 +241,7 @@ import type { ActionButton } from "@/components/base/ActionButtonGroup.vue";
 import i18n from "@/utils/i18n";
 import { useColumnVisibility } from "@/utils/column";
 import { BackendDataType } from "@/types";
+import { EnumClass, ensureEnum, enumOptionsOf } from "@/utils/enums";
 import type { InspectorDailyStatIn, InspectorTaskListIn } from "@/apis/@types/etl";
 
 const confirmStateDeleteTaskDialogRef = useTemplateRef("confirmStateDeleteTaskDialogRef");
@@ -258,9 +268,14 @@ const pageSizeOptions = [
 const appStore = useAppStore();
 const days = ref(7);
 const queue = ref("default");
+// 任务类型筛选中代表「全部类型」的哨兵值（枚举取值不含 "*"，不会与真实类型冲突）
+const TASK_TYPE_ALL = "*";
+// taskTypeFilter 任务类型筛选值（取自 taskType 枚举类；哨兵值表示不过滤）
+const taskTypeFilter = ref<string>(TASK_TYPE_ALL);
 const taskState = ref("archived" as TaskState);
 const page = ref(1);
 const pageSize = ref(10);
+const taskTotal = ref(0);
 const taskHeaders = ref([
   {
     key: "id",
@@ -280,6 +295,8 @@ const taskHeaders = ref([
     key: "type",
     title: i18n.global.t("model.task.field.type"),
     type: BackendDataType.STRING,
+    // 类型列按 enumType 渲染 taskType 枚举 label，与筛选下拉的展示保持一致
+    enumType: EnumClass.taskType,
     align: "start",
     sortable: false,
   },
@@ -382,26 +399,25 @@ const {
   visibleKeys: taskVisibleKeys,
   visibleHeaders: taskVisibleHeaders,
 } = useColumnVisibility("model:task", taskHeaders);
-// 队列列表（各状态计数）用于计算任务总数；每日统计键用于队列筛选项
+
+// 任务类型筛选选项：首项「全部类型」+ taskType 枚举类条目
+// （取值空间为 worker 任务处理器注册表，label 由 /admin/enum 按请求语言下发）
+const taskTypeFilterOptions = computed(() => [
+  { title: i18n.global.t("model.task.value.allTypes"), value: TASK_TYPE_ALL },
+  ...enumOptionsOf(EnumClass.taskType),
+]);
+
+// 队列列表（各状态计数）用于队列筛选项与默认队列选择；每日统计键用于队列筛选项
 const statItems = ref({} as Record<string, InspectorDailyStatItem[]>);
 const queueItems = ref([] as InspectorQueueListItem[]);
 const taskItems = ref([] as InspectorTaskListItem[]);
-const taskTotal = computed(() => {
-  // 队列数据未返回（或尚无队列）时队列列表为空，reduce 必须带初始值以免空数组抛 TypeError
-  return queueItems.value
-    .map((item) => {
-      return item[taskState.value];
-    })
-    .reduce((total, cur) => {
-      return total + cur;
-    }, 0);
-});
 const queueOptions = computed(() => {
   return Object.keys(statItems.value).map((key) => {
     return { title: key, value: key };
   });
 });
-const taskTypeOptions = computed(() => {
+// 任务状态筛选项（注意与任务类型筛选项 taskTypeFilterOptions 区分）
+const taskStateOptions = computed(() => {
   return [
     { title: i18n.global.t("model.queue.field.active"), value: "active" },
     { title: i18n.global.t("model.queue.field.pending"), value: "pending" },
@@ -485,6 +501,18 @@ watch(taskState, (value) => {
   });
 });
 
+// 任务类型筛选变化：回到第一页并按新条件重载列表。
+// 请求体中的 type 由 getTaskListAction 统一补入，此处不重复传参。
+watch(taskTypeFilter, () => {
+  page.value = 1;
+  getTaskListAction({
+    page: page.value,
+    pageSize: pageSize.value,
+    queue: queue.value,
+    state: taskState.value,
+  });
+});
+
 // 队列列表加载后，若当前选中的队列并非真实存在的队列（如硬编码的默认 "default"
 // 与 asynq 实际队列不符），自动切换到第一个真实队列，避免持续查询不存在的队列。
 watch(
@@ -555,10 +583,16 @@ const getDailyStatAction = async (data: InspectorDailyStatIn): Promise<void> => 
 
 // getTaskListAction 按筛选条件分页拉取任务列表。
 const getTaskListAction = async (data: InspectorTaskListIn): Promise<void> => {
+  // 任务类型筛选统一在此补入，避免刷新、分页、状态/队列切换等各调用点遗漏
+  const request: InspectorTaskListIn = {
+    ...data,
+    type: taskTypeFilter.value === TASK_TYPE_ALL ? undefined : taskTypeFilter.value,
+  };
   await getResponse<InspectorTaskListOut>(
-    inspectorTaskListGet(data),
+    inspectorTaskListGet(request),
     async (rsp) => {
-      taskItems.value = rsp.data;
+      taskItems.value = rsp.data.items;
+      taskTotal.value = rsp.data.total;
     },
     async (rsp) => {
       appStore.notify({
@@ -783,5 +817,9 @@ const cancelPorcessingTaskAction = async (item: Record<string, any>): Promise<vo
   );
 };
 
-onMounted(refreshAction);
+onMounted(() => {
+  // 预取任务类型枚举（筛选下拉选项），并加载队列 / 统计 / 任务列表
+  void ensureEnum(EnumClass.taskType);
+  void refreshAction();
+});
 </script>

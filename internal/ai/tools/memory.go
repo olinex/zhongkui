@@ -5,20 +5,17 @@
 // 记忆交给运行期注入的记忆写入器落库。工具本身无状态：写入器接口 MemoryWriter 与入参
 // MemoryWriteInput 声明在本包，由 internal/ai 适配实现（internal/ai 单向依赖本包，故接口与类型
 // 必须留在本包内以避免导入环）；归属信息（命名空间 / Agent 类型 / 来源会话）与写入器一同经 ctx
-// 注入，取不到时工具返回英文错误。工具元信息（internal/ai 的 ToolSpecs）与出厂行（002_fixtures.sql）由
-// 另外两处提供，本文件只补实现并在 init 期登记。
+// 注入，取不到时工具返回英文错误。参数 schema 由 eino 的 tool/utils.InferTool 按入参结构体推导。
 
 package tools
 
 import (
 	// 标准库
 	"context"
-	"encoding/json"
 	"strings"
 
 	// 第三方
 	"github.com/cloudwego/eino/components/tool"
-	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
 	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
@@ -82,8 +79,8 @@ func memoryRuntimeFrom(ctx context.Context) (MemoryRuntime, bool) {
 	return rt, ok
 }
 
-// memoryKindNames 返回记忆类别取值空间的字符串清单（唯一来源为 internal/models/ai），供工具参数
-// schema 的枚举与错误文案渲染复用。
+// memoryKindNames 返回记忆类别取值空间的字符串清单（唯一来源为 internal/models/ai），供错误文案
+// 渲染复用。
 func memoryKindNames() []string {
 	kinds := aimodel.AllMemoryKinds()
 	names := make([]string, 0, len(kinds))
@@ -96,11 +93,11 @@ func memoryKindNames() []string {
 // memoryWriteArgs 是 memory_write 的 JSON 入参形态：content 必填，title / kind 可选。
 type memoryWriteArgs struct {
 	// Content 记忆正文（必填，去空白后非空）
-	Content string `json:"content"`
+	Content string `json:"content" jsonschema_description:"要存储的记忆正文，必须非空。"`
 	// Title 记忆标题（可选）
-	Title string `json:"title"`
+	Title string `json:"title,omitempty" jsonschema_description:"记忆的单行标题，可选。"`
 	// Kind 记忆类别（可选，缺省 fact）
-	Kind string `json:"kind"`
+	Kind string `json:"kind,omitempty" jsonschema:"enum=fact,enum=preference,enum=decision,enum=artifact" jsonschema_description:"记忆类别，可选，缺省为 fact。"`
 }
 
 // memoryWriteResult 是 memory_write 成功时返回给模型的 JSON 载荷。
@@ -111,79 +108,45 @@ type memoryWriteResult struct {
 	Saved bool `json:"saved"`
 }
 
-// memoryWriteTool 是内置工具 memory_write 的无状态实现：不持有依赖，全部归属信息与写入器均取自
-// ctx。
-type memoryWriteTool struct{}
-
-// Info 返回 memory_write 的工具元信息与参数 JSON schema，供模型决定何时调用。参数经 eino 的
-// ParameterInfo 形式描述（content 必填，title / kind 可选，kind 带枚举取值）。
-func (t *memoryWriteTool) Info(_ context.Context) (*schema.ToolInfo, error) {
-	return &schema.ToolInfo{
-		Name: "memory_write",
-		Desc: "保存一条值得在本会话后续轮次中复用的长期记忆：稳定的事实、用户偏好、决定或产出的成果。命名空间、Agent 类型与会话取自本次运行；该记忆仅在本会话内可见。",
-		ParamsOneOf: schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{
-			"content": {
-				Type:     schema.String,
-				Desc:     "要存储的记忆正文，必须非空。",
-				Required: true,
-			},
-			"title": {
-				Type: schema.String,
-				Desc: "记忆的单行标题，可选。",
-			},
-			"kind": {
-				Type: schema.String,
-				Desc: "记忆类别，可选，缺省为 fact。",
-				Enum: memoryKindNames(),
-			},
-		}),
-	}, nil
-}
-
-// InvokableRun 执行 memory_write：解析 JSON 入参，校验 content 与 kind，从 ctx 取回写入器与归属
-// 信息后落库，成功返回形如 {"id":123,"saved":true} 的 JSON 字符串。任何校验失败均返回英文错误且
-// 不触发写入；落库错误以 errors.WithStack 包装后返回（英文）。
-func (t *memoryWriteTool) InvokableRun(ctx context.Context, argumentsInJSON string, _ ...tool.Option) (string, error) {
-	var args memoryWriteArgs
-	if err := json.Unmarshal([]byte(argumentsInJSON), &args); err != nil {
-		return "", errors.WithStack(err)
-	}
-	content := strings.TrimSpace(args.Content)
-	if content == "" {
-		return "", errors.New("memory_write: content must be non-empty")
-	}
-	rawKind := strings.TrimSpace(args.Kind)
-	kind, err := aimodel.ParseMemoryKind(aimodel.MemoryKind(rawKind))
-	if err != nil {
-		return "", errors.Newf("memory_write: invalid kind %q, expected one of %s",
-			rawKind, strings.Join(memoryKindNames(), ", "))
-	}
-	rt, ok := memoryRuntimeFrom(ctx)
-	if !ok || rt.Writer == nil {
-		return "", errors.New("memory_write: no memory runtime in context")
-	}
-	id, err := rt.Writer.WriteMemory(ctx, MemoryWriteInput{
-		NamespaceName: rt.NamespaceName,
-		AgentKind:     rt.AgentKind,
-		SessionID:     rt.SessionID,
-		UserID:        rt.UserID,
-		Kind:          kind,
-		Title:         args.Title,
-		Content:       content,
-	})
-	if err != nil {
-		return "", errors.WithStack(err)
-	}
-	out, err := json.Marshal(memoryWriteResult{ID: id, Saved: true})
-	if err != nil {
-		return "", errors.WithStack(err)
-	}
-	return string(out), nil
-}
+// memoryWriteTool 是内置工具 memory_write 的 eino 实现：不持有依赖，全部归属信息与写入器均取自
+// ctx，参数 schema 由入参结构体推导。
+var memoryWriteTool = mustInferTool(
+	"memory_write",
+	"保存一条值得在本会话后续轮次中复用的长期记忆：稳定的事实、用户偏好、决定或产出的成果。命名空间、Agent 类型与会话取自本次运行；该记忆仅在本会话内可见。",
+	func(ctx context.Context, in memoryWriteArgs) (memoryWriteResult, error) {
+		content := strings.TrimSpace(in.Content)
+		if content == "" {
+			return memoryWriteResult{}, errors.New("memory_write: content must be non-empty")
+		}
+		rawKind := strings.TrimSpace(in.Kind)
+		kind, err := aimodel.ParseMemoryKind(aimodel.MemoryKind(rawKind))
+		if err != nil {
+			return memoryWriteResult{}, errors.Newf("memory_write: invalid kind %q, expected one of %s",
+				rawKind, strings.Join(memoryKindNames(), ", "))
+		}
+		rt, ok := memoryRuntimeFrom(ctx)
+		if !ok || rt.Writer == nil {
+			return memoryWriteResult{}, errors.New("memory_write: no memory runtime in context")
+		}
+		id, err := rt.Writer.WriteMemory(ctx, MemoryWriteInput{
+			NamespaceName: rt.NamespaceName,
+			AgentKind:     rt.AgentKind,
+			SessionID:     rt.SessionID,
+			UserID:        rt.UserID,
+			Kind:          kind,
+			Title:         in.Title,
+			Content:       content,
+		})
+		if err != nil {
+			return memoryWriteResult{}, errors.WithStack(err)
+		}
+		return memoryWriteResult{ID: id, Saved: true}, nil
+	},
+)
 
 // init 向内置工具实现注册表登记 memory_write；工具无状态，不消费 Deps。
 func init() {
 	Register("memory_write", func(_ context.Context, _ Deps) (tool.BaseTool, error) {
-		return &memoryWriteTool{}, nil
+		return memoryWriteTool, nil
 	})
 }

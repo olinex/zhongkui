@@ -13,7 +13,7 @@ import (
 
 	// 项目内部
 
-	"zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/ai/change"
 	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
 	"zhongkuisec.com/zhongkui/internal/manager/response"
 	"zhongkuisec.com/zhongkui/internal/manager/views"
@@ -22,6 +22,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/pkg/llm"
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 	"zhongkuisec.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // LlmModelCreateIn 定义创建 LLM 模型端点的请求输入结构。
@@ -29,21 +30,21 @@ import (
 // 数值型字段的默认值经 default 标签声明，并在反序列化前由 defaults.Set 填充。
 type LlmModelCreateIn struct {
 	// Name 模型本地标识，全局唯一，最长 64
-	Name string `json:"name" binding:"max=64"`
+	Name string `json:"name" binding:"required,trimmed,max=64"`
 	// Kind 模型类型：chat（对话）| embedding（向量化），创建后不可更改
-	Kind llm.ModelKind `json:"kind" binding:"max=16"`
+	Kind llm.ModelKind `json:"kind" binding:"required,enum=llmModelKind"`
 	// BaseURL 模型端点的 OpenAI 兼容接口基地址，最长 512
-	BaseURL string `json:"baseURL" binding:"max=512"`
+	BaseURL string `json:"baseURL" binding:"required,trimmed,max=512"`
 	// APIKey 访问端点的凭据（明文提交，落库为密文）
-	APIKey string `json:"apiKey"`
+	APIKey string `json:"apiKey" binding:"required"`
 	// Model 供应商侧模型名（如 gpt-4o-mini、text-embedding-3-small），最长 128
-	Model string `json:"model" binding:"max=128"`
+	Model string `json:"model" binding:"required,trimmed,max=128"`
 	// TimeoutSeconds 单次请求超时秒数，默认 60
-	TimeoutSeconds int `json:"timeoutSeconds" default:"60"`
+	TimeoutSeconds int `json:"timeoutSeconds" default:"60" binding:"min=1"`
 	// Temperature 采样温度，取值 [0, 2]，默认 0.2（仅 chat 模型有意义）
-	Temperature float64 `json:"temperature" default:"0.2"`
+	Temperature float64 `json:"temperature" default:"0.2" binding:"min=0,max=2"`
 	// MaxTokens 单次生成的最大 token 数，默认 4096（仅 chat 模型有意义）
-	MaxTokens int `json:"maxTokens" default:"4096"`
+	MaxTokens int `json:"maxTokens" default:"4096" binding:"min=1"`
 	// ContextTokens 上下文窗口容量（token 数），仅 chat 模型有意义且必填正整数；embedding 模型忽略（留 0）
 	ContextTokens int `json:"contextTokens"`
 	// Enabled 是否启用，默认启用；禁用的模型不可绑定到档位
@@ -59,6 +60,8 @@ type LlmModelCreateIn struct {
 	ThinkingOnValue string `json:"thinkingOnValue"`
 	// ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）
 	ThinkingOffValue string `json:"thinkingOffValue"`
+	// APIMode 对话模型接口形态：chat（默认）| responses；仅 chat 类模型可设为 responses
+	APIMode llm.APIMode `json:"apiMode" binding:"omitempty,enum=llmAPIMode"`
 }
 
 // LlmModelUpdateIn 定义更新 LLM 模型端点的请求输入结构。
@@ -66,19 +69,19 @@ type LlmModelCreateIn struct {
 // APIKey 留空表示保持原凭据不变，避免编辑时强制回填密文。
 type LlmModelUpdateIn struct {
 	// Name 模型本地标识，全局唯一，最长 64
-	Name string `json:"name" binding:"max=64"`
+	Name string `json:"name" binding:"required,trimmed,max=64"`
 	// BaseURL 模型端点的 OpenAI 兼容接口基地址，最长 512
-	BaseURL string `json:"baseURL" binding:"max=512"`
+	BaseURL string `json:"baseURL" binding:"required,trimmed,max=512"`
 	// APIKey 访问端点的凭据；留空表示沿用原凭据
 	APIKey string `json:"apiKey"`
 	// Model 供应商侧模型名，最长 128
-	Model string `json:"model" binding:"max=128"`
+	Model string `json:"model" binding:"required,trimmed,max=128"`
 	// TimeoutSeconds 单次请求超时秒数，须为正数
-	TimeoutSeconds int `json:"timeoutSeconds"`
+	TimeoutSeconds int `json:"timeoutSeconds" binding:"min=1"`
 	// Temperature 采样温度，取值 [0, 2]（仅 chat 模型有意义）
-	Temperature float64 `json:"temperature"`
+	Temperature float64 `json:"temperature" binding:"min=0,max=2"`
 	// MaxTokens 单次生成的最大 token 数（仅 chat 模型有意义）
-	MaxTokens int `json:"maxTokens"`
+	MaxTokens int `json:"maxTokens" binding:"min=1"`
 	// ContextTokens 上下文窗口容量（token 数），仅 chat 模型有意义且必填正整数；embedding 模型忽略（留 0）
 	ContextTokens int `json:"contextTokens"`
 	// Enabled 是否启用；禁用的模型不可绑定到档位
@@ -94,6 +97,8 @@ type LlmModelUpdateIn struct {
 	ThinkingOnValue string `json:"thinkingOnValue"`
 	// ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）
 	ThinkingOffValue string `json:"thinkingOffValue"`
+	// APIMode 对话模型接口形态：chat（默认）| responses；仅 chat 类模型可设为 responses
+	APIMode llm.APIMode `json:"apiMode" binding:"omitempty,enum=llmAPIMode"`
 }
 
 // LlmModelDetailOut 定义 LLM 模型端点的详情输出结构。
@@ -108,7 +113,7 @@ type LlmModelDetailOut struct {
 	// BaseURL 模型端点的 OpenAI 兼容接口基地址
 	BaseURL string `json:"baseURL"`
 	// APIKey 访问凭据的密文；明文不回显，需经明文权限接口查看
-	APIKey *serializer.Crypto `json:"apiKey" form:"kind:crypto"`
+	APIKey *serializer.Crypto `json:"apiKey" form:"kind=crypto"`
 	// Model 供应商侧模型名
 	Model string `json:"model"`
 	// TimeoutSeconds 单次请求超时秒数
@@ -134,6 +139,8 @@ type LlmModelDetailOut struct {
 	ThinkingOnValue string `json:"thinkingOnValue"`
 	// ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）
 	ThinkingOffValue string `json:"thinkingOffValue"`
+	// APIMode 对话模型接口形态：chat（默认）| responses
+	APIMode llm.APIMode `json:"apiMode"`
 }
 
 // LlmModelListOut 定义 LLM 模型列表的输出项结构。
@@ -156,20 +163,20 @@ type LlmModelBatchIn struct {
 type LlmModelTestIn struct {
 	// ID 已注册模型的 ID；大于 0 时忽略其余字段
 	ID uint64 `json:"id"`
-	// Kind 模型类型：chat | embedding
-	Kind llm.ModelKind `json:"kind" binding:"max=16"`
-	// BaseURL 模型端点的 OpenAI 兼容接口基地址
-	BaseURL string `json:"baseURL" binding:"max=512"`
-	// APIKey 访问端点的明文凭据
-	APIKey string `json:"apiKey"`
-	// Model 供应商侧模型名
-	Model string `json:"model" binding:"max=128"`
+	// Kind 模型类型：chat | embedding；仅未传 id 时必填
+	Kind llm.ModelKind `json:"kind" binding:"required_if=ID 0,omitempty,enum=llmModelKind"`
+	// BaseURL 模型端点的 OpenAI 兼容接口基地址；仅未传 id 时必填
+	BaseURL string `json:"baseURL" binding:"required_if=ID 0,omitempty,trimmed,max=512"`
+	// APIKey 访问端点的明文凭据；仅未传 id 时必填
+	APIKey string `json:"apiKey" binding:"required_if=ID 0"`
+	// Model 供应商侧模型名；仅未传 id 时必填
+	Model string `json:"model" binding:"required_if=ID 0,omitempty,trimmed,max=128"`
 	// TimeoutSeconds 探活超时秒数，默认 60
-	TimeoutSeconds int `json:"timeoutSeconds" default:"60"`
+	TimeoutSeconds int `json:"timeoutSeconds" default:"60" binding:"min=1"`
 	// Temperature 采样温度（仅 chat 模型有意义，探活不参与请求）
-	Temperature float64 `json:"temperature" default:"0.2"`
+	Temperature float64 `json:"temperature" default:"0.2" binding:"min=0,max=2"`
 	// MaxTokens 单次生成的最大 token 数（探活不参与请求）
-	MaxTokens int `json:"maxTokens" default:"4096"`
+	MaxTokens int `json:"maxTokens" default:"4096" binding:"min=1"`
 }
 
 // LlmModelTestOut 连通性测试结果输出：Success 表示端点可达，Message 为失败原因。
@@ -239,30 +246,16 @@ func LlmModelCreate(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	kind, err := llm.ParseModelKind(in.Kind)
-	if err != nil {
-		response.CreateBadBodyError(err).AbortWithGinH(c)
+	kind := in.Kind
+	apiMode := in.APIMode
+	if apiMode == "" {
+		apiMode = llm.APIModeChat
+	}
+	if err := llm.ValidateAPIMode(kind, apiMode); err != nil {
+		response.CreateBadBodyMessageError("apiModeInvalid").AbortWithGinH(c)
 		return
 	}
 	name, baseURL, modelName := strings.TrimSpace(in.Name), strings.TrimSpace(in.BaseURL), strings.TrimSpace(in.Model)
-	if name == "" {
-		response.CreateBadBodyMessageError("llmModelNameEmpty").AbortWithGinH(c)
-		return
-	}
-	// 端点字段不变量由 pkgllm.ModelConfig.Validate 校验（Kind 与 Name 已在上方单独处理）
-	endpoint := llm.ModelConfig{
-		Kind:        kind,
-		BaseURL:     baseURL,
-		APIKey:      in.APIKey,
-		Model:       modelName,
-		Timeout:     time.Duration(in.TimeoutSeconds) * time.Second,
-		Temperature: in.Temperature,
-		MaxTokens:   in.MaxTokens,
-	}
-	if err := endpoint.Validate(); err != nil {
-		response.CreateBadBodyError(err).AbortWithGinH(c)
-		return
-	}
 	// 上下文容量仅 chat 模型必填（正整数），embedding 模型不涉及、强制留 0
 	contextTokens := 0
 	if kind == llm.ModelKindChat {
@@ -301,6 +294,7 @@ func LlmModelCreate(c *gin.Context) {
 	instance := &aimodel.LlmModel{
 		Name:             name,
 		Kind:             kind,
+		APIMode:          apiMode,
 		BaseURL:          baseURL,
 		APIKey:           serializer.NewCrypto([]byte(in.APIKey)),
 		ModelName:        modelName,
@@ -319,7 +313,7 @@ func LlmModelCreate(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	afterConfigWrite(c, ai.ChangeKindModel, instance.Name)
+	afterConfigWrite(c, change.ChangeKindModel, instance.Name)
 	response.SimpleOK.AbortWithGinH(c)
 }
 
@@ -373,20 +367,26 @@ func LlmModelUpdate(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	name, baseURL, modelName := strings.TrimSpace(in.Name), strings.TrimSpace(in.BaseURL), strings.TrimSpace(in.Model)
-	if name == "" {
-		response.CreateBadBodyMessageError("llmModelNameEmpty").AbortWithGinH(c)
+	apiMode := in.APIMode
+	if apiMode == "" {
+		apiMode = llm.APIModeChat
+	}
+	if err := llm.ValidateAPIMode(kind, apiMode); err != nil {
+		response.CreateBadBodyMessageError("apiModeInvalid").AbortWithGinH(c)
 		return
 	}
+	name, baseURL, modelName := strings.TrimSpace(in.Name), strings.TrimSpace(in.BaseURL), strings.TrimSpace(in.Model)
 	// 凭据留空即沿用原值：解密读回后参与完整性校验，但不出现在更新列中
 	apiKey := in.APIKey
 	if strings.TrimSpace(apiKey) == "" {
 		apiKey = string(instance.APIKeyData())
 	}
-	// 本次提交的端点配置：既用于字段不变量校验，也用于 embedding 档位的维度兼容性探测
+	// 本次提交的端点配置用于 embedding 档位的维度兼容性探测；形状规则已由 In 标签校验，
+	// 此处只补查「沿用原凭据」解析后的 APIKey（该值不在入口结构体中）。
 	endpoint := llm.ModelConfig{
 		Name:        name,
 		Kind:        kind,
+		APIMode:     apiMode,
 		BaseURL:     baseURL,
 		APIKey:      apiKey,
 		Model:       modelName,
@@ -394,7 +394,7 @@ func LlmModelUpdate(c *gin.Context) {
 		Temperature: in.Temperature,
 		MaxTokens:   in.MaxTokens,
 	}
-	if err := endpoint.Validate(); err != nil {
+	if err := validator.CheckPartial(endpoint, "APIKey"); err != nil {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
@@ -449,9 +449,10 @@ func LlmModelUpdate(c *gin.Context) {
 		}
 	}
 	// 凭据留空时更新列中不含 api_key，保持原密文不变；未绑定 embedding 槽位时不写 dimensions
-	columns := []string{"name", "base_url", "model", "timeout_seconds", "temperature", "max_tokens", "context_tokens", "enabled", "description", "extra_body", "thinking_field", "thinking_on_value", "thinking_off_value"}
+	columns := []string{"name", "base_url", "model", "timeout_seconds", "temperature", "max_tokens", "context_tokens", "enabled", "description", "extra_body", "thinking_field", "thinking_on_value", "thinking_off_value", "api_mode"}
 	update := aimodel.LlmModel{
 		Name:             name,
+		APIMode:          apiMode,
 		BaseURL:          baseURL,
 		ModelName:        modelName,
 		TimeoutSeconds:   in.TimeoutSeconds,
@@ -478,7 +479,7 @@ func LlmModelUpdate(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	afterConfigWrite(c, ai.ChangeKindModel, name)
+	afterConfigWrite(c, change.ChangeKindModel, name)
 	response.SimpleOK.AbortWithGinH(c)
 }
 
@@ -522,7 +523,7 @@ func LlmModelBatchDelete(c *gin.Context) {
 		},
 	)
 	if deleted > 0 {
-		afterConfigWrite(c, ai.ChangeKindModel, fmt.Sprintf("%d models deleted", deleted))
+		afterConfigWrite(c, change.ChangeKindModel, fmt.Sprintf("%d models deleted", deleted))
 	}
 }
 
@@ -560,23 +561,14 @@ func LlmModelTest(c *gin.Context) {
 		}
 		cfg = resolved
 	} else {
-		kind, err := llm.ParseModelKind(in.Kind)
-		if err != nil {
-			response.CreateBadBodyError(err).AbortWithGinH(c)
-			return
-		}
 		cfg = llm.ModelConfig{
-			Kind:        kind,
+			Kind:        in.Kind,
 			BaseURL:     strings.TrimSpace(in.BaseURL),
 			APIKey:      in.APIKey,
 			Model:       strings.TrimSpace(in.Model),
 			Timeout:     time.Duration(in.TimeoutSeconds) * time.Second,
 			Temperature: in.Temperature,
 			MaxTokens:   in.MaxTokens,
-		}
-		if err := cfg.Validate(); err != nil {
-			response.CreateBadBodyError(err).AbortWithGinH(c)
-			return
 		}
 	}
 	out := LlmModelTestOut{Success: true}
@@ -610,5 +602,6 @@ func newLlmModelDetailOut(m *aimodel.LlmModel) LlmModelDetailOut {
 		ThinkingField:    m.ThinkingField,
 		ThinkingOnValue:  m.ThinkingOnValue,
 		ThinkingOffValue: m.ThinkingOffValue,
+		APIMode:          m.APIMode,
 	}
 }

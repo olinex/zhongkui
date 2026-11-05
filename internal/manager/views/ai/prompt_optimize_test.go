@@ -2,6 +2,7 @@ package ai
 
 import (
 	// 标准库
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -15,9 +16,48 @@ import (
 	// 项目内部
 	ai "zhongkuisec.com/zhongkui/internal/ai"
 	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	modelsai "zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/models/core"
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/llm"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
+
+// newCompactingAiRuntime 播种 chat/embedding 模型与档位绑定，并用指定 URL
+// 构建 AI 运行时；用于提示词优化等需要真实假端点的用例。
+func newCompactingAiRuntime(t *testing.T, db *database.DB, chatURL string) *ai.Runtime {
+	t.Helper()
+	chat := &modelsai.LlmModel{
+		Name: "chat-test", Kind: llm.ModelKindChat,
+		BaseURL: chatURL, APIKey: serializer.NewCrypto([]byte("sk-test")),
+		ModelName: "gpt-test", Enabled: true, APIMode: llm.APIModeChat,
+	}
+	if err := db.Create(chat).Error; err != nil {
+		t.Fatalf("seed chat model: %v", err)
+	}
+	embed := &modelsai.LlmModel{
+		Name: "embed-test", Kind: llm.ModelKindEmbedding,
+		BaseURL: chatURL, APIKey: serializer.NewCrypto([]byte("sk-test")),
+		ModelName: "emb-test", Enabled: true,
+	}
+	if err := db.Create(embed).Error; err != nil {
+		t.Fatalf("seed embedding model: %v", err)
+	}
+	for _, binding := range []modelsai.LlmBinding{
+		{Slot: modelsai.SlotStandard, ModelID: chat.ID},
+		{Slot: modelsai.SlotFlash, ModelID: chat.ID},
+		{Slot: modelsai.SlotEmbedding, ModelID: embed.ID},
+	} {
+		if err := db.Omit("Model").Create(&binding).Error; err != nil {
+			t.Fatalf("seed slot binding %q: %v", binding.Slot, err)
+		}
+	}
+	rt, err := ai.NewRuntime(context.Background(), db, nil, newKnowledgeTestLogger())
+	if err != nil {
+		t.Fatalf("build ai runtime: %v", err)
+	}
+	return rt
+}
 
 // newPromptOptimizeChatServer 启动一个 OpenAI 兼容的假对话端点：固定返回一段优化后的提问正文，
 // 不发起任何真实模型调用。
@@ -91,7 +131,7 @@ func TestAgentPromptOptimize(t *testing.T) {
 
 			w := doKnowledgeJSONRequest(r, http.MethodPost, "/ai/prompt/optimize", map[string]any{"query": "   "})
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
-			So(w.Body.String(), ShouldContainSubstring, "query is required")
+			So(w.Body.String(), ShouldContainSubstring, "query")
 		})
 
 		Convey("AI 未启用返回本地化 400", func() {

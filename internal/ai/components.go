@@ -26,10 +26,11 @@
 //
 // ## Agent 编排与记忆注入
 //
-// Agent 以 Eino 的 compose.Graph 编排四个节点：上下文装配、业务数据脱敏、LLM 生成
-// 与输出校验。生成节点内驱动工具循环：每轮调用可用工具并把结果回灌对话，轮数受
-// agent.maxToolRounds 约束、单次工具结果受 agent.maxToolResultBytes 截断；最终输出可经 Rego
-// 校验（data.agent.validate）判定是否放行。
+// 对话执行由 agentkit 承载：每个对话档位构建一个 eino ADK TypedChatModelAgent 与 TypedRunner，
+// 消息表示（chat / responses）由该档位模型的 api_mode 决定；工具循环、工具级中断 / 续跑与
+// checkpoint 均由 ADK 原生提供，轮数受 agent.maxToolRounds 约束、单次工具结果受
+// agent.maxToolResultBytes 截断。会话生命周期由 turns.Manager 的 TurnLoop 驱动：加载历史、
+// 处理抢占 / 中止、把运行事件投影为领域事件并持久化消息与交互。
 //
 // 送入模型的消息按固定顺序装配：系统提示 → 会话摘要 → 长期记忆分节 → 窗口历史 → 用户消息；
 // 用户消息自身由「业务数据段 + 提问段」拼成。短期记忆以「条数 + 字节」双预算维护窗口，
@@ -61,10 +62,10 @@
 //
 // ## 会话与工具
 //
-// SessionStore 持久化会话与消息（创建 / 重命名 / 启停 / 删除、追加与分页读取、会话摘要回写），
-// 以 ErrSessionNotFound / ErrMessageNotFound 区分未找到场景；StreamRun 在流式生成前后完成历史
-// 加载、用户消息落库与助手消息落库。Store.LoadTools 依据数据库中的启用工具装配 ToolSet（含
-// mcp 分组拨号与内置工具），工具契约与内置实现见 internal/ai/tools。
+// session.Store 持久化会话与消息（创建 / 重命名 / 启停 / 删除、追加与分页读取、会话摘要回写），
+// 以 contract.ErrSessionNotFound / contract.ErrMessageNotFound（session 保留同值别名）区分未找到场景；StreamRun 在流式生成前后完成历史
+// 加载、用户消息落库与助手消息落库。llmconfig.Store.LoadTools 依据数据库中的启用工具装配
+// llmconfig.ToolSet（含 mcp 分组拨号与内置工具），工具契约与内置实现见 internal/ai/tools。
 //
 // ## 设计要点
 //
@@ -72,7 +73,7 @@
 // 聚合摘要与逐块明细，不改表、不改索引写入路径；`Stale` 表示索引落后于正文（`sha256(content) != doc.Hash`），
 // 结构单元识别复用切片器解析（`DescribeChunk`），标题为硬边界只存在于 `heading_path`、不进分块正文。
 //
-// 检索试运行（`Retriever.DryRun`）以 SSE 流式上报：`EvalReporter` 为函数类型别名（非单方法接口），逐阶段
+// 检索试运行（`Retriever.DryRun`）以 SSE 流式上报：`contract.EvalReporter` 为函数类型别名（非单方法接口），逐阶段
 // 上报 `start`/`done`/`failed` 与增量 `delta`，并汇总各次调用耗时与 token（`DryRunMeta`）；除一次确定性检索外
 // 有 `answer` / `chunkRelevance` / `claims` / `reverseQuestions` / `suggestions` 五个 LLM 阶段，任一阶段失败一律
 // 降级为 warning、对应指标置 0，绝不中断整条链路（`suggestions` 阶段即使回答生成失败也执行）；指标为自研轻量
@@ -92,34 +93,43 @@ package ai
 
 import (
 	"github.com/cloudwego/eino/components/tool"
+	"zhongkuisec.com/zhongkui/internal/ai/agentkit"
+	"zhongkuisec.com/zhongkui/internal/ai/config"
+	"zhongkuisec.com/zhongkui/internal/ai/knowledge"
+	"zhongkuisec.com/zhongkui/internal/ai/memory"
+	"zhongkuisec.com/zhongkui/internal/ai/session"
+	"zhongkuisec.com/zhongkui/internal/ai/skill"
+	"zhongkuisec.com/zhongkui/internal/ai/turns"
 )
 
-// Components 聚合 AI 助手（RAG + Agent）运行所需的全部组件：对话执行器（Agent）、
-// 知识库索引（Knowledge）、知识库检索器（Retriever）、会话持久化（SessionStore）、
-// 行为参数解析器（Params）与已启用的工具清单（Tools）。由本包的运行时（Runtime）依据数据库
-// 模型注册表装配，并经请求中间件注入视图层；AI 未启用时各执行组件为 nil，视图层以 Enabled
-// 统一判断。
+// Components 聚合 AI 助手（RAG + Agent）运行所需的全部组件：ADK Agent 运行时（Agent）、
+// TurnLoop 会话驱动（Turns）、知识库索引（Knowledge）、知识库检索器（Retriever）、会话持久化
+// （session.Store）、技能资源存储（skill.Store）、行为参数解析器（Params）与已启用的工具清单
+// （Tools）。由本包的运行时（Runtime）依据数据库模型注册表装配，并经请求中间件注入视图层；
+// AI 未启用时各执行组件为 nil，视图层以 Enabled 统一判断。
 type Components struct {
-	// Agent 对话执行器（AI 未启用时为 nil）
-	Agent *Agent
+	// Agent ADK Agent 运行时（AI 未启用时为 nil）
+	Agent *agentkit.Runtime
+	// Turns TurnLoop 会话驱动（AI 未启用时为 nil）
+	Turns *turns.Manager
 	// Knowledge 知识库索引（AI 未启用时为 nil）
-	Knowledge *Knowledge
+	Knowledge *knowledge.Knowledge
 	// Retriever 知识库混合检索器（AI 未启用时为 nil）
-	Retriever *Retriever
+	Retriever *knowledge.Retriever
 	// Sessions 会话持久化（AI 未启用时为 nil）
-	Sessions *SessionStore
+	Sessions *session.Store
+	// Skills 技能资源存储（AI 未启用时为 nil）
+	Skills *skill.Store
 	// Memory 会话记忆服务（滚动摘要 / 会话压缩 / 长期记忆检索；AI 未启用时为 nil）
-	Memory *Memory
+	Memory *memory.Service
 	// Params 行为参数解析器（始终非 nil）
-	Params *Params
+	Params *config.Params
 	// Tools 已启用的工具（AI 未启用时为空），视图层 / Agent 由它取得工具清单与 schema；
 	// AI 启用但无启用工具时为空切片（非 nil）
 	Tools []tool.BaseTool
-	// Hub 驻留运行执行器（把生成生命周期与浏览器连接解耦），供视图层启动 / 订阅 / 取消在途运行
-	Hub *RunHub
 }
 
 // Enabled 报告 AI 能力是否已完整装配（未启用或装配不完整时返回 false）。
 func (c *Components) Enabled() bool {
-	return c != nil && c.Agent != nil && c.Knowledge != nil && c.Sessions != nil && c.Memory != nil && c.Params != nil && c.Tools != nil
+	return c != nil && c.Agent != nil && c.Turns != nil && c.Knowledge != nil && c.Sessions != nil && c.Memory != nil && c.Params != nil && c.Tools != nil
 }

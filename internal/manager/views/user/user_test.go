@@ -161,7 +161,7 @@ func setupUserSelfTestRouterWithFullDeps(db *database.DB, user *core.User) *gin.
 	authenticator := middlewares.NewJwtAuthenticator(authConfig, db, kd)
 	loggingLogger := createTestLoggingLogger()
 	r.Use(func(c *gin.Context) {
-		c.Set(middlewares.AuthCtxName, authenticator)
+		c.Set(middlewares.AuthCtxName, middlewares.NewAuthenticator(authenticator))
 		c.Set(config.ConfigCtxName, &config.Config{
 			Auth: *authConfig,
 		})
@@ -403,7 +403,7 @@ func TestUserPasswordLogin(t *testing.T) {
 		r := setupUserSelfTestRouterWithDB(db)
 		r.Use(injectLoggerMiddleware(loggingLogger))
 		r.Use(func(c *gin.Context) {
-			c.Set(middlewares.AuthCtxName, authenticator)
+			c.Set(middlewares.AuthCtxName, middlewares.NewAuthenticator(authenticator))
 			c.Next()
 		})
 		r.POST("/api/v1/user/password/login", UserPasswordLogin)
@@ -628,7 +628,7 @@ func TestUserSelfJwtRefresh(t *testing.T) {
 
 		r := setupUserSelfTestRouterWithDBAndUser(db, user)
 		r.Use(func(c *gin.Context) {
-			c.Set(middlewares.AuthCtxName, authenticator)
+			c.Set(middlewares.AuthCtxName, middlewares.NewAuthenticator(authenticator))
 			c.Next()
 		})
 		r.POST("/api/v1/user/jwt/refresh", UserSelfJwtRefresh)

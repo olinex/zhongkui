@@ -200,6 +200,10 @@
 | thinkingOnValue | string | - | - | - | - |
 | thinkingOffValue | string | - | - | - | - |
 
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| apiMode | llm.APIMode | - | - | - | - |
+
 ## 响应示例
 
 ```json

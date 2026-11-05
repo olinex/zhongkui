@@ -1047,6 +1047,19 @@ func TestGenericFieldValidations(t *testing.T) {
 			}
 		})
 
+		Convey("notBlank rejects empty or whitespace-only values", func() {
+			for _, valid := range []string{"abc", " a ", "\n# 标题\n正文", "中文"} {
+				Convey(fmt.Sprintf("value '%q' should not be blank", valid), func() {
+					So(IsNotBlank(valid), ShouldBeTrue)
+				})
+			}
+			for _, invalid := range []string{"", " ", "\t", "\n\n", " \r\n "} {
+				Convey(fmt.Sprintf("value '%q' should be blank", invalid), func() {
+					So(IsNotBlank(invalid), ShouldBeFalse)
+				})
+			}
+		})
+
 		Convey("custom tags apply to a named string type (enum value types)", func() {
 			v := newTestValidate()
 			// 合法取值通过；空值由 omitempty 放行

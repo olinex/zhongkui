@@ -15,6 +15,9 @@
         :row-click="openDetail"
         :project-fields="projectFields"
         :storage-key="`traffic:${type}`"
+        :actions="rowActions"
+        :plaintext-loading="plaintextLoading"
+        @view-plaintext="onViewPlaintext"
       >
         <!-- 额外筛选区：抓包时间（timestamp）与入库时间（createdAt）两个必填时间范围，
                不参与高级条件编辑器（由 buildFilter 强制注入） -->
@@ -32,18 +35,8 @@
             />
           </div>
         </template>
-        <!-- 通用单元格接管：加密/S3 字段展示占位与明文入口，其余交 AdaptiveCell 按类型渲染 -->
-        <template #cell="{ item, header }">
-          <encrypted-value-cell
-            v-if="cryptoKeys.has(header.key) || s3Keys.has(header.key)"
-            :kind="cryptoKeys.has(header.key) ? 'crypto' : 's3'"
-            :item="item"
-            :field-key="header.key"
-            :loading="plaintextLoading === header.key"
-            @view-plaintext="onViewPlaintext"
-          />
-          <adaptive-cell v-else :header="header" :item="item" :actions="rowActions" />
-        </template>
+        <!-- 加密 / S3 列由 SearchTable 按 OPTIONS kind 自动分发为加密单元格，
+             明文查看事件由 @view-plaintext 统一接收；其余列交 AdaptiveCell -->
       </search-table>
 
       <!-- 行详情：列表行仅含投影字段，经 detail 接口拉取全字段后展示；
@@ -83,10 +76,7 @@ import type { SortItem } from "vuetify/lib/components/VDataTable/composables/sor
 import { getResponse, getSimpleResponse } from "@/apis/base";
 import { tagRuleSampleCreate } from "@/apis/tagEvent";
 import {
-  TrafficCryptoFields,
-  TrafficExtraFieldTypes,
   TrafficModelKeys,
-  TrafficS3Fields,
   trafficDetailGet,
   trafficListGet,
   trafficListOptions,
@@ -108,7 +98,8 @@ import { isEmptyCiphertext } from "@/utils/encrypted";
 import i18n from "@/utils/i18n";
 import { modelFieldTitle } from "@/utils/modelField";
 import { enumFieldTypeOfMeta, enumOptionsOf, ensureEnum } from "@/utils/enums";
-import type { MetaOut } from "@/components/@types/meta";
+import { fieldKindSetsOfMeta, fieldMetaOfMeta, fieldRenderTypeOfMeta } from "@/utils/meta";
+import type { ApiMeta, MetaOut } from "@/components/@types/meta";
 
 // 流量模型类型与路由段一一对应（/traffic/:type），侧边栏各模型入口分别携带 type 参数
 const isTrafficType = (value: unknown): value is TrafficType => {
@@ -195,9 +186,11 @@ const { defineField, handleSubmit } = useForm({
 const [timestampRange, timestampRangeProps] = defineField("timestampRange", vuetifyCfg);
 const [createdAtRange, createdAtRangeProps] = defineField("createdAtRange", vuetifyCfg);
 
-// 加密与 S3 body 字段清单（随类型切换）：列表单元格与详情页统一占位展示，不直接暴露密文
-const cryptoKeys = computed(() => new Set(TrafficCryptoFields[type.value] ?? []));
-const s3Keys = computed(() => new Set(TrafficS3Fields[type.value] ?? []));
+// 列表字段元信息与加密 / S3 字段集合（随类型切换）：
+// 全部来自列表 OPTIONS 自省（Out 字段 form:"kind=..."), 由 loadSearchOptions 刷新
+const listMeta = ref<ApiMeta | undefined>(undefined);
+const cryptoKeys = ref(new Set<string>());
+const s3Keys = ref(new Set<string>());
 
 // 非常用字段清单：列设置中罗列全部模型字段、默认隐藏；常用审计列单独定义于 headers
 const IPV4_TCP_EXTRA_KEYS = [
@@ -436,16 +429,15 @@ const trafficFieldTitle = (key: string): string => {
   return modelFieldTitle(typeKey.value, key);
 };
 
-// h 便捷构造表头：defaultVisible 控制默认是否展示（非常用字段显式传 false）
-const h = (
-  key: string,
-  type: BackendDataType = BackendDataType.STRING,
-  defaultVisible = true,
-): TableHeader => {
+// h 便捷构造表头：类型与展示语义由 OPTIONS 自省推导（type 仅在少数自定义列显式覆盖），
+// defaultVisible 控制默认是否展示（非常用字段显式传 false）
+const h = (key: string, type?: BackendDataType, defaultVisible = true): TableHeader => {
+  const fieldMeta = fieldMetaOfMeta(listMeta.value, key);
   return {
     key,
     title: trafficFieldTitle(key),
-    type,
+    type: type ?? fieldRenderTypeOfMeta(fieldMeta),
+    kind: fieldMeta?.kind,
     align: "start",
     sortable: false,
     defaultVisible,
@@ -508,7 +500,7 @@ const headers = computed((): Array<TableHeader> => {
       h("fpHttpServer"),
       h("fpDeviceGuess"),
       ...commonTail,
-      ...HTTP_EXTRA_KEYS.map((key) => h(key, TrafficExtraFieldTypes[key], false)),
+      ...HTTP_EXTRA_KEYS.map((key) => h(key, undefined, false)),
       actionsHeader,
     ];
   }
@@ -527,7 +519,7 @@ const headers = computed((): Array<TableHeader> => {
     ...tcpFingerprint,
     ...commonTail,
     ...(ipv4 ? IPV4_TCP_EXTRA_KEYS : IPV6_TCP_EXTRA_KEYS).map((key) =>
-      h(key, TrafficExtraFieldTypes[key], false),
+      h(key, undefined, false),
     ),
     actionsHeader,
   ];
@@ -637,6 +629,12 @@ const loadSearchOptions = async (): Promise<void> => {
         }
       }
       await Promise.all([...enumTypes].map((t) => ensureEnum(t)));
+      // 字段元信息与加密 / S3 字段集合取自同一次 OPTIONS 自省：
+      // 列表列类型与展示语义、加密单元格都由它驱动，前端不再维护字段清单
+      listMeta.value = rsp.data.meta;
+      const kindSets = fieldKindSetsOfMeta(rsp.data.meta);
+      cryptoKeys.value = kindSets.crypto ?? new Set<string>();
+      s3Keys.value = kindSets.s3 ?? new Set<string>();
       searchHeaders.value = rsp.data.filterBy
         .filter((item) => !EXCLUDED_FILTER_FIELDS.has(item.name))
         .reduce(

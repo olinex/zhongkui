@@ -25,15 +25,16 @@
 - 查看标签事件（风险）记录列表 → `POST /api/v1/tag-event/record/list`（只读；可调用：是；实体：tag_event_records）
 - 查看标签规则验证样例详情 → `POST /api/v1/tag-event/tag-rule-sample/:id/get`（只读；可调用：是；实体：tag_rule_samples）
 - 查看标签规则验证样例列表 → `POST /api/v1/tag-event/tag-rule-sample/list`（只读；可调用：是；实体：tag_rule_samples）
+- 创建标签规则（写入，需用户在审批卡片上确认） → `POST /api/v1/tag-event/tag-rule/create`（写入；可调用：是；实体：tag_rules）
 - 查看标签规则详情 → `POST /api/v1/tag-event/tag-rule/:id/get`（只读；可调用：是；实体：tag_rules）
-- 对单条候选标签规则执行 dry-run（不落库） → `POST /api/v1/tag-event/tag-rule/single/dry-run`（只读；仅参考；实体：）
+- 对单条候选标签规则执行 dry-run（不落库） → `POST /api/v1/tag-event/tag-rule/single/dry-run`（只读；可调用：是；实体：）
 - 对一组候选标签规则执行 dry-run（不落库） → `POST /api/v1/tag-event/tag-rule/group/dry-run`（只读；仅参考；实体：）
-- 查看 Rego 自定义内置函数 → `POST /api/v1/tag-event/tag-rule/functions`（只读；仅参考；实体：）
+- 查看 Rego 自定义内置函数 → `POST /api/v1/tag-event/tag-rule/functions`（只读；可调用：是；实体：）
 - 查看标签规则列表与启用状态 → `POST /api/v1/tag-event/tag-rule/list`（只读；可调用：是；实体：tag_rules）
-- 查看标签规则目标模型的字段元信息 → `POST /api/v1/tag-event/tag-rule/model/metadata`（只读；仅参考；实体：）
+- 查看标签规则目标模型的字段元信息 → `POST /api/v1/tag-event/tag-rule/model/metadata`（只读；可调用：是；实体：）
 - 查看标签规则目标模型样例 → `POST /api/v1/tag-event/tag-rule/model/samples`（只读；可调用：是；实体：tag_summings）
-- 查看当前命名空间已注册数据源的 schema → `POST /api/v1/tag-event/tag-rule/sqlite/meta`（只读；仅参考；实体：datasources）
-- 校验标签规则 Rego 语法（不落库） → `POST /api/v1/tag-event/tag-rule/validate`（只读；仅参考；实体：）
+- 查看当前命名空间已注册数据源的 schema → `POST /api/v1/tag-event/tag-rule/sqlite/meta`（只读；可调用：是；实体：datasources）
+- 校验标签规则 Rego 语法与契约（不落库） → `POST /api/v1/tag-event/tag-rule/validate`（只读；可调用：是；实体：）
 - 查看标签规则历史版本 → `POST /api/v1/tag-event/tag-rule/:id/version/list`（只读；可调用：是；实体：tag_rule_versions）
 
 ## 数据源
@@ -84,11 +85,23 @@
 - 查看系统命名空间的共享知识文档 → `POST /api/v1/ai/doc/system/list`（只读；可调用：是；实体：knowledge_documents）
 - 查看长期记忆详情 → `POST /api/v1/ai/memory/:id/get`（只读；可调用：是；实体：agent_memories）
 - 查看长期记忆列表 → `POST /api/v1/ai/memory/list`（只读；可调用：是；实体：agent_memories）
+- 查看报告中心信息流 → `POST /api/v1/ai/periodic-report/feed/list`（只读；可调用：是；实体：periodic_report_runs）
+- 创建周期性报告计划（写入，需用户在审批卡片上确认） → `POST /api/v1/ai/periodic-report/plan/create`（写入；可调用：是；实体：periodic_report_plans）
+- 查看报告计划列表 → `POST /api/v1/ai/periodic-report/plan/list`（只读；可调用：是；实体：periodic_report_plans）
+- 立即执行周期性报告计划并生成一条真实报告（写入，需用户在审批卡片上确认） → `POST /api/v1/ai/periodic-report/plan/:id/run`（写入；可调用：是；实体：periodic_report_plans、periodic_report_runs）
+- 查看报告运行详情与正文 → `POST /api/v1/ai/periodic-report/run/:id/get`（只读；可调用：是；实体：periodic_report_runs）
+- 查看报告运行记录列表 → `POST /api/v1/ai/periodic-report/run/list`（只读；可调用：是；实体：periodic_report_runs）
+- 查看可作为报告来源的技能选项 → `POST /api/v1/ai/periodic-report/skill/options`（只读；可调用：是；实体：agent_skills）
+- 查看当前用户关注的报告计划 → `POST /api/v1/ai/periodic-report/watch/list`（只读；可调用：是；实体：periodic_report_plans）
 - 执行知识库检索试运行（SSE 流式，仅参考） → `POST /api/v1/ai/retrieval/dry-run`（只读；仅参考；实体：knowledge_documents、knowledge_chunks）
 - 查看知识库检索试运行的参数默认值 → `POST /api/v1/ai/retrieval/options`（只读；可调用：是；实体：）
 - 查看 AI 会话详情 → `POST /api/v1/ai/session/:id/get`（只读；可调用：是；实体：agent_sessions）
 - 查看当前命名空间的 AI 会话列表 → `POST /api/v1/ai/session/list`（只读；可调用：是；实体：agent_sessions）
 - 查看 AI 会话的消息记录 → `POST /api/v1/ai/session/:id/messages`（只读；可调用：是；实体：agent_messages）
+- 创建 AI 技能（写入，需用户在审批卡片上确认） → `POST /api/v1/ai/skill/create`（写入；可调用：是；实体：agent_skills）
+- 查看技能详情 → `POST /api/v1/ai/skill/:id/get`（只读；可调用：是；实体：agent_skills）
+- 查看技能列表 → `POST /api/v1/ai/skill/list`（只读；可调用：是；实体：agent_skills）
+- 查看当前可用的技能选项（内置技能与已启用自定义技能） → `POST /api/v1/ai/skill/options`（只读；可调用：是；实体：agent_skills）
 - 查看 AI 助手运行状态与档位可用性 → `POST /api/v1/ai/status`（只读；可调用：是；实体：）
 
 ## 模型与工具

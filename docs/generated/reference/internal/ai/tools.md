@@ -76,7 +76,7 @@ type Builder func(ctx context.Context, deps Deps) (tool.BaseTool, error)
 <a name="Deps"></a>
 ## type Deps
 
-Deps 是构建内置工具时可注入的运行期依赖：数据库句柄与日志记录器。构造由调用方（运行时 装配）持有并复用，实现不得修改其内容。
+Deps 是构建内置工具时可注入的运行期依赖：数据库句柄、日志记录器与进程内 JS 运行时。 构造由调用方（运行时装配）持有并复用，实现不得修改其内容。
 
 ```go
 type Deps struct {
@@ -84,6 +84,9 @@ type Deps struct {
     DB  *database.DB
     // Logger 日志记录器
     Logger *logging.Logger
+    // JS 进程内 JS 运行时（provider 管理的单例）；仅依赖脚本的工具（如 mermaid_check）使用，
+    // 其他工具忽略该字段。
+    JS  *jsengine.Engine
 }
 ```
 
@@ -107,6 +110,9 @@ type KnowledgeHit struct {
     // Complete 内容是否为整篇文档展开结果（small-to-big）：为 true 时不再按 SnippetLimit 截断，
     // 由上层（internal/ai）在检索结果上标记。
     Complete bool
+    // Citation 本次运行内稳定的来源编号（1 起，由上层采集器去重后分配）；模型在正文中引用该条
+    // 内容时据此标注 [citation]。0 表示未分配（如采集器缺失）。
+    Citation int
 }
 ```
 

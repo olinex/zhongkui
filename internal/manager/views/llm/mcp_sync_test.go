@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"zhongkuisec.com/zhongkui/internal/ai/llminfra"
 	// 标准库
 	"testing"
 
@@ -10,7 +11,6 @@ import (
 	"gorm.io/gorm/logger"
 
 	// 项目内部
-	"zhongkuisec.com/zhongkui/internal/ai"
 	mcptool "zhongkuisec.com/zhongkui/internal/ai/tools/mcp"
 	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
 )
@@ -57,7 +57,7 @@ func TestReconcileMCPTools_PreservesEnabledRefreshesAndCleans(t *testing.T) {
 	seedSyncTool(t, db, "tool-a", aimodel.ToolSourceMCP, &server.ID, "tool-a", "old description", true)
 	seedSyncTool(t, db, "tool-c", aimodel.ToolSourceMCP, &server.ID, "tool-c", "stale description", true)
 
-	out, err := reconcileMCPTools(db, server, []ai.MCPRemoteTool{
+	out, err := reconcileMCPTools(db, server, []llminfra.MCPRemoteTool{
 		{Name: "tool-a", Description: "new description"},
 		{Name: "tool-b", Description: "brand new"},
 	})
@@ -106,7 +106,7 @@ func TestReconcileMCPTools_RejectsBuiltinNameCollision(t *testing.T) {
 	server := seedSyncServer(t, db, "srv-a")
 	seedSyncTool(t, db, "shared", aimodel.ToolSourceBuiltin, nil, "", "", true)
 
-	if _, err := reconcileMCPTools(db, server, []ai.MCPRemoteTool{{Name: "shared"}}); err == nil {
+	if _, err := reconcileMCPTools(db, server, []llminfra.MCPRemoteTool{{Name: "shared"}}); err == nil {
 		t.Fatal("reconcileMCPTools error = nil, want an English collision error")
 	}
 	var count int64
@@ -127,7 +127,7 @@ func TestReconcileMCPTools_RejectsConsistencyViolation(t *testing.T) {
 	if err := db.Create(&aimodel.LlmTool{Name: "dirty", Source: aimodel.ToolSourceMCP, RemoteName: "dirty"}).Error; err != nil {
 		t.Fatalf("seed dirty row error = %v", err)
 	}
-	if _, err := reconcileMCPTools(db, server, []ai.MCPRemoteTool{{Name: "clean"}}); err == nil {
+	if _, err := reconcileMCPTools(db, server, []llminfra.MCPRemoteTool{{Name: "clean"}}); err == nil {
 		t.Fatal("reconcileMCPTools error = nil, want an English consistency error")
 	}
 }
@@ -136,7 +136,7 @@ func TestReconcileMCPTools_RejectsConsistencyViolation(t *testing.T) {
 func TestReconcileMCPTools_RejectsEmptyRemoteName(t *testing.T) {
 	db := newSyncTestDB(t)
 	server := seedSyncServer(t, db, "srv-a")
-	if _, err := reconcileMCPTools(db, server, []ai.MCPRemoteTool{{Name: "   "}}); err == nil {
+	if _, err := reconcileMCPTools(db, server, []llminfra.MCPRemoteTool{{Name: "   "}}); err == nil {
 		t.Fatal("reconcileMCPTools error = nil, want an English error for an empty remote name")
 	}
 }

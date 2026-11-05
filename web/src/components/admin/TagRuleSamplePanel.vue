@@ -76,7 +76,7 @@
               v-bind="editDescriptionProps"
               :label="$t('model.tagRuleSample.field.description')"
               :disabled="!editable"
-              rows="2"
+              rows="3"
             />
           </v-col>
         </v-row>
@@ -118,9 +118,9 @@ import {
   tagRuleSampleUpdate,
 } from "@/apis/tagEvent";
 import {
-  TrafficCryptoFields,
-  TrafficFieldTypes,
-  TrafficS3Fields,
+  trafficCryptoKeysOf,
+  trafficFieldTypesOf,
+  trafficS3KeysOf,
   trafficTypeFromModelKey,
 } from "@/apis/traffic";
 import { getResponse, getSimpleResponse } from "@/apis/base";
@@ -148,6 +148,31 @@ const detailItem = ref<Record<string, any> | null>(null);
 
 const plaintextDialogRef = useTemplateRef("plaintextDialogRef");
 const plaintextLoading = ref("");
+// 加密 / S3 字段集合与字段渲染类型：全部来自流量列表 OPTIONS 自省，随详情模型加载
+const cryptoKeys = ref(new Set<string>());
+const s3Keys = ref(new Set<string>());
+const fieldTypes = ref<Record<string, BackendDataType>>({});
+
+watch(
+  () => (detailItem.value ? trafficTypeFromModelKey(String(detailItem.value.model)) : undefined),
+  async (trafficType) => {
+    if (!trafficType) {
+      cryptoKeys.value = new Set<string>();
+      s3Keys.value = new Set<string>();
+      fieldTypes.value = {};
+      return;
+    }
+    const [crypto, s3, types] = await Promise.all([
+      trafficCryptoKeysOf(trafficType),
+      trafficS3KeysOf(trafficType),
+      trafficFieldTypesOf(trafficType),
+    ]);
+    cryptoKeys.value = crypto;
+    s3Keys.value = s3;
+    fieldTypes.value = types;
+  },
+  { immediate: true },
+);
 
 let editSampleID = 0;
 
@@ -157,26 +182,21 @@ const [editDescription, editDescriptionProps] = updateForm.defineField("descript
 
 // ---- 详情 ----
 // detailFields 样例详情字段：遍历 input 文档按模型类型翻译字段名；
-// 加密/S3 字段经模型类型键逆映射识别后提供明文查看，其余字段按流量模型类型
-// （TrafficFieldTypes）由 AdaptiveCell 以列表页方式渲染
+// 加密/S3 字段经 OPTIONS 自省 kind 识别后提供明文查看，其余字段按自省类型
+// 由 AdaptiveCell 以列表页方式渲染
 const detailFields = computed<DetailField[]>(() => {
   const item = detailItem.value;
   if (!item) {
     return [];
   }
   const modelKey = modelTypeKeyToI18nKey(String(item.model));
-  // 加密/S3 字段识别：model 为 tagengine 类型键，逆映射回流量类型后查字段清单
-  const trafficType = trafficTypeFromModelKey(String(item.model));
-  const cryptoKeys = new Set(trafficType ? (TrafficCryptoFields[trafficType] ?? []) : []);
-  const s3Keys = new Set(trafficType ? (TrafficS3Fields[trafficType] ?? []) : []);
-  // 字段渲染类型：按流量类型查 TrafficFieldTypes，未知类型/字段回退 STRING
-  const fieldTypes = trafficType ? TrafficFieldTypes[trafficType] : {};
   const input = (item.input ?? {}) as Record<string, unknown>;
   return Object.entries(input).map(([key, value]) => {
     const label = modelFieldTitle(modelKey, key);
-    const fieldType = fieldTypes[key] ?? BackendDataType.STRING;
+    // 字段渲染类型来自 OPTIONS 自省，未知字段回退字符串
+    const fieldType = fieldTypes.value[key] ?? BackendDataType.STRING;
     // 加密字段：密文须为非空字符串才提供明文查看（预置样例空对象 {} 按普通值展示）
-    if (cryptoKeys.has(key) && typeof value === "string" && value !== "") {
+    if (cryptoKeys.value.has(key) && typeof value === "string" && value !== "") {
       return {
         key,
         label,
@@ -188,7 +208,7 @@ const detailFields = computed<DetailField[]>(() => {
       };
     }
     // S3 字段：对象键须为非空字符串才提供明文查看；长度取 input 中 {key}Length 字段
-    if (s3Keys.has(key) && typeof value === "string" && value !== "") {
+    if (s3Keys.value.has(key) && typeof value === "string" && value !== "") {
       return {
         key,
         label,

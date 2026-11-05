@@ -29,15 +29,8 @@
             </template>
           </v-select>
         </div>
-        <v-btn
-          class="toolbar-btn"
-          :icon="fullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'"
-          :variant="fullscreen ? 'tonal' : 'text'"
-          :disabled="disabled"
-          :title="$t(fullscreen ? 'action.exitFullscreen' : 'action.fullscreen')"
-          :aria-label="$t(fullscreen ? 'action.exitFullscreen' : 'action.fullscreen')"
-          @click="toggleFullscreen"
-        />
+        <!-- 操作区：全屏按钮固定最右（与 MarkdownEditor 一致）；全屏为查看类动作，
+             只读（disabled）态仍可进入，仅写入类操作（数据源速查）随 disabled 禁用 -->
         <v-btn
           class="toolbar-btn"
           icon="mdi-database-search-outline"
@@ -47,6 +40,14 @@
           :title="$t('guide.title')"
           :aria-label="$t('guide.title')"
           @click="openGuide"
+        />
+        <v-btn
+          class="toolbar-btn"
+          :icon="fullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'"
+          :variant="fullscreen ? 'tonal' : 'text'"
+          :title="$t(fullscreen ? 'action.exitFullscreen' : 'action.fullscreen')"
+          :aria-label="$t(fullscreen ? 'action.exitFullscreen' : 'action.fullscreen')"
+          @click="toggleFullscreen"
         />
       </div>
       <div class="rego-body">
@@ -180,12 +181,11 @@ function openGuide(): void {
   guideOpen.value = !guideOpen.value;
 }
 
-// 全屏布局切换后重新测量，保证 CodeMirror 行宽度/滚动区正确适配（lineWrapping 需要）
-watch(fullscreen, async (open) => {
-  if (open) {
-    await nextTick();
-    view.value?.requestMeasure();
-  }
+// 全屏布局切换后重新测量，保证 CodeMirror 行宽度 / 滚动区随可视宽度正确适配
+// （进入与退出全屏都会改变可用宽度，两个方向都需要重测）
+watch(fullscreen, async () => {
+  await nextTick();
+  view.value?.requestMeasure();
 });
 
 /** 在光标处插入文本并置于插入内容末尾（速查/样例一键写入），随后把焦点还给编辑器。 */

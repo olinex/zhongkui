@@ -53,8 +53,7 @@
 ```go
 const (
     // Prefix 配置前缀，用于在配置文件中标识任务队列相关配置。
-    // 例如，完整的配置路径为 "pipeline.<queue_name>.<config_field>"。
-    // 保留 "pipeline" 原值以兼容既有配置文件与运行环境。
+    // 完整的配置路径为 "pipeline.<queue_name>.<config_field>"。
     Prefix = "pipeline"
 )
 ```
@@ -90,7 +89,7 @@ ComputeCronTriggers 根据上一次已投递触发点（stamp）与当前时间�
 
 积压行为由 BacklogPolicy 控制：
 
-- Enabled=false 时跳过全部积压，不生成任何历史触发点，游标直接推进到下一次未来触发点；
+- Enabled=false 时跳过全部积压，仅投递不晚于当前时刻的最近一次触发点（保证当次触发 不会被 schedule.Next 跳过），游标推进到该触发点；
 - Window 大于 0 时仅补投 \[now\-Window, now\] 内的触发点，更早的积压直接丢弃；
 - Limit 限制单次最多生成的触发点个数，达到上限即截断本轮的 nextCursor， 交由下一轮继续追赶，避免一次性实例化海量时间戳；
 - 循环内置"必须严格晚于当前游标"的守卫，防止 cron 库 Next 意外不前进导致的死循环。
@@ -173,7 +172,7 @@ DescribeConfig 生成任务队列配置的描述信息 利用反射分析 Config
 func EnqueueSchedulerTaskNow(ctx context.Context, enq *Client, taskType string, cfg SchedulerTaskConfig) error
 ```
 
-EnqueueSchedulerTaskNow 立即投递一条签到当前时刻作为触发时间点的任务。 用于前端"立即执行"能力：以任务当前配置的队列/超时/重试参数将 config 中的 固定入参透传给处理器，触发时间点为调用时刻（time.Now）。
+EnqueueSchedulerTaskNow 立即投递一条签到当前时刻作为触发时间点的任务。 用于前端"立即执行"能力：以任务当前配置的队列/超时/重试参数将 config 中的 固定入参透传给处理器，触发时间点为调用时刻（time.Now），任务类型为配置键 taskType。
 
 <a name="LoadSchedulerTaskConfigs"></a>
 ## func LoadSchedulerTaskConfigs
@@ -741,9 +740,10 @@ type SchedulerTaskConfig struct {
 
     // BacklogEnabled 是否补投积压期间错过的历史触发点。
     // 长时间停机或游标异常会形成积压 (last, now]；为 false 时跳过全部积压，
-    // 不生成任何历史任务，并直接推进游标到下一次未来触发点（cron）或当前网格点（interval）。
-    // 默认值: true（补投积压，保持与既有语义一致）
-    BacklogEnabled bool `mapstructure:"backlogEnabled" json:"backlog_enabled" default:"true" comment:"是否补投积压期间错过的历史触发点，false 时跳过全部积压"` // 是否补投积压
+    // 仅投递不晚于当前时刻的最近一次触发点（cron）或对齐到当前网格点（interval）。
+    // 默认值: false（不补投）。注意本字段默认值必须与零值一致：任务配置在导入 etcd 前会经
+    // defaults.Set 补默认值，若默认写成 true，配置文件中显式声明的 false 会被当成零值覆盖回 true。
+    BacklogEnabled bool `mapstructure:"backlogEnabled" json:"backlog_enabled" default:"false" comment:"是否补投积压期间错过的历史触发点，false 时跳过全部积压，默认关闭"` // 是否补投积压
 
     // BacklogWindow 历史触发点的最大回溯窗口期。
     // 大于 0 时仅补投 [now-BacklogWindow, now] 内的触发点，更早的积压直接丢弃并推进游标；

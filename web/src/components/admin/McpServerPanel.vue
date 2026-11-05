@@ -15,16 +15,9 @@
     :create="openCreateDialogAction"
     :project-fields="projectFields"
     model-name="mcpServer"
+    @view-plaintext="viewHeadersPlaintext"
   >
-    <!-- 请求头为加密列：列表出参为密文，仅以「已加密」标识占位，点击解密查看明文 -->
-    <template #cell-headers="{ item }">
-      <encrypted-value-cell
-        kind="crypto"
-        :item="item"
-        field-key="headers"
-        @view-plaintext="viewHeadersPlaintext"
-      />
-    </template>
+    <!-- 请求头为加密列（后端 kind=crypto）：由 SearchTable 自动渲染加密单元格，点击经事件查看明文 -->
 
     <!-- 启用态：行内开关就地改写（后端无独立启停接口，内部走「读详情 + 整表单更新」） -->
     <template #cell-enabled="{ item }">
@@ -139,7 +132,7 @@
               v-model="createDescription"
               v-bind="createDescriptionProps"
               :label="$t('model.mcpServer.field.description')"
-              rows="1"
+              rows="3"
             />
           </v-col>
         </v-row>
@@ -224,7 +217,7 @@
               v-model="updateDescription"
               v-bind="updateDescriptionProps"
               :label="$t('model.mcpServer.field.description')"
-              rows="1"
+              rows="3"
               :disabled="!editable"
             />
           </v-col>

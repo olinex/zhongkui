@@ -2,12 +2,12 @@ package llm
 
 import (
 	// 标准库
-	"encoding/json"
 	"strings"
 	"time"
 
 	// 项目内部
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // ModelKind 是 LLM 模型类型标识：对话模型（chat）与向量化模型（embedding）。
@@ -33,22 +33,69 @@ func ParseModelKind(value ModelKind) (ModelKind, error) {
 	}
 }
 
+// APIMode 是对话模型使用的接口形态标识：chat（Chat Completions，*schema.Message）与
+// responses（Response API，*schema.AgenticMessage）。取值与 llm_models.api_mode 列、
+// agent_messages.message_kind 列的取值一致，决定客户端的接口实现以及消息载荷的编解码方式。
+type APIMode string
+
+// 对话模型 API 形态常量。
+const (
+	// APIModeChat 使用 Chat Completions（*schema.Message），全部模型的默认取值。
+	APIModeChat APIMode = "chat"
+	// APIModeResponses 使用 Response API（*schema.AgenticMessage），仅 chat 类模型可配置。
+	APIModeResponses APIMode = "responses"
+)
+
+// ParseAPIMode 解析并规范化接口形态取值（忽略首尾空白；不区分大小写）：空串取缺省值 chat（与
+// llm_models.api_mode 列默认值一致），chat / responses 合法，其余取值返回英文错误。形态清单与
+// 取值规范化只在本包声明，调用方不再各自校验并拼错误文案。
+func ParseAPIMode(value APIMode) (APIMode, error) {
+	mode := APIMode(strings.ToLower(strings.TrimSpace(string(value))))
+	switch mode {
+	case "":
+		return APIModeChat, nil
+	case APIModeChat, APIModeResponses:
+		return mode, nil
+	default:
+		return "", errors.Newf("invalid api mode %q: expected chat or responses", value)
+	}
+}
+
+// ValidateAPIMode 校验模型类型与接口形态的组合：接口形态本身必须合法（空串按 chat 处理），且
+// responses 只允许用于 chat 类模型；embedding 等非 chat 类模型使用 responses 时返回英文错误。
+func ValidateAPIMode(kind ModelKind, mode APIMode) error {
+	parsed, err := ParseAPIMode(mode)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if parsed == APIModeResponses && kind != ModelKindChat {
+		return errors.Newf("api mode %q requires a chat model, got %q", APIModeResponses, kind)
+	}
+	return nil
+}
+
 // ModelConfig 是一个模型端点的运行时配置快照，由 ai 运行时从模型注册表（llm_models）
 // 与档位绑定（llm_bindings）组装而来，是 LLM 接入配置的唯一事实来源（不再来自配置文件）。
+// 完整形状规则声明在视图层入口 In 结构体；本类型只保留构造客户端所需的端点三要素标签，
+// 供 validateEndpoint 在运行时边界 fail fast。
 type ModelConfig struct {
 	// Name 模型在注册表中的本地标识（llm_models.name），用于运维识别与展示
 	Name string
 	// Kind 模型类型（chat / embedding）
 	Kind ModelKind
+	// APIMode 对话模型的 API 形态：chat（Chat Completions）| responses（Response API）
+	APIMode APIMode
 	// BaseURL 模型端点的 OpenAI 兼容接口 Base URL
-	BaseURL string
+	BaseURL string `binding:"notBlank"`
 	// APIKey 访问模型端点的明文凭据（落库为密文，此处为解密后的明文）
-	APIKey string
+	APIKey string `binding:"required"`
 	// Model 供应商侧的模型名（如 gpt-4o-mini、text-embedding-3-small）
-	Model string
+	Model string `binding:"notBlank"`
 	// Timeout 单次请求的超时；未声明（0）时由探活经 defaults.Set 回填 default 标签声明的 15s，
 	// 构造正式客户端时 0 仍交由底层客户端默认值
 	Timeout time.Duration `default:"15s"`
+	// TimeoutRetry 非流式 Generate 的超时重试策略；零值表示不重试，由运行时按 agent_params 注入
+	TimeoutRetry TimeoutRetryPolicy
 	// Temperature 采样温度，仅 chat 类模型有意义
 	Temperature float64
 	// MaxTokens 单次生成的最大 token 数，仅 chat 类模型有意义
@@ -69,60 +116,39 @@ type ModelConfig struct {
 	ThinkingOffValue any
 }
 
-// ParseExtraBody 解析模型端点的高级请求配置（llm_models.extra_body）：入参去掉首尾空白后
-// 为空则返回 (nil, nil)；否则必须是 JSON 对象（{}），解析为 map[string]any 返回。非对象或
-// 非法 JSON 返回英文错误。
+// ParseExtraBody 解析模型端点的高级请求配置（llm_models.extra_body）：入参为空、纯空白或
+// 字面量 null 时返回 (nil, nil)；否则必须是 JSON 对象（{}），解析为 map[string]any 返回。
+// 非对象或非法 JSON 返回英文错误。
 func ParseExtraBody(raw string) (map[string]any, error) {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return nil, nil
-	}
-	var value any
-	if err := json.Unmarshal([]byte(trimmed), &value); err != nil {
+	object := make(map[string]any)
+	present, err := validator.DecodeOptionalObject(raw, &object)
+	if err != nil {
 		return nil, errors.Newf("extraBody must be a valid JSON object: %s", err)
 	}
-	object, ok := value.(map[string]any)
-	if !ok {
-		return nil, errors.Newf("extraBody must be a JSON object, got %q", trimmed)
+	if !present {
+		return nil, nil
 	}
 	return object, nil
 }
 
 // ParseJSONValue 解析思考开关的开/关取值（llm_models.thinking_on_value / thinking_off_value）：
-// 入参去掉首尾空白后为空则返回 (nil, nil)；否则用 json.Unmarshal 解析为任意 JSON 值
-// （bool / object / string / number / array）返回。非法 JSON 返回英文错误。
+// 入参为空或字面量 null 时返回 (nil, nil)；否则解析为任意 JSON 值（bool / object / string /
+// number / array）返回。非法 JSON 返回英文错误。
 func ParseJSONValue(raw string) (any, error) {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return nil, nil
-	}
 	var value any
-	if err := json.Unmarshal([]byte(trimmed), &value); err != nil {
+	present, err := validator.DecodeOptionalValue(raw, &value)
+	if err != nil {
 		return nil, errors.Newf("invalid JSON value %q: %s", raw, err)
+	}
+	if !present {
+		return nil, nil
 	}
 	return value, nil
 }
 
-// Validate 校验模型端点的字段不变量：端点三要素非空、超时与最大 token 数为正数、
-// 温度落在 [0, 2]。Kind 与 Name 不在校验范围内：Kind 由 ParseModelKind 在入口解析为合法取值，
-// Name 的注册表内唯一性属于视图层语义。向量维度同样不校验：它不再由前端提交，
-// 「索引维度是运维独占的 schema 属性」由运维经 sync embedding-dimensions 显式指定，模型的已验证
-// 维度则由后端在绑定 embedding 档位时经真实探测写入（见 VerifyEmbeddingCompat）。
-func (c ModelConfig) Validate() error {
-	switch {
-	case strings.TrimSpace(c.BaseURL) == "":
-		return errors.New("baseURL must be non-empty")
-	case strings.TrimSpace(c.APIKey) == "":
-		return errors.New("apiKey must be non-empty")
-	case strings.TrimSpace(c.Model) == "":
-		return errors.New("model must be non-empty")
-	case c.Timeout <= 0:
-		return errors.New("timeoutSeconds must be a positive integer")
-	case c.MaxTokens <= 0:
-		return errors.New("maxTokens must be a positive integer")
-	case c.Temperature < 0 || c.Temperature > 2:
-		return errors.New("temperature must be within [0, 2]")
-	default:
-		return nil
-	}
+// validateEndpoint 校验模型端点三要素（BaseURL / APIKey / Model）。这是构造 LLM 客户端的
+// 运行时边界，不依赖 HTTP 入口：运行时快照由数据库装配，缺字段时仍须 fail fast，避免构造出
+// 必然失败的客户端。Timeout / MaxTokens 允许为 0（交由底层默认值），不在本函数校验。
+func (c ModelConfig) validateEndpoint() error {
+	return validator.CheckPartial(c, "BaseURL", "APIKey", "Model")
 }

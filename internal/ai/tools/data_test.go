@@ -11,18 +11,17 @@ import (
 	"testing"
 
 	// 第三方
-	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
 )
 
 // ============================================================================
-// json
+// JSON 工具
 // ============================================================================
 
 // TestJSON_Info 覆盖 Info：工具名为 json；operation 为带四种取值的必填 string；json 必填 string；
 // indent 为可选 integer；path 为可选 string。
 func TestJSON_Info(t *testing.T) {
-	info, err := (&jsonTool{}).Info(context.Background())
+	info, err := jsonTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -72,7 +71,7 @@ func TestJSON_InvokableErrors(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := (&jsonTool{}).InvokableRun(context.Background(), tc.args)
+			_, err := jsonTool.InvokableRun(context.Background(), tc.args)
 			if err == nil {
 				t.Fatal("error = nil, want a rejection")
 			}
@@ -95,7 +94,7 @@ func TestJSON_Smoke(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			out, err := (&jsonTool{}).InvokableRun(context.Background(), tc.args)
+			out, err := jsonTool.InvokableRun(context.Background(), tc.args)
 			if err != nil {
 				t.Fatalf("InvokableRun error = %v", err)
 			}
@@ -107,13 +106,13 @@ func TestJSON_Smoke(t *testing.T) {
 }
 
 // ============================================================================
-// csv_parse
+// CSV 解析工具
 // ============================================================================
 
 // TestCSVParse_Info 覆盖 Info：工具名为 csv_parse；text 为必填 string；delimiter 为 string；
 // has_header 为 boolean。
 func TestCSVParse_Info(t *testing.T) {
-	info, err := (&csvParseTool{}).Info(context.Background())
+	info, err := csvParseTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -151,7 +150,7 @@ func TestCSVParse_InvokableErrors(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := (&csvParseTool{}).InvokableRun(context.Background(), tc.args)
+			_, err := csvParseTool.InvokableRun(context.Background(), tc.args)
 			if err == nil {
 				t.Fatal("error = nil, want a rejection")
 			}
@@ -164,7 +163,7 @@ func TestCSVParse_InvokableErrors(t *testing.T) {
 
 // TestCSVParse_Smoke 锁定 csv_parse 的出参 JSON 线形状与字段名。
 func TestCSVParse_Smoke(t *testing.T) {
-	out, err := (&csvParseTool{}).InvokableRun(context.Background(), `{"text":"a,b\n1,2\n3,4"}`)
+	out, err := csvParseTool.InvokableRun(context.Background(), `{"text":"a,b\n1,2\n3,4"}`)
 	if err != nil {
 		t.Fatalf("InvokableRun error = %v", err)
 	}
@@ -175,12 +174,12 @@ func TestCSVParse_Smoke(t *testing.T) {
 }
 
 // ============================================================================
-// url_parse
+// URL 解析工具
 // ============================================================================
 
 // TestURLParse_Info 覆盖 Info：工具名为 url_parse；url 为必填 string。
 func TestURLParse_Info(t *testing.T) {
-	info, err := (&urlParseTool{}).Info(context.Background())
+	info, err := urlParseTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -213,7 +212,7 @@ func TestURLParse_InvokableErrors(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := (&urlParseTool{}).InvokableRun(context.Background(), tc.args)
+			_, err := urlParseTool.InvokableRun(context.Background(), tc.args)
 			if err == nil {
 				t.Fatal("error = nil, want a rejection")
 			}
@@ -226,7 +225,7 @@ func TestURLParse_InvokableErrors(t *testing.T) {
 
 // TestURLParse_Smoke 锁定 url_parse 的出参 JSON 线形状与字段名。
 func TestURLParse_Smoke(t *testing.T) {
-	out, err := (&urlParseTool{}).InvokableRun(context.Background(),
+	out, err := urlParseTool.InvokableRun(context.Background(),
 		`{"url":"https://u:p@example.com:8443/a/b?x=1&x=2#frag"}`)
 	if err != nil {
 		t.Fatalf("InvokableRun error = %v", err)
@@ -266,8 +265,3 @@ func TestDataTools_BuildResolves(t *testing.T) {
 		})
 	}
 }
-
-// 仅用于确认工具满足 eino 的可调用工具接口（编译期断言）。
-var _ tool.InvokableTool = (*jsonTool)(nil)
-var _ tool.InvokableTool = (*csvParseTool)(nil)
-var _ tool.InvokableTool = (*urlParseTool)(nil)

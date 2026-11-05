@@ -44,8 +44,8 @@ type WebhookChannelConfig struct{}
 
 // WebhookTarget Webhook 目标级配置。
 type WebhookTarget struct {
-	// URL 接收 Webhook 的地址，必填
-	URL string `json:"url" binding:"required" form:"kind=string"`
+	// URL 接收 Webhook 的地址，必填且须为绝对 http/https 地址
+	URL string `json:"url" binding:"required,httpUrl" form:"kind=string"`
 	// Headers 附加请求头，可选
 	Headers map[string]string `json:"headers" form:"kind=object"`
 }
@@ -60,7 +60,7 @@ func (c *webhookChannel) Send(ctx context.Context, target *Target, msg *Rendered
 	if err := json.Unmarshal(target.Config, &cfg); err != nil {
 		return "", errors.WithStack(err)
 	}
-	if err := validator.Validate.Struct(&cfg); err != nil {
+	if err := validator.Check(&cfg); err != nil {
 		return "", errors.WithStack(err)
 	}
 	payload, err := json.Marshal(msg)

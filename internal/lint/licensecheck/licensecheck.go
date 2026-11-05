@@ -256,7 +256,7 @@ func goModuleInfo(ctx context.Context, root string) (map[string]goModule, error)
 			if err == io.EOF {
 				break
 			}
-			return nil, fmt.Errorf("解析 go list -m 输出: %w", err)
+			return nil, fmt.Errorf("parse go list -m output: %w", err)
 		}
 		modules[m.Path] = m
 	}
@@ -358,7 +358,7 @@ func checkWeb(ctx context.Context, root, webDir string, requireWeb bool) ([]Viol
 	pnpmPath, err := exec.LookPath("pnpm")
 	if err != nil {
 		if requireWeb {
-			return nil, 0, false, fmt.Errorf("未找到 pnpm，无法检查 Web 生产依赖；请安装 pnpm 或设置 LICENSE_CHECK_REQUIRE_WEB=0")
+			return nil, 0, false, fmt.Errorf("pnpm not found; cannot check Web production dependencies. Install pnpm or set LICENSE_CHECK_REQUIRE_WEB=0")
 		}
 		return nil, 0, true, nil
 	}
@@ -371,7 +371,7 @@ func checkWeb(ctx context.Context, root, webDir string, requireWeb bool) ([]Viol
 
 	var groups map[string][]pnpmPackage
 	if err := json.Unmarshal(out, &groups); err != nil {
-		return nil, 0, false, fmt.Errorf("解析 pnpm licenses 输出: %w", err)
+		return nil, 0, false, fmt.Errorf("parse pnpm licenses output: %w", err)
 	}
 
 	var violations []Violation

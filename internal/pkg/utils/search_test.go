@@ -291,6 +291,49 @@ func TestConvertFilterClause(t *testing.T) {
 			So(calledArgs[0], ShouldEqual, "%IMPORTANT%")
 		})
 
+		Convey("Should handle fts action correctly", func() {
+			item := &testFilterByItem{
+				column: "search",
+				action: "fts",
+				value:  "alpha beta",
+			}
+
+			called := false
+			var calledQuery any
+			var calledArgs []any
+
+			f := func(query any, args ...any) (tx *database.DB) {
+				called = true
+				calledQuery = query
+				calledArgs = args
+				return &database.DB{}
+			}
+
+			result, err := convertFilterClause(item, f)
+
+			So(err, ShouldBeNil)
+			So(result, ShouldNotBeNil)
+			So(called, ShouldBeTrue)
+			So(calledQuery, ShouldEqual, "search @@ plainto_tsquery('simple', ?)")
+			So(calledArgs, ShouldHaveLength, 1)
+			So(calledArgs[0], ShouldEqual, "alpha beta")
+		})
+
+		Convey("Should reject non-string value for fts action", func() {
+			item := &testFilterByItem{
+				column: "search",
+				action: "fts",
+				value:  1,
+			}
+
+			_, err := convertFilterClause(item, func(query any, args ...any) *database.DB {
+				return &database.DB{}
+			})
+
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "Invalid value type")
+		})
+
 		Convey("Should handle nil action correctly", func() {
 			item := &testFilterByItem{
 				column: "deleted_at",

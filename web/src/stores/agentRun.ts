@@ -2,12 +2,20 @@
 // AI 运行态 store（单例）：承担 SSE 订阅所有权与「运行生命周期」状态，与抽屉组件的挂载 / 可见性解耦。
 // 组件关闭抽屉或卸载时仅 detach（退订），不取消服务端运行——退订本身即触发服务端退订宽限计时，
 // 宽限内重连即停表续跑；宽限内始终无订阅者才由服务端自动取消。刷新后由组件读 live-run 状态并经
-// agentStreamResume 续播。lastSeq 经 localManager 按会话持久化，作为续播的 after 参数。
+// /agent/:sessionID/events 续播。lastSeq 经 localManager 按会话持久化，作为续播的 after 参数。
 
 import { defineStore } from "pinia";
 
 import { localManager } from "@/stores/local";
-import type { AgentBlockKind, AgentMessageBlockOut, ToolRequestPayload } from "@/apis/@types/ai";
+import type {
+  AgentApprovalBlockPayload,
+  AgentBlockKind,
+  AgentMessageBlockOut,
+  AgentQuestionnaireBlockPayload,
+  AgentToolCallRecord,
+  AgentToolCallsBlockPayload,
+  ToolRequestPayload,
+} from "@/apis/@types/ai";
 
 // RunPendingCall 单条待审批调用的运行态记录（与视图层 PendingCallState 同形）
 export interface RunPendingCall {
@@ -16,8 +24,8 @@ export interface RunPendingCall {
   arguments: string;
   auditLevel?: string;
   approvalRequired?: boolean;
-  // 执行归属：client 由前端执行（默认，字段缺失时按此处理）、backend 由后端执行（前端仅审批）
-  execOwner?: "client" | "backend";
+  // 执行归属：client 由前端执行、backend 由后端执行（前端仅审批）
+  execOwner: "client" | "backend";
   decision?: "approved" | "rejected";
   result?: string;
   error?: string;
@@ -79,6 +87,58 @@ const emptyRun = (sessionID: number): RunState => ({
 // isActive 会话当前是否有在途活动（运行中 / 等待中）
 const isActive = (state: RunState): boolean =>
   state.state === STATE_RUNNING || state.state === STATE_WAITING;
+
+// blockIdentity 为交互类块返回跨序号稳定的语义身份：快照里由交互重建的块序号与在途流回放的
+// block 事件序号可能不同，仅按 seq 归并会把同一问卷 / 审批 / 工具调用渲染成两份。问卷以根中断 ID、
+// 审批与工具调用以调用 ID 归一；没有稳定 ID 的块返回 null，仍按原有 seq 逻辑处理。
+const blockIdentity = (block: AgentMessageBlockOut): string | null => {
+  const summarize = (ids: string[]): string | null => {
+    const unique = [...new Set(ids.filter((id) => id !== ""))].sort();
+    return unique.length > 0 ? unique.join(",") : null;
+  };
+  if (block.kind === "questionnaire") {
+    const ids = summarize(
+      (block.payload as AgentQuestionnaireBlockPayload | undefined)?.interruptIDs ?? [],
+    );
+    return ids === null ? null : `questionnaire:${ids}`;
+  }
+  if (block.kind === "approval") {
+    const payload = block.payload as AgentApprovalBlockPayload | undefined;
+    const ids = summarize(payload?.callIDs ?? payload?.calls?.map((call) => call.callID) ?? []);
+    return ids === null ? null : `approval:${ids}`;
+  }
+  if (block.kind === "tool_calls") {
+    const ids = summarize(
+      ((block.payload as AgentToolCallsBlockPayload | undefined)?.calls ?? []).map(
+        (call) => call.callID,
+      ),
+    );
+    return ids === null ? null : `tool_calls:${ids}`;
+  }
+  return null;
+};
+
+// dedupeBlocks 按 blockIdentity 清理既有重复块：同身份的后续块原位覆盖前一块载荷并保留首次
+// 出现的位置，避免「快照 + 在途回放」已经写进两份时仅靠后续 upsert 无法消除。
+const dedupeBlocks = (blocks: AgentMessageBlockOut[]): AgentMessageBlockOut[] => {
+  const out: AgentMessageBlockOut[] = [];
+  const seen = new Map<string, AgentMessageBlockOut>();
+  for (const block of blocks) {
+    const identity = blockIdentity(block);
+    if (identity === null) {
+      out.push(block);
+      continue;
+    }
+    const previous = seen.get(identity);
+    if (previous) {
+      previous.payload = block.payload;
+      continue;
+    }
+    seen.set(identity, block);
+    out.push(block);
+  }
+  return out;
+};
 
 // insertBlock 按 seq 升序把块插入运行块列表（同 seq 已存在时调用方应先走覆盖分支）
 const insertBlock = (state: RunState, block: AgentMessageBlockOut): void => {
@@ -192,6 +252,13 @@ export const useAgentRunStore = defineStore("agentRun", {
         localManager.setAgentRunSeq(sessionID, seq);
       }
     },
+    // resetSeq 为一条新的传输流派生游标：每轮 /chat、/action、/render 的实时事件游标都从 1 重新
+    // 计数，直接消费该流前须把续播游标归零，避免旧轮次的大序号让 /events?after= 越界。
+    resetSeq(sessionID: number): void {
+      const state = this.stateOf(sessionID);
+      state.lastSeq = 0;
+      localManager.setAgentRunSeq(sessionID, 0);
+    },
     // appendBuffer 累积助手正文增量
     appendBuffer(sessionID: number, delta: string): void {
       this.stateOf(sessionID).buffer += delta;
@@ -203,8 +270,18 @@ export const useAgentRunStore = defineStore("agentRun", {
     // 无正文，刷新才见」）。openSeq 一并归零：新基线里没有「当前开放块」，待回放的创建事件重新确立。
     adoptAnchorBlocks(sessionID: number, blocks: AgentMessageBlockOut[]): void {
       const state = this.stateOf(sessionID);
-      state.blocks = [...blocks];
+      state.blocks = dedupeBlocks(blocks.map((block) => ({ ...block })));
       state.openSeq = 0;
+    },
+    // normalizeBlocks 清理当前运行块列表中的同身份重复块（快照块与在途回放块序号不同导致），
+    // 返回清理后的数组供消息体直接绑定；无重复时保留原数组引用，避免无谓的响应式替换。
+    normalizeBlocks(sessionID: number): AgentMessageBlockOut[] {
+      const state = this.stateOf(sessionID);
+      const deduped = dedupeBlocks(state.blocks);
+      if (deduped.length !== state.blocks.length) {
+        state.blocks = deduped;
+      }
+      return state.blocks;
     },
     // upsertBlock 应用一条流式 block 事件：按 seq 归并，列表恒按 seq 升序。reasoning / content 块分两类
     // 事件：创建事件（created）的载荷仅带首个增量、其后同段增量经 appendBlockText 追加，故把该序号处建为 /
@@ -213,6 +290,17 @@ export const useAgentRunStore = defineStore("agentRun", {
     // 载荷覆盖即可。
     upsertBlock(sessionID: number, ev: AgentMessageBlockOut): void {
       const state = this.stateOf(sessionID);
+      // 交互类块先按语义身份归并：快照块与在途回放块可能序号不同，若只按 seq 查找会把同一
+      // 问卷 / 审批 / 工具调用插入两次（表现为页面上出现两张一模一样的「AI 提问」卡片）。
+      // 命中同身份时原位覆盖载荷并保留快照中的序号，以保证块顺序与历史视图一致。
+      const identity = blockIdentity(ev);
+      if (identity !== null) {
+        const existing = state.blocks.find((b) => blockIdentity(b) === identity);
+        if (existing) {
+          existing.payload = ev.payload;
+          return;
+        }
+      }
       const idx = state.blocks.findIndex((b) => b.seq === ev.seq);
       if (ev.kind !== "reasoning" && ev.kind !== "content") {
         if (idx >= 0) {
@@ -226,10 +314,13 @@ export const useAgentRunStore = defineStore("agentRun", {
         state.blocks[idx] = ev;
         return;
       }
+      // 创建事件携带首个增量（block.created 的 text 即首段），并入占位块；其后同段增量经
+      // appendBlockText 精确追加，避免首段文本丢失。
+      const first = (ev.payload as { text?: string } | undefined)?.text ?? "";
       const placeholder: AgentMessageBlockOut = {
         seq: ev.seq,
         kind: ev.kind,
-        payload: { text: "" },
+        payload: { text: first },
       };
       if (idx >= 0) {
         state.blocks[idx] = placeholder;
@@ -239,6 +330,36 @@ export const useAgentRunStore = defineStore("agentRun", {
       if (ev.created) {
         state.openSeq = ev.seq;
       }
+    },
+    // upsertToolCall 应用一条 tool.call.updated：按块序号定位 tool_calls 块，按 callID 原位归并单条
+    // 调用记录（start / done / failed 与耗时、结果），使同一次调用在消息体内始终只占一行。
+    upsertToolCall(sessionID: number, blockSeq: number, call: AgentToolCallRecord): void {
+      const state = this.stateOf(sessionID);
+      // 优先按 callID 跨序号定位：快照块与在途回放块序号不同时，仅按 blockSeq 会另建一个
+      // tool_calls 块，使同一次调用在界面上重复成两行。找不到同 callID 时再按序号兜底。
+      let block = state.blocks.find(
+        (b) =>
+          b.kind === "tool_calls" &&
+          ((b.payload as AgentToolCallsBlockPayload | undefined)?.calls ?? []).some(
+            (item) => item.callID === call.callID,
+          ),
+      );
+      if (!block) {
+        block = state.blocks.find((b) => b.seq === blockSeq && b.kind === "tool_calls");
+      }
+      if (!block) {
+        block = { seq: blockSeq, kind: "tool_calls", payload: { calls: [] } };
+        insertBlock(state, block);
+      }
+      const payload = block.payload as AgentToolCallsBlockPayload | undefined;
+      const calls = [...(payload?.calls ?? [])];
+      const idx = calls.findIndex((c) => c.callID === call.callID);
+      if (idx >= 0) {
+        calls[idx] = { ...calls[idx], ...call };
+      } else {
+        calls.push(call);
+      }
+      block.payload = { ...payload, calls };
     },
     // appendBlockText 把一段思考 / 正文增量追加进「当前开放块」（openSeq，由该 kind 的创建事件确立）的文本
     // 载荷——从序号 0 回放时基线里可能已有后续同 kind 块，按「最后一个同 kind 块」追加会落错序号；openSeq
@@ -292,6 +413,18 @@ export const useAgentRunStore = defineStore("agentRun", {
       const state = this.stateOf(sessionID);
       releaseSubscription(state);
       state.unsubscribe = unsubscribe;
+    },
+    // release 丢弃某会话当前的订阅句柄（仅当与给定句柄一致），**不中止**连接：流已自然结束
+    // （EOF / 错误）时用它在收尾阶段清理句柄，避免后续 attach / detach 对已完成的请求再调用
+    // abort，在浏览器网络记录里留下 net::ERR_ABORTED。
+    release(sessionID: number, unsubscribe: () => void): void {
+      const state = this.runs[sessionID];
+      if (!state || state.unsubscribe === null) {
+        return;
+      }
+      if (state.unsubscribe === unsubscribe) {
+        state.unsubscribe = null;
+      }
     },
     // detach 退订某会话的在途流（仅断连接，不取消服务端运行）。幂等：运行已收敛时只丢弃句柄、
     // 不再 abort 那条正在自然收尾的连接（见 releaseSubscription）

@@ -41,6 +41,10 @@ const props = withDefaults(
 
 const emits = defineEmits<{
   "update:modelValue": [value: number];
+  /** 开始拖拽：消费方可据此临时关闭宽度/高度过渡动画。 */
+  "resize-start": [];
+  /** 结束拖拽（含失焦与组件卸载导致的结束）。 */
+  "resize-end": [];
 }>();
 
 // isWidthResize 该边调的是宽度（左右边框）还是高度（上下边框）
@@ -55,6 +59,29 @@ const label = computed(() =>
 const resizing = ref(false);
 let startPos = 0;
 let startSize = 0;
+// frame 是待提交尺寸的帧句柄；pendingSize 是本帧内最后一次算出的尺寸。
+// 指针事件频率可能高于屏幕刷新（高回报率鼠标），逐事件回写会让父级每帧多次重排；
+// 这里按帧合并，只回写每帧最终值。
+let frame = 0;
+let pendingSize: number | null = null;
+
+// flushPending 把本帧累计的尺寸提交给父级。
+const flushPending = (): void => {
+  frame = 0;
+  if (pendingSize === null) {
+    return;
+  }
+  emits("update:modelValue", pendingSize);
+  pendingSize = null;
+};
+
+// scheduleSize 记录尺寸并确保本帧结束前提交一次。
+const scheduleSize = (size: number): void => {
+  pendingSize = size;
+  if (frame === 0) {
+    frame = requestAnimationFrame(flushPending);
+  }
+};
 
 // onPointerDown 开始拖拽：以起点尺寸为基准，拖离该边的对侧即为增大
 const onPointerDown = (e: PointerEvent): void => {
@@ -64,6 +91,7 @@ const onPointerDown = (e: PointerEvent): void => {
   window.addEventListener("pointermove", onPointerMove);
   window.addEventListener("pointerup", onPointerUp);
   window.addEventListener("blur", onPointerUp);
+  emits("resize-start");
 };
 
 // onPointerMove 拖拽中：按指针位移换算尺寸（left / top 向左 / 上为增，right / bottom 向右 / 下为增），
@@ -75,18 +103,24 @@ const onPointerMove = (e: PointerEvent): void => {
   const current = isWidthResize.value ? e.clientX : e.clientY;
   const sign = props.side === "left" || props.side === "top" ? -1 : 1;
   const next = startSize + (current - startPos) * sign;
-  emits("update:modelValue", Math.min(props.max, Math.max(props.min, Math.round(next))));
+  scheduleSize(Math.min(props.max, Math.max(props.min, Math.round(next))));
 };
 
-// onPointerUp 结束拖拽：移除监听（窗口失焦时同样结束，避免残留「拖拽中」）
+// onPointerUp 结束拖拽：先同步提交最后一帧尺寸，再移除监听（窗口失焦时同样结束，
+// 避免残留「拖拽中」与丢帧）
 const onPointerUp = (): void => {
   if (!resizing.value) {
     return;
   }
+  if (frame !== 0) {
+    cancelAnimationFrame(frame);
+  }
+  flushPending();
   resizing.value = false;
   window.removeEventListener("pointermove", onPointerMove);
   window.removeEventListener("pointerup", onPointerUp);
   window.removeEventListener("blur", onPointerUp);
+  emits("resize-end");
 };
 
 onUnmounted(onPointerUp);

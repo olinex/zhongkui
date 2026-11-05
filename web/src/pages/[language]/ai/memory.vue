@@ -8,6 +8,7 @@
         :actions="getActions"
         :batch-actions="getBatchActions"
         :project-fields="projectFields"
+        :default-order-by="defaultOrderBy"
         model-name="agentMemory"
       >
         <!-- 状态列：字符串 status 映射为布尔开关（active ⇄ archived），开关即时写入启停 -->
@@ -72,6 +73,10 @@ import type { BatchResultOut } from "@/apis/@types/admin";
 import type { BatchActions, ItemActions } from "@/components/@types/table";
 import { useAppStore } from "@/stores/app";
 import i18n from "@/utils/i18n";
+import type { SortItem } from "vuetify/lib/components/VDataTable/composables/sort.mjs";
+
+// 默认按最近更新时间倒序，与记忆列表的展示语义一致
+const defaultOrderBy: SortItem[] = [{ key: "updatedAt", order: "desc" }];
 
 const appStore = useAppStore();
 const searchTableRef = useTemplateRef("searchTableRef");

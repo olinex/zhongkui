@@ -24,7 +24,7 @@
 
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
-| query | string | 是 | required | - | - |
+| query | string | 是 | required,notBlank | - | - |
 
 ## 出参
 

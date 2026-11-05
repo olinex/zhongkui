@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"zhongkuisec.com/zhongkui/internal/ai/config"
 	// 标准库
 	"fmt"
 	"strings"
@@ -11,7 +12,7 @@ import (
 
 	// 项目内部
 
-	"zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/ai/change"
 	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
 	"zhongkuisec.com/zhongkui/internal/manager/response"
 	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
@@ -96,8 +97,8 @@ func LlmParamListGet(c *gin.Context) {
 		byKey[rows[i].Key] = rows[i]
 	}
 	lang := middlewares.GetLanguage(c)
-	items := make([]LlmParamItemOut, 0, len(ai.Specs))
-	for _, spec := range ai.Specs {
+	items := make([]LlmParamItemOut, 0, len(config.Specs))
+	for _, spec := range config.Specs {
 		row := byKey[spec.Key]
 		items = append(items, LlmParamItemOut{
 			Key:        spec.Key,
@@ -115,10 +116,19 @@ func LlmParamListGet(c *gin.Context) {
 	response.SimpleOK.AbortWithGinW(c, LlmParamListOut{Items: items})
 }
 
+// paramUpdate 是待写入的单条参数变更；value 为空串表示恢复出厂值（写回 default_value）。
+type paramUpdate struct {
+	// key 参数键（注册表已声明）
+	key string
+	// value 目标值；空串表示恢复出厂值
+	value string
+}
+
 // LlmParamSet 处理批量写入 Agent 参数的请求。
-// 先全量校验（键必须已声明、值必须符合注册表声明的类型），校验通过后再逐条写入，
-// 避免部分写入后因后续条目非法而中断；空值等价于恢复出厂值（把当前值写回
-// default_value），与「参数记录恒存在」的启动期强校验保持一致。
+// 先全量校验（键必须已声明、值必须符合注册表声明的类型、跨键关系必须成立），校验通过后
+// 再逐条写入，避免部分写入后因后续条目非法而中断；空值等价于恢复出厂值（把当前值写回
+// default_value），与「参数记录恒存在」的启动期强校验保持一致。跨键关系在这里提前拦截，
+// 避免把库改成下次启动无法通过校验的状态。
 func LlmParamSet(c *gin.Context) {
 	var in LlmParamSetIn
 	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
@@ -129,13 +139,9 @@ func LlmParamSet(c *gin.Context) {
 		response.CreateBadBodyMessageError("llmParamItemsEmpty").AbortWithGinH(c)
 		return
 	}
-	type paramUpdate struct {
-		key   string
-		value string
-	}
 	updates := make([]paramUpdate, 0, len(in.Items))
 	for _, item := range in.Items {
-		spec, ok := ai.Lookup(item.Key)
+		spec, ok := config.Lookup(item.Key)
 		if !ok {
 			response.CreateBadBodyMessageError("llmParamNotDeclared", item.Key).AbortWithGinH(c)
 			return
@@ -148,6 +154,10 @@ func LlmParamSet(c *gin.Context) {
 		updates = append(updates, paramUpdate{key: spec.Key, value: value})
 	}
 	db := middlewares.GetCoreDatabase(c)
+	if err := validateParamRelations(db, updates); err != nil {
+		response.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
 	for _, update := range updates {
 		if update.value == "" {
 			if err := resetAgentParam(db, []string{update.key}); err != nil {
@@ -161,8 +171,35 @@ func LlmParamSet(c *gin.Context) {
 			return
 		}
 	}
-	afterConfigWrite(c, ai.ChangeKindParam, fmt.Sprintf("%d parameters", len(updates)))
+	afterConfigWrite(c, change.ChangeKindParam, fmt.Sprintf("%d parameters", len(updates)))
 	response.SimpleOK.AbortWithGinH(c)
+}
+
+// validateParamRelations 在读库当前值上叠加本次更新（空值按该键的 default_value 展开），
+// 再校验跨键参数关系；非法组合在写入前被拒绝，不会出现「保存成功但下次启动失败」。
+func validateParamRelations(db *gorm.DB, updates []paramUpdate) error {
+	var rows []aimodel.AgentParam
+	if err := db.Find(&rows).Error; err != nil {
+		return errors.WithStack(err)
+	}
+	byKey := make(map[string]aimodel.AgentParam, len(rows))
+	values := make(map[string]string, len(rows))
+	for i := range rows {
+		byKey[rows[i].Key] = rows[i]
+		values[rows[i].Key] = rows[i].Value
+	}
+	for _, update := range updates {
+		if update.value == "" {
+			row, ok := byKey[update.key]
+			if !ok {
+				return errors.Newf("parameter %q has no seeded row; run `migrate up` to seed the agent parameter defaults", update.key)
+			}
+			values[update.key] = row.DefaultValue
+			continue
+		}
+		values[update.key] = update.value
+	}
+	return config.ValidateRelations(values)
 }
 
 // LlmParamReset 处理恢复 Agent 参数出厂值的请求。
@@ -176,7 +213,7 @@ func LlmParamReset(c *gin.Context) {
 	}
 	keys := make([]string, 0, len(in.Keys))
 	if group := strings.TrimSpace(in.Group); group != "" {
-		for _, spec := range ai.Specs {
+		for _, spec := range config.Specs {
 			if spec.Group == group {
 				keys = append(keys, spec.Key)
 			}
@@ -187,7 +224,7 @@ func LlmParamReset(c *gin.Context) {
 		}
 	} else if len(in.Keys) > 0 {
 		for _, key := range in.Keys {
-			if _, ok := ai.Lookup(key); !ok {
+			if _, ok := config.Lookup(key); !ok {
 				response.CreateBadBodyMessageError("llmParamNotDeclared", key).AbortWithGinH(c)
 				return
 			}
@@ -201,7 +238,7 @@ func LlmParamReset(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	afterConfigWrite(c, ai.ChangeKindParam, fmt.Sprintf("%d parameters", len(keys)))
+	afterConfigWrite(c, change.ChangeKindParam, fmt.Sprintf("%d parameters", len(keys)))
 	response.SimpleOK.AbortWithGinH(c)
 }
 
@@ -227,7 +264,7 @@ func upsertAgentParam(db *gorm.DB, key, value string) error {
 
 // paramJSONValue 把库内文本字面量按其类型解析为对应的 JSON 原生类型，供前端直接展示与
 // 编辑（免去二次解析）；字面量不可解析时原样返回，保证接口始终可读。
-func paramJSONValue(spec ai.ParamSpec, literal string) any {
+func paramJSONValue(spec config.ParamSpec, literal string) any {
 	value, err := utils.ParseScalar(paramScalarKind(spec.Kind), literal)
 	if err != nil {
 		return literal
@@ -237,13 +274,13 @@ func paramJSONValue(spec ai.ParamSpec, literal string) any {
 
 // paramScalarKind 把注册表声明的参数类型映射为标量类型内核；string 与 text 同属字符串，
 // text 仅表示多行文本语义。
-func paramScalarKind(kind ai.ParamKind) utils.ScalarKind {
+func paramScalarKind(kind config.ParamKind) utils.ScalarKind {
 	switch kind {
-	case ai.ParamKindInt:
+	case config.ParamKindInt:
 		return utils.ScalarKindInt
-	case ai.ParamKindFloat:
+	case config.ParamKindFloat:
 		return utils.ScalarKindFloat
-	case ai.ParamKindBool:
+	case config.ParamKindBool:
 		return utils.ScalarKindBool
 	default:
 		return utils.ScalarKindString
@@ -252,7 +289,7 @@ func paramScalarKind(kind ai.ParamKind) utils.ScalarKind {
 
 // paramLabel 返回参数展示名称：i18n 键 param.<Key>.label（Key 全局唯一，故直接复用为文案
 // 键的一部分），未命中时回退参数短名（键的最后一段），保证前端始终有可展示的文案。
-func paramLabel(lang *base.Language, spec ai.ParamSpec) string {
+func paramLabel(lang *base.Language, spec config.ParamSpec) string {
 	key := fmt.Sprintf("param.%s.label", spec.Key)
 	if label := translate.L(lang, key, nil); label != key {
 		return label
@@ -266,7 +303,7 @@ func paramLabel(lang *base.Language, spec ai.ParamSpec) string {
 // paramComment 返回参数说明：i18n 键 param.<Key>.comment（Key 全局唯一，故直接复用为文案
 // 键的一部分）。说明文案只在语言文件中维护，注册表不持有副本，故无可回退的兜底文案；
 // 未命中时按 translate 层约定返回键本身，由 param_i18n_test.go 的键完整性测试兜底。
-func paramComment(lang *base.Language, spec ai.ParamSpec) string {
+func paramComment(lang *base.Language, spec config.ParamSpec) string {
 	return translate.L(lang, fmt.Sprintf("param.%s.comment", spec.Key), nil)
 }
 
@@ -275,7 +312,7 @@ func paramComment(lang *base.Language, spec ai.ParamSpec) string {
 // 参数传入空串时即为该情形；数值与布尔类参数的空串按零值处理（表单清空的既有契约）；
 // 类型不符或声明了封闭取值清单却传入清单外的值（如 retrieval.fusion）时返回按请求语言
 // 本地化的错误，避免非法值落库。
-func normalizeParamValue(spec ai.ParamSpec, value any) (string, error) {
+func normalizeParamValue(spec config.ParamSpec, value any) (string, error) {
 	if value == nil {
 		return "", nil
 	}
@@ -283,7 +320,7 @@ func normalizeParamValue(spec ai.ParamSpec, value any) (string, error) {
 	if err != nil {
 		return "", response.CreateBadBodyMessageError("llmParamValueTypeInvalid", spec.Key, spec.Kind)
 	}
-	if literal != "" && !ai.OptionAllowed(spec, literal) {
+	if literal != "" && !config.OptionAllowed(spec, literal) {
 		return "", response.CreateBadBodyMessageError("llmParamValueNotAllowed",
 			spec.Key, strings.Join(spec.Options, ", "), literal)
 	}

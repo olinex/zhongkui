@@ -25,9 +25,9 @@ func TestCompareGeneratedTrees(t *testing.T) {
 		t.Fatalf("compareGeneratedTrees 返回错误: %v", err)
 	}
 	want := map[string]bool{
-		"内容不一致: generated/explanation/a.md": true,
-		"缺失: generated/explanation/b.md":    true,
-		"多余: generated/explanation/c.md":    true,
+		"content mismatch: generated/explanation/a.md": true,
+		"missing: generated/explanation/b.md":          true,
+		"unexpected: generated/explanation/c.md":       true,
 	}
 	if len(diffs) != len(want) {
 		t.Fatalf("漂移项数 = %d, want %d: %v", len(diffs), len(want), diffs)

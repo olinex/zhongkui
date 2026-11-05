@@ -196,6 +196,86 @@ export interface AgentMemoryStatusIn {
   status: string;
 }
 
+// 技能（AgentSkill）
+// 技能按命名空间隔离，由名称、描述与正文组成，正文为可复用的技能内容（Markdown 文本）。
+// AgentSkillInputFieldOut 技能输入字段（由用户填写），供报告计划渲染输入表单。
+export interface AgentSkillInputFieldOut {
+  // 字段名称，作为报告计划 inputValues 中的键
+  name: string;
+  // 字段类型（date / number / string / enum / boolean）；nowTime 是字段名，其类型为 date
+  type: string;
+  // 该字段是否必填
+  required: boolean;
+  // 字段用途说明，可为空
+  description: string;
+}
+export interface AgentSkillItemOut {
+  id: number;
+  // 技能名称，同一命名空间内唯一；内置技能为全局名称
+  name: string;
+  // 技能来源：custom | builtin；builtin 只读（可启停）
+  source: string;
+  // 技能描述，便于在技能列表中识别用途，可空
+  description: string;
+  enabled: boolean;
+  // 技能是否可周期执行（由用户声明）
+  periodicCapable: boolean;
+  // 技能输入字段（由用户填写）
+  inputFields: AgentSkillInputFieldOut[];
+  // 技能固定参数（由用户填写的自由形状 JSON 对象）：值可为字符串 / 数字 / 布尔 /
+  // 对象 / 数组并保留原始类型
+  fixedFields: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface AgentSkillDetailOut extends AgentSkillItemOut {
+  // 所属命名空间
+  namespaceName: string;
+  // 技能正文内容
+  content: string;
+}
+export interface AgentSkillCreateIn {
+  name: string;
+  description: string;
+  content: string;
+  // 是否可周期执行；为 true 时 inputFields 必须包含 name=nowTime、type=date 的字段
+  periodicCapable: boolean;
+  // 技能输入字段
+  inputFields: AgentSkillInputFieldOut[];
+  // 技能固定参数，保留各键原始 JSON 类型
+  fixedFields: Record<string, unknown>;
+}
+export interface AgentSkillUpdateIn {
+  name: string;
+  description: string;
+  content: string;
+  // 是否可周期执行；为 true 时 inputFields 必须包含 name=nowTime、type=date 的字段
+  periodicCapable: boolean;
+  // 技能输入字段
+  inputFields: AgentSkillInputFieldOut[];
+  // 技能固定参数，保留各键原始 JSON 类型
+  fixedFields: Record<string, unknown>;
+}
+export interface AgentSkillStatusIn {
+  // 目标启停状态
+  enabled: boolean;
+}
+
+// 技能选择器选项（AgentSkillOptionOut）：合并跨命名空间内置技能与当前命名空间已启用技能；
+// 内置与自定义技能统一以 agent_skills 行 ID 作为选择标识。
+export interface AgentSkillOptionOut {
+  // 技能 ID
+  id: number;
+  // 展示名
+  name: string;
+  // 技能说明，可空
+  description: string;
+}
+export interface AgentSkillOptionListOut {
+  // 合并后的选项列表（内置在前、自定义在后）
+  items: AgentSkillOptionOut[];
+}
+
 // 检索引用（RetrievalResult，来自 done 事件的 citations）
 export interface RetrievalResult {
   documentID: string;
@@ -216,7 +296,7 @@ export interface AgentMessageItem {
   citations?: RetrievalResult[];
   createdAt: string;
   // 助手回答的用量元信息：本轮全部模型调用的 token 累计（提示 / 补全 / 合计）与总耗时（毫秒），
-  // 随消息落库，故重新加载历史会话后仍可展示；用户消息与历史遗留消息一律为 0。
+  // 随消息落库，故重新加载历史会话后仍可展示；用户消息与无用量数据的消息一律为 0。
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
@@ -225,6 +305,12 @@ export interface AgentMessageItem {
   // agentRunPhase）：failed/cancelled 表示本轮被中断，前端据此展示中断提示；用户消息与在途
   // 运行的阶段性落库行缺省
   phase?: string;
+  // 本条用户消息所在轮次选用的技能 ID（技能归属轮次而非会话，同一会话的不同轮次可各自不同）；
+  // 未选技能时缺省（用户消息才有值）
+  skillID?: number;
+  // 本条用户消息所在轮次选用的技能名称快照：技能后续重命名 / 停用 / 删除后仍如实展示当时选用
+  // 的技能；未选技能时缺省（用户消息才有值）
+  skillName?: string;
   // 该消息所锚定的历史压缩记录（压缩游标等于本条消息 seq 时由后端给出）：供刷新 / 重进会话后
   // 回显过往的压缩推进（含静默滚动 rolling）；无则为缺省
   compress?: AgentMessageCompressItem;
@@ -273,7 +359,7 @@ export interface AgentToolCallRecord {
   toolName: string;
   arguments: string;
   auditLevel: string;
-  execOwner?: "client" | "backend";
+  execOwner: "client" | "backend";
   round?: number;
   // 调用状态：start 发起 / done 完成 / failed 失败
   status: "start" | "done" | "failed";
@@ -292,21 +378,26 @@ export interface AgentApprovalCallRecord {
   arguments: string;
   auditLevel: string;
   approvalRequired: boolean;
-  execOwner?: "client" | "backend";
+  execOwner: "client" | "backend";
   // 用户决策：缺省表示尚无最终决策（仍待审批 / 只读回显），true 批准、false 拒绝
   decision?: boolean;
   result?: string;
   error?: string;
 }
-// approval 块载荷：本轮待审批调用清单
+// approval 块载荷：本轮待审批调用清单。callIDs 为卡片上的全部工具调用 ID（含已决策行）——已决策
+// 行没有可点击按钮，前端据此仍能精确定位该审批交互，供「重新审批」回退。
 export interface AgentApprovalBlockPayload {
   calls: AgentApprovalCallRecord[];
+  callIDs?: string[];
 }
-// questionnaire 块载荷：一轮 ask_user 问卷的题目与作答（同一回合内多轮各成一块，仅末轮可待回答）
+// questionnaire 块载荷：一轮 ask_user 问卷的题目与作答（同一回合内多轮各成一块，仅末轮可待回答）。
+// interruptIDs 为本轮 ask_user 调用的根中断 ID——已作答卡片不再渲染提交按钮，前端据此仍能定位该
+// 问卷交互，供「重新回答」回退到未作答状态。
 export interface AgentQuestionnaireBlockPayload {
   questions: QuestionnaireQuestion[];
   answers?: QuestionnaireAnswer[];
   awaiting: boolean;
+  interruptIDs?: string[];
 }
 // next_steps 块内一条推荐的下一步：title 为不超过 24 字的行动标题，reason 为不超过 64 字的推荐理由，
 // text 为可直接发送的完整诉求；recommended 标记最推荐项
@@ -335,9 +426,12 @@ export interface AgentMessageQuestionnaire {
 }
 
 // 回退到一条助手待输入回合的请求体（AgentAssistantInputRerunIn）：messageID 为该回合的助手锚点消息 id
-// （问卷作答与工具授权共用一个入口）。
+// （问卷作答与工具授权共用一个入口）；blockSeq 指定要回退到的授权块序号（同一回合可多次挂起、各轮授权
+// 各落一个 approval 块），省略时后端沿用「取末轮」口径。
 export interface AgentAssistantInputRerunIn {
   messageID: number;
+  // blockSeq 要回退到的授权块序号（锚点消息内 block_seq）：仅授权回合使用，省略时取末个 approval 块
+  blockSeq?: number;
 }
 
 // 回退到一条助手待输入回合的出参（AgentAssistantInputRerunOut）：按回合种类给出对应载荷，并附回退后的
@@ -353,9 +447,11 @@ export interface AgentAssistantInputRerunOut {
   pendingCalls?: ToolRequestPayload[];
 }
 
-// 消息所锚定的历史压缩记录（AgentMessageCompressOut）：仅承载回显所需的度量字段，
-// 不含摘要全文与游标本身。
+// 消息所锚定的历史压缩记录（AgentMessageCompressOut）：承载回显所需的度量字段与摘要全文
+// （摘要用于压缩块收起后点击展开查看）。
 export interface AgentMessageCompressItem {
+  // 压缩完成后的摘要全文（仅 done）：供历史回放中的压缩块展开查看
+  summary?: string;
   // 推进原因（rolling 静默滚动 / auto 自动压缩 / manual 手动压缩）
   reason: string;
   // 推进前会话上下文占用 token
@@ -381,12 +477,27 @@ export interface AgentSessionBranchIn {
   title?: string;
 }
 
+// 启动一轮对话的请求体（AgentChatIn）：POST /agent/:sessionID/chat，
+// 语义与旧的生成流请求体一致（query 必填，其余为可选上下文）。
+export interface AgentChatIn extends AgentStreamIn {
+  // 本轮对话选用的技能 ID（内置与自定义统一，可选），后端据此把技能正文装配进系统提示；
+  // 未选技能时不携带该字段
+  skillID?: number;
+}
+
+// 重新审批 / 重新回答请求体（AgentInteractionReopenIn）：审批回退按卡片上的工具调用 ID（callIDs）
+// 定位交互，问卷回退按卡片上的根中断 ID（interruptIDs）定位交互，二者至少提供其一。后端把会话回退
+// 到该次交互的待处理状态（删除该交互之后的回答，不重跑整轮）。
+export interface AgentInteractionReopenIn {
+  callIDs?: string[];
+  interruptIDs?: string[];
+}
+
 // 流式生成请求体（AgentStreamIn）
 export interface AgentStreamIn {
   query: string;
   docIDs?: number[];
   businessData?: Record<string, unknown>;
-  regoRule?: string;
   // 本次生成的显式档位（flash/standard/advanced），空表示回退到会话档位与 agent.defaultSlot
   slot?: string;
   // 思考开关（on/off）：仅当当前档位绑定模型支持思考开关时携带，空 / 缺省表示不注入
@@ -470,7 +581,7 @@ export interface AgentStageEvent {
 }
 
 // 挂起事件负载（后端 ToolRequest）：模型请求调用某个工具，需经人工审批后执行。execOwner 指明
-// 执行归属：client（默认，字段缺失时按此处理）由前端以用户自身凭据执行，再把结果回传后端续跑；
+// 执行归属：client 由前端以用户自身凭据执行，再把结果回传后端续跑；
 // backend 由后端在审批通过后自行执行，前端仅做批准 / 拒绝。后端不解释入参，原样透传工具名与入参文本。
 // auditLevel 为后端评估产出的审核重要级（取值集合与展示文案由后端枚举类 auditLevel 下发）；
 // approvalRequired 由后端按审核重要级与会话阀门合成得出，为 false 时无需人工审批。
@@ -485,12 +596,14 @@ export interface ToolRequestPayload {
   auditLevel: string;
   // 是否需要人工审批：由后端按审核重要级与会话阀门合成，可能为 false（自动批准）
   approvalRequired: boolean;
-  // 执行归属：client 由前端执行（默认，字段缺失时按此处理）、backend 由后端执行（前端仅审批）
-  execOwner?: "client" | "backend";
+  // 执行归属：client 由前端执行、backend 由后端执行（前端仅审批）
+  execOwner: "client" | "backend";
   // 本次挂起所锚定的助手消息 ID（服务端 agent_messages.id）：挂起一律把本回合的助手消息落为锚点行，
   // 故正常挂起均携带，前端据此把挂起定位到本地气泡；「重新回答」须按其截断其后消息并可重答。
   // 仅旁路调用（服务端未注入运行期共享状态）缺省
   messageID?: number;
+  // 该调用所属的根中断 ID（快照下由此恢复待审批 / 待作答的续跑定位）
+  interruptID?: string;
 }
 
 // 单条审批结果（ToolResultItemIn）：approved=true 时 result 为工具执行结果文本、执行失败
@@ -506,6 +619,42 @@ export interface ToolResultItemIn {
 // 后端会把运行现场一次性消费。
 export interface ToolResultIn {
   results: ToolResultItemIn[];
+}
+
+// 单条审批决策（AssistantApprovalDecision）：toolName / arguments / execOwner / approvalRequired
+// 为审批卡片上下文元信息，随决策一并回传（供后端续跑定位与执行归属）。
+export interface AssistantApprovalDecision {
+  callID: string;
+  interruptId?: string;
+  approved: boolean;
+  reason?: string;
+  /** Frontend execution result for client tools (api_invoke). */
+  result?: string;
+  /** Frontend execution error for client tools. */
+  error?: string;
+  /** Tool metadata copied from the approval card context; not sent as a decision field. */
+  toolName?: string;
+  arguments?: string;
+  execOwner?: string;
+  approvalRequired?: boolean;
+}
+
+// 单题作答（AssistantQuestionnaireAnswer）。
+export interface AssistantQuestionnaireAnswer {
+  questionID: string;
+  answered: boolean;
+  answer?: string;
+  custom?: boolean;
+}
+
+// 助手动作请求体（AssistantActionRequest）：POST /ai/agent/:sessionID/action。
+export interface AssistantActionRequest {
+  action: string;
+  interruptId?: string;
+  interruptIds?: string[];
+  decisions?: AssistantApprovalDecision[];
+  answers?: AssistantQuestionnaireAnswer[];
+  text?: string;
 }
 
 // 主动提问问卷：模型在信息不足时经 client 工具 ask_user 向用户发起一组带候选的提问，前端据此

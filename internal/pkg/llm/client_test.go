@@ -3,7 +3,6 @@ package llm
 import (
 	// 标准库
 	"context"
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -17,6 +16,9 @@ import (
 	"github.com/cloudwego/eino/components"
 	"github.com/cloudwego/eino/components/embedding"
 	"github.com/cloudwego/eino/schema"
+
+	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // fakeEmbedder 记录每次收到的批次文本，并返回与入参等长的占位向量（第 i 个向量的唯一元素为
@@ -349,7 +351,7 @@ func TestChatClient_StreamExceedsModelTimeout(t *testing.T) {
 			flusher.Flush()
 		}
 		writeChunk("hel")
-		// 停顿远超模型超时：旧实现（http.Client.Timeout）会在此中断
+		// 停顿远超模型超时：若按 http.Client.Timeout 实现会在此中断
 		time.Sleep(4 * modelTimeout)
 		writeChunk("lo")
 		_, _ = io.WriteString(w, "data: [DONE]\n\n")

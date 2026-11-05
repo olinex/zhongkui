@@ -76,28 +76,28 @@
 1101 = "用户旧密码验证失败"
 1102 = "用户名或邮箱已存在"
 1103 = "过多的访问密钥"
-1104 = "标签规则校验失败"
-1105 = "标签事件规则校验失败"
-1106 = "标签规则运行期校验失败"
-1107 = "标签规则目标模型未注册"
-1108 = "前端配置已被其他浏览器更新，请刷新后重试"
-1109 = "前端配置同步未开启"
-1110 = "标签规则样例输入无法反序列化为目标模型"
-1111 = "通知发送失败"
-1112 = "定时任务配置非法"
-1113 = "重置密码功能不可用，请联系管理员或稍后再试"
-1114 = "重置密码链接无效或已过期，请重新申请"
-1115 = "档位绑定与系统当前配置不兼容，请按错误详情调整后重试"
-1116 = "待审批的接口调用已不存在，请重新发起提问"
-1117 = "该接口调用已被处理，请勿重复提交"
-1118 = "本次接口调用已超时，请重新发起提问"
-1119 = "内置系统命名空间受保护，禁止删除"
-1120 = "该会话没有在途运行"
-1121 = "该会话的驻留运行已过期"
-1122 = "无权访问该会话的在途运行"
-1123 = "请求过于频繁，请稍后再试"
-1124 = "会话已达轮次上限，请回滚后再试"
-1125 = "当前会话状态不允许该操作，请稍后再试"
+1104 = "重置密码功能不可用，请联系管理员或稍后再试"
+1105 = "重置密码链接无效或已过期，请重新申请"
+1106 = "请求过于频繁，请稍后再试"
+1107 = "访问密钥无效或已过期"
+1200 = "标签规则校验失败"
+1201 = "标签事件规则校验失败"
+1202 = "标签规则运行期校验失败"
+1203 = "标签规则目标模型未注册"
+1204 = "标签规则样例输入无法反序列化为目标模型"
+1300 = "待审批的接口调用已不存在，请重新发起提问"
+1301 = "该接口调用已被处理，请勿重复提交"
+1302 = "该会话没有在途运行"
+1303 = "该会话的驻留运行已过期"
+1304 = "无权访问该会话的在途运行"
+1305 = "会话已达轮次上限，请回滚后再试"
+1306 = "当前会话状态不允许该操作，请稍后再试"
+1400 = "前端配置已被其他浏览器更新，请刷新后重试"
+1401 = "前端配置同步未开启"
+1402 = "通知发送失败"
+1403 = "定时任务配置非法"
+1404 = "档位绑定与系统当前配置不兼容，请按错误详情调整后重试"
+1405 = "内置系统命名空间受保护，禁止删除"
 
 [error]
 emptyUrlParam = "URL参数`%s`不应为空"
@@ -112,6 +112,17 @@ llmBindingKindMismatch = "模型 %s 是 %s 模型，无法绑定到 %s 档位（
 llmBindingIncompatibleDimension = "embedding 模型 %s 与知识库索引维度 %d 不兼容（该模型实际返回 %d 维）；请先解绑 embedding 档位（若已绑定），执行 `sync embedding-dimensions --dimensions %d` 重建索引后再绑定"
 enumUnknownType = "未知的枚举类 `%s`"
 aiFeatureDisabled = "AI 功能未启用，请先在档位绑定中启用所需模型"
+aiSkillUnavailable = "技能不存在或已停用"
+aiSkillNameExists = "同名技能已存在"
+aiSkillBuiltinReadonly = "内置技能由代码维护，不可编辑或删除"
+aiSkillInvalidFields = "技能输入字段或固定参数不合法：%v"
+aiSkillPeriodicNowTimeRequired = "可周期执行的技能必须包含 name=nowTime、类型为 date 的输入字段"
+periodicReportSkillNotEligible = "所选技能不可用于周期性报告，请选择可周期执行、固定参数含合法时间窗口且包含 nowTime 输入字段的技能"
+periodicReportScheduleInvalid = "cron 表达式非法"
+periodicReportInputMissing = "技能必填输入未填写"
+periodicReportInputInvalid = "技能输入参数不合法：键必须属于技能固定参数或输入字段，值的类型须与原字段一致，且不能覆盖 nowTime 或提供非法时间窗口"
+periodicReportPlanExpired = "报告计划已到期，不能立即执行"
+periodicReportRunObjectMissing = "报告正文不存在或已被清理"
 knowledgeImportedContentReadOnly = "导入文档的正文为只读内容，请重新解析文档以刷新"
 knowledgeDocumentParsing = "文档正在解析中，请等待解析完成后再重新索引"
 knowledgeDocumentNotFound = "知识库文档 %d 不存在"
@@ -130,6 +141,7 @@ llmParamValueNotAllowed = "参数 `%q` 的取值必须为 %s 之一，实际为 
 llmModelNameEmpty = "模型名称不能为空"
 llmModelNameExists = "模型名称 `%q` 已存在"
 llmModelContextTokensInvalid = "上下文容量必须是正整数（对话模型必填）"
+apiModeInvalid = "接口形态必须是 chat 或 responses；responses 仅对话模型可用"
 llmModelBound = "模型 `%q` 已绑定到档位，请先解绑再删除"
 extraBodyInvalid = "高级请求配置须为合法的 JSON 对象"
 thinkingValueInvalid = "思考开/关取值须为合法 JSON"
@@ -168,8 +180,10 @@ enum = "字段取值不在允许范围内"
 httpUrl = "字段须为绝对的 http 或 https 地址"
 jsonObject = "字段须为 JSON 对象文本，且所有取值均为字符串"
 trimmed = "字段首尾不能包含空白字符"
+notBlank = "字段不能为空白字符"
 gtCurrentTime = "字段必须晚于当前时间"
 ltCurrentTime = "字段必须早于当前时间"
+cron = "字段须为合法的 cron 表达式（支持 5 段标准 cron 或 @daily 等描述符）"
 
 # =============================================================================
 # Interactive prompt texts (cliinput) - Key layout: cli.input.prompt.<Struct>.<Field>
@@ -1969,6 +1983,23 @@ other = "MCP 工具"
 [enum.llmToolSource.client]
 other = "客户端工具"
 
+# 技能来源（枚举类 agentSkillSource）
+[enum.agentSkillSource.custom]
+other = "自定义技能"
+
+[enum.agentSkillSource.builtin]
+other = "内置技能"
+
+# 报告运行状态（枚举类 periodicReportRunStatus）
+[enum.periodicReportRunStatus.running]
+other = "运行中"
+
+[enum.periodicReportRunStatus.success]
+other = "成功"
+
+[enum.periodicReportRunStatus.failed]
+other = "失败"
+
 # Agent 类型（枚举类 agentKind）
 [enum.agentKind.general]
 other = "通用助手"
@@ -1978,6 +2009,13 @@ other = "知识检索"
 
 [enum.agentKind.rego]
 other = "Rego 规则生成"
+
+# 对话模型接口形态（枚举类 llmAPIMode）
+[enum.llmAPIMode.chat]
+other = "Chat Completions"
+
+[enum.llmAPIMode.responses]
+other = "Response API"
 
 # 长期记忆类别（枚举类 memoryKind）
 [enum.memoryKind.fact]
@@ -2282,18 +2320,6 @@ other = "推荐下一步"
 [param.agent.nextStepsEnabled.comment]
 other = "是否在每条助手回答完成后自动生成「推荐的下一步」；关闭后不生成、不展示"
 
-[param.agent.businessSectionTitle.label]
-other = "业务现场分节标题"
-
-[param.agent.businessSectionTitle.comment]
-other = "用户消息中当前业务现场分节的标题"
-
-[param.agent.questionSectionTitle.label]
-other = "提问分节标题"
-
-[param.agent.questionSectionTitle.comment]
-other = "用户消息中提问分节的标题"
-
 [param.agent.retrievedDocSnippetLimit.label]
 other = "知识检索片段截断长度"
 
@@ -2310,7 +2336,7 @@ other = "未显式指定档位且调用点未声明建议档位时使用的默�
 other = "工具调用轮数上限"
 
 [param.agent.maxToolRounds.comment]
-other = "单轮对话中工具调用循环的最大轮数，达到上限仍存在工具调用时以该轮文本作为答案"
+other = "单次自主工具循环的最大轮数（人工审批 / 问卷续跑重新计数），达到上限仍存在工具调用时以该轮文本作为答案"
 
 [param.agent.maxToolResultBytes.label]
 other = "工具结果字节上限"
@@ -2323,6 +2349,24 @@ other = "退订宽限秒数"
 
 [param.agent.runDetachGraceSeconds.comment]
 other = "驻留运行最后一名订阅者退订后，超过该秒数仍无订阅者则自动取消运行；<=0 表示关闭自动取消"
+
+[param.agent.llmTimeoutRetryEnabled.label]
+other = "超时自动重试"
+
+[param.agent.llmTimeoutRetryEnabled.comment]
+other = "非流式模型调用（记忆抽取、审核分级、检索重排等）超时后是否自动重试；流式对话不受影响"
+
+[param.agent.llmTimeoutRetryMaxRetries.label]
+other = "超时重试次数"
+
+[param.agent.llmTimeoutRetryMaxRetries.comment]
+other = "超时后最多重试几次（不含首次请求）；0 表示不重试"
+
+[param.agent.llmTimeoutRetryMultiplier.label]
+other = "超时放大倍数"
+
+[param.agent.llmTimeoutRetryMultiplier.comment]
+other = "每次重试把单次请求超时乘以该倍数；例如基础 60 秒、倍数 2 时依次为 120、240、480 秒"
 
 # ---- retrieval：混合检索融合与 LLM 重排 ----
 [param.retrieval.topK.label]
@@ -2416,12 +2460,6 @@ other = "长期记忆开关"
 
 [param.memory.enabled.comment]
 other = "长期记忆总开关，关闭时生成请求跳过记忆检索与注入且不报错"
-
-[param.memory.sectionTitle.label]
-other = "记忆分节标题"
-
-[param.memory.sectionTitle.comment]
-other = "长期记忆注入提示词时使用的分节标题"
 
 [param.memory.topK.label]
 other = "记忆注入条数"
@@ -2572,10 +2610,10 @@ other = "向用户提问"
 other = "模型在信息不足或需用户在多个方案间抉择时向用户提问；由前端呈现问卷、用户作答后回传结果，可一次提多个问题，每题提供候选答案"
 
 [tool.api_invoke.label]
-other = "调用只读能力"
+other = "调用平台能力"
 
 [tool.api_invoke.comment]
-other = "在用户自身凭据下调用经后端白名单校验的只读能力；需用户人工审批后由前端执行，只返回接口响应"
+other = "在用户自身凭据下调用经后端白名单校验的只读或写入能力；需用户人工审批后由前端执行，只返回接口响应"
 
 [tool.math_eval.label]
 other = "表达式求值"
@@ -2655,6 +2693,12 @@ other = "URL 解析"
 [tool.url_parse.comment]
 other = "解析 URL 的协议、用户、主机、端口、路径、查询参数与片段等分量"
 
+[tool.mermaid_check.label]
+other = "Mermaid 图表校验"
+
+[tool.mermaid_check.comment]
+other = "在输出图表前校验 mermaid 源码合法性，按行号返回问题与修改建议，供 Agent 自行整改；覆盖流程图语法、连线写法与样式类引用"
+
 [tool.poly_solve.label]
 other = "多项式求根"
 
@@ -2687,3 +2731,37 @@ other = "用牛顿-拉夫逊法求解非线性方程组，给出解向量、残�
 
 [tagengine.custom-functions.sqlite.query.description]
 other = "查询第三方数据源：对注册为 sqlite vtable 的第三方数据源执行 SELECT 语句并返回行对象数组。\n参数：第一参数为查询语句（支持 ? 占位符），第二参数为按顺序绑定到占位符的参数数组。\n返回值：每行是以列名为键的对象，经下标加列名访问（如 rows[0].value）；无匹配行时返回空数组，下标访问会使规则体不满足，可先用 count(rows) > 0 判断"
+
+# 任务类型（枚举类 taskType，来源 worker 的任务处理器注册表 TaskTypes()）
+[enum.taskType."network:pcapimport"]
+other = "PCAP 抓包文件导入"
+
+[enum.taskType."tag:event:detect"]
+other = "标签事件检测"
+
+[enum.taskType."tag:event:suppress"]
+other = "标签事件抑制评估"
+
+[enum.taskType."tag:event:cleanup"]
+other = "标签事件无效记录清理"
+
+[enum.taskType."mail:send"]
+other = "系统级邮件直发"
+
+[enum.taskType."notify:send:group"]
+other = "通知组发送"
+
+[enum.taskType."notify:send:target"]
+other = "通知单目标直投"
+
+[enum.taskType."ai:doc:parse"]
+other = "知识文档导入解析"
+
+[enum.taskType."periodic-report:plan:dispatch"]
+other = "周期性报告计划分发"
+
+[enum.taskType."periodic-report:plan:run"]
+other = "周期性报告生成"
+
+[enum.taskType."periodic-report:run:cleanup"]
+other = "周期性报告生命周期清理"

@@ -3,9 +3,9 @@
 //
 // 本文件是内置工具 datetime_calc 的薄适配器：Agent 在工具循环中做日期与时区运算——取当前时间、在
 // 时区间转换、对时间做加减、计算两个时间的间隔。工具完全无状态：不消费 Deps、不依赖运行期上下文。
-// 纯算法实现已下沉到 internal/pkg/utils（RunDatetimeCalc 及各 helper），本文件只保留入参结构体、
-// Info（含中文 Desc/schema）、init 期登记与 InvokableRun 骨架：解析入参 JSON、调用 utils 导出函数、
-// 出错时补上工具名前缀并以 JSON 序列化结果。工具元信息（internal/ai 的 ToolSpecs）与出厂行
+// 纯算法实现已下沉到 internal/pkg/utils（RunDatetimeCalc），工具契约由 eino 的
+// tool/utils.InferTool 按入参结构体生成参数 schema，并自动完成入参解析与结果序列化；本文件只保留
+// 入参结构体、工具描述与调用 utils 的薄函数。工具元信息（internal/ai 的 ToolSpecs）与出厂行
 // （002_fixtures.sql）由另外两处提供。
 
 package tools
@@ -13,11 +13,9 @@ package tools
 import (
 	// 标准库
 	"context"
-	"encoding/json"
 
 	// 第三方
 	"github.com/cloudwego/eino/components/tool"
-	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
@@ -27,109 +25,49 @@ import (
 // datetimeCalcArgs 是 datetime_calc 的 JSON 入参形态：operation 必填，其余按操作各取所需。
 type datetimeCalcArgs struct {
 	// Operation 要执行的操作：now / convert / add / diff
-	Operation string `json:"operation"`
+	Operation string `json:"operation" jsonschema:"enum=now,enum=convert,enum=add,enum=diff" jsonschema_description:"要执行的操作，必填：now 取当前时间、convert 时区转换、add 时间加减、diff 计算间隔。"`
 	// Timezone 目标/解释时区（now 输出、convert 输出目标、add 运算时区），缺省 UTC
-	Timezone string `json:"timezone"`
+	Timezone string `json:"timezone,omitempty" jsonschema_description:"目标/解释时区（IANA 名称），缺省 UTC；now 的输出时区、convert 的输出目标时区、add 运算所基于的时区。"`
 	// Time 待处理时间，除 now 外使用
-	Time string `json:"time"`
+	Time string `json:"time,omitempty" jsonschema_description:"待处理时间，除 now 外使用；支持 RFC3339（如 2024-01-01T00:00:00Z）与 2006-01-02 15:04:05 两种格式。"`
 	// FromTimezone convert 的源时区，缺省 UTC
-	FromTimezone string `json:"from_timezone"`
+	FromTimezone string `json:"from_timezone,omitempty" jsonschema_description:"convert 的源时区（IANA 名称），缺省 UTC。"`
 	// ToTimezone convert 的目标时区，缺省取 timezone，再缺省 UTC
-	ToTimezone string `json:"to_timezone"`
+	ToTimezone string `json:"to_timezone,omitempty" jsonschema_description:"convert 的目标时区（IANA 名称），缺省取 timezone，再缺省 UTC。"`
 	// Duration add 的增量（支持 h/m/s/ms/us/ns 与 d）
-	Duration string `json:"duration"`
+	Duration string `json:"duration,omitempty" jsonschema_description:"add 的增量，支持 Go 时长单位 h/m/s/ms/us/ns 以及 d（天，按 24 小时计），如 1d2h。"`
 	// Start diff 的起始时间
-	Start string `json:"start"`
+	Start string `json:"start,omitempty" jsonschema_description:"diff 的起始时间，支持 RFC3339 与 2006-01-02 15:04:05 两种格式。"`
 	// End diff 的结束时间
-	End string `json:"end"`
+	End string `json:"end,omitempty" jsonschema_description:"diff 的结束时间，支持 RFC3339 与 2006-01-02 15:04:05 两种格式。"`
 }
 
-// datetimeCalcTool 是内置工具 datetime_calc 的无状态实现：不持有依赖，不读取运行期上下文。
-type datetimeCalcTool struct{}
-
-// Info 返回 datetime_calc 的工具元信息与参数 JSON schema，供模型决定何时调用。所有参数说明为中文，
-// operation 带枚举取值且必填；timezone / time / from_timezone / to_timezone / duration / start / end
-// 均按需可选。
-func (t *datetimeCalcTool) Info(_ context.Context) (*schema.ToolInfo, error) {
-	return &schema.ToolInfo{
-		Name: "datetime_calc",
-		Desc: "进行日期与时间计算：获取当前时间、在时区间转换、对时间做加减、计算两个时间的间隔。" +
-			"时区用 IANA 名称（如 Asia/Shanghai），缺省 UTC；时间支持 RFC3339 与 2006-01-02 15:04:05 两种格式。",
-		ParamsOneOf: schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{
-			"operation": {
-				Type:     schema.String,
-				Desc:     "要执行的操作，必填：now 取当前时间、convert 时区转换、add 时间加减、diff 计算间隔。",
-				Required: true,
-				Enum:     utils.DatetimeOperations,
-			},
-			"timezone": {
-				Type: schema.String,
-				Desc: "目标/解释时区（IANA 名称），缺省 UTC；now 的输出时区、convert 的输出目标时区、add 运算所基于的时区。",
-			},
-			"time": {
-				Type: schema.String,
-				Desc: "待处理时间，除 now 外使用；支持 RFC3339（如 2024-01-01T00:00:00Z）与 2006-01-02 15:04:05 两种格式。",
-			},
-			"from_timezone": {
-				Type: schema.String,
-				Desc: "convert 的源时区（IANA 名称），缺省 UTC。",
-			},
-			"to_timezone": {
-				Type: schema.String,
-				Desc: "convert 的目标时区（IANA 名称），缺省取 timezone，再缺省 UTC。",
-			},
-			"duration": {
-				Type: schema.String,
-				Desc: "add 的增量，支持 Go 时长单位 h/m/s/ms/us/ns 以及 d（天，按 24 小时计），如 1d2h。",
-			},
-			"start": {
-				Type: schema.String,
-				Desc: "diff 的起始时间，支持 RFC3339 与 2006-01-02 15:04:05 两种格式。",
-			},
-			"end": {
-				Type: schema.String,
-				Desc: "diff 的结束时间，支持 RFC3339 与 2006-01-02 15:04:05 两种格式。",
-			},
-		}),
-	}, nil
-}
-
-// InvokableRun 执行 datetime_calc：解析 JSON 入参，调用 utils.RunDatetimeCalc 按 operation 分派计算，
-// 返回紧凑 JSON 字符串。operation 非法、缺 time、时区非法或时间不可解析均返回英文错误（工具名前缀
-// 在此补齐）。
-func (t *datetimeCalcTool) InvokableRun(_ context.Context, argumentsInJSON string, _ ...tool.Option) (string, error) {
-	var args datetimeCalcArgs
-	if err := json.Unmarshal([]byte(argumentsInJSON), &args); err != nil {
-		return "", errors.WithStack(err)
-	}
-	result, err := utils.RunDatetimeCalc(utils.DatetimeCalcInput{
-		Operation:    args.Operation,
-		Timezone:     args.Timezone,
-		Time:         args.Time,
-		FromTimezone: args.FromTimezone,
-		ToTimezone:   args.ToTimezone,
-		Duration:     args.Duration,
-		Start:        args.Start,
-		End:          args.End,
-	})
-	if err != nil {
-		return "", errors.Newf("datetime_calc: %s", err.Error())
-	}
-	return datetimeEncodeResult(result)
-}
-
-// datetimeEncodeResult 把 utils 返回的结果结构体序列化为紧凑 JSON 字符串；失败时返回带堆栈错误。
-func datetimeEncodeResult(v any) (string, error) {
-	out, err := json.Marshal(v)
-	if err != nil {
-		return "", errors.WithStack(err)
-	}
-	return string(out), nil
-}
+// datetimeCalcTool 是内置工具 datetime_calc 的 eino 实现：不持有依赖，参数 schema 由入参结构体推导。
+var datetimeCalcTool = mustInferTool(
+	"datetime_calc",
+	"进行日期与时间计算：获取当前时间、在时区间转换、对时间做加减、计算两个时间的间隔。"+
+		"时区用 IANA 名称（如 Asia/Shanghai），缺省 UTC；时间支持 RFC3339 与 2006-01-02 15:04:05 两种格式。",
+	func(_ context.Context, in datetimeCalcArgs) (any, error) {
+		result, err := utils.RunDatetimeCalc(utils.DatetimeCalcInput{
+			Operation:    in.Operation,
+			Timezone:     in.Timezone,
+			Time:         in.Time,
+			FromTimezone: in.FromTimezone,
+			ToTimezone:   in.ToTimezone,
+			Duration:     in.Duration,
+			Start:        in.Start,
+			End:          in.End,
+		})
+		if err != nil {
+			return nil, errors.Newf("datetime_calc: %s", err.Error())
+		}
+		return result, nil
+	},
+)
 
 // init 向内置工具实现注册表登记 datetime_calc；工具无状态，不消费 Deps。
 func init() {
 	Register("datetime_calc", func(_ context.Context, _ Deps) (tool.BaseTool, error) {
-		return &datetimeCalcTool{}, nil
+		return datetimeCalcTool, nil
 	})
 }

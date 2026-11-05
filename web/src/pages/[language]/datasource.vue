@@ -10,16 +10,9 @@
         :create="openCreateDialogAction"
         :project-fields="projectFields"
         model-name="datasource"
+        @view-plaintext="viewConfigPlaintext"
       >
-        <!-- config 为加密字段，列表统一用加密字段组件展示（提供明文查看入口，点击可解密） -->
-        <template #cell-config="{ item }">
-          <encrypted-value-cell
-            kind="crypto"
-            :item="item"
-            field-key="config"
-            @view-plaintext="viewConfigPlaintext"
-          />
-        </template>
+        <!-- config 为加密字段（后端 kind=crypto），由 SearchTable 自动渲染加密单元格 -->
 
         <!-- 启用列：开关即时写入（后端按批设置启用态接口，单条即单元素批次），
              写入期间按行显示 loading 并禁用，失败回退，避免重复切换同一行 -->
@@ -241,7 +234,7 @@
                   v-model="createDescription"
                   v-bind="createDescriptionProps"
                   :label="$t('model.datasource.field.description')"
-                  rows="1"
+                  rows="3"
                 />
               </v-col>
             </v-row>
@@ -416,7 +409,7 @@
                   v-bind="editDescriptionProps"
                   :label="$t('model.datasource.field.description')"
                   :disabled="!editable"
-                  rows="1"
+                  rows="3"
                 />
               </v-col>
             </v-row>

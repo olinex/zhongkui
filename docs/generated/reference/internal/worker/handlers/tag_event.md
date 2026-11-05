@@ -115,7 +115,7 @@ NewEventDetectHandler 从 do.Injector 解析依赖并创建标签事件检测处
 func (h *EventDetectHandler) Do(ctx context.Context, task etl.Task) error
 ```
 
-Do 执行一次标签事件检测。 检测时间取自任务载荷中的游标时间点（CursorTaskPayload.TriggerAt），由 CursorScheduler 按游标推进投递：即使积压补投或多个触发点并行执行，每个触发点也使用自身时间窗口计算， 不会因实际执行时刻漂移而重复或遗漏。载荷解析失败时回退到当前时间并记录告警。 表达式非法仅记录告警日志并跳过对应条件，入库失败返回错误触发 asynq 重试； 加载/查询错误返回错误触发 asynq 重试。
+Do 执行一次标签事件检测。 检测时间取自任务载荷中的游标时间点（CursorTaskPayload.TriggerAt），由 CursorScheduler 按游标推进投递：即使积压补投或多个触发点并行执行，每个触发点也使用自身时间窗口计算， 不会因实际执行时刻漂移而重复或遗漏。载荷解析失败或缺失 triggerAt 时返回错误触发 asynq 重试。 表达式非法仅记录告警日志并跳过对应条件，入库失败返回错误触发 asynq 重试； 加载/查询错误返回错误触发 asynq 重试。
 
 <a name="EventSuppressHandler"></a>
 ## type EventSuppressHandler

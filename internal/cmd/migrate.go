@@ -182,10 +182,16 @@ func migrateDB(ctx context.Context, v *viper.Viper, gormDB *database.DB, dbName 
 	case "status":
 		return m.Status(ctx)
 	case "up-to":
-		v := parseInt64(args[0])
+		v, err := parseInt64(args[0])
+		if err != nil {
+			return errors.WithStack(err)
+		}
 		return m.UpTo(ctx, v)
 	case "down-to":
-		v := parseInt64(args[0])
+		v, err := parseInt64(args[0])
+		if err != nil {
+			return errors.WithStack(err)
+		}
 		return m.DownTo(ctx, v)
 	default:
 		return errors.Newf("unknown action: %s", action)
@@ -333,10 +339,13 @@ func targetFromViper(v *viper.Viper) string {
 	return target
 }
 
-func parseInt64(s string) int64 {
+// parseInt64 解析迁移版本号；非法输入必须报错，不能静默按 0 处理。
+func parseInt64(s string) (int64, error) {
 	var v int64
-	fmt.Sscanf(s, "%d", &v)
-	return v
+	if _, err := fmt.Sscanf(s, "%d", &v); err != nil {
+		return 0, errors.Newf("invalid migration version %q: %v", s, err)
+	}
+	return v, nil
 }
 
 func init() {

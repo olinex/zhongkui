@@ -12,17 +12,16 @@ import (
 	"testing"
 
 	// 第三方
-	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
 )
 
 // ============================================================================
-// hash
+// 哈希工具
 // ============================================================================
 
 // TestHash_Info 覆盖 Info：工具名为 hash；algorithm 为带四种取值的必填 string；text 必填 string。
 func TestHash_Info(t *testing.T) {
-	info, err := (&hashTool{}).Info(context.Background())
+	info, err := hashTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -62,7 +61,7 @@ func TestHash_InvokableErrors(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := (&hashTool{}).InvokableRun(context.Background(), tc.args)
+			_, err := hashTool.InvokableRun(context.Background(), tc.args)
 			if err == nil {
 				t.Fatal("error = nil, want a rejection")
 			}
@@ -75,7 +74,7 @@ func TestHash_InvokableErrors(t *testing.T) {
 
 // TestHash_Smoke 锁定 hash 的出参 JSON 线形状与字段名（摘要值随机无关，只校验字段名与非空）。
 func TestHash_Smoke(t *testing.T) {
-	out, err := (&hashTool{}).InvokableRun(context.Background(), `{"algorithm":"sha256","text":"hello"}`)
+	out, err := hashTool.InvokableRun(context.Background(), `{"algorithm":"sha256","text":"hello"}`)
 	if err != nil {
 		t.Fatalf("InvokableRun error = %v", err)
 	}
@@ -99,13 +98,13 @@ func TestHash_Smoke(t *testing.T) {
 }
 
 // ============================================================================
-// encode_convert
+// 编码转换工具
 // ============================================================================
 
 // TestEncodeConvert_Info 覆盖 Info：工具名为 encode_convert；operation / scheme / text 均为必填
 // string，operation 与 scheme 带枚举取值。
 func TestEncodeConvert_Info(t *testing.T) {
-	info, err := (&encodeConvertTool{}).Info(context.Background())
+	info, err := encodeConvertTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -143,7 +142,7 @@ func TestEncodeConvert_InvokableErrors(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := (&encodeConvertTool{}).InvokableRun(context.Background(), tc.args)
+			_, err := encodeConvertTool.InvokableRun(context.Background(), tc.args)
 			if err == nil {
 				t.Fatal("error = nil, want a rejection")
 			}
@@ -156,7 +155,7 @@ func TestEncodeConvert_InvokableErrors(t *testing.T) {
 
 // TestEncodeConvert_Smoke 锁定 encode_convert 的出参 JSON 线形状与字段名。
 func TestEncodeConvert_Smoke(t *testing.T) {
-	out, err := (&encodeConvertTool{}).InvokableRun(context.Background(),
+	out, err := encodeConvertTool.InvokableRun(context.Background(),
 		`{"operation":"encode","scheme":"base64","text":"hello"}`)
 	if err != nil {
 		t.Fatalf("InvokableRun error = %v", err)
@@ -167,12 +166,12 @@ func TestEncodeConvert_Smoke(t *testing.T) {
 }
 
 // ============================================================================
-// uuid
+// UUID 工具
 // ============================================================================
 
 // TestUUID_Info 覆盖 Info：工具名为 uuid；version 为可选带枚举 string；count 为可选 integer。
 func TestUUID_Info(t *testing.T) {
-	info, err := (&uuidTool{}).Info(context.Background())
+	info, err := uuidTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -207,7 +206,7 @@ func TestUUID_InvokableErrors(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := (&uuidTool{}).InvokableRun(context.Background(), tc.args)
+			_, err := uuidTool.InvokableRun(context.Background(), tc.args)
 			if err == nil {
 				t.Fatal("error = nil, want a rejection")
 			}
@@ -220,7 +219,7 @@ func TestUUID_InvokableErrors(t *testing.T) {
 
 // TestUUID_Smoke 锁定 uuid 的出参 JSON 线形状与字段名（UUID 值随机无关，只校验字段名、版本与数量）。
 func TestUUID_Smoke(t *testing.T) {
-	out, err := (&uuidTool{}).InvokableRun(context.Background(), `{"version":"4","count":2}`)
+	out, err := uuidTool.InvokableRun(context.Background(), `{"version":"4","count":2}`)
 	if err != nil {
 		t.Fatalf("InvokableRun error = %v", err)
 	}
@@ -270,8 +269,3 @@ func TestEncodingTools_BuildResolves(t *testing.T) {
 		}
 	}
 }
-
-// 仅用于确认三个工具满足 eino 的可调用工具接口（编译期断言）。
-var _ tool.InvokableTool = (*hashTool)(nil)
-var _ tool.InvokableTool = (*encodeConvertTool)(nil)
-var _ tool.InvokableTool = (*uuidTool)(nil)

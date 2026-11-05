@@ -3,6 +3,9 @@
     <v-card-title class="px-4 pt-3 pb-2 text-body-large font-weight-bold">
       {{ title }}
     </v-card-title>
+    <!-- 页面级常驻提示（作用域说明 / 只读提醒等）：置于外层卡片内，与列表共享同一表面，
+         避免提示以独立卡片悬浮在列表卡片之外造成左右边缘错位 -->
+    <slot name="banner" />
     <!-- 筛选区：高级条件编辑器常驻一行；页面可通过 extra-filters 插槽追加额外筛选字段（如流量时间窗口）。
          查询按钮统一收纳在下方操作按钮组（action-button-group）第一顺位，保持列表页行为一致 -->
     <v-card-text class="px-4 pt-0 pb-2">
@@ -79,7 +82,7 @@
               ></v-checkbox-btn>
             </td>
             <td
-              v-for="hdr in visibleHeaders"
+              v-for="hdr in displayHeaders"
               :key="hdr.key"
               :class="[
                 hdr.align ? `v-data-table-column--align-${hdr.align}` : undefined,
@@ -89,10 +92,28 @@
               ]"
             >
               <!-- 允许页面按列名提供 cell-<key> 具名插槽覆盖默认渲染（如 model 列显示可读名称）；
-                   或经通用 cell 插槽统一接管全部单元格（如流量页加密/S3 单元格分发） -->
+                   或经通用 cell 插槽统一接管全部单元格；其余列按 OPTIONS 自省的 kind 自动分发：
+                   加密 / S3 列渲染加密单元格并把明文查看事件上抛，纯展示列交 AdaptiveCell -->
               <slot :name="`cell-${hdr.key}`" :item="item" :value="item[hdr.key]">
                 <slot name="cell" :item="item" :header="hdr">
+                  <encrypted-value-cell
+                    v-if="hdr.kind === 'crypto'"
+                    kind="crypto"
+                    :item="item"
+                    :field-key="hdr.key"
+                    :loading="plaintextLoading === hdr.key"
+                    @view-plaintext="onViewPlaintext"
+                  />
+                  <encrypted-value-cell
+                    v-else-if="hdr.kind === 's3'"
+                    kind="s3"
+                    :item="item"
+                    :field-key="hdr.key"
+                    :loading="plaintextLoading === hdr.key"
+                    @view-plaintext="onViewPlaintext"
+                  />
                   <adaptive-cell
+                    v-else
                     :header="hdr"
                     :item="item"
                     :actions="actions"
@@ -113,6 +134,7 @@ import type { AxiosPromise } from "axios";
 import { getResponse } from "@/apis/base";
 import i18n from "@/utils/i18n";
 import { enumFieldTypeOfMeta, enumOptionsOf, ensureEnum } from "@/utils/enums";
+import { fieldMetaOfMeta } from "@/utils/meta";
 import { useColumnVisibility } from "@/utils/column";
 import type { FilterItem } from "@/components/forms/ExpressionField.vue";
 import type { ActionButton } from "@/components/base/ActionButtonGroup.vue";
@@ -195,9 +217,10 @@ function extractTableHeaders(out: SearchOptionsOut): Array<TableHeader> {
       case out.headers.length:
         align = "end";
     }
-    // 枚举列 class 名：header 显式声明优先，缺省回退 bodyOutput 自省的 enumType；
-    // 仅存在时写入，避免 undefined 键污染
-    const enumType = hdr.enumType ?? enumFieldTypeOfMeta((out as MetaOut).meta, hdr.name);
+    // 字段元信息取 bodyOutput 自省：枚举类名 header 显式声明优先、缺省回退自省；
+    // 展示语义 kind（如 json）直接从同一份自省取用，不重复声明
+    const fieldMeta = fieldMetaOfMeta((out as MetaOut).meta, hdr.name);
+    const enumType = hdr.enumType ?? fieldMeta?.enumType;
     const header: TableHeader = {
       key: hdr.name,
       title: i18n.global.t(`model.${props.modelName}.field.${hdr.name}`),
@@ -208,6 +231,10 @@ function extractTableHeaders(out: SearchOptionsOut): Array<TableHeader> {
     };
     if (enumType) {
       header.enumType = enumType;
+    }
+    // 展示语义类型仅在后端显式声明时写入，缺省键不写入
+    if (fieldMeta?.kind) {
+      header.kind = fieldMeta.kind;
     }
     return header;
   });
@@ -294,6 +321,17 @@ const props = defineProps({
     >,
     default: undefined,
   },
+  // 附加表头：在 OPTIONS / headers 派生的表头中追加页面自有列（如后端尚未下发的字段），
+  // 置于操作列之前；与已有列同 key 时忽略，避免后端补齐后出现重复列
+  extraHeaders: {
+    type: Array as PropType<Array<TableHeader>>,
+    default: () => [],
+  },
+  // 加密 / S3 列当前正在查看明文的字段名：仅用于行内按钮 loading，缺省无 loading
+  plaintextLoading: {
+    type: String,
+    default: "",
+  },
   // 自定义高级筛选字段元数据源（覆盖 OPTIONS 派生）：对象、ref 或函数
   filterHeaders: {
     type: [Object, Function] as PropType<
@@ -317,6 +355,18 @@ const props = defineProps({
   },
 });
 
+const emits = defineEmits<{
+  // 行值异构
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  "view-plaintext": [item: Record<string, any>, fieldKey: string];
+}>();
+
+// onViewPlaintext 加密 / S3 单元格的明文查看事件上抛，页面据此分发到具体解密流程
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const onViewPlaintext = (item: Record<string, any>, fieldKey: string): void => {
+  emits("view-plaintext", item, fieldKey);
+};
+
 const loading = ref(false);
 const total = ref(0);
 const page = ref(1);
@@ -336,7 +386,19 @@ const optionsSearchHeaders = ref({} as Record<string, FilterByOption>);
 // 表格表头：优先取页面自定义源（headers prop），否则由 OPTIONS 派生。
 // 行操作列（__actions）的居中 + 置尾由 useColumnVisibility 统一覆写，此处无需处理
 const tableHeaders = computed((): Array<TableHeader> => {
-  return props.headers ? toValue(props.headers) : optionsTableHeaders.value;
+  const base = props.headers ? toValue(props.headers) : optionsTableHeaders.value;
+  if (props.extraHeaders.length === 0) {
+    return base;
+  }
+  const existing = new Set(base.map((hdr) => hdr.key));
+  const extras = props.extraHeaders.filter((hdr) => !existing.has(hdr.key));
+  if (extras.length === 0) {
+    return base;
+  }
+  const actionsIndex = base.findIndex((hdr) => hdr.key === "__actions");
+  return actionsIndex === -1
+    ? [...base, ...extras]
+    : [...base.slice(0, actionsIndex), ...extras, ...base.slice(actionsIndex)];
 });
 // 高级筛选字段元数据：优先取页面自定义源（filterHeaders prop），否则由 OPTIONS 派生
 const searchHeaders = computed((): Record<string, FilterByOption> => {
@@ -352,11 +414,27 @@ const selectHeader: TableHeader = {
   sortable: false,
 };
 
+// hasRowActions 当前数据中是否存在可选的行操作；用于在整页都无可选动作时自动隐藏操作列
+// （如内置技能只读行，行操作集合为空）。任一行有动作即保留该列。
+const hasRowActions = computed(() => {
+  const buildActions = props.actions;
+  if (!buildActions) {
+    return false;
+  }
+  return items.value.some((item) => Object.keys(buildActions(item)).length > 0);
+});
+
+// displayHeaders 在列可见性结果上叠加操作可用性：操作列（__actions）无任何可选动作时整列移除，
+// 固定列不参与列设置，故此处只做展示层过滤，不影响用户已保存的列配置。
+const displayHeaders = computed(() =>
+  visibleHeaders.value.filter((hdr) => hdr.key !== "__actions" || hasRowActions.value),
+);
+
 // selectTableHeaders 将多选列置于字段列之前，供 v-data-table-server 渲染表头。
 // 仅当存在批量操作（batchActions）时才插入多选列，与 #item 模板中的复选框单元格
 // （v-if="batchActions"）保持一致，避免无批量操作页面表头多出一列导致列错位。
 const selectTableHeaders = computed(() =>
-  props.batchActions ? [selectHeader, ...visibleHeaders.value] : visibleHeaders.value,
+  props.batchActions ? [selectHeader, ...displayHeaders.value] : displayHeaders.value,
 );
 
 const pageSizeOptions = [

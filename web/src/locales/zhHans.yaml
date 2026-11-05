@@ -17,6 +17,8 @@ navbar:
     self: AI
     knowledge: 知识库管理
     memory: 长期记忆
+    skill: 技能
+    periodicReport: 周期性报告
   notification:
     self: 通知管理
     channel: 通知渠道
@@ -288,7 +290,11 @@ model:
       originalName: 原文件名
       parseError: 解析错误
       createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
       updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
   aiSession:
     name: AI 会话
     field:
@@ -304,6 +310,7 @@ model:
     name: 长期记忆
     field:
       id: ID
+      keyword: 关键字
       agentKind: Agent 类型
       kind: 记忆类别
       title: 标题
@@ -312,15 +319,72 @@ model:
       useCount: 命中次数
       lastUsedAt: 最近命中
       createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
       updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
       namespaceName: 命名空间
       sessionID: 来源会话
+  agentSkill:
+    name: 技能
+    field:
+      id: ID
+      name: 名称
+      source: 来源
+      keyword: 关键字
+      description: 描述
+      content: 正文
+      enabled: 启用
+      periodicCapable: 可周期执行
+      inputFields: 输入字段
+      noInputFields: 无输入字段
+      fixedFields: 固定字段
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+  periodicReportPlan:
+    name: 周期性报告计划
+    field:
+      id: ID
+      name: 名称
+      description: 说明
+      skillID: 技能 ID
+      skill: 技能
+      skillName: 技能
+      keyword: 关键字
+      cronSpec: Cron 表达式
+      inputValues: 输入参数
+      retentionDays: 保留天数
+      nextRunAt: 下次执行
+      expiresAt: 失效时间
+      sessionID: 会话 ID
+      enabled: 启用
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+  periodicReportRun:
+    name: 周期性报告运行
+    field:
+      status: 状态
+      title: 标题
+      triggerAt: 触发时间
+      createdAt: 创建时间
+      sizeBytes: 大小
+      error: 错误
   llmModel:
     name: LLM 模型
     field:
       id: ID
       name: 名称
       kind: 模型类型
+      apiMode: API 模式
       baseURL: 接入地址
       apiKey: 凭据
       model: 模型名
@@ -341,6 +405,9 @@ model:
       updatedAt: 更新时间
       updatedAtTime: 更新时间
       updatedAtDate: 更新日期
+    apiMode:
+      chat: Chat Completions
+      responses: Responses
     validation:
       jsonObject: "{path}必须是合法的 JSON 对象"
       jsonValue: "{path}必须是合法的 JSON 值"
@@ -435,7 +502,7 @@ model:
   scheduler:
     name: 定时任务
     field:
-      typeName: 任务类型名称
+      typeName: 类型
       cronSpec: Cron 表达式
       interval: 触发间隔
       queue: 管道
@@ -450,6 +517,8 @@ model:
       backlogLimit: 单次补投上限
   task:
     name: 任务
+    value:
+      allTypes: 全部类型
     field:
       id: ID
       type: 类型
@@ -1142,6 +1211,11 @@ chart:
     failed: 已失败
   serie:
     queueSize: 管道大小
+enum:
+  periodicReportRunStatus:
+    running: 运行中
+    success: 成功
+    failed: 失败
 action:
   signIn: 登录
   signOut: 退出
@@ -1157,6 +1231,8 @@ action:
   expand: 展开
   collapse: 收起
   scrollToBottom: 直达底部
+  jumpToContainerTop: 跳到容器上边界
+  jumpToContainerBottom: 跳到容器下边界
   resizeWidth: 拖拽调整宽度
   resizeHeight: 拖拽调整高度
   reset: 重置
@@ -1180,6 +1256,8 @@ action:
   archive: 归档
   cancel: 取消
   run: 运行
+  runNow: 立即执行
+  history: 历史报告
   previousDate: 上一天
   currentDate: 当天
   nextDate: 下一天
@@ -1203,6 +1281,8 @@ action:
   addCondition: 添加条件
   removeCondition: 移除条件
   beautifyJson: 美化
+  markdownSource: Markdown
+  markdownPreview: 预览
   validatePassed: 校验通过
   validateFailed: 校验未通过
   viewPlaintext: 查看明文
@@ -1212,6 +1292,11 @@ action:
   viewInput: 查看 input
   fullscreen: 全屏编辑
   exitFullscreen: 退出全屏
+  fullscreenView: 全屏查看
+  exportPdf: 导出 PDF
+  exportImage: 导出图片
+  exportHtml: 导出 HTML
+  print: 打印
   favoriteSample: 收藏样例
   resetFrontendConfig: 重置前端配置
   download: 下载
@@ -1281,6 +1366,8 @@ title:
   accessKey: 访问密钥
   aiKnowledge: 知识库管理
   aiMemory: 长期记忆
+  aiSkill: 技能管理
+  aiPeriodicReport: 周期性报告计划
   aiDocumentDetail: 知识文档详情
   passwordReset: 重置密码
   userAdmin: 管理 - 用户
@@ -1318,6 +1405,14 @@ title:
   dryRunEventHits: 命中 {count} 个条件
 home:
   subtitle: 网络安全审计平台
+  periodicReportBoard:
+    self: 周期性报告看板
+    settings: 设置关注
+    empty: 暂无关注的周期性报告，选择一个计划开始关注
+    selectPlans: 去选择关注计划
+    loadMore: 加载更多
+    viewDetail: 查看详情
+    noPlans: 当前命名空间暂无可关注的周期性报告计划
   quickStart:
     self: 快速开始
     addGroup: 新建分组
@@ -1356,6 +1451,9 @@ page:
     optimizePrompt: 优化提问
     optimizePromptFailed: 提示词优化失败
     undoOptimizePrompt: 撤回优化
+    skillsLoading: 正在加载技能…
+    skillsEmpty: 暂无可用技能，请先在技能管理中创建并启用
+    composerPlaceholder: 输入 / 选择技能；再次输入 / 关闭技能列表并保留字面斜杠
     error: 生成失败
     runFailed: 本次回答未正常结束（运行出错或超时），以上为中断前已生成的内容。
     runCancelled: 本次回答已被取消，以上为取消前已生成的内容。
@@ -1385,7 +1483,12 @@ page:
     compressFailed: 上下文压缩失败
     approvalTitle: 工具调用审批
     approvalWaiting: 等待审批
+    approvalHint: 请逐项批准或拒绝，全部决定后自动继续
+    approvalPrev: 上一项
+    approvalNext: 下一项
     approvalParams: 调用参数
+    approvalResult: 调用结果
+    approvalError: 调用错误
     approve: 批准
     reject: 拒绝
     approved: 已批准
@@ -1398,7 +1501,6 @@ page:
     autoApproved: 已自动批准
     approvalBackendNote: 该调用由服务端执行，你只需批准或拒绝
     apiInvokeInvalidArgs: 调用参数无法解析，未执行本次只读接口调用
-    apiInvokeFailed: 调用只读能力失败：{error}
     thinking: 思考
     thinkingHint: 开启后请求模型输出思考过程，回答将附带可折叠的思考内容
     reasoningDefaultOnHint: 该模型默认开启思考，未配置思考开关时也会输出思考内容；可在「LLM 模型」的高级配置中填写思考开关字段与开启 / 关闭取值，以手动控制思考。
@@ -1411,6 +1513,8 @@ page:
     branchTitle: "{title}（分支）"
     branchCreated: 已创建分支会话
     usageTokens: "{count} tokens"
+    usagePromptTokens: "输入 {count} tokens"
+    usageCompletionTokens: "输出 {count} tokens"
     usageElapsed: "耗时 {seconds}s"
     rollbackMessage: 回退
     deleteMessage: 删除
@@ -1427,13 +1531,16 @@ page:
     questionnaireUnavailable: 本次提问已失效，无法提交作答，请直接发起新的提问
     questionnaireReanswer: 重新回答
     questionnaireReanswerBusy: 本轮仍在生成，完成后可重新回答
-    confirmReanswerQuestionnaire: 确定重新回答吗？本问之后的内容将被清空并重新生成。
-    approvalRerun: 重新授权
-    approvalRerunBusy: 本轮仍在生成，完成后可重新授权
-    confirmRerunApproval: 确定重新授权吗？本回合之后的内容将被清空并重新生成。
+    confirmReanswerQuestionnaire: 确定重新回答吗？该问卷之后的回答将被清除，你可以重新作答。
+    approvalRerun: 重新审批
+    approvalRerunBusy: 本轮仍在生成，完成后可重新审批
+    confirmRerunApproval: 确定重新审批吗？该审批之后的回答将被清除，你可以重新选择批准或拒绝。
     questionnaireNoAnswer: 未作答
     questionnairePendingHint: AI 正在等待你回答上方的问题，请先完成作答
     questionnaireJump: 查看问题
+    blockNav: 块间快速跳读
+    blockPrev: 上一块
+    blockNext: 下一块
     lockedHint: "会话{label}（{used}/{max} 轮），回滚历史消息后可继续提问"
     lockedReject: 会话已达提问轮次上限，请先回滚历史消息后再提问
     stateGuardReject: 当前会话状态暂不允许该操作，请稍后再试
@@ -1519,6 +1626,67 @@ page:
     scopeSystem: 系统知识库
     scopeSystemHint: 系统知识库为代码声明的共享知识，仅供查看，不可编辑
     documentUnreadable: 该知识文档不存在或不在可读范围内
+  aiSkill:
+    scopeHint: 内置技能为代码声明的全局能力，仅可启停；自定义技能按命名空间隔离
+    builtinReadonly: 内置技能由代码维护，不可编辑或删除
+    create: 新建技能
+    edit: 编辑技能
+    importMarkdown: 导入 Markdown
+    importHint: 支持 .md / .markdown / .txt 文件；读取后会填入正文，名称为空时以文件名（去扩展名）预填
+    importFailed: 读取文件 {name} 失败，请重试或直接粘贴正文
+    namePlaceholder: 用于在列表中识别技能，例如日志排障
+    descriptionPlaceholder: 一句话说明技能的用途，可留空
+    contentPlaceholder: 粘贴技能正文，可使用 Markdown 编写步骤与说明
+    addInputField: 添加输入字段
+    inputFieldsHint: 输入字段用于周期计划的参数表单；nowTime 由系统在运行时注入
+    inputFieldName: 字段名
+    inputFieldType: 类型
+    inputFieldRequired: 必填
+    inputFieldDescription: 说明
+    fixedFieldsHint: 固定参数须为 JSON 对象；周期技能必须包含 timeOffset 与 timeWindow（Go 时长，如 -24h、24h）
+    invalidFixedFields: 固定参数必须是合法的 JSON 对象
+    inputFieldNameRequired: 输入字段名不能为空
+    nowTimeRequired: 可周期执行的技能必须包含一个 name=nowTime、类型为 date 的输入字段
+    nowTimeLocked: nowTime 由系统在运行时注入，不可删除或改名
+  periodicReportPlan:
+    scopeHint: 仅固定参数含合法时间窗口、输入字段含 nowTime 的自定义周期技能可用于报告计划；未偏置的固定字段沿用技能默认值
+    nowTimeInjected: nowTime 由系统在运行时注入
+    inputFieldsTitle: 输入字段
+    fixedFieldsTitle: 固定字段
+    fixedFieldsHint: 整段 JSON 可直接编辑（含对象与数组）；未修改的固定字段沿用技能默认值，仅提交改动项
+    fixedFieldsInvalid: 固定字段必须是合法的 JSON 对象
+    noInputValues: 无输入参数
+    create: 新建周期性报告计划
+    edit: 编辑周期性报告计划
+    history: 历史报告
+    viewReport: 查看报告
+    viewSession: 查看会话
+    sessionReadonlyHint: 运行结束后会话已冻结，本视图仅用于回顾与审计，不能继续对话或修改
+    sessionEmpty: 该运行没有可展示的会话记录
+    sessionUserLabel: 用户提问
+    sessionAssistantLabel: 助手回答
+    sessionToolCalls: 工具调用
+    sessionArguments: 入参
+    sessionResult: 结果
+    sessionQuestionnaire: 向用户提问
+    sessionNextSteps: 推荐下一步
+    sessionToolRunning: 运行中
+    sessionToolDone: 完成
+    sessionToolFailed: 失败
+    sessionApproved: 已批准
+    sessionDeclined: 已拒绝
+    sessionPendingDecision: 未决策
+    noRuns: 该计划暂无运行记录
+    runsTitle: 运行记录
+    cronPlaceholder: "0 9 * * *"
+    expiresHint: 留空表示长期有效
+    longTerm: 长期有效
+    pendingSchedule: 待计算
+    retentionHint: 生成周期性报告保留 1 至 3650 天，默认 90 天
+    runNow: 立即执行
+    runNowConfirm: 确定立即执行周期性报告计划「{name}」吗？
+    deleteRun: 删除运行记录
+    deleteRunConfirm: 确定删除该运行记录吗？已生成的报告正文将一并删除，且不可恢复。
   llmModelAdmin:
     baseURLHint: 供应商的 OpenAI 兼容接口基地址（例如 https://dashscope.aliyuncs.com/compatible-mode/v1）
     apiKeyKeepHint: 凭据不以明文回显；留空表示沿用原凭据
@@ -1526,6 +1694,7 @@ page:
     dimensionsHint: 向量维度由后端在绑定 embedding 档位时探测确定；如需调整索引维度，请联系运维在服务器上执行
     extraBodyHint: '为该模型每次请求自动合并的 JSON 对象（例如 {''{"top_k": 20}''}）；留空表示不附加'
     thinkingHint: 字段名与开启/关闭取值三者齐备时生效；留空表示该模型不支持思考开关
+    apiModeHint: 仅对话模型可选；Responses 使用 Agentic 消息协议，工具调用与中断续跑语义一致
     advancedTitle: 高级配置
     advancedHint: 额外请求字段与思考开关，均为可选；仅对话模型适用
   llmBindingAdmin:
@@ -1594,6 +1763,12 @@ notice:
     expectedOperand: '此处应为标签或左括号，但遇到 "{token}"'
   copied: 已复制！
   copyFailed: 复制失败！
+  copyImageFallback: 当前环境无法写入图片剪贴板（需 HTTPS 且允许剪贴板权限），已改为复制图表源码
+  exportImageSuccess: 图片已导出
+  exportHtmlSuccess: HTML 已导出
+  exportFailed: 导出失败，请稍后重试
+  printReady: 已打开打印视图，请在打印对话框中选择「另存为 PDF」
+  printBlocked: 打印视图被浏览器拦截，请允许本站打开新窗口后重试
   deleteConfirm: "确认删除 {category} {key} 吗？"
   archiveConfirm: "确认归档 {category} {key} 吗？"
   cancelConfirm: "确认取消 {category} {key} 吗？"
@@ -1684,12 +1859,75 @@ option:
     lte: 小于等于
     gt: 大于
     gte: 大于等于
+    fts: 全文检索
   language:
     "*": 全部语言
     en: 英语
     zh-Hans: 简体中文
   channel:
     "*": 全部渠道
+# Cron 表达式字段的引导面板与校验文案（components/forms/CronField.vue 与 utils/cron.ts）
+cron:
+  builder: 定时计划设置
+  title: 定时计划
+  frequency: 执行频率
+  frequencyOption:
+    minute: 每分钟
+    hourly: 每小时
+    daily: 每天
+    weekly: 每周
+    monthly: 每月
+    yearly: 每年
+  field:
+    minute: 分钟
+    hour: 小时
+    dayOfMonth: 日
+    month: 月
+    dayOfWeek: 星期
+  weekday:
+    sun: 周日
+    mon: 周一
+    tue: 周二
+    wed: 周三
+    thu: 周四
+    fri: 周五
+    sat: 周六
+  descriptorHint: "该模式仅支持 {'@hourly'} / {'@daily'} / {'@weekly'} / {'@monthly'} / {'@yearly'} 等宏描述符"
+  nextRuns: 下次执行
+  noNextRuns: 无法计算下次执行时间
+  customHint: 当前为自定义表达式；调整上方选项会覆盖它
+  weekdayRequired: 至少选择一个星期
+  descriptorTitle: 常用描述符
+  guide: 分 0-59 · 时 0-23 · 日 1-31 · 月 1-12 · 周 0-6（0 为周日）；支持 *、a-b、a,b、*/n
+  error:
+    empty: 表达式不能为空
+    fieldCount: "应为 5 段（分 时 日 月 周），或使用 {'@daily'} 等描述符"
+    descriptorOnly: "仅支持 {'@hourly'} / {'@daily'} / {'@weekly'} / {'@monthly'} / {'@yearly'} 等宏描述符"
+    cronOnly: "仅支持 5 段 cron 表达式（分 时 日 月 周），不支持 {'@daily'} 等描述符"
+    syntax: "{field}字段格式不正确"
+    range: "{field}字段的取值须在 {min} 到 {max} 之间"
+    order: "{field}字段的起始值不能大于结束值"
+    descriptor: "不支持的计划描述符 {token}"
+  describe:
+    everyMinute: 每分钟执行
+    hourlyAt: "每小时的第 {minute} 分钟执行"
+    dailyAt: "每天 {time} 执行"
+    weeklyAt: "每周 {weekdays} 的 {time} 执行"
+    monthlyAt: "每月 {day} 日的 {time} 执行"
+    yearlyAt: "每年 {month} 月 {day} 日的 {time} 执行"
+    every: "每 {duration} 执行"
+    custom: 自定义计划
+# Markdown 语法校验文案（components/forms/MarkdownEditor.vue）
+markdown:
+  fullscreenTitle: 文档预览
+  lint:
+    fenceUnclosed: 代码块未闭合
+    linkMissingParen: 链接缺少右括号
+    linkEmptyTarget: 链接地址为空
+    headingMissingSpace: 标题 # 后缺少空格
+    listMissingSpace: 列表标记后缺少空格
+    summary: "第 {line} 行：{message}"
+    summaryMore: "第 {line} 行：{message}（共 {count} 处）"
 validation:
   mixed:
     default: "{path}不合法"

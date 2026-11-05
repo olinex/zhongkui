@@ -65,24 +65,30 @@ package tools
 import (
 	// 标准库
 	"context"
+	"encoding/json"
 	"sort"
 
 	// 第三方
 	"github.com/cloudwego/eino/components/tool"
+	"github.com/cloudwego/eino/components/tool/utils"
 
 	// 项目内部
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/jsengine"
 	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
-// Deps 是构建内置工具时可注入的运行期依赖：数据库句柄与日志记录器。构造由调用方（运行时
-// 装配）持有并复用，实现不得修改其内容。
+// Deps 是构建内置工具时可注入的运行期依赖：数据库句柄、日志记录器与进程内 JS 运行时。
+// 构造由调用方（运行时装配）持有并复用，实现不得修改其内容。
 type Deps struct {
 	// DB core 库句柄
 	DB *database.DB
 	// Logger 日志记录器
 	Logger *logging.Logger
+	// JS 进程内 JS 运行时（provider 管理的单例）；仅依赖脚本的工具（如 mermaid_check）使用，
+	// 其他工具忽略该字段。
+	JS *jsengine.Engine
 }
 
 // Builder 是内置工具的构造器：按名取其实现，注入依赖后返回可被节点 4 消费的 eino
@@ -131,4 +137,34 @@ func Names() []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+// mustInferTool 按入参结构体 T 推导参数 JSON schema 并构造 eino 可调用工具；schema 推导失败属于
+// 编程缺陷，直接 panic（与 Register 的 fail fast 一致）。入参解析与结果序列化沿用 encoding/json，
+// 使工具的错误文本与出参线形状与迁移前完全一致。
+func mustInferTool[T, D any](name, desc string, fn utils.InvokeFunc[T, D]) tool.InvokableTool {
+	built, err := utils.InferTool(name, desc, fn,
+		utils.WithUnmarshalArguments(func(_ context.Context, arguments string) (any, error) {
+			var in T
+			if uerr := json.Unmarshal([]byte(arguments), &in); uerr != nil {
+				return nil, uerr
+			}
+			return in, nil
+		}),
+		utils.WithMarshalOutput(func(_ context.Context, output any) (string, error) {
+			// 结果本身已是字符串（如需要自定义线形状的工具）时原样返回，不做二次 JSON 编码。
+			if text, ok := output.(string); ok {
+				return text, nil
+			}
+			out, merr := json.Marshal(output)
+			if merr != nil {
+				return "", merr
+			}
+			return string(out), nil
+		}),
+	)
+	if err != nil {
+		panic("ai/tools: build builtin tool " + name + ": " + err.Error())
+	}
+	return built
 }

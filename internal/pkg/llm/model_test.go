@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-// TestParseExtraBody 表驱动测试 ParseExtraBody：空串返回 (nil, nil)，合法 JSON 对象解析为
-// map[string]any，非法 JSON 与非对象 JSON（数组、数字、字符串、布尔、null）均返回英文错误。
+// TestParseExtraBody 表驱动测试 ParseExtraBody：空串、空白与 null 返回 (nil, nil)，合法 JSON 对象
+// 解析为 map[string]any，非法 JSON 与非对象 JSON（数组、数字、字符串、布尔）均返回英文错误。
 func TestParseExtraBody(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -25,7 +25,7 @@ func TestParseExtraBody(t *testing.T) {
 		{name: "number", raw: `123`, want: nil, wantErr: true},
 		{name: "string", raw: `"abc"`, want: nil, wantErr: true},
 		{name: "boolean", raw: `true`, want: nil, wantErr: true},
-		{name: "null", raw: `null`, want: nil, wantErr: true},
+		{name: "null", raw: `null`, want: nil, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -43,6 +43,50 @@ func TestParseExtraBody(t *testing.T) {
 				t.Errorf("ParseExtraBody(%q) = %#v, want %#v", tt.raw, got, tt.want)
 			}
 		})
+	}
+}
+
+// TestParseAPIMode 测试接口形态解析：空串取缺省 chat，chat / responses 合法（容忍空白与大小写），
+// 其余取值返回英文错误。
+func TestParseAPIMode(t *testing.T) {
+	cases := []struct {
+		raw  APIMode
+		want APIMode
+		ok   bool
+	}{
+		{"", APIModeChat, true},
+		{" chat ", APIModeChat, true},
+		{"RESPONSES", APIModeResponses, true},
+		{"completions", "", false},
+	}
+	for _, c := range cases {
+		mode, err := ParseAPIMode(c.raw)
+		if c.ok {
+			if err != nil || mode != c.want {
+				t.Errorf("ParseAPIMode(%q) = (%q, %v), want (%q, nil)", c.raw, mode, err, c.want)
+			}
+			continue
+		}
+		if err == nil || mode != "" {
+			t.Errorf("ParseAPIMode(%q) = (%q, %v), want an error", c.raw, mode, err)
+		}
+	}
+}
+
+// TestValidateAPIMode 测试模型类型与接口形态的组合校验：chat 类模型两种形态均可用，
+// embedding 等非 chat 类模型只允许 chat。
+func TestValidateAPIMode(t *testing.T) {
+	if err := ValidateAPIMode(ModelKindChat, APIModeResponses); err != nil {
+		t.Errorf("ValidateAPIMode(chat, responses) error = %v, want nil", err)
+	}
+	if err := ValidateAPIMode(ModelKindEmbedding, ""); err != nil {
+		t.Errorf("ValidateAPIMode(embedding, default) error = %v, want nil", err)
+	}
+	if err := ValidateAPIMode(ModelKindEmbedding, APIModeResponses); err == nil {
+		t.Error("ValidateAPIMode(embedding, responses) error = nil, want an error")
+	}
+	if err := ValidateAPIMode(ModelKindChat, "bogus"); err == nil {
+		t.Error("ValidateAPIMode(chat, bogus) error = nil, want an error")
 	}
 }
 

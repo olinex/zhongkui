@@ -23,6 +23,7 @@ import (
 
 	// 项目内部
 	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 )
 
@@ -40,12 +41,20 @@ const (
 	KindTextarea Kind = "textarea"
 	// KindObject 对象/结构化数据（通常以 JSON 文本编辑）
 	KindObject Kind = "object"
+	// KindJSON JSON 字段：列表列以 JSON 胶囊展示（点开查看完整 JSON），表单以 JSON 文本编辑
+	KindJSON Kind = "json"
+	// KindHex 十六进制文本字段：列表列以 hex 形式展示
+	KindHex Kind = "hex"
+	// KindDecByte 十进制字节数字段：列表列按人类可读的存储大小展示
+	KindDecByte Kind = "decByte"
 	// KindColumns 列定义列表：形如 [{name, type}] 的手动 schema 编辑器（数据源接入用）
 	KindColumns Kind = "columns"
 	// KindBoolean 布尔开关
 	KindBoolean Kind = "boolean"
 	// KindCrypto 加密字段：值保存为 base64 密文（经 meta options 下发前端，明文需走明文权限接口）
 	KindCrypto Kind = "crypto"
+	// KindS3 S3 对象字段：值为对象键，列表展示键与大小并提供明文读取入口
+	KindS3 Kind = "s3"
 )
 
 // FieldMeta 描述接口结构体中单个字段的元信息。
@@ -485,6 +494,8 @@ func kindForType(t reflect.Type) Kind {
 }
 
 // parseFormTag 解析 form 标签：";" 分隔的 k=v 列表。
+// 冒号写法（如 kind:crypto）不受支持：它会让 kind 静默失效，因此直接 panic 暴露问题，
+// 强制统一为 k=v（与 kind=password、kind=json 等既有声明一致）。
 func parseFormTag(tag string) map[string]string {
 	kv := make(map[string]string)
 	for _, part := range strings.Split(tag, ";") {
@@ -492,7 +503,10 @@ func parseFormTag(tag string) map[string]string {
 		if part == "" {
 			continue
 		}
-		k, v, _ := strings.Cut(part, "=")
+		k, v, found := strings.Cut(part, "=")
+		if !found && strings.Contains(part, ":") {
+			panic(errors.Newf("invalid form tag %q: use k=v instead of k:v", tag))
+		}
 		kv[strings.TrimSpace(k)] = strings.TrimSpace(v)
 	}
 	return kv

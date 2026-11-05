@@ -3,7 +3,7 @@
 //     namespace_name 过滤；创建时写入当前请求命名空间；
 //   - 样例的 Model 与 Input 创建后不可变，更新仅允许调整 Name 与 Description
 //     （DTO 不暴露 Model/Input，落库仅写 name/description 两列，双重保证）；
-//   - 创建时校验目标模型已注册（tagengine.IsRegistered），未注册返回 400 + 1107。
+//   - 创建时校验目标模型已注册（tagengine.IsRegistered），未注册返回 400 + 1203。
 package tag
 
 import (

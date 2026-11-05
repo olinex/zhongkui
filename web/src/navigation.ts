@@ -156,6 +156,19 @@ export const navigationGroups: NavGroup[] = [
         namespaceScoped: true,
         perm: { obj: "api:/api/v1/ai/memory/list", act: "POST" },
       },
+      {
+        title: "navbar.ai.skill",
+        icon: "mdi-lightning-bolt-outline",
+        routeName: "AI Skill List",
+        namespaceScoped: true,
+        perm: { obj: "api:/api/v1/ai/skill/list", act: "POST" },
+      },
+      {
+        title: "navbar.ai.periodicReport",
+        icon: "mdi-file-chart-outline",
+        routeName: "AI Periodic Report List",
+        namespaceScoped: true,
+      },
     ],
   },
   {

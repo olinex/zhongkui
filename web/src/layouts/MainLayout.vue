@@ -160,6 +160,7 @@ const childTo = (child: NavChild) => {
   // 导航声明的路由名为宽泛字符串，类型不满足 RouteLocationRaw 的具名路由字面量联合
 
   return {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 导航声明的路由名为宽泛字符串，typed routes 的具名路由联合无法由其表达
     name: child.routeName as any,
     params: { language: route.params.language, ...child.params },
   };

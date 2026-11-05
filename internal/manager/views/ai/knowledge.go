@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"zhongkuisec.com/zhongkui/internal/ai/llminfra"
 	// 标准库
 	"fmt"
 	"io"
@@ -19,7 +20,7 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	ai "zhongkuisec.com/zhongkui/internal/ai"
+	aiknowledge "zhongkuisec.com/zhongkui/internal/ai/knowledge"
 	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
 	"zhongkuisec.com/zhongkui/internal/manager/response"
 	"zhongkuisec.com/zhongkui/internal/manager/views"
@@ -612,7 +613,7 @@ func KnowledgeDocumentChunksGet(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	overview, err := ai.BuildChunkOverview(c, db, middlewares.GetAi(c).Params, &doc)
+	overview, err := aiknowledge.BuildChunkOverview(c, db, middlewares.GetAi(c).Params, &doc)
 	if err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -642,7 +643,7 @@ func KnowledgeDocumentChunksGet(c *gin.Context) {
 		out.Summary.EmbeddingModel = info.Model
 	}
 	// 向量维度取 embedding 列的实际维度（表或列不可读时记 0），与状态接口共用同一读取来源
-	if n, found, err := ai.ChunkEmbeddingDimension(c, db); err == nil && found {
+	if n, found, err := llminfra.ChunkEmbeddingDimension(c, db); err == nil && found {
 		out.Summary.EmbeddingDimensions = n
 	}
 	for _, chunk := range overview.Chunks {
@@ -680,7 +681,7 @@ func KnowledgeSystemDocumentChunksGet(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	overview, err := ai.BuildChunkOverview(c, db, middlewares.GetAi(c).Params, &doc)
+	overview, err := aiknowledge.BuildChunkOverview(c, db, middlewares.GetAi(c).Params, &doc)
 	if err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -710,7 +711,7 @@ func KnowledgeSystemDocumentChunksGet(c *gin.Context) {
 		out.Summary.EmbeddingModel = info.Model
 	}
 	// 向量维度取 embedding 列的实际维度（表或列不可读时记 0），与状态接口共用同一读取来源
-	if n, found, err := ai.ChunkEmbeddingDimension(c, db); err == nil && found {
+	if n, found, err := llminfra.ChunkEmbeddingDimension(c, db); err == nil && found {
 		out.Summary.EmbeddingDimensions = n
 	}
 	for _, chunk := range overview.Chunks {

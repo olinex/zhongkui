@@ -49,7 +49,9 @@ func GenerateFallbackPcap(outputPath string, numPackets int) error {
 			DstPort: 80,
 			SYN:     true,
 		}
-		tcp.SetNetworkLayerForChecksum(ip)
+		if err := tcp.SetNetworkLayerForChecksum(ip); err != nil {
+			return errors.WithStack(err)
+		}
 
 		payload := make([]byte, 512)
 		binary.BigEndian.PutUint64(payload[:8], uint64(i))

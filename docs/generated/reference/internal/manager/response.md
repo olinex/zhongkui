@@ -51,36 +51,51 @@ const (
 )
 ```
 
-<a name="CodeUsernamePasswordCheckFailed"></a>业务错误码常量 使用 iota 从 1100 开始自增，用于标识业务逻辑层面的特定错误。 与基础错误码区分，便于在日志和前端中快速定位业务问题。
+<a name="CodeUsernamePasswordCheckFailed"></a>业务错误码常量
+
+业务错误码按领域划分区间，新增错误码必须落在所属领域区间内，不得继续顺延或跨区间借用：
+
+- 1100\-1199 通用与账户：认证、用户、访问密钥、密码重置、限流
+- 1200\-1299 标签：标签规则 / 标签事件规则 / 样例输入
+- 1300\-1399 AI 助手：运行现场、驻留运行、会话交互
+- 1400\-1499 平台与运维：前端配置、通知、定时任务、命名空间、LLM 绑定
+
+错误码同时作为国际化消息的键名（如 "code.1100"），翻译文件须同步登记。
 
 ```go
 const (
-    CodeUsernamePasswordCheckFailed = 1100 + iota // 1100: 用户名或密码校验失败
-    CodeOldPasswordCheckFailed                    // 1101: 旧密码校验失败
-    CodeUsernameOrEmailAlreadyExist               // 1102: 用户名或邮箱已存在
-    CodeTooManyAccessKey                          // 1103: 访问密钥数量超出限制
-    CodeTagRuleInvalid                            // 1104: 标签规则校验失败（语法/契约/组级冲突）
-    CodeTagEventRuleInvalid                       // 1105: 标签事件规则校验失败（表达式非法）
-    CodeTagRuleRuntimeInvalid                     // 1106: 标签规则运行期样例校验失败（样例评估报错）
-    CodeTagRuleModelNotRegistered                 // 1107: 标签规则目标模型未注册（引擎不识别，写入被拒绝）
-    CodeFrontendConfigConflict                    // 1108: 前端配置更新冲突（上传的哈希或版本号与服务端不一致）
-    CodeFrontendConfigSyncDisabled                // 1109: 前端配置同步未开启（拒绝接收配置上传）
-    CodeTagRuleSampleInputInvalid                 // 1110: 标签规则样例输入无法反序列化为目标模型
-    CodeNotificationSendFailed                    // 1111: 通知发送失败（test-send 等实际投递动作未成功）
-    CodeSchedulerTaskInvalid                      // 1112: 定时任务配置非法（cronSpec 与 interval 未满足互斥要求、任务已存在或不存在等）
-    CodePasswordResetUnavailable                  // 1113: 重置密码功能不可用（系统未启用或未配置 SMTP）
-    CodePasswordResetTokenInvalid                 // 1114: 重置密码令牌无效或已过期
-    CodeLlmBindingIncompatible                    // 1115: 档位绑定与系统当前配置不兼容（如向量维度与知识库索引维度不符）
-    CodeAgentRunNotFound                          // 1116: 待恢复的运行现场不存在
-    CodeAgentRunConsumed                          // 1117: 运行现场已被消费（重复恢复）
-    CodeAgentRunExpired                           // 1118: 运行现场已过期
-    CodeSystemNamespaceProtected                  // 1119: 内置系统命名空间受保护，禁止删除
-    CodeAgentLiveRunNotFound                      // 1120: 驻留运行不存在
-    CodeAgentLiveRunExpired                       // 1121: 驻留运行登记已过期
-    CodeAgentLiveRunForbidden                     // 1122: 驻留运行归属不符
-    CodeTooManyRequests                           // 1123: 请求过于频繁（命中公共接口限流）
-    CodeAgentSessionLocked                        // 1124: 会话已达轮次上限，拒绝新提问
-    CodeAgentInteractionBusy                      // 1125: 当前交互状态不允许该操作
+    // 1100-1199 通用与账户
+    CodeUsernamePasswordCheckFailed = 1100 // 1100: 用户名或密码校验失败
+    CodeOldPasswordCheckFailed      = 1101 // 1101: 旧密码校验失败
+    CodeUsernameOrEmailAlreadyExist = 1102 // 1102: 用户名或邮箱已存在
+    CodeTooManyAccessKey            = 1103 // 1103: 访问密钥数量超出限制
+    CodePasswordResetUnavailable    = 1104 // 1104: 重置密码功能不可用（系统未启用或未配置 SMTP）
+    CodePasswordResetTokenInvalid   = 1105 // 1105: 重置密码令牌无效或已过期
+    CodeTooManyRequests             = 1106 // 1106: 请求过于频繁（命中公共接口限流）
+
+    // 1200-1299 标签
+    CodeTagRuleInvalid            = 1200 // 1200: 标签规则校验失败（语法/契约/组级冲突）
+    CodeTagEventRuleInvalid       = 1201 // 1201: 标签事件规则校验失败（表达式非法）
+    CodeTagRuleRuntimeInvalid     = 1202 // 1202: 标签规则运行期样例校验失败（样例评估报错）
+    CodeTagRuleModelNotRegistered = 1203 // 1203: 标签规则目标模型未注册（引擎不识别，写入被拒绝）
+    CodeTagRuleSampleInputInvalid = 1204 // 1204: 标签规则样例输入无法反序列化为目标模型
+
+    // 1300-1399 AI 助手
+    CodeAgentRunNotFound      = 1300 // 1300: 待恢复的运行现场不存在
+    CodeAgentRunConsumed      = 1301 // 1301: 运行现场已被消费（重复恢复）
+    CodeAgentLiveRunNotFound  = 1302 // 1302: 驻留运行不存在
+    CodeAgentLiveRunExpired   = 1303 // 1303: 驻留运行登记已过期
+    CodeAgentLiveRunForbidden = 1304 // 1304: 驻留运行归属不符
+    CodeAgentSessionLocked    = 1305 // 1305: 会话已达轮次上限，拒绝新提问
+    CodeAgentInteractionBusy  = 1306 // 1306: 当前交互状态不允许该操作
+
+    // 1400-1499 平台与运维
+    CodeFrontendConfigConflict     = 1400 // 1400: 前端配置更新冲突（上传的哈希或版本号与服务端不一致）
+    CodeFrontendConfigSyncDisabled = 1401 // 1401: 前端配置同步未开启（拒绝接收配置上传）
+    CodeNotificationSendFailed     = 1402 // 1402: 通知发送失败（test-send 等实际投递动作未成功）
+    CodeSchedulerTaskInvalid       = 1403 // 1403: 定时任务配置非法（cronSpec 与 interval 未满足互斥要求、任务已存在或不存在等）
+    CodeLlmBindingIncompatible     = 1404 // 1404: 档位绑定与系统当前配置不兼容（如向量维度与知识库索引维度不符）
+    CodeSystemNamespaceProtected   = 1405 // 1405: 内置系统命名空间受保护，禁止删除
 )
 ```
 

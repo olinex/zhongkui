@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"zhongkuisec.com/zhongkui/internal/ai/llminfra"
 	// 标准库
 	"context"
 	"crypto/tls"
@@ -16,7 +17,7 @@ import (
 
 	// 项目内部
 
-	"zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/ai/llmconfig"
 	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/pkg/base"
 	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
@@ -202,7 +203,7 @@ func probeSMTP(v *viper.Viper) status.Probe {
 }
 
 // probeModel 依配置自建 core 库连接，从模型注册表（llm_models + llm_bindings）读取指定
-// 档位的模型端点配置并对该端点做一次轻量探活（见 ai.TestModel：chat 走 GET
+// 档位的模型端点配置并对该端点做一次轻量探活（见 llminfra.TestModel：chat 走 GET
 // /models，embedding 走一次最小向量化请求）。档位无可用绑定（含未启用/类型不符）→
 // Configured=false；配置读取或探活失败 → Configured=true、Reachable=false（英文原因）。
 // 探测结束后关闭自建连接，避免连接泄漏。
@@ -216,13 +217,13 @@ func probeModel(v *viper.Viper, logger *logging.Logger, slot aimodel.Slot) statu
 			return status.Status{Configured: true, Reachable: false, Err: "resolve database connection: " + err.Error()}
 		} else {
 			defer sqlDB.Close()
-			if store, err := ai.NewStore(db); err != nil {
+			if store, err := llmconfig.NewStore(db); err != nil {
 				return status.Status{Configured: true, Reachable: false, Err: "construct config store: " + err.Error()}
-			} else if model, err := store.ModelConfig(ctx, slot); errors.Is(err, ai.ErrSlotNotBound) {
+			} else if model, err := store.ModelConfig(ctx, slot); errors.Is(err, llmconfig.ErrSlotNotBound) {
 				return status.Status{Configured: false}
 			} else if err != nil {
 				return status.Status{Configured: true, Reachable: false, Err: "load model config: " + err.Error()}
-			} else if err := ai.TestModel(ctx, model); err != nil {
+			} else if err := llminfra.TestModel(ctx, model); err != nil {
 				return status.Status{Configured: true, Reachable: false, Err: err.Error()}
 			}
 			return status.Status{Configured: true, Reachable: true}

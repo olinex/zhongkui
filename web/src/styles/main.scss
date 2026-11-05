@@ -311,6 +311,19 @@ html {
   color: rgb(var(--v-theme-on-surface-variant));
 }
 
+// Markdown 语法校验的诊断范围：在 CodeMirror 自带波浪下划线之上再叠一层低透明度语义底色，
+// 让错误 / 警告在长正文里一眼可辨。限定 `.zk-markdown-editor`（MarkdownEditor 的编辑区宿主），
+// 不影响 JSON / Rego 等编辑器现有的诊断外观。
+/* stylelint-disable-next-line selector-class-pattern -- CodeMirror 内部类名 */
+.zk-markdown-editor .cm-lintRange-error {
+  background-color: rgb(var(--v-theme-error), 0.1);
+}
+
+/* stylelint-disable-next-line selector-class-pattern -- CodeMirror 内部类名 */
+.zk-markdown-editor .cm-lintRange-warning {
+  background-color: rgb(var(--v-theme-warning), 0.12);
+}
+
 // 输入光标（原生 caret）随全局主题联动：深色近白、浅色近黑，即与正文同色。
 // CodeMirror 的 baseTheme 依据 `EditorView.darkTheme` facet 在
 // `&light .cm-content{caret-color:black}` / `&dark{white}` 间二选一；本项目只切换语法
@@ -678,6 +691,48 @@ html {
   background-color: rgb(var(--v-theme-on-surface), var(--zk-surface-subtle-opacity));
 }
 
+// ---------------------------------------------------------------------------
+// JSON 树视图（vue-json-pretty）
+// 容器边界跳转按钮：紧邻起始 / 结束括号常驻展示，点击滚动到匹配的另一侧边界。
+// vue-json-pretty 默认把动作区绝对定位到行尾并仅在悬停时出现，这里改为行内展开，
+// 保证与括号同处一行、且无需悬停即可发现。
+// ---------------------------------------------------------------------------
+.zk-json-viewer .vjs-tree-node .vjs-tree-node-actions {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--zk-space-1);
+  padding: 0;
+  background: none;
+}
+
+// 非容器行不渲染跳转按钮，动作容器为空时整体隐藏，避免悬停残留空白热区
+.zk-json-viewer .vjs-tree-node .vjs-tree-node-actions:empty {
+  display: none;
+}
+
+.zk-json-boundary-jump {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--zk-space-4);
+  height: var(--zk-space-4);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgb(var(--v-theme-on-surface-variant));
+  font-size: var(--zk-font-size-caption);
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.55;
+
+  &:hover,
+  &:focus-visible {
+    opacity: 1;
+    color: rgb(var(--v-theme-primary));
+  }
+}
+
 // 可点击行（分块行）的悬停反馈。类名自带 :hover，用法处静态挂载即可，
 // 强度与数据表行 hover 一致（primary 6%）。排除选中行，保证持久态高亮（.zk-row-selected）
 // 悬停时不被更浅的瞬时色冲淡。
@@ -760,6 +815,7 @@ html {
 
 .zk-question-dot {
   border: 0;
+  padding: 0;
   background-color: transparent;
   cursor: pointer;
 }
@@ -783,6 +839,7 @@ html {
 
 .zk-rail-bottom {
   border: 0;
+  padding: 0;
   background-color: transparent;
   color: rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity-strong));
   cursor: pointer;
@@ -792,6 +849,372 @@ html {
 .zk-rail-bottom:hover {
   color: rgb(var(--v-theme-primary));
 }
+
+// 「直达底部」的箭头图标与圆点等大：尺寸取 8px（--zk-space-2），由按钮字号驱动
+// （v-icon 宽高为 1em，x-small 亦只把字号写成 1em）。
+.zk-rail-bottom .v-icon {
+  font-size: var(--zk-space-2);
+}
+
+// ---------------------------------------------------------------------------
+// AI 助手对话区
+// 抽屉与问卷共用的会话外壳：会话列表行、消息操作行、推荐下一步、
+// 输入区与待发队列、引用 / 压缩块、块间跳读控件、问卷选项。
+// 这些视觉在组件 <style scoped> 中无法表达（禁写颜色 / 圆角 / 边框 / 字号 /
+// 过渡），故统一登记在外壳层；组件只保留 flex / grid / 尺寸约束 / 溢出 / 定位。
+// ---------------------------------------------------------------------------
+
+// 会话列表行：整行可点击切换；悬停 / 选中底色由 .zk-row-hover / .zk-row-selected 提供。
+.zk-chat-session-row {
+  cursor: pointer;
+}
+
+// 会话主体：标题 + 更新时间；占满行内剩余宽度并允许标题截断。
+.zk-chat-session-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+// 输入区外框（与 .zk-panel + .zk-panel--subtle 同挂）：聚焦时描边转主色标识编辑态；
+// 被问卷 / 锁定闸住时整体弱化，但保留用户已写内容的可读性。
+.zk-chat-composer {
+  transition: border-color var(--zk-transition-base) ease;
+
+  &:focus-within {
+    border-color: rgb(var(--v-theme-primary));
+  }
+
+  &--blocked {
+    opacity: var(--zk-opacity-disabled);
+  }
+}
+
+// 输入区状态条：展示输入被闸住的原因（运行 / 等待子状态 / 锁定），
+// 以弱化底与输入区其它部分区分；锁定态转警示色。
+.zk-chat-composer-status {
+  border-radius: var(--zk-radius-sm);
+  background-color: rgb(var(--v-theme-on-surface), var(--zk-surface-raised-opacity));
+
+  &--locked {
+    color: rgb(var(--v-theme-warning));
+  }
+}
+
+// 待发提问队列项：抬升底色叠在输入区的弱化面板之上，层级靠灰度差表达。
+.zk-chat-queue-item {
+  border-radius: var(--zk-radius-sm);
+  background-color: rgb(var(--v-theme-on-surface), var(--zk-surface-raised-opacity));
+}
+
+.zk-chat-queue-text {
+  font-size: var(--zk-font-size-caption);
+}
+
+// 输入区工具条的档位 / 审核阀门下拉：plain 变体把取值区内边距归零，
+// 而独立控件的左右留白必须自带对称内边距（见 AGENTS.md「无背景 / 无边框的
+// 独立控件必须自带对称内边距」）。此处补 4px 对称内边距并把 append 的 6px
+// 单侧偏移归零，使「边界 ｜ 文本 ｜ 箭头 ｜ 边界」等距；字号落在 .v-field 上，
+// 因其自带 16px、由 .v-input 声明会被吞掉。
+// 档位下拉是工具条内唯一含长文本的成员，允许收缩并让 Vuetify 自带的 ellipsis 截断。
+.zk-chat-slot,
+.zk-chat-valve {
+  width: fit-content;
+
+  --v-input-padding-top: 0px;
+  --v-field-padding-end: 0px;
+}
+
+.zk-chat-slot {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.zk-chat-valve {
+  flex: 0 0 auto;
+}
+
+/* stylelint-disable selector-class-pattern -- Vuetify 内部 BEM 元素名 */
+.zk-chat-slot .v-field,
+.zk-chat-valve .v-field {
+  padding-inline: var(--zk-space-1);
+  font-size: var(--zk-font-size-caption);
+}
+
+.zk-chat-slot .v-field .v-select__selection,
+.zk-chat-valve .v-field .v-select__selection {
+  margin-inline-end: 0;
+}
+
+.zk-chat-slot .v-field__append-inner,
+.zk-chat-valve .v-field__append-inner {
+  align-items: center;
+}
+
+.zk-chat-slot .v-field,
+.zk-chat-slot .v-field__field {
+  min-width: 0;
+}
+
+// 正文输入区（plain 变体）：补 12px 左右对称内边距，与工具条首个控件
+// 「容器 8px + 控件自身 4px」的文字左边缘对齐。
+.zk-chat-composer .v-textarea textarea {
+  padding-inline: var(--zk-space-3);
+}
+
+// 助手对话输入框：去掉 Vuetify 默认的上下内边距，与内置发送按钮共用同一面板。
+.zk-chat-composer-input textarea {
+  padding-block: var(--zk-space-1);
+}
+/* stylelint-enable selector-class-pattern */
+
+.zk-chat-usage-percent {
+  font-size: var(--zk-font-size-caption);
+}
+
+// 消息快捷操作行：默认淡出，悬停 / 键盘聚焦该轮时淡入；整行取次要色，
+// 使 text 变体的图标按钮与左侧时间同为一档灰。
+.zk-chat-actions {
+  color: rgb(var(--v-theme-on-surface-variant));
+  opacity: 0;
+  transition: opacity var(--zk-transition-fast) ease;
+
+  &--persistent {
+    opacity: 1;
+  }
+}
+
+.zk-chat-turn:hover .zk-chat-actions,
+.zk-chat-turn:focus-within .zk-chat-actions {
+  opacity: 1;
+}
+
+// 推荐下一步：整行可点击直接发送；不可发送时抑制行级可点击暗示。
+.zk-chat-next-step {
+  border-radius: var(--zk-radius-sm);
+  cursor: pointer;
+
+  &--disabled {
+    cursor: default;
+  }
+}
+
+// 推荐项的原生 button：抹平 UA 外观，使整行文本读作一个可点击单元。
+.zk-chat-next-step-main {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+    opacity: var(--zk-opacity-disabled);
+  }
+}
+
+// 上下文压缩失败态：在弱化面板上补一条错误色描边。
+/* stylelint-disable-next-line selector-class-pattern -- BEM 修饰符 */
+.zk-chat-compress--failed {
+  border: var(--zk-hairline-width) solid rgb(var(--v-theme-error));
+}
+
+// 引用序号 / 标题链接 / 展开入口：与正文上标标注同号同色，弱于标题本身。
+.zk-chat-citation-index {
+  margin-inline-end: var(--zk-space-1);
+  color: rgb(var(--v-theme-on-surface-variant));
+  font-variant-numeric: tabular-nums;
+}
+
+.zk-chat-citation-link {
+  color: rgb(var(--v-theme-primary));
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// 引用展开入口挂在 text 变体按钮上，须压过 Vuetify 注入的 .v-btn 默认色，
+// 故带 .v-application 前缀（与注入顺序无关）。
+.v-application .zk-chat-citations-toggle {
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+
+// 正文内的来源上标：小号、主色、无下划线；line-height: 0 防止上标撑高正文行盒。
+.zk-chat-citation-ref {
+  color: rgb(var(--v-theme-primary));
+  font-size: var(--zk-font-size-caption);
+  font-variant-numeric: tabular-nums;
+  line-height: 0;
+  vertical-align: super;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// 并行调用组：以左侧细线体现「同一轮内 N 次并发调用」的边界包含关系，
+// 不在行间另加分隔边框。
+.zk-chat-parallel {
+  border-left: var(--zk-hairline-width) solid
+    rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity-strong));
+}
+
+// 块间跳读控件：不设底色 / 边框，靠图标对比度与悬停变色表达可操作；
+// 计数以 surface 作底片，浮在正文上时既保证可读、也不与正文粘连。
+// 按钮色带 .v-application 前缀压过 Vuetify 注入的 .v-btn 默认色。
+.v-application .zk-chat-nav-btn {
+  color: rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity-strong));
+  transition: color var(--zk-transition-fast) ease;
+
+  &:hover {
+    color: rgb(var(--v-theme-primary));
+  }
+}
+
+.zk-chat-nav-count {
+  padding: 0 var(--zk-space-1);
+  border-radius: var(--zk-radius-sm);
+  background-color: rgb(var(--v-theme-surface));
+  font-variant-numeric: tabular-nums;
+}
+
+// 问卷候选项：「其他」与候选项共用；选中 / 悬停底由 .zk-row-selected / .zk-row-hover 提供。
+.zk-chat-option {
+  cursor: pointer;
+
+  &--disabled {
+    cursor: default;
+    pointer-events: none;
+  }
+}
+
+// Markdown 预览根容器：md-editor 在深色主题下铺纯黑底，与抽屉 / 编辑器外壳的 surface
+// 不一致；置为透明让正文直接落在所在容器的背景上。内边距交由外层气泡 / 面板承担。
+// md-editor 的 preview.css 在组件加载时才注入、晚于本文件，故用两个类（0-2-0）压过
+// 同权重的 `.md-editor` 底色声明。
+// 两个祖先入口各司其职：`.v-application` 覆盖应用内的助手消息；`.zk-editor` 覆盖对话框内的
+// MarkdownEditor 预览（VDialog 经 overlay 挂到 body 下、不在 `.v-application` 祖先链内，
+// 单靠前者会让深色主题的预览退回纯黑底）。
+.v-application .zk-chat-markdown,
+.zk-editor .zk-chat-markdown {
+  background-color: transparent;
+
+  /* stylelint-disable-next-line selector-class-pattern -- md-editor-v3 内部类名 */
+  .md-editor-preview {
+    padding: 0;
+  }
+
+  // mermaid 图表外观（参照 Trae 导出图示）：节点 8px 圆角 + 1px 细描边、标签 500 字重、
+  // 连线 1.5px 圆头；配色（含明暗两套）由 utils/mermaidTheme.ts 注入，此处只补 mermaid
+  // 主题变量覆盖不到的几何与字重。
+  /* stylelint-disable selector-class-pattern -- md-editor-v3 / mermaid 内部类名 */
+  // 图表画布（参照 Trae 导出图示）：弱化表面底 + 12px 圆角 + hairline 描边 + 内边距，让图从
+  // 正文中独立成块；节点与连线配色仍由 utils/mermaidTheme.ts 提供，天然与画布同系
+  .md-editor-mermaid {
+    margin-block: var(--zk-space-2);
+    padding: var(--zk-space-4);
+    border: var(--zk-hairline-width) solid
+      rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity));
+    border-radius: var(--zk-radius-lg);
+    background-color: rgb(var(--v-theme-on-surface), var(--zk-surface-subtle-opacity));
+  }
+
+  .md-editor-mermaid svg {
+    display: block;
+    margin-inline: auto;
+
+    .node rect,
+    .node polygon {
+      rx: 8px;
+      ry: 8px;
+      stroke-width: 1px;
+    }
+
+    .nodeLabel,
+    .nodeLabel p,
+    .node text {
+      font-weight: 500;
+    }
+
+    .flowchart-link {
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    marker path,
+    marker polygon {
+      stroke-width: 0;
+    }
+
+    .edgeLabel,
+    .edgeLabel p {
+      font-size: var(--zk-font-size-caption);
+      font-weight: 400;
+    }
+  }
+  /* stylelint-enable selector-class-pattern */
+}
+
+// Markdown 预览操作区（全屏查看 / 导出 PDF·图片·HTML）：悬停才显现，避免每条消息旁常驻
+// 工具栏；外层锚点以 sticky 钉在滚动容器顶部，长正文滚动时按钮组始终可见（见组件 scoped 样式）。
+// 表面与描边沿用面板语言（surface 底 + hairline）；组内按钮之间不画分隔线，靠间距分组。
+.zk-markdown-actions {
+  padding: var(--zk-space-1);
+  border: var(--zk-hairline-width) solid rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity));
+  border-radius: var(--zk-radius-md);
+  background-color: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface-variant));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--zk-transition-fast) ease;
+}
+
+.zk-chat-markdown-root:hover .zk-markdown-actions,
+.zk-chat-markdown-root:focus-within .zk-markdown-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+// 触屏没有 hover：操作区常驻显示，保证功能可达
+@media (hover: none) {
+  .zk-markdown-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+// 全屏查看的标题行与正文区：留白与分隔由外壳层统一提供（Teleport 到 body，
+// 不在 .v-application 祖先链内，故不用带前缀的选择器）
+.zk-markdown-fullscreen-header {
+  padding: var(--zk-space-2) var(--zk-space-4);
+  border-bottom: var(--zk-hairline-width) solid
+    rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity));
+}
+
+.zk-markdown-fullscreen-body {
+  padding: var(--zk-space-6) var(--zk-space-4);
+}
+
+// 全局提示条需浮在全屏编辑器 / 对话框之上：Vuetify 默认 z-index 为 2000，低于
+// --zk-z-fullscreen(2600)，全屏查看时导出结果提示会被遮罩盖住，看上去像没有反馈。
+// 提示条自身以行内样式写入 z-index，故必须用 !important 才能覆盖。
+.v-snackbar {
+  z-index: calc(var(--zk-z-fullscreen) + 1) !important;
+}
+
+// 折叠代码块（md-editor 把可折叠围栏渲染为 details.md-editor-code）展开后限高：
+// 超长代码在块内纵向滚动，避免单个代码块把消息 / 报告整体撑过一屏；折叠头在 pre 之外，
+// 滚动时仍固定可见。选择器带 .md-editor-preview（0-3-0）压过主题的 pre 规则（0-2-0）。
+/* stylelint-disable selector-class-pattern -- md-editor-v3 内部类名 */
+.md-editor-preview .md-editor-code[open] > pre {
+  max-height: var(--zk-preview-max-height);
+  overflow: auto;
+}
+/* stylelint-enable selector-class-pattern */
 
 // ---------------------------------------------------------------------------
 // 定向 hairline 分隔线
@@ -1060,8 +1483,8 @@ html {
 }
 
 // ---------------------------------------------------------------------------
-// 问卷面板步骤条（VStepper 紧凑变体）
-// AI 助手「主动提问」问卷一轮内可能合并出多道题，逐题呈现时复用 Vuetify 的 v-stepper
+// 紧凑面板步骤条（VStepper 紧凑变体）
+// AI 助手「主动提问」问卷的多题作答与「工具调用审批」的逐项确认都复用 Vuetify 的 v-stepper
 // （步骤条）。组件默认按「独立卡片」尺度设计——步骤项 24px 内边距、头部自带抬升阴影、
 // 窗口四周 24px 外边距，直接嵌进抽屉内的紧凑面板会明显偏散，头部阴影还会与面板自身的
 // hairline 描边叠出第二层浮起感。故只在此收敛四处：
@@ -1076,14 +1499,15 @@ html {
 //      再留 8px 会变成 16px 的悬空；横向 8px 与标题行内边距同一档，题干 / 候选项高亮带的左边缘
 //      与标题图标对齐。滚动与高度上限由窗口自身承载——外层 .zk-panel 需 overflow: hidden，
 //      滚动只能落在窗口上；
-//   5) 当前题徽标改用主色实底：Vuetify 给「已作答题」与「当前题」同一个 surface-variant
-//      底，面板需要一眼看出「现在在第几题」。
+//   5) 当前项徽标改用主色实底：Vuetify 给「已完成项」与「当前项」同一个 surface-variant
+//      底，面板需要一眼看出「现在在第几步」。
 // 步骤徽标只呈序号：用法处不传 title（Vuetify 无 title 时只渲染序号头像），徽标内容由
-// 用法处的 #icon 插槽自绘（当前题显序号、已作答题显对勾），窄面板内不溢出、无需按断点隐藏标题。
-// 用法处（AskUserQuestionnaire.vue）只挂 .zk-questionnaire-stepper，尺度不得再就地覆写。
+// 用法处的 #icon 插槽自绘（当前项显序号、已完成项显对勾），窄面板内不溢出、无需按断点隐藏标题。
+// 用法处（AskUserQuestionnaire.vue / AssistantApprovalSteps.vue）只挂 .zk-compact-stepper，
+// 尺度不得再就地覆写。
 // ---------------------------------------------------------------------------
 
-.zk-questionnaire-stepper .v-stepper-header {
+.zk-compact-stepper .v-stepper-header {
   flex: 1 1 auto;
   min-width: 0;
   gap: var(--zk-space-2);
@@ -1092,12 +1516,13 @@ html {
 
 // 徽标组靠右：用首项的自适应左边距（而非 justify-content: flex-end）——头部自带 overflow-x: auto，
 // 题数多到横向溢出时 flex-end 会把左侧溢出的徽标顶到不可滚到的位置
-.zk-questionnaire-stepper .v-stepper-header .v-stepper-item:first-child {
+.zk-compact-stepper .v-stepper-header .v-stepper-item:first-child {
   margin-inline-start: auto;
 }
 
-.zk-questionnaire-stepper .v-stepper-header .v-stepper-item {
+.zk-compact-stepper .v-stepper-header .v-stepper-item {
   padding: 0;
+  border-radius: 50%;
 }
 
 // 徽标右外边距归零：Vuetify 的 8px（$stepper-item-avatar-margin-inline-end）是留给标题文字的
@@ -1105,33 +1530,46 @@ html {
 // （.v-stepper-item__overlay）铺满整个按钮盒——于是叠色向右多出一截，看着不对称。
 // 归零后按钮盒与 24px 圆徽标等大，叠色层再改成圆形即可与徽标同心同形（方角会在圆外露四角）
 /* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部 BEM 元素名 */
-.zk-questionnaire-stepper .v-stepper-header .v-stepper-item__avatar {
+.zk-compact-stepper .v-stepper-header .v-stepper-item__avatar {
   margin-inline-end: 0;
 }
 
 /* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部 BEM 元素名 */
-.zk-questionnaire-stepper .v-stepper-header .v-stepper-item__overlay {
+.zk-compact-stepper .v-stepper-header .v-stepper-item__overlay {
   border-radius: 50%;
 }
 
 // 步骤间连线：固定 8px 短段（不伸缩），徽标间距 = 头部 gap 8px + 连线 8px + gap 8px
-.zk-questionnaire-stepper .v-stepper-header .v-divider {
+.zk-compact-stepper .v-stepper-header .v-divider {
   flex: none;
   width: var(--zk-space-2);
   margin: 0;
 }
 
-.zk-questionnaire-stepper .v-stepper-window {
+.zk-compact-stepper .v-stepper-window {
   margin: 0 var(--zk-space-2) var(--zk-space-2);
   max-height: var(--zk-preview-max-height);
   overflow-y: auto;
 }
 
-// 步骤徽标的着色：Vuetify 给「已作答题」与「当前题」同一个 surface-variant 底（前者显对勾、
-// 后者显序号），问卷面板需要一眼看出「现在在第几题」，故当前题改用主色实底 + on-primary 数字。
-// 徽标内容由用法处的 #icon 插槽给出（当前题显序号、已作答题显对勾）。
-/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部 BEM 类名 */
-.zk-questionnaire-stepper .v-stepper-item--selected .v-stepper-item__avatar {
-  background: rgb(var(--v-theme-primary));
-  color: rgb(var(--v-theme-on-primary));
+// 展开区自带滚动的变体（工具调用审批：参数 / 结果 JSON 块自身限高滚动，
+// 见 .assistant-approval-block）：窗口不再整体滚动，标题行与展开开关始终可见。
+// 高度上限随之取消——各文本块已各自封顶，窗口无需再截断；问卷仍走上面的通用规则。
+// overflow 保持 hidden（仅为裁剪步骤切换时的滑动动画，高度自适应不会裁到正文）。
+/* stylelint-disable-next-line selector-class-pattern -- BEM 修饰符（双短横线） */
+.zk-compact-stepper--inner-scroll .v-stepper-window {
+  max-height: none;
+  overflow: hidden;
+}
+
+// 步骤徽标不着底色：普通 / 完成 / 当前都保持透明背景，避免点击切换步骤时整块跳色。
+// 当前项改用主色文字（序号本身即进度），完成项显示对勾——形状与颜色都不再随点击变化。
+// 徽标内容由用法处的 #icon 插槽给出（当前项显序号、已完成项显对勾）。
+.zk-compact-stepper .v-avatar {
+  background: transparent;
+}
+
+/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部 BEM 元素名 */
+.zk-compact-stepper .v-stepper-item--selected .v-avatar {
+  color: rgb(var(--v-theme-primary));
 }

@@ -77,7 +77,7 @@ func (h *SendGroupHandler) Do(ctx context.Context, task etl.Task) error {
 	if err := json.Unmarshal(task.Payload(), &input); err != nil {
 		return errors.WithStack(err)
 	}
-	if err := validateSendGroupInput(input); err != nil {
+	if err := validator.Check(&input); err != nil {
 		return errors.WithStack(err)
 	}
 	targets, err := h.service.ResolveGroupTargets(ctx, input)
@@ -104,7 +104,7 @@ func (h *SendGroupHandler) Do(ctx context.Context, task etl.Task) error {
 
 // NewSendGroupTask 将通知组发送请求编码为 notify:send:group 异步任务；必填字段缺失返回错误。
 func NewSendGroupTask(in notifybase.SendGroupInput) (*asynq.Task, error) {
-	if err := validateSendGroupInput(in); err != nil {
+	if err := validator.Check(&in); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	payload, err := json.Marshal(&in)
@@ -112,13 +112,6 @@ func NewSendGroupTask(in notifybase.SendGroupInput) (*asynq.Task, error) {
 		return nil, errors.WithStack(err)
 	}
 	return asynq.NewTask(SendGroupTask, payload), nil
-}
-
-// validateSendGroupInput 校验通知组发送载荷的必填字段：命名空间、事件类型与消息模板键。
-// 校验规则声明在 SendGroupInput / Message 结构体的 binding 标签上，经全局 validator 引擎
-// 统一执行（validator.Validate.Struct），错误为 validator.ValidationErrors。
-func validateSendGroupInput(in notifybase.SendGroupInput) error {
-	return errors.WithStack(validator.Validate.Struct(&in))
 }
 
 // SendTargetHandler 单目标直投处理器，消费 notify:send:target 任务。
@@ -145,7 +138,7 @@ func (h *SendTargetHandler) Do(ctx context.Context, task etl.Task) error {
 	if err := json.Unmarshal(task.Payload(), &input); err != nil {
 		return errors.WithStack(err)
 	}
-	if err := validateSendTargetInput(input); err != nil {
+	if err := validator.Check(&input); err != nil {
 		return errors.WithStack(err)
 	}
 	if err := h.service.SendToTarget(ctx, input); err != nil {
@@ -158,7 +151,7 @@ func (h *SendTargetHandler) Do(ctx context.Context, task etl.Task) error {
 
 // NewSendTargetTask 将单目标直投请求编码为 notify:send:target 异步任务；必填字段缺失返回错误。
 func NewSendTargetTask(in notifybase.SendTargetInput) (*asynq.Task, error) {
-	if err := validateSendTargetInput(in); err != nil {
+	if err := validator.Check(&in); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	payload, err := json.Marshal(&in)
@@ -166,11 +159,4 @@ func NewSendTargetTask(in notifybase.SendTargetInput) (*asynq.Task, error) {
 		return nil, errors.WithStack(err)
 	}
 	return asynq.NewTask(SendTargetTask, payload), nil
-}
-
-// validateSendTargetInput 校验单目标直投载荷的必填字段：命名空间、事件类型、消息模板键与目标 ID。
-// 校验规则声明在 SendTargetInput / Message 结构体的 binding 标签上，经全局 validator 引擎
-// 统一执行（validator.Validate.Struct），错误为 validator.ValidationErrors。
-func validateSendTargetInput(in notifybase.SendTargetInput) error {
-	return errors.WithStack(validator.Validate.Struct(&in))
 }

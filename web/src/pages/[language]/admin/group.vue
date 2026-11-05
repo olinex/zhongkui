@@ -60,6 +60,7 @@
                   v-model="createDescription"
                   v-bind="createDescriptionProps"
                   :label="$t('model.group.field.description')"
+                  rows="3"
                 />
               </v-col>
             </v-row>
@@ -87,6 +88,7 @@
                   v-bind="updateDescriptionProps"
                   :label="$t('model.group.field.description')"
                   :disabled="!editable"
+                  rows="3"
                 />
               </v-col>
             </v-row>

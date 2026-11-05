@@ -25,7 +25,7 @@ func newETLTestLocalizer() *i18n.Localizer {
 	bundle.MustParseMessageFileBytes([]byte(`
 code.200 = "ok"
 code.1000 = "unknown error"
-code.1112 = "scheduler task config invalid"
+code.1403 = "scheduler task config invalid"
 error.schedulerScheduleConflict = "cronSpec and interval are mutually exclusive, set only one"
 error.schedulerScheduleEmpty = "either cronSpec or interval must be set"
 `), "en.toml")

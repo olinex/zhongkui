@@ -64,11 +64,12 @@
 - [`POST /api/v1/admin/user/list`](./admin/post-admin-user-list.md) — 用户列表查询 - 支持分页、搜索和排序
 ### AI 助手
 
-- [`POST /api/v1/ai/agent/:sessionID/input/rerun`](./ai/post-ai-agent-sessionID-input-rerun.md) — 回退到助手待输入回合（问卷作答 / 工具授权）- 删除该锚点之后的回复、把锚点与本回合运行现场重置为待输入，返回该回合的题目与上次答案 / 待审批调用清单供前端重建面板
-- [`POST /api/v1/ai/agent/:sessionID/run/cancel`](./ai/post-ai-agent-sessionID-run-cancel.md) — 取消某会话在途运行（落 cancelled 终态，可回放）
-- [`GET /api/v1/ai/agent/:sessionID/stream`](./ai/get-ai-agent-sessionID-stream.md) — AI 助手 SSE 流式问答（POST 启动驻留运行并转发事件）：运行与连接解耦，刷新后经 GET 续播。
-- [`POST /api/v1/ai/agent/:sessionID/stream`](./ai/post-ai-agent-sessionID-stream.md) — AI 助手 SSE 流式问答（POST 启动驻留运行并转发事件）：运行与连接解耦，刷新后经 GET 续播。
-- [`POST /api/v1/ai/agent/:sessionID/tool-result`](./ai/post-ai-agent-sessionID-tool-result.md) — 回传客户端工具调用结果并续跑挂起运行（SSE 流式：继续输出 delta/stage/done 或再次挂起）
+- [`POST /api/v1/ai/agent/:sessionID/abort`](./ai/post-ai-agent-sessionID-abort.md) — 中止当前回合（下发 turn.completed(cancelled) 并作废挂起现场）
+- [`POST /api/v1/ai/agent/:sessionID/action`](./ai/post-ai-agent-sessionID-action.md) — 提交审批 / 问卷动作并续跑（SSE）
+- [`POST /api/v1/ai/agent/:sessionID/chat`](./ai/post-ai-agent-sessionID-chat.md) — 启动或抢占一轮 AI 助手对话（SSE）
+- [`GET /api/v1/ai/agent/:sessionID/events`](./ai/get-ai-agent-sessionID-events.md) — 运行中重连订阅后续事件（SSE，?after= 指定回放起点）
+- [`POST /api/v1/ai/agent/:sessionID/interaction/reopen`](./ai/post-ai-agent-sessionID-interaction-reopen.md) — 回退到某次审批 / 问卷交互的待处理状态（可重新决策 / 作答，不重跑整轮回答）
+- [`GET /api/v1/ai/agent/:sessionID/render`](./ai/get-ai-agent-sessionID-render.md) — 回放会话的历史快照与当前挂起交互（SSE）
 - [`POST /api/v1/ai/doc/:id/chunks`](./ai/post-ai-doc-id-chunks.md) — 知识库文档分块明细 - 聚合索引摘要（分块统计/切片参数/向量维度/索引新鲜度）与逐块明细
 - [`POST /api/v1/ai/doc/:id/download`](./ai/post-ai-doc-id-download.md) — 下载知识库文档原件 - 解密 S3 原件以附件流式返回（二进制流，不经统一 JSON 响应封装）
 - [`POST /api/v1/ai/doc/:id/get`](./ai/post-ai-doc-id-get.md) — 按文档 ID 查询当前命名空间内某篇知识库文档的完整信息。
@@ -76,7 +77,7 @@
 - [`POST /api/v1/ai/doc/:id/update`](./ai/post-ai-doc-id-update.md) — 更新知识库文档 - 更新标题/正文并触发重新索引
 - [`POST /api/v1/ai/doc/create`](./ai/post-ai-doc-create.md) — 创建知识库文档 - 落库后切块向量化（AI 未启用时文档保留，可稍后重新索引）
 - [`POST /api/v1/ai/doc/delete`](./ai/post-ai-doc-delete.md) — 批量删除知识库文档 - 删除文档及其分块索引
-- [`POST /api/v1/ai/doc/list`](./ai/post-ai-doc-list.md) — 知识库文档列表查询 - 支持分页、搜索与排序。
+- [`POST /api/v1/ai/doc/list`](./ai/post-ai-doc-list.md) — 知识库文档列表查询 - 支持分页、搜索、排序与创建/更新时间过滤。
 - [`POST /api/v1/ai/doc/system/:id/chunks`](./ai/post-ai-doc-system-id-chunks.md) — 系统命名空间知识库文档分块明细 - 只读
 - [`POST /api/v1/ai/doc/system/:id/get`](./ai/post-ai-doc-system-id-get.md) — 系统命名空间知识库文档详情 - 只读
 - [`POST /api/v1/ai/doc/system/list`](./ai/post-ai-doc-system-list.md) — 系统命名空间知识库文档列表查询 - 只读，数据范围恒为内置系统命名空间
@@ -84,12 +85,25 @@
 - [`POST /api/v1/ai/memory/:id/get`](./ai/post-ai-memory-id-get.md) — 记忆详情查询
 - [`POST /api/v1/ai/memory/:id/status`](./ai/post-ai-memory-id-status.md) — 启停记忆 - active/archived
 - [`POST /api/v1/ai/memory/delete`](./ai/post-ai-memory-delete.md) — 批量删除记忆 - 软删除
-- [`POST /api/v1/ai/memory/list`](./ai/post-ai-memory-list.md) — 记忆列表查询 - 支持分页、keyword/agentKind/kind/status 过滤与字段投影
+- [`POST /api/v1/ai/memory/list`](./ai/post-ai-memory-list.md) — 记忆列表查询 - 支持分页、keyword/agentKind/kind/status 与创建/更新时间过滤及字段投影
+- [`POST /api/v1/ai/periodic-report/feed/list`](./ai/post-ai-periodic-report-feed-list.md) — 报告中心信息流查询 - 仅返回关注计划的成功运行记录
+- [`POST /api/v1/ai/periodic-report/plan/:id/delete`](./ai/post-ai-periodic-report-plan-id-delete.md) — 删除报告计划 - 软删除计划
+- [`POST /api/v1/ai/periodic-report/plan/:id/run`](./ai/post-ai-periodic-report-plan-id-run.md) — 立即执行报告计划 - 跳过 cron 直接投递一条生成任务（已到期计划返回 400）
+- [`POST /api/v1/ai/periodic-report/plan/:id/toggle`](./ai/post-ai-periodic-report-plan-id-toggle.md) — 启停报告计划 - 停用后不再按 cron 触发
+- [`POST /api/v1/ai/periodic-report/plan/:id/update`](./ai/post-ai-periodic-report-plan-id-update.md) — 更新报告计划 - 可编辑字段整体覆盖，下次执行时间交由分发器重算
+- [`POST /api/v1/ai/periodic-report/plan/create`](./ai/post-ai-periodic-report-plan-create.md) — 创建报告计划 - 校验技能资格与 cron 后落库
+- [`POST /api/v1/ai/periodic-report/plan/list`](./ai/post-ai-periodic-report-plan-list.md) — 报告计划列表查询 - 支持 keyword / enabled 与创建/更新时间过滤及分页
+- [`POST /api/v1/ai/periodic-report/run/:id/delete`](./ai/post-ai-periodic-report-run-id-delete.md) — 删除报告运行记录 - 一并删除报告对象；运行中与已结束的记录均可删除
+- [`POST /api/v1/ai/periodic-report/run/:id/get`](./ai/post-ai-periodic-report-run-id-get.md) — 报告运行详情查询 - 含报告正文（对象缺失返回 404）
+- [`POST /api/v1/ai/periodic-report/run/list`](./ai/post-ai-periodic-report-run-list.md) — 报告运行记录列表查询 - 可按计划 / 状态过滤并分页
+- [`POST /api/v1/ai/periodic-report/skill/options`](./ai/post-ai-periodic-report-skill-options.md) — 可作为报告来源的技能选项 - 仅返回可周期执行且含时间窗口字段的已启用自定义技能
+- [`POST /api/v1/ai/periodic-report/watch/list`](./ai/post-ai-periodic-report-watch-list.md) — 关注计划候选列表 - 分页返回可关注计划，并回填当前用户关注状态
+- [`POST /api/v1/ai/periodic-report/watch/set`](./ai/post-ai-periodic-report-watch-set.md) — 设置计划关注状态 - 幂等关注 / 取消关注
 - [`POST /api/v1/ai/prompt/optimize`](./ai/post-ai-prompt-optimize.md) — 优化用户提问的提示词 - 把当前诉求改写为更清晰、更易被正确理解的提问（单轮、非流式）
 - [`POST /api/v1/ai/retrieval/dry-run`](./ai/post-ai-retrieval-dry-run.md) — 知识库 RAG dry-run（SSE 流式）：混合检索 → 生成回答 → RAGAS 风格量化评估
 - [`POST /api/v1/ai/retrieval/options`](./ai/post-ai-retrieval-options.md) — 知识库检索试运行参数默认值（来自行为参数注册表，供前端对话框预填）
 - [`POST /api/v1/ai/session/:id/branch`](./ai/post-ai-session-id-branch.md) — 以某一轮用户消息为结尾创建会话分支 - 把该轮及其之前的全部消息复制到新会话
-- [`POST /api/v1/ai/session/:id/compact`](./ai/post-ai-session-id-compact.md) — 压缩会话上下文并抽取长期记忆（SSE 流式：依次下发 compress_start / compress_delta / compress_done，可选 assistantMessageID 指定折叠边界）
+- [`POST /api/v1/ai/session/:id/compact`](./ai/post-ai-session-id-compact.md) — 压缩会话上下文并抽取长期记忆（message.compress SSE 流式进度，可选 assistantMessageID 指定折叠边界）
 - [`POST /api/v1/ai/session/:id/get`](./ai/post-ai-session-id-get.md) — 会话详情查询
 - [`POST /api/v1/ai/session/:id/messages`](./ai/post-ai-session-id-messages.md) — 会话消息列表查询 - 按创建时间升序
 - [`POST /api/v1/ai/session/:id/messages/truncate`](./ai/post-ai-session-id-messages-truncate.md) — 从某一轮用户消息起截断会话消息 - 删除该轮提问及其之后的全部消息（回退 / 删除）
@@ -97,7 +111,14 @@
 - [`POST /api/v1/ai/session/:id/valve`](./ai/post-ai-session-id-valve.md) — 更新会话审核阀门
 - [`POST /api/v1/ai/session/create`](./ai/post-ai-session-create.md) — 创建会话
 - [`POST /api/v1/ai/session/list`](./ai/post-ai-session-list.md) — 查询当前命名空间内的 AI 助手会话列表，按最近更新时间倒序。
-- [`POST /api/v1/ai/status`](./ai/post-ai-status.md) — 查询 AI 助手运行状态：是否启用、各档位绑定模型与可用性、生效参数覆盖数量，可选附指定会话的在途运行快照。
+- [`POST /api/v1/ai/skill/:id/get`](./ai/post-ai-skill-id-get.md) — 技能详情查询 - 含解密后的技能正文
+- [`POST /api/v1/ai/skill/:id/status`](./ai/post-ai-skill-id-status.md) — 启停技能 - 停用的技能不参与运行时装配
+- [`POST /api/v1/ai/skill/:id/update`](./ai/post-ai-skill-id-update.md) — 更新技能 - 名称/描述/正文与周期能力、输入字段、固定参数整体覆盖；周期技能须含 nowTime 输入字段及 timeOffset / timeWindow 固定参数
+- [`POST /api/v1/ai/skill/create`](./ai/post-ai-skill-create.md) — 创建技能 - 名称在同命名空间内唯一，新建默认启用，周期能力、输入字段与固定参数由用户提交；周期技能须含 nowTime 输入字段及 timeOffset / timeWindow 固定参数
+- [`POST /api/v1/ai/skill/delete`](./ai/post-ai-skill-delete.md) — 批量删除技能 - 软删除
+- [`POST /api/v1/ai/skill/list`](./ai/post-ai-skill-list.md) — 技能列表查询 - 支持分页、keyword/enabled 与创建/更新时间过滤及字段投影
+- [`POST /api/v1/ai/skill/options`](./ai/post-ai-skill-options.md) — 技能选择器选项 - 合并内置技能与当前命名空间已启用技能
+- [`POST /api/v1/ai/status`](./ai/post-ai-status.md) — 查询 AI 助手运行状态：是否启用、各档位绑定模型与可用性、生效参数覆盖数量，可选附指定会话的回合状态快照。
 ### 数据源
 
 - [`POST /api/v1/datasource/:id/get`](./datasource/post-datasource-id-get.md) — 第三方数据源详情查询 - 根据ID获取数据源完整信息

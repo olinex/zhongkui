@@ -11,6 +11,7 @@ import (
 	"github.com/samber/do/v2"
 	"github.com/spf13/cobra"
 	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 	_ "zhongkuisec.com/zhongkui/internal/pkg/validator"
 	"zhongkuisec.com/zhongkui/internal/provider"
@@ -73,6 +74,7 @@ var RootCmd = &cobra.Command{
 		provider.InjectRawDatabase(i)
 		provider.InjectCacheRedis(i)
 		provider.InjectPipelineRedis(i)
+		provider.InjectAccessKeyPool(i)
 		provider.InjectEtcdClient(ctx, i)
 		provider.InjectTagEngine(i)
 		provider.InjectObjectCache(i)
@@ -90,6 +92,7 @@ var RootCmd = &cobra.Command{
 		provider.InjectMailSender(i)
 		provider.InjectFeatureRegistry(i)
 		provider.InjectMessagePool(i)
+		provider.InjectJSEngine(ctx, i)
 		provider.InjectAi(ctx, i)
 
 		// 初始化密钥派生器
@@ -123,7 +126,12 @@ var RootCmd = &cobra.Command{
 		// 带 10 秒超时兜底，防止 shutdown 阶段无限阻塞
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer shutdownCancel()
-		i.ShutdownWithContext(shutdownCtx)
+		// ShutdownWithContext 返回的是执行报告（恒非 nil），不是 error；须以 Succeed 判定失败，
+		// 否则正常退出也会被当成错误。
+		report := i.ShutdownWithContext(shutdownCtx)
+		if !report.Succeed {
+			return errors.New(report.Error())
+		}
 		pterm.Debug.Println(translate.T("cli.root.process-exit", nil))
 		return nil
 	},

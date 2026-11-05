@@ -30,10 +30,7 @@ func RunHttpService(ctx context.Context, i do.Injector) error {
 	viper := provider.MustInvokeViper(i)
 	engine := provider.MustInvokeGin(i)
 	apiLogger := provider.MustInvokeApiLogger(i)
-	cfg, err := config.ExtractConfig(viper, validator.Validate)
-	if err != nil {
-		return errors.WithStack(err)
-	}
+	cfg := config.MustExtractConfig(viper, validator.Validate)
 	srv := &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 		Handler: engine,

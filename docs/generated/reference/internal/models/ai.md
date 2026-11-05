@@ -7,8 +7,19 @@
 - [Constants](<#constants>)
 - [Variables](<#variables>)
 - [func ChatSlotValues\(\) \[\]string](<#ChatSlotValues>)
+- [func InputFieldAcceptsJSON\(fieldType SkillInputFieldType, raw json.RawMessage\) bool](<#InputFieldAcceptsJSON>)
 - [func InvalidChatSlotError\(value Slot\) error](<#InvalidChatSlotError>)
+- [func MergeParameters\(sources ...map\[string\]json.RawMessage\) map\[string\]json.RawMessage](<#MergeParameters>)
+- [func ParseSkillFixedFields\(raw datatypes.JSON\) \(map\[string\]json.RawMessage, error\)](<#ParseSkillFixedFields>)
+- [func SkillFixedFieldsJSON\(fields map\[string\]json.RawMessage\) \(datatypes.JSON, error\)](<#SkillFixedFieldsJSON>)
+- [func SkillIDColumn\(id uint\) \*uint](<#SkillIDColumn>)
+- [func SkillIDFromColumn\(id \*uint\) uint](<#SkillIDFromColumn>)
+- [func SkillInputFieldsJSON\(fields \[\]SkillInputField\) \(datatypes.JSON, error\)](<#SkillInputFieldsJSON>)
 - [func SlotKind\(slot Slot\) llm.ModelKind](<#SlotKind>)
+- [func ValidateSkillFixedFields\(fields map\[string\]json.RawMessage, periodic bool, inputFields \[\]SkillInputField\) error](<#ValidateSkillFixedFields>)
+- [func ValidateSkillPeriodicInputFields\(periodic bool, fields \[\]SkillInputField\) error](<#ValidateSkillPeriodicInputFields>)
+- [type AgentCheckpoint](<#AgentCheckpoint>)
+- [type AgentInteraction](<#AgentInteraction>)
 - [type AgentInteractionState](<#AgentInteractionState>)
   - [func AllAgentInteractionStates\(\) \[\]AgentInteractionState](<#AllAgentInteractionStates>)
   - [func ParseAgentInteractionState\(raw AgentInteractionState\) \(AgentInteractionState, error\)](<#ParseAgentInteractionState>)
@@ -18,16 +29,10 @@
 - [type AgentKind](<#AgentKind>)
   - [func AllAgentKinds\(\) \[\]AgentKind](<#AllAgentKinds>)
   - [func ParseAgentKind\(raw AgentKind\) \(AgentKind, error\)](<#ParseAgentKind>)
-- [type AgentLiveRun](<#AgentLiveRun>)
 - [type AgentMemory](<#AgentMemory>)
 - [type AgentMessage](<#AgentMessage>)
-- [type AgentMessageBlock](<#AgentMessageBlock>)
-- [type AgentMessageBlockKind](<#AgentMessageBlockKind>)
 - [type AgentParam](<#AgentParam>)
 - [type AgentRun](<#AgentRun>)
-- [type AgentRunEvent](<#AgentRunEvent>)
-- [type AgentRunEventType](<#AgentRunEventType>)
-  - [func AllAgentRunEventTypes\(\) \[\]AgentRunEventType](<#AllAgentRunEventTypes>)
 - [type AgentRunPhase](<#AgentRunPhase>)
   - [func AllAgentRunPhases\(\) \[\]AgentRunPhase](<#AllAgentRunPhases>)
   - [func ParseAgentRunPhase\(raw AgentRunPhase\) \(AgentRunPhase, error\)](<#ParseAgentRunPhase>)
@@ -36,6 +41,9 @@
   - [func ParseAgentRunStatus\(raw AgentRunStatus\) \(AgentRunStatus, error\)](<#ParseAgentRunStatus>)
 - [type AgentSession](<#AgentSession>)
 - [type AgentSessionCompaction](<#AgentSessionCompaction>)
+- [type AgentSkill](<#AgentSkill>)
+- [type InteractionKind](<#InteractionKind>)
+- [type InteractionStatus](<#InteractionStatus>)
 - [type KnowledgeChunk](<#KnowledgeChunk>)
 - [type KnowledgeDocStatus](<#KnowledgeDocStatus>)
 - [type KnowledgeDocument](<#KnowledgeDocument>)
@@ -52,8 +60,20 @@
   - [func AllMemoryStatuses\(\) \[\]MemoryStatus](<#AllMemoryStatuses>)
   - [func ParseMemoryStatus\(raw MemoryStatus\) \(MemoryStatus, error\)](<#ParseMemoryStatus>)
 - [type MessageRole](<#MessageRole>)
+- [type PeriodicReportPlan](<#PeriodicReportPlan>)
+- [type PeriodicReportPlanWatch](<#PeriodicReportPlanWatch>)
+- [type PeriodicReportRun](<#PeriodicReportRun>)
+- [type PeriodicReportRunStatus](<#PeriodicReportRunStatus>)
 - [type ReviewValve](<#ReviewValve>)
 - [type SessionStatus](<#SessionStatus>)
+- [type SkillInputField](<#SkillInputField>)
+  - [func ParseSkillInputFields\(raw datatypes.JSON\) \(\[\]SkillInputField, error\)](<#ParseSkillInputFields>)
+- [type SkillInputFieldType](<#SkillInputFieldType>)
+  - [func AllSkillInputFieldTypes\(\) \[\]SkillInputFieldType](<#AllSkillInputFieldTypes>)
+- [type SkillPeriodicWindow](<#SkillPeriodicWindow>)
+  - [func ParsePeriodicWindowFromFields\(fields map\[string\]json.RawMessage\) \(SkillPeriodicWindow, error\)](<#ParsePeriodicWindowFromFields>)
+  - [func ParseSkillPeriodicWindow\(raw datatypes.JSON\) \(SkillPeriodicWindow, error\)](<#ParseSkillPeriodicWindow>)
+- [type SkillSource](<#SkillSource>)
 - [type Slot](<#Slot>)
   - [func ParseChatSlot\(value Slot\) \(Slot, bool\)](<#ParseChatSlot>)
   - [func ParseSlot\(value Slot\) \(Slot, error\)](<#ParseSlot>)
@@ -62,6 +82,19 @@
 
 
 ## Constants
+
+<a name="SkillInputFieldNameNowTime"></a>技能输入字段与固定参数的约定键：nowTime 是运行时注入的输入字段名（其类型必须为 date）； timeOffset / timeWindow 是周期技能固定参数中必须以 Go 时长字符串给出的键。
+
+```go
+const (
+    // SkillInputFieldNameNowTime 运行时注入的当前时间字段名；周期技能的该字段类型必须为 date
+    SkillInputFieldNameNowTime = "nowTime"
+    // SkillFixedFieldTimeOffset 周期技能固定参数中的时间偏移键，值须为 Go 时长字符串，允许为负
+    SkillFixedFieldTimeOffset = "timeOffset"
+    // SkillFixedFieldTimeWindow 周期技能固定参数中的时间窗口键，值须为 Go 时长字符串且大于 0
+    SkillFixedFieldTimeWindow = "timeWindow"
+)
+```
 
 <a name="DefaultReviewValve"></a>DefaultReviewValve 出厂默认阀门：会话未创建或未记录阀门时的默认档位，取「逐一审核」以保持 引入本特性前「一律人工审核」的既有行为，与 agent\_sessions.review\_valve 列的默认值一致。
 
@@ -86,6 +119,15 @@ func ChatSlotValues() []string
 
 ChatSlotValues 把对话档位清单展开为字面量清单（embedding 不在其列），返回新切片，调用方 修改不影响内部档位清单。档位成员仍只声明在 AllSlots 一处，清单由此派生，新增档位无需同步 修改消费方（如参数注册表 agent.defaultSlot 的封闭取值清单）。
 
+<a name="InputFieldAcceptsJSON"></a>
+## func InputFieldAcceptsJSON
+
+```go
+func InputFieldAcceptsJSON(fieldType SkillInputFieldType, raw json.RawMessage) bool
+```
+
+InputFieldAcceptsJSON 判断原始 JSON 值是否符合技能输入字段类型：类型不在取值空间或 JSON 非法时返回 false；number / boolean 分别要求 JSON 数字 / 布尔，string / enum / date 均要求 JSON 字符串。
+
 <a name="InvalidChatSlotError"></a>
 ## func InvalidChatSlotError
 
@@ -95,6 +137,60 @@ func InvalidChatSlotError(value Slot) error
 
 InvalidChatSlotError 返回「对话档位取值不合法」的英文错误，枚举文案与档位清单同源；供 视图层在 ParseChatSlot 返回 false 时直接使用，各处不再重复拼写档位枚举。
 
+<a name="MergeParameters"></a>
+## func MergeParameters
+
+```go
+func MergeParameters(sources ...map[string]json.RawMessage) map[string]json.RawMessage
+```
+
+MergeParameters 按传入顺序合并参数映射，后者同名键覆盖前者，返回新 map 且不修改入参； 典型用法为 MergeParameters\(fixedFields, planInputs, runtimeInputs\)，优先级由右向左递增。
+
+<a name="ParseSkillFixedFields"></a>
+## func ParseSkillFixedFields
+
+```go
+func ParseSkillFixedFields(raw datatypes.JSON) (map[string]json.RawMessage, error)
+```
+
+ParseSkillFixedFields 把技能行 fixed\_fields 列的 JSON 解码为自由形状的参数映射：空值（nil 或 空串）与 JSON null 返回空 map；非 JSON object 或非法 JSON 返回英文错误。值以 json.RawMessage 承载，保留字符串、数字、布尔、对象与数组的原始 JSON 类型。
+
+<a name="SkillFixedFieldsJSON"></a>
+## func SkillFixedFieldsJSON
+
+```go
+func SkillFixedFieldsJSON(fields map[string]json.RawMessage) (datatypes.JSON, error)
+```
+
+SkillFixedFieldsJSON 把固定参数映射编码为技能行 fixed\_fields 列的 JSON：nil 或空 map 编码为 空 JSON 对象，非法值（如无法序列化的内容）返回英文错误。
+
+<a name="SkillIDColumn"></a>
+## func SkillIDColumn
+
+```go
+func SkillIDColumn(id uint) *uint
+```
+
+SkillIDColumn 把轮次技能 ID 映射为消息行的可空技能列：0（未选技能）映射为 NULL， 使 agent\_messages.skill\_id 的外键约束不会因「未选技能」而违例。
+
+<a name="SkillIDFromColumn"></a>
+## func SkillIDFromColumn
+
+```go
+func SkillIDFromColumn(id *uint) uint
+```
+
+SkillIDFromColumn 把消息行的可空技能列还原为轮次技能 ID：NULL 映射为 0（未选技能）。
+
+<a name="SkillInputFieldsJSON"></a>
+## func SkillInputFieldsJSON
+
+```go
+func SkillInputFieldsJSON(fields []SkillInputField) (datatypes.JSON, error)
+```
+
+SkillInputFieldsJSON 把输入字段列表编码为技能行 input\_fields 列的 JSON：nil 或空切片编码为 空 JSON 数组，非法值（如无法序列化的内容）返回英文错误。
+
 <a name="SlotKind"></a>
 ## func SlotKind
 
@@ -103,6 +199,75 @@ func SlotKind(slot Slot) llm.ModelKind
 ```
 
 SlotKind 返回档位要求的模型类型：embedding 档位要求向量模型，其余对话档位要求对话模型。
+
+<a name="ValidateSkillFixedFields"></a>
+## func ValidateSkillFixedFields
+
+```go
+func ValidateSkillFixedFields(fields map[string]json.RawMessage, periodic bool, inputFields []SkillInputField) error
+```
+
+ValidateSkillFixedFields 校验技能固定参数：按 skillReservedFixedFields 的 isdefault 规则拒绝运行时 保留键，并拒绝与输入字段同名的固定字段；periodic 为 true 时进一步按 skillPeriodicWindowFields 校验 timeOffset / timeWindow，非周期技能不要求时长键。输入字段声明本身由调用方的校验视图负责。
+
+<a name="ValidateSkillPeriodicInputFields"></a>
+## func ValidateSkillPeriodicInputFields
+
+```go
+func ValidateSkillPeriodicInputFields(periodic bool, fields []SkillInputField) error
+```
+
+ValidateSkillPeriodicInputFields 校验周期技能的输入字段：必须且只能有一个 name=nowTime、 type=date 的字段；非周期技能不校验。字段名重复、类型非法等结构问题由调用方的 binding 负责。
+
+<a name="AgentCheckpoint"></a>
+## type AgentCheckpoint
+
+AgentCheckpoint 保存 eino 图一次运行的可恢复现场：挂起时由 checkpoint 存储写入，续跑按同一键恢复图 现场并跳过已完成节点，运行收敛后随之删除。对应表为 agent\_checkpoints。
+
+与 AgentRun（agent\_runs）是「引擎现场 ↔ 业务现场」的关系：agent\_runs.checkpoint\_id 指向本表的 checkpoint\_id。本表保存 eino 直接序列化的 graphState（消息链、档位、轮次等），续跑优先据此恢复并 跳过已完成节点；agent\_runs 另存 messages / slot 作为 checkpoint 缺失时的回退，并保存 checkpoint 无法表达的领域数据（pending\_calls、citations 与审批锚点）。本表不设过期时间——挂起现场在等待授权 / 作答期间与 agent\_runs 同寿命，随会话删除清理。
+
+```go
+type AgentCheckpoint struct {
+    database.BaseModel // 内嵌基础模型，包含 ID、CreatedAt、UpdatedAt 字段（表无 deleted_at 列）
+
+    // CheckpointID eino checkpoint 键（运行分配的 UUID），全局唯一，运行现场据此定位
+    CheckpointID string `json:"checkpointID" gorm:"column:checkpoint_id;type:VARCHAR(64);not null;uniqueIndex:uq_agent_checkpoints_checkpoint_id"`
+    // Payload 序列化后的图运行现场字节（含消息链、工具调用与运行状态，可能携带用户内容与凭据），
+    // 经 crypto 序列化器加密落库
+    Payload *serializer.Crypto `json:"payload" gorm:"column:payload;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12820,length=32"`
+}
+```
+
+<a name="AgentInteraction"></a>
+## type AgentInteraction
+
+AgentInteraction 保存业务交互：审批、问卷与推荐的下一步各落一行，供刷新 / 重进会话时重建 可交互块（块本身由消息载荷与交互类型重新投影，不落库）。Seq 在所属会话内单调递增（从 1 起）， 即交互的真实产生顺序；Payload 为业务 JSON（审批调用清单与决策 / 问卷题目与作答 / 下一步列表）， 经 crypto 序列化器加密落库。对应表为 agent\_interactions。
+
+```go
+type AgentInteraction struct {
+    database.BaseModel // 内嵌基础模型，包含 ID、CreatedAt、UpdatedAt 字段（表无 deleted_at 列）
+
+    // Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
+    Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
+    // NamespaceName 所属命名空间名称，多租户隔离字段
+    NamespaceName string `gorm:"type:VARCHAR(32)"`
+    // UserID 数据属主用户 ID（users.id），用于跨用户隔离
+    UserID uint `gorm:"type:BIGINT;not null"`
+    // SessionID 所属会话 ID（真外键，随会话级联删除），与 Seq 共同构成会话内排序索引
+    SessionID uint `gorm:"type:BIGINT;not null;index:idx_agent_interactions_session_seq,priority:1"`
+    // MessageID 交互所属的助手消息 ID（agent_messages.id），0 表示尚未或无需绑定消息；
+    // 历史回放据此把交互挂到对应消息卡片上
+    MessageID uint `gorm:"type:BIGINT;not null;default:0;index:idx_agent_interactions_message_id"`
+    // Seq 交互在所属会话内的单调递增序号（从 1 起），即交互的真实产生顺序
+    Seq uint64 `gorm:"type:BIGINT;not null;index:idx_agent_interactions_session_seq,priority:2"`
+    // Kind 交互类型：approval | questionnaire | next_steps（取值见 InteractionKind）
+    Kind InteractionKind `gorm:"type:VARCHAR(16);not null"`
+    // Status 交互生命周期状态：pending | answered | cancelled（取值见 InteractionStatus）
+    Status InteractionStatus `gorm:"type:VARCHAR(16);not null;default:pending"`
+    // Payload 交互业务 JSON（审批调用清单与决策 / 问卷题目与作答 / 下一步列表），经 crypto
+    // 序列化器加密落库；offset 12822 为本次新增分配（12821 已分配予 agent_messages.payload）
+    Payload *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12822,length=32"`
+}
+```
 
 <a name="AgentInteractionState"></a>
 ## type AgentInteractionState
@@ -238,36 +403,6 @@ func ParseAgentKind(raw AgentKind) (AgentKind, error)
 
 ParseAgentKind 解析并校验 Agent 类型取值：空串取缺省值 knowledge；非空但不在取值空间内的 取值返回英文错误；合法取值原样返回。取值清单只在 internal/models/ai 声明，调用方不再各自 校验并拼错误文案。
 
-<a name="AgentLiveRun"></a>
-## type AgentLiveRun
-
-AgentLiveRun 表示一次驻留运行（RunHub 管理的 liveRun）的持久化登记：记录运行标识、 归属（命名空间 \+ 会话）、生命周期阶段、已发布的最大事件序号与过期时间，供刷新后 发现并重连在途运行。对应表为 agent\_live\_runs。该表不含用户内容，无需加密。 与 AgentRun（agent\_runs，审批挂起现场）是不同概念：前者描述在途运行的生命周期， 后者保存挂起时刻的运行现场。
-
-```go
-type AgentLiveRun struct {
-    database.BaseModel // 内嵌基础模型，包含 ID、CreatedAt、UpdatedAt 字段（表无 deleted_at 列）
-
-    // Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
-    Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
-    // NamespaceName 所属命名空间名称，多租户隔离字段
-    NamespaceName string `json:"namespaceName" gorm:"type:VARCHAR(32)"`
-    // UserID 数据属主用户 ID（users.id），用于跨用户隔离
-    UserID uint `json:"userID" gorm:"type:BIGINT;not null;uniqueIndex:uq_agent_live_runs_running,priority:2"`
-    // RunID 运行标识（全局唯一，随机生成的 UUID），事件日志与取消请求据此定位运行
-    RunID serializer.HexUUID `json:"runID" gorm:"type:UUID;uniqueIndex:uq_agent_live_runs_run_id"`
-    // SessionID 所属会话 ID（真外键，随会话级联删除，无哨兵值）；与 UserID 共同构成部分唯一索引
-    // uq_agent_live_runs_running（仅 status='running' 行参与），保证单会话单在途驻留运行
-    SessionID uint `json:"sessionID" gorm:"type:BIGINT;uniqueIndex:uq_agent_live_runs_running,priority:1,where:status = 'running'"`
-    // Phase 运行生命周期阶段，取值来自枚举类 agentRunPhase，落库列名为 status
-    // （running/done/failed/cancelled/suspended）
-    Phase AgentRunPhase `json:"phase" gorm:"column:status;type:VARCHAR(16)"`
-    // LastSeq 已发布的最大事件序号，续播起点（?after=）据此定位
-    LastSeq uint64 `json:"lastSeq" gorm:"type:BIGINT"`
-    // ExpiresAt 运行登记过期时间，超过该时刻的运行登记与事件可被 TTL 清理
-    ExpiresAt time.Time `json:"expiresAt" gorm:"type:TIMESTAMPTZ;index:idx_agent_live_runs_expires_at"`
-}
-```
-
 <a name="AgentMemory"></a>
 ## type AgentMemory
 
@@ -312,7 +447,9 @@ type AgentMemory struct {
 <a name="AgentMessage"></a>
 ## type AgentMessage
 
-AgentMessage 表示 AI 助手会话中的一条消息，记录消息角色（Role）、正文 （Content），以及助手回复的草稿载荷（DraftJSON）与引用来源列表（CitationsJSON）。 一轮助手回答的思考 / 工具调用 / 授权 / 问卷 / 正文按时序存于子表 agent\_message\_blocks（AgentMessageBlock）。对应表为 agent\_messages。
+AgentMessage 表示 AI 助手会话中的一条消息，记录消息角色（Role）、原生消息载荷 （MessageKind / Payload）、正文（Content），以及助手回复的草稿载荷（DraftJSON）与引用 来源列表（CitationsJSON）。对应表为 agent\_messages。
+
+MessageKind / Payload 承载 eino 原生消息 JSON，是会话的事实来源；Content / DraftJSON 仍保留 给滚动摘要、消息列表等读取路径（Content 在追加原生消息时由载荷回填），不参与新的写入链路。 MessageKind 的取值空间与枚举类注册见 internal/pkg/llm（APIMode，枚举类 llmAPIMode）。
 
 ```go
 type AgentMessage struct {
@@ -331,7 +468,14 @@ type AgentMessage struct {
     Seq uint64 `gorm:"type:BIGINT;not null"`
     // Role 消息角色：user/assistant/system 等
     Role MessageRole `gorm:"type:VARCHAR(16)"`
-    // Content 消息正文内容（含用户原文与模型输出，经 crypto 序列化器加密落库）
+    // MessageKind 本条消息 Payload 承载的 eino 原生消息表示：chat（*schema.Message）|
+    // responses（*schema.AgenticMessage），缺省 chat（取值见 llm.APIModeChat / llm.APIModeResponses）
+    MessageKind llm.APIMode `gorm:"type:VARCHAR(16);not null;default:chat"`
+    // Payload eino 原生消息 JSON（chat 或 responses 表示，含用户原文与模型输出），经 crypto
+    // 序列化器加密落库，是会话消息的事实来源
+    Payload *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12821,length=32"`
+    // Content 消息正文内容（含用户原文与模型输出，经 crypto 序列化器加密落库；追加原生消息时
+    // 由 Payload 解码回填，供滚动摘要与消息列表读取）
     Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12811,length=32"`
     // DraftJSON 助手回复的草稿载荷（JSON，如工具调用的中间状态），可空，经 crypto 序列化器加密落库
     DraftJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12812,length=32"`
@@ -350,62 +494,14 @@ type AgentMessage struct {
     // （超时 / 报错 / 取消）时据此表达「本轮未正常结束」，由渲染层按阶段展示提示——不再向正文
     // 拼接提示文案（提示语若混入正文，会被喂回模型污染下一轮上下文）；用户消息恒为空。
     Phase AgentRunPhase `gorm:"type:VARCHAR(16)"`
+    // SkillID 本条用户消息所在轮次选用的技能 ID（agent_skills.id），nil 表示未选技能；技能归属
+    // 「轮次」而非会话——同一会话的不同轮次可分别选用不同技能。仅用户消息有值。列上设外键约束
+    // REFERENCES agent_skills(id) ON DELETE SET NULL，故未选技能以 NULL 而非 0 表达。
+    SkillID *uint `gorm:"type:BIGINT"`
+    // SkillName 本轮技能名称快照（写入时的技能名），空表示未选技能；以快照而非实时关联，
+    // 保证技能后续重命名 / 停用 / 删除后历史气泡仍能如实展示当时选用的技能。仅用户消息有值。
+    SkillName string `gorm:"type:VARCHAR(64);not null;default:''"`
 }
-```
-
-<a name="AgentMessageBlock"></a>
-## type AgentMessageBlock
-
-AgentMessageBlock 表示一条助手回答（AgentMessage）下的一个有序内容块：一轮回答的思考段、 工具调用组、授权待审、主动提问与正文段各按其真实产生时序落为一个块。BlockSeq 在同一消息内 单调递增（从 1 起），块的顺序即内容真实产生的顺序；块为展示事实，不参与模型上下文回灌。 对应表为 agent\_message\_blocks。
-
-```go
-type AgentMessageBlock struct {
-    database.BaseModel // 内嵌基础模型，包含 ID、CreatedAt、UpdatedAt 字段（表无 deleted_at 列）
-
-    // Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
-    Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
-    // NamespaceName 所属命名空间名称，多租户隔离字段
-    NamespaceName string `gorm:"type:VARCHAR(32)"`
-    // UserID 数据属主用户 ID（users.id），用于跨用户隔离
-    UserID uint `gorm:"type:BIGINT;not null"`
-    // MessageID 从属的助手消息 ID（agent_messages.id），消息删除时块级联删除（真外键，无哨兵值）
-    MessageID uint `gorm:"type:BIGINT"`
-    // BlockSeq 块在所属消息内的单调递增序号（从 1 起），与 MessageID 共同唯一，即内容的真实产生顺序
-    BlockSeq uint64 `gorm:"type:BIGINT;not null"`
-    // Kind 块类型：reasoning/tool_calls/approval/questionnaire/content/next_steps（取值见 AgentMessageBlockKind）
-    Kind AgentMessageBlockKind `gorm:"type:VARCHAR(16);not null"`
-    // Payload 块的 JSON 载荷（思考文本 / 工具调用记录 / 授权清单 / 问卷题目与作答 / 正文文本 /
-    // 推荐的下一步），经 crypto 序列化器加密落库
-    Payload *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12819,length=32"`
-}
-```
-
-<a name="AgentMessageBlockKind"></a>
-## type AgentMessageBlockKind
-
-AgentMessageBlockKind 是助手回答有序内容块的类型标识（agent\_message\_blocks.kind）：思考段 （reasoning）、工具调用组（tool\_calls）、授权待审（approval）、主动提问（questionnaire）、 正文段（content）与推荐的下一步（next\_steps）。块的产生顺序即内容真实产生的时序，取值与 agent\_message\_blocks.kind 列的取值一致。仅内部流转与展示使用，\*\*不注册枚举类\*\*（无 i18n label，约定同 AgentRunEventType）。
-
-```go
-type AgentMessageBlockKind string
-```
-
-<a name="AgentMessageBlockKindReasoning"></a>助手回答内容块类型常量。
-
-```go
-const (
-    // AgentMessageBlockKindReasoning 思考段：模型返回的思考/推理内容，连续增量聚为一个块
-    AgentMessageBlockKindReasoning AgentMessageBlockKind = "reasoning"
-    // AgentMessageBlockKindToolCalls 工具调用组：同一轮（round）发起的调用聚为一个块
-    AgentMessageBlockKindToolCalls AgentMessageBlockKind = "tool_calls"
-    // AgentMessageBlockKindApproval 授权待审：本轮待前端审批与执行的客户端工具调用清单
-    AgentMessageBlockKindApproval AgentMessageBlockKind = "approval"
-    // AgentMessageBlockKindQuestionnaire 主动提问：一轮 ask_user 问卷的题目与作答
-    AgentMessageBlockKindQuestionnaire AgentMessageBlockKind = "questionnaire"
-    // AgentMessageBlockKindContent 正文段：模型返回的面向用户正文，连续增量聚为一个块
-    AgentMessageBlockKindContent AgentMessageBlockKind = "content"
-    // AgentMessageBlockKindNextSteps 推荐的下一步：回答完成后基于整体上下文给出的 1-3 条可选诉求
-    AgentMessageBlockKindNextSteps AgentMessageBlockKind = "next_steps"
-)
 ```
 
 <a name="AgentParam"></a>
@@ -431,7 +527,9 @@ type AgentParam struct {
 <a name="AgentRun"></a>
 ## type AgentRun
 
-AgentRun 表示一次 Agent 运行在挂起时刻的运行现场：命中客户端工具后， 后端把完整消息链、待执行调用列表、检索引用、档位与过期时间落库，结束本次流等待前端回传 审批决定与执行结果，再据该现场从中断处续跑。对应表为 agent\_runs。
+AgentRun 表示一次 Agent 运行在挂起时刻的运行现场：命中客户端工具后， 后端把待执行调用列表、检索引用与档位落库，结束本次流等待前端回传 审批决定与执行结果，再据该现场从中断处续跑。挂起时没有大模型调用在跑，故现场不设 过期时间：只要会话未删除，任意时间都可恢复或回退。对应表为 agent\_runs。
+
+本表是「业务现场」，与「引擎现场」agent\_checkpoints（AgentCheckpoint）成对存在：后者由 eino 直接序列化 graphState，续跑优先按 checkpoint\_id 恢复图现场并跳过已完成节点。slot 在两处 有意重叠，用于回退续跑时构造运行入参；pending\_calls 与 citations 只存在于本表：前者是审批 / 展示与回灌的领域数据，后者来自运行期采集器，均不在图状态内。
 
 ```go
 type AgentRun struct {
@@ -445,107 +543,30 @@ type AgentRun struct {
     UserID uint `json:"userID" gorm:"type:BIGINT;not null"`
     // SessionID 所属会话 ID（真外键，随会话级联删除，无哨兵值），恢复请求据此校验运行现场归属
     SessionID uint `json:"sessionID" gorm:"type:BIGINT"`
-    // Status 运行现场状态，取值来自枚举类 agentRunStatus（pending/consumed/expired）
+    // Status 运行现场状态，取值来自枚举类 agentRunStatus（pending/consumed）
     Status AgentRunStatus `json:"status" gorm:"type:VARCHAR(16)"`
-    // MessagesJSON 挂起时刻的完整消息链 JSON（含用户原文，经 crypto 序列化器加密落库）
-    MessagesJSON *serializer.Crypto `json:"messages" gorm:"column:messages;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12814,length=32"`
     // PendingCallsJSON 待执行调用列表 JSON：callID、工具名与调用入参文本
     // （工具入参可能携带凭据，经 crypto 序列化器加密落库）
     PendingCallsJSON *serializer.Crypto `json:"pendingCalls" gorm:"column:pending_calls;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12815,length=32"`
     // CitationsJSON 检索引用列表 JSON，用于恢复后的最终轮产出引用
     // （引用携带知识库正文，经 crypto 序列化器加密落库）
     CitationsJSON *serializer.Crypto `json:"citations" gorm:"column:citations;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12816,length=32"`
-    // Slot 本次运行使用的档位，取值来自枚举类 llmSlot
+    // Slot 本次运行使用的档位，取值来自枚举类 llmSlot。
+    // 与 checkpoint 的 graphState.Slot 重叠，用于回退续跑时构造运行入参。
     Slot Slot `json:"slot" gorm:"type:VARCHAR(255)"`
     // AnchorMessageID 本现场的挂起锚点消息 ID（agent_messages.id）：挂起时承载本回合最终回答（问卷挂起
     // 还承载问卷载荷）的助手消息行；续跑据此原地终态化该行而非新增。旁路调用（运行期共享状态缺失）为 0
     AnchorMessageID uint `json:"anchorMessageID" gorm:"type:BIGINT"`
-    // ExpiresAt 运行现场过期时间，超过该时刻的现场不可恢复
-    ExpiresAt time.Time `json:"expiresAt" gorm:"type:TIMESTAMPTZ;index:idx_agent_runs_expires_at"`
+    // CheckpointID 本次运行在 eino checkpoint 存储中的键：挂起时写入，续跑据此恢复图现场并跳过已完成的
+    // 上游节点；为空表示旧现场或未启用 checkpoint，续跑回落为按 ResumeMessages 重放开图。
+    CheckpointID string `json:"checkpointID" gorm:"type:VARCHAR(64);not null;default:''"`
 }
 ```
-
-<a name="AgentRunEvent"></a>
-## type AgentRunEvent
-
-AgentRunEvent 表示驻留运行事件日志中的一条事件：按 \(RunID, Seq\) 唯一，payload 为 已序列化的 JSON 负载（含助手正文与引用等用户内容，经 crypto 序列化器加密落库）。 对应表为 agent\_run\_events，按 expires\_at TTL 硬删除（表无 deleted\_at 列，避免与 \(run\_id, seq\) 唯一索引冲突）。该表是断线续播的回放来源，也是落库兜底。
-
-```go
-type AgentRunEvent struct {
-    // ID 主键
-    ID  uint `gorm:"primarykey"`
-    // CreatedAt 事件落库时间
-    CreatedAt time.Time
-    // RunID 所属运行标识
-    RunID serializer.HexUUID `json:"runID" gorm:"type:UUID;uniqueIndex:uq_agent_run_events_run_seq,priority:1"`
-    // SessionID 所属会话 ID（真外键，随会话级联删除，无哨兵值）
-    SessionID uint `json:"sessionID" gorm:"type:BIGINT"`
-    // NamespaceName 所属命名空间名称，多租户隔离字段
-    NamespaceName string `json:"namespaceName" gorm:"type:VARCHAR(32)"`
-    // UserID 数据属主用户 ID（users.id），用于跨用户隔离
-    UserID uint `json:"userID" gorm:"type:BIGINT;not null"`
-    // Seq 事件在所属运行内的单调自增序号（从 1 起），与 RunID 共同唯一
-    Seq uint64 `json:"seq" gorm:"type:BIGINT;uniqueIndex:uq_agent_run_events_run_seq,priority:2"`
-    // Type 事件类型，取值来自内部枚举 AgentRunEventType（delta/stage/tool_request/done/error）
-    Type AgentRunEventType `json:"type" gorm:"type:VARCHAR(16)"`
-    // Payload 事件负载 JSON（含用户内容，经 crypto 序列化器加密落库），可空
-    Payload *serializer.Crypto `json:"payload" gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12817,length=32"`
-    // ExpiresAt 事件过期时间，超过该时刻的事件可被 TTL 清理任务硬删除
-    ExpiresAt time.Time `json:"expiresAt" gorm:"type:TIMESTAMPTZ;index:idx_agent_run_events_expires_at"`
-}
-```
-
-<a name="AgentRunEventType"></a>
-## type AgentRunEventType
-
-AgentRunEventType 是驻留运行事件日志（agent\_run\_events.type）与 SSE 事件类型的标识： 增量文本（delta）、思考过程增量（reasoning）、阶段状态（stage）、工具执行请求 （tool\_request）、内容块（block）、上下文压缩开始（compress\_start）、压缩摘要增量 （compress\_delta）、压缩完成（compress\_done）、交互状态（state）、完成（done）与错误 （error）。取值与 sse.SSEEventValue 常量一一对应，仅内部流转使用，\*\*不注册枚举类\*\* （不面向用户展示，无 i18n label）。
-
-```go
-type AgentRunEventType string
-```
-
-<a name="AgentRunEventDelta"></a>运行事件类型常量。
-
-```go
-const (
-    // AgentRunEventDelta 增量文本事件
-    AgentRunEventDelta AgentRunEventType = "delta"
-    // AgentRunEventReasoning 思考过程增量事件（模型返回的思考/推理内容增量）
-    AgentRunEventReasoning AgentRunEventType = "reasoning"
-    // AgentRunEventStage 阶段状态事件
-    AgentRunEventStage AgentRunEventType = "stage"
-    // AgentRunEventToolRequest 工具执行请求事件（运行挂起等待前端执行并审批客户端工具）
-    AgentRunEventToolRequest AgentRunEventType = "tool_request"
-    // AgentRunEventCompressStart 上下文压缩开始事件（携带压缩原因、占用 token、容量与阈值）
-    AgentRunEventCompressStart AgentRunEventType = "compress_start"
-    // AgentRunEventCompressDelta 上下文压缩摘要增量事件（携带摘要生成的增量文本）
-    AgentRunEventCompressDelta AgentRunEventType = "compress_delta"
-    // AgentRunEventCompressDone 上下文压缩完成事件（携带压缩前后占用、折叠条数与摘要游标）
-    AgentRunEventCompressDone AgentRunEventType = "compress_done"
-    // AgentRunEventDone 完成事件
-    AgentRunEventDone AgentRunEventType = "done"
-    // AgentRunEventError 错误事件
-    AgentRunEventError AgentRunEventType = "error"
-    // AgentRunEventState 会话交互状态事件（携带 {state, substate} 交互状态与子状态）
-    AgentRunEventState AgentRunEventType = "state"
-    // AgentRunEventBlock 内容块事件（携带 {seq, kind, payload} 的有序内容块，块创建与收敛各下发一次）
-    AgentRunEventBlock AgentRunEventType = "block"
-)
-```
-
-<a name="AllAgentRunEventTypes"></a>
-### func AllAgentRunEventTypes
-
-```go
-func AllAgentRunEventTypes() []AgentRunEventType
-```
-
-AllAgentRunEventTypes 返回全部运行事件类型的副本，声明顺序即事件流转顺序；供 RunHub 与视图层 复用，调用方修改返回值不影响该取值空间。
 
 <a name="AgentRunPhase"></a>
 ## type AgentRunPhase
 
-AgentRunPhase 是驻留运行（RunHub 管理的 liveRun）生命周期阶段的标识：运行中（running）、 已完成（done）、失败（failed）、已取消（cancelled）与挂起待审批（suspended），取值与 agent\_live\_runs.status 列的取值一致。与运行现场状态 AgentRunStatus 是不同概念： AgentRunStatus 描述 agent\_runs 中「待恢复现场」的消费状态，AgentRunPhase 描述一次 在途运行的生命周期阶段。
+AgentRunPhase 是 Agent 回合生命周期阶段的标识：运行中（running）、已完成（done）、失败 （failed）、已取消（cancelled）与挂起待审批（suspended），取值与 agent\_messages.phase 列的取值一致。与运行现场状态 AgentRunStatus 是不同概念：AgentRunStatus 描述 agent\_runs 中 「待恢复现场」的消费状态，AgentRunPhase 描述一次回合的生命周期阶段。
 
 ```go
 type AgentRunPhase string
@@ -589,7 +610,7 @@ ParseAgentRunPhase 解析并校验运行生命周期阶段：不在取值空间�
 <a name="AgentRunStatus"></a>
 ## type AgentRunStatus
 
-AgentRunStatus 是 Agent 运行现场状态的标识：待恢复（pending）、已消费（consumed）与 已过期（expired），取值与 agent\_runs.status 列的取值一致。运行现场在命中客户端工具 时挂起并落库，仅处于 pending 且未过期的现场可被恢复。
+AgentRunStatus 是 Agent 运行现场状态的标识：待恢复（pending）与已消费（consumed），取值与 agent\_runs.status 列的取值一致。运行现场在命中客户端工具时挂起并落库，处于 pending 的现场 可被恢复（现场不设过期，只要会话未删除即可恢复）。
 
 ```go
 type AgentRunStatus string
@@ -603,8 +624,6 @@ const (
     AgentRunStatusPending AgentRunStatus = "pending"
     // AgentRunStatusConsumed 已消费：运行现场已被成功恢复，不可再次恢复
     AgentRunStatusConsumed AgentRunStatus = "consumed"
-    // AgentRunStatusExpired 已过期：运行现场超过存活期限，不可恢复
-    AgentRunStatusExpired AgentRunStatus = "expired"
 )
 ```
 
@@ -660,6 +679,9 @@ type AgentSession struct {
     MessageSeq uint `gorm:"type:BIGINT;not null"`
     // SummaryUptoSeq 滚动摘要已覆盖的最后一条消息的会话内序号（seq），0 表示尚未摘要任何消息
     SummaryUptoSeq uint `gorm:"type:BIGINT"`
+    // PendingInterruptID 会话当前挂起的根 interrupt ID（ADK 中断续跑键），无挂起时为空；续跑 / 重连
+    // 据此定位待恢复的引擎现场
+    PendingInterruptID string `gorm:"type:VARCHAR(256);not null;default:''"`
 }
 ```
 
@@ -696,6 +718,85 @@ type AgentSessionCompaction struct {
     // 落值；静默滚动（rolling）与估算不可用时留 0，表示「无估算」，读取侧据此回落到末次真实测量。
     TokensAfter int `gorm:"type:INT"`
 }
+```
+
+<a name="AgentSkill"></a>
+## type AgentSkill
+
+AgentSkill 表示一条 AI 技能定义，记录技能名称、明文描述与加密正文，并提供启停开关。 对应表为 agent\_skills：自定义技能按命名空间隔离；内置技能固定位于 base.SystemNamespace， 正文为空（Content 为 nil），由代码注册表按名提供。
+
+```go
+type AgentSkill struct {
+    gorm.Model // 内嵌 gorm.Model，包含 ID、CreatedAt、UpdatedAt、DeletedAt 字段
+
+    // Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
+    Namespace coremodel.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
+    // NamespaceName 所属命名空间名称，多租户隔离字段；内置技能固定为 base.SystemNamespace
+    NamespaceName string `gorm:"type:VARCHAR(32);index:idx_agent_skills_namespace"`
+    // Source 技能来源：custom | builtin，取值见 SkillSource（枚举类 agentSkillSource）
+    Source SkillSource `gorm:"type:VARCHAR(16);not null;default:'custom';index:idx_agent_skills_source"`
+    // Name 技能名称，同一命名空间内未删除的技能名称唯一；内置技能同时是代码注册表的对齐键
+    Name string `gorm:"type:VARCHAR(64)"`
+    // Description 技能描述（明文存储），便于在技能列表中识别技能用途
+    Description string `gorm:"type:VARCHAR(256)"`
+    // Content 技能正文内容，经 crypto 序列化器加密存储；内置技能不落库（nil），正文取自代码注册表
+    Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12823,length=32"`
+    // Enabled 技能是否启用，默认 true；停用的技能不参与运行时装配
+    Enabled bool `gorm:"type:BOOLEAN;not null;default:true"`
+    // PeriodicCapable 技能是否可周期执行（由用户声明）：为 true 时应按固定周期、固定时间窗口
+    // 取数并输出报告，可作为周期性报告计划的技能来源
+    PeriodicCapable bool `gorm:"type:BOOLEAN;not null;default:false"`
+    // InputFields 技能输入字段的结构化描述（由用户填写，JSON 数组），供报告计划渲染输入表单；
+    // 无输入字段时为空数组
+    InputFields datatypes.JSON `gorm:"type:JSONB;not null;default:'[]'"`
+    // FixedFields 技能固定参数（由用户填写，JSON 对象），键为参数名、值为任意 JSON 值，
+    // 保留原始 JSON 类型；周期技能的 timeOffset / timeWindow 为 Go 时长字符串；无固定参数时为空对象
+    FixedFields datatypes.JSON `gorm:"type:JSONB;not null;default:'{}'"`
+}
+```
+
+<a name="InteractionKind"></a>
+## type InteractionKind
+
+InteractionKind 是持久化交互（agent\_interactions.kind）的类型标识：审批（approval）、问卷 （questionnaire）与推荐的下一步（next\_steps）。取值与 agent\_interactions.kind 列一致。
+
+```go
+type InteractionKind string
+```
+
+<a name="InteractionKindApproval"></a>持久化交互类型常量。
+
+```go
+const (
+    // InteractionKindApproval 审批：后端 must 级工具调用的待审清单与用户决策
+    InteractionKindApproval InteractionKind = "approval"
+    // InteractionKindQuestionnaire 问卷：ask_user 主动提问的题目与用户作答
+    InteractionKindQuestionnaire InteractionKind = "questionnaire"
+    // InteractionKindNextSteps 推荐的下一步：回答完成后供用户一键发起的可选诉求
+    InteractionKindNextSteps InteractionKind = "next_steps"
+)
+```
+
+<a name="InteractionStatus"></a>
+## type InteractionStatus
+
+InteractionStatus 是持久化交互（agent\_interactions.status）的生命周期状态：待处理（pending）、 已作答 / 已决策（answered）与已取消（cancelled）。取值与 agent\_interactions.status 列一致。
+
+```go
+type InteractionStatus string
+```
+
+<a name="InteractionStatusPending"></a>持久化交互状态常量。
+
+```go
+const (
+    // InteractionStatusPending 待处理：交互已渲染，等待用户审批或作答
+    InteractionStatusPending InteractionStatus = "pending"
+    // InteractionStatusAnswered 已作答：用户已提交审批决策或问卷答案
+    InteractionStatusAnswered InteractionStatus = "answered"
+    // InteractionStatusCancelled 已取消：交互随中止 / 回滚 / 抢占而作废
+    InteractionStatusCancelled InteractionStatus = "cancelled"
+)
 ```
 
 <a name="KnowledgeChunk"></a>
@@ -821,6 +922,10 @@ type LlmModel struct {
     Name string `gorm:"type:VARCHAR(64);uniqueIndex:uq_llm_models_name"`
     // Kind 模型类型：chat（对话）| embedding（向量化），取值见视图层 llmModelKind 枚举类
     Kind llm.ModelKind `gorm:"type:VARCHAR(16);index:idx_llm_models_kind"`
+    // APIMode 模型端点使用的接口模式：chat（Chat Completions，默认）| responses（Response API）；
+    // responses 仅对 chat 类模型有效，embedding 模型恒为 chat。取值空间与解析/校验见 internal/pkg/llm
+    // （llm.APIMode / llmAPIMode 枚举类）。
+    APIMode llm.APIMode `gorm:"type:VARCHAR(16);not null;default:chat"`
     // BaseURL 模型端点的基地址（OpenAI 兼容 API），如 https://api.openai.com/v1
     BaseURL string `gorm:"type:VARCHAR(512)"`
     // APIKey 访问模型端点的凭据，以加密形式持久化（crypto serializer 密文入库，BYTEA 列）；
@@ -1037,6 +1142,116 @@ const (
 )
 ```
 
+<a name="PeriodicReportPlan"></a>
+## type PeriodicReportPlan
+
+PeriodicReportPlan 表示一个周期性报告计划：按 cron 表达式周期性执行指定技能，携带渲染输入所需的 实参，并按保留天数清理历史报告。对应表为 periodic\_report\_plans。
+
+```go
+type PeriodicReportPlan struct {
+    gorm.Model // 内嵌 gorm.Model，包含 ID、CreatedAt、UpdatedAt、DeletedAt 字段
+
+    // Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
+    Namespace coremodel.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
+    // NamespaceName 所属命名空间名称，多租户隔离字段
+    NamespaceName string `gorm:"type:VARCHAR(32);index:idx_periodic_report_plans_namespace_name"`
+    // Name 报告计划名称
+    Name string `gorm:"type:VARCHAR(128);not null"`
+    // Description 报告计划说明，可为空
+    Description string `gorm:"type:VARCHAR(512)"`
+    // SkillID 计划使用的技能 ID（agent_skills.id，受外键约束）
+    SkillID uint `gorm:"type:BIGINT;not null"`
+    // CronSpec 计划执行的 cron 表达式
+    CronSpec string `gorm:"type:VARCHAR(64);not null"`
+    // InputValues 技能输入字段的实参（JSON 对象，键为字段名），无实参时为空对象
+    InputValues datatypes.JSON `gorm:"type:JSONB;not null;default:'{}'"`
+    // Enabled 计划是否启用，默认 true；停用的计划不再触发
+    Enabled bool `gorm:"type:BOOLEAN;default:true"`
+    // SessionID 计划专属的 Agent 会话 ID（agent_sessions.id 外键，会话删除时置空）；nil 表示尚未创建
+    SessionID *uint `gorm:"type:BIGINT"`
+    // UserID 计划属主用户 ID（users.id），用于跨用户隔离
+    UserID uint `gorm:"type:BIGINT;not null"`
+    // RetentionDays 报告保留天数，默认 90
+    RetentionDays int `gorm:"type:INT;not null;default:90"`
+    // ExpiresAt 计划失效时间，null 表示长期有效
+    ExpiresAt *time.Time `gorm:"type:TIMESTAMPTZ"`
+    // NextRunAt 下一次计划执行时间，NULL 表示待分发器计算
+    NextRunAt *time.Time `gorm:"type:TIMESTAMPTZ"`
+}
+```
+
+<a name="PeriodicReportPlanWatch"></a>
+## type PeriodicReportPlanWatch
+
+PeriodicReportPlanWatch 表示用户对某个报告计划的关注关系：关注后该用户的报告中心展示该计划的运行 记录。对应表为 periodic\_report\_plan\_watches。
+
+```go
+type PeriodicReportPlanWatch struct {
+    gorm.Model // 内嵌 gorm.Model，包含 ID、CreatedAt、UpdatedAt、DeletedAt 字段
+
+    // UserID 关注者用户 ID（users.id）
+    UserID uint `gorm:"type:BIGINT;not null;uniqueIndex:uq_periodic_report_plan_watches_user_id_namespace_name_plan_id,where:deleted_at IS NULL"`
+    // NamespaceName 计划所属命名空间名称，用户隔离维度
+    NamespaceName string `gorm:"type:VARCHAR(32);not null;uniqueIndex:uq_periodic_report_plan_watches_user_id_namespace_name_plan_id,where:deleted_at IS NULL"`
+    // PlanID 被关注的报告计划 ID
+    PlanID uint `gorm:"type:BIGINT;not null;uniqueIndex:uq_periodic_report_plan_watches_user_id_namespace_name_plan_id,where:deleted_at IS NULL"`
+}
+```
+
+<a name="PeriodicReportRun"></a>
+## type PeriodicReportRun
+
+PeriodicReportRun 表示一次报告运行的记录：由计划在 cron 触发点创建，记录触发时间、运行状态与产出 （对象存储键、标题、大小）以及失败原因。对应表为 periodic\_report\_runs。
+
+```go
+type PeriodicReportRun struct {
+    gorm.Model // 内嵌 gorm.Model，包含 ID、CreatedAt、UpdatedAt、DeletedAt 字段
+
+    // NamespaceName 所属命名空间名称，多租户隔离字段
+    NamespaceName string `gorm:"type:VARCHAR(32)"`
+    // PlanID 所属报告计划 ID
+    PlanID uint `gorm:"type:BIGINT;not null;index:idx_periodic_report_runs_plan_id;uniqueIndex:uq_periodic_report_runs_plan_id_trigger_at,priority:1,where:deleted_at IS NULL"`
+    // TriggerAt 计划触发时间点；同一计划同一触发点唯一（未删除行范围内）
+    TriggerAt time.Time `gorm:"type:TIMESTAMPTZ;not null;uniqueIndex:uq_periodic_report_runs_plan_id_trigger_at,priority:2,where:deleted_at IS NULL"`
+    // Status 运行状态，取值来自枚举类 periodicReportRunStatus（running/success/failed）
+    Status PeriodicReportRunStatus `gorm:"type:VARCHAR(16);not null;index:idx_periodic_report_runs_status"`
+    // ObjectKey 生成的报告对象在对象存储中的键，无产出时为空
+    ObjectKey string `gorm:"type:VARCHAR(512)"`
+    // Title 生成报告的标题
+    Title string `gorm:"type:VARCHAR(256)"`
+    // SizeBytes 生成的报告字节大小
+    SizeBytes int64 `gorm:"type:BIGINT"`
+    // Error 运行失败原因，成功时为空
+    Error string `gorm:"type:VARCHAR(2048)"`
+    // StartedAt 实际开始执行时间，null 表示尚未开始
+    StartedAt *time.Time `gorm:"type:TIMESTAMPTZ"`
+    // FinishedAt 执行结束时间，null 表示尚未结束
+    FinishedAt *time.Time `gorm:"type:TIMESTAMPTZ"`
+}
+```
+
+<a name="PeriodicReportRunStatus"></a>
+## type PeriodicReportRunStatus
+
+PeriodicReportRunStatus 是报告运行记录状态的标识：运行中（running）、成功（success）与失败（failed）。 取值与 periodic\_report\_runs.status 列的取值一致，取值空间在包内 init 注册为枚举类 periodicReportRunStatus。
+
+```go
+type PeriodicReportRunStatus string
+```
+
+<a name="PeriodicReportRunStatusRunning"></a>报告运行记录状态常量。
+
+```go
+const (
+    // PeriodicReportRunStatusRunning 运行中：报告任务已触发，正在取数与生成
+    PeriodicReportRunStatusRunning PeriodicReportRunStatus = "running"
+    // PeriodicReportRunStatusSuccess 成功：报告已生成并落对象存储
+    PeriodicReportRunStatusSuccess PeriodicReportRunStatus = "success"
+    // PeriodicReportRunStatusFailed 失败：报告生成失败，失败原因见 PeriodicReportRun.Error
+    PeriodicReportRunStatusFailed PeriodicReportRunStatus = "failed"
+)
+```
+
 <a name="ReviewValve"></a>
 ## type ReviewValve
 
@@ -1076,6 +1291,120 @@ const (
     SessionStatusActive SessionStatus = "active"
     // SessionStatusArchived 会话状态：归档（不再展示/参与上下文）
     SessionStatusArchived SessionStatus = "archived"
+)
+```
+
+<a name="SkillInputField"></a>
+## type SkillInputField
+
+SkillInputField 表示技能的一个输入字段的结构化描述：由用户填写，是报告计划渲染输入表单的 JSON 协议载体（技能行 input\_fields 列的 JSON 形状）。
+
+```go
+type SkillInputField struct {
+    // Name 字段名称，作为报告计划 inputValues 中的键
+    Name string `json:"name"`
+    // Type 字段类型，取值见 SkillInputFieldType
+    Type SkillInputFieldType `json:"type"`
+    // Required 该字段是否必填
+    Required bool `json:"required"`
+    // Description 字段用途说明，可为空
+    Description string `json:"description"`
+}
+```
+
+<a name="ParseSkillInputFields"></a>
+### func ParseSkillInputFields
+
+```go
+func ParseSkillInputFields(raw datatypes.JSON) ([]SkillInputField, error)
+```
+
+ParseSkillInputFields 把技能行 input\_fields 列的 JSON 解码为输入字段列表：空值（nil 或空串） 与 JSON null 返回空切片，非法 JSON 或无法映射的形状返回英文错误。
+
+<a name="SkillInputFieldType"></a>
+## type SkillInputFieldType
+
+SkillInputFieldType 是技能输入字段的类型标识：由用户填写，决定报告计划输入表单的控件 形态与计划 inputValues 中允许承载的 JSON 值类型。取值集合与命令边界 inputFieldRule 的 oneof 规则保持一致。
+
+```go
+type SkillInputFieldType string
+```
+
+<a name="SkillInputFieldTypeString"></a>技能输入字段类型常量。
+
+```go
+const (
+    // SkillInputFieldTypeString 文本类型，承载 JSON 字符串
+    SkillInputFieldTypeString SkillInputFieldType = "string"
+    // SkillInputFieldTypeNumber 数字类型，承载 JSON 数字
+    SkillInputFieldTypeNumber SkillInputFieldType = "number"
+    // SkillInputFieldTypeBoolean 布尔类型，承载 JSON 布尔
+    SkillInputFieldTypeBoolean SkillInputFieldType = "boolean"
+    // SkillInputFieldTypeEnum 枚举类型，承载 JSON 字符串
+    SkillInputFieldTypeEnum SkillInputFieldType = "enum"
+    // SkillInputFieldTypeDate 日期类型，承载 JSON 字符串；name=nowTime 的字段必须使用该类型
+    SkillInputFieldTypeDate SkillInputFieldType = "date"
+)
+```
+
+<a name="AllSkillInputFieldTypes"></a>
+### func AllSkillInputFieldTypes
+
+```go
+func AllSkillInputFieldTypes() []SkillInputFieldType
+```
+
+AllSkillInputFieldTypes 返回全部输入字段类型的副本，声明顺序即前端编辑器中的展示顺序；供边界校验与 测试遍历使用，调用方修改返回值不影响该取值空间。
+
+<a name="SkillPeriodicWindow"></a>
+## type SkillPeriodicWindow
+
+SkillPeriodicWindow 表示周期技能从固定参数解析出的时间窗口：TimeOffset 是相对 nowTime 的偏移 （可为负），TimeWindow 是窗口长度（必须大于 0）。
+
+```go
+type SkillPeriodicWindow struct {
+    // TimeOffset 相对 nowTime 的偏移，可为负（如 -24h 表示窗口结束于当前时刻）
+    TimeOffset time.Duration
+    // TimeWindow 窗口长度，必须大于 0
+    TimeWindow time.Duration
+}
+```
+
+<a name="ParsePeriodicWindowFromFields"></a>
+### func ParsePeriodicWindowFromFields
+
+```go
+func ParsePeriodicWindowFromFields(fields map[string]json.RawMessage) (SkillPeriodicWindow, error)
+```
+
+ParsePeriodicWindowFromFields 从已解码的固定参数映射解析周期时间窗口：把映射转换为 skillPeriodicWindowFields 结构体后交由全局 validator 校验（required / gt=0），校验通过再转回 SkillPeriodicWindow，供创建 / 更新校验与运行期直接复用 map。
+
+<a name="ParseSkillPeriodicWindow"></a>
+### func ParseSkillPeriodicWindow
+
+```go
+func ParseSkillPeriodicWindow(raw datatypes.JSON) (SkillPeriodicWindow, error)
+```
+
+ParseSkillPeriodicWindow 从技能行 fixed\_fields 列的 JSON 解析周期时间窗口：要求存在 timeOffset 与 timeWindow，且两者均可被 serializer.DurationMS 解析，timeWindow 须大于 0；缺失、类型错误 或解析失败返回英文错误。
+
+<a name="SkillSource"></a>
+## type SkillSource
+
+SkillSource 是技能来源的取值类型（agent\_skills.source 与视图层 source 字段）。
+
+```go
+type SkillSource string
+```
+
+<a name="SkillSourceCustom"></a>技能来源常量。
+
+```go
+const (
+    // SkillSourceCustom 自定义技能：由用户在命名空间内维护，正文加密落库
+    SkillSourceCustom SkillSource = "custom"
+    // SkillSourceBuiltin 内置技能：由代码注册表声明、fixture 注入注册行，正文由代码按名提供
+    SkillSourceBuiltin SkillSource = "builtin"
 )
 ```
 

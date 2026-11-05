@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/gin-gonic/gin/binding"
@@ -33,10 +34,6 @@ func newValidate() *validator.Validate {
 	return v
 }
 
-func init() {
-	Validate = newValidate()
-}
-
 // Funcs 返回全部自定义校验规则的登记表（tag → 校验函数），是自定义规则的唯一登记处：
 // provider 用它把规则注册到全局校验器并为每个 tag 挂本地化文案，测试用它注册到自己的校验器。
 // 集中登记可避免各调用方重复抄写 tag 清单——漏抄某项会让该 tag 在对应场景被判为未注册规则，
@@ -54,7 +51,21 @@ func Funcs() map[string]validator.Func {
 		TagHTTPURL:                ValidateHTTPURL,
 		TagJSONObject:             ValidateJSONObject,
 		TagTrimmed:                ValidateTrimmed,
+		TagNotBlank:               ValidateNotBlank,
 		TagGreaterThanCurrentTime: ValidateGtCurrentTime,
 		TagLesserThanCurrentTime:  ValidateLtCurrentTime,
+		TagCron:                   ValidateCronSpec,
+	}
+}
+
+func init() {
+	Validate = newValidate()
+	// 全局引擎自注册自定义校验规则：任何包（worker / CLI / 测试等）无需重复登记即可执行自定义 tag；
+	// 同名 tag 的 RegisterValidation 是覆盖写入，provider 与测试中的重复注册不会 panic。
+	for tag, fn := range Funcs() {
+		// 注册失败说明 tag 名非法或函数为 nil，属编程错误：启动期直接暴露，避免规则静默失效。
+		if err := Validate.RegisterValidation(tag, fn); err != nil {
+			panic(fmt.Sprintf("validator: register custom tag %q failed: %v", tag, err))
+		}
 	}
 }

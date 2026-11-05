@@ -9,7 +9,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/ai/capability"
 )
 
-// TestCollectCapabilities_Invariants 校验能力快照：ID 唯一、字段齐备、当前只登记只读可调用能力，
+// TestCollectCapabilities_Invariants 校验能力快照：ID 唯一、字段齐备、访问性质合法（只读或写入），
 // 且每个能力的 method/path 都能在接口目录中找到。
 func TestCollectCapabilities_Invariants(t *testing.T) {
 	items := CollectCapabilities()
@@ -30,8 +30,8 @@ func TestCollectCapabilities_Invariants(t *testing.T) {
 		if item.Domain == "" || item.DomainLabel == "" || item.Intent == "" {
 			t.Errorf("能力 %q 缺少业务域、业务域中文名或意图", item.ID)
 		}
-		if item.Access != capability.AccessRead {
-			t.Errorf("能力 %q 当前只允许登记只读能力", item.ID)
+		if !item.Access.Valid() {
+			t.Errorf("能力 %q 的访问性质非法: %q", item.ID, item.Access)
 		}
 		if !known[item.Method+" "+item.Path] {
 			t.Errorf("能力 %q 指向未登记的接口: %s %s", item.ID, item.Method, item.Path)

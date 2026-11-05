@@ -4,7 +4,6 @@ import (
 	// 标准库
 	"context"
 	"encoding/json"
-	"sort"
 	"strings"
 
 	// 项目内部
@@ -66,25 +65,13 @@ func canonicalJSON(config json.RawMessage) string {
 		// 非法 JSON 按原文参与构建（工厂将在 New 阶段报错）
 		return string(config)
 	}
-	keys := make([]string, 0, len(obj))
-	for k := range obj {
-		keys = append(keys, k)
+	// 编码失败时按原文参与构建（工厂将在 New 阶段报错）；json.Marshal 对 map 已按键升序输出，
+	// 无需手工拼接。
+	raw, err := json.Marshal(obj)
+	if err != nil {
+		return string(config)
 	}
-	sort.Strings(keys)
-	var b strings.Builder
-	b.WriteByte('{')
-	for i, k := range keys {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		kv, _ := json.Marshal(k)
-		vv, _ := json.Marshal(obj[k])
-		b.Write(kv)
-		b.WriteByte(':')
-		b.Write(vv)
-	}
-	b.WriteByte('}')
-	return b.String()
+	return string(raw)
 }
 
 // Send 经统一资源池向目标投递渲染后的消息：借出与配置匹配的渠道实例并复用底层连接，

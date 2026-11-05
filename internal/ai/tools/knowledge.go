@@ -6,20 +6,17 @@
 // 检索器接口 KnowledgeSearcher 与命中条目 KnowledgeHit 声明在本包，由 internal/ai 适配实现
 // （internal/ai 单向依赖本包，故接口与类型必须留在本包内以避免导入环）；命名空间与文档限定由适配
 // 器持有，模型入参只有 query，无法越权改变租户范围。检索器与单条内容截断长度经 ctx 注入，取不到
-// 时工具返回英文错误。工具元信息（internal/ai 的 ToolSpecs）与出厂行（002_fixtures.sql）由另外两处提供，
-// 本文件只补实现并在 init 期登记。
+// 时工具返回英文错误。参数 schema 由 eino 的 tool/utils.InferTool 按入参结构体推导。
 
 package tools
 
 import (
 	// 标准库
 	"context"
-	"encoding/json"
 	"strings"
 
 	// 第三方
 	"github.com/cloudwego/eino/components/tool"
-	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
 	"zhongkuisec.com/zhongkui/internal/pkg/docconv"
@@ -91,9 +88,9 @@ func knowledgeRuntimeFrom(ctx context.Context) (KnowledgeRuntime, bool) {
 // 分区），命名空间、文档限定与 topK 等均不暴露给模型。
 type knowledgeSearchArgs struct {
 	// Query 检索查询语句（必填，去空白后非空）
-	Query string `json:"query"`
+	Query string `json:"query" jsonschema_description:"用于检索知识库的查询语句，必须非空。"`
 	// Format 可选的知识分区（generated / native_api / schema / capability），空表示全部分区
-	Format string `json:"format"`
+	Format string `json:"format,omitempty" jsonschema:"enum=generated,enum=native_api,enum=schema,enum=capability" jsonschema_description:"可选的知识分区：native_api（原生接口知识）、schema（数据表知识）、capability（平台能力知识）、generated（注释生成的叙述页）；省略时检索全部分区。"`
 }
 
 // knowledgeSearchItem 是返回给模型的单条命中：字段与 KnowledgeHit 一一对应，字段名采用小驼峰。
@@ -121,90 +118,57 @@ type knowledgeSearchResult struct {
 	Message string `json:"message,omitempty"`
 }
 
-// knowledgeSearchTool 是内置工具 knowledge_search 的无状态实现：不持有依赖，检索器与截断长度均
-// 取自 ctx。
-type knowledgeSearchTool struct{}
-
-// Info 返回 knowledge_search 的工具元信息与参数 JSON schema，供模型决定何时调用。参数经 eino 的
-// ParameterInfo 形式描述，唯一键为 query（必填）；命名空间、文档限定与 topK 由运行上下文决定，
-// 不出现在入参中。
-func (t *knowledgeSearchTool) Info(_ context.Context) (*schema.ToolInfo, error) {
-	return &schema.ToolInfo{
-		Name: "knowledge_search",
-		Desc: "在用户维护的知识库中检索与查询相关的文档片段（语义与关键词混合检索）。" +
-			"当回答需要引用知识库中的既有资料时调用；可用不同的查询多次调用，逐步收敛到所需信息。" +
-			"每条命中带 citation 字段，是本次运行内稳定的来源编号；在最终回答中引用该条内容时，" +
-			"请在相应位置标注 [citation]（多处来源写作 [1][2]），编号只能取自该字段。" +
-			"需要查询平台原生接口的用途、入参或出参字段时，传 format=native_api；" +
-			"查询已迁移数据表时传 format=schema；查询平台能力地图与能力明细时传 format=capability。" +
-			"检索范围（命名空间与文档）由本次运行固定，调用无法改变。",
-		ParamsOneOf: schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{
-			"query": {
-				Type:     schema.String,
-				Desc:     "用于检索知识库的查询语句，必须非空。",
-				Required: true,
-			},
-			"format": {
-				Type: schema.String,
-				Desc: "可选的知识分区：native_api（原生接口知识）、schema（数据表知识）、" +
-					"capability（平台能力知识）、generated（注释生成的叙述页）；省略时检索全部分区。",
-				Enum: knowledgeSearchFormats,
-			},
-		}),
-	}, nil
-}
-
-// InvokableRun 执行 knowledge_search：解析 JSON 入参，校验 query 非空，从 ctx 取回检索器后执行
-// 一次知识库检索，返回形如 {"results":[...]} 的 JSON 字符串。任何校验失败均返回英文错误且不触发
-// 检索；检索错误以 errors.WithStack 包装后返回（英文）。无命中时返回空数组并附空结果说明，且
-// 不返回错误。
-func (t *knowledgeSearchTool) InvokableRun(ctx context.Context, argumentsInJSON string, _ ...tool.Option) (string, error) {
-	var args knowledgeSearchArgs
-	if err := json.Unmarshal([]byte(argumentsInJSON), &args); err != nil {
-		return "", errors.WithStack(err)
-	}
-	query := strings.TrimSpace(args.Query)
-	if query == "" {
-		return "", errors.New("knowledge_search: query must be non-empty")
-	}
-	format, err := knowledgeSearchFormat(args.Format)
-	if err != nil {
-		return "", err
-	}
-	rt, ok := knowledgeRuntimeFrom(ctx)
-	if !ok || rt.Searcher == nil {
-		return "", errors.New("knowledge_search: no knowledge runtime in context")
-	}
-	hits, err := rt.Searcher.Search(ctx, query, format)
-	if err != nil {
-		return "", errors.WithStack(err)
-	}
-	results := make([]knowledgeSearchItem, 0, len(hits))
-	for _, hit := range hits {
-		// 整篇展开的命中（Complete）已是完整规格，截断只会让模型看不到字段定义，故原样返回
-		content := hit.Content
-		if !hit.Complete {
-			content = truncateSnippet(hit.Content, rt.SnippetLimit)
+// knowledgeSearchTool 是内置工具 knowledge_search 的 eino 实现：不持有依赖，检索器与截断长度均
+// 取自 ctx，参数 schema 由入参结构体推导。
+var knowledgeSearchTool = mustInferTool(
+	"knowledge_search",
+	"在用户维护的知识库中检索与查询相关的文档片段（语义与关键词混合检索）。"+
+		"当回答需要引用知识库中的既有资料时调用；可用不同的查询多次调用，逐步收敛到所需信息。"+
+		"每条命中带 citation 字段，是本次运行内稳定的来源编号；在最终回答中引用该条内容时，"+
+		"请在相应位置标注 [citation]（多处来源写作 [1][2]），编号只能取自该字段。"+
+		"需要查询平台原生接口的用途、入参或出参字段时，传 format=native_api；"+
+		"查询已迁移数据表时传 format=schema；查询平台能力地图与能力明细时传 format=capability。"+
+		"检索范围（命名空间与文档）由本次运行固定，调用无法改变。",
+	func(ctx context.Context, in knowledgeSearchArgs) (knowledgeSearchResult, error) {
+		query := strings.TrimSpace(in.Query)
+		if query == "" {
+			return knowledgeSearchResult{}, errors.New("knowledge_search: query must be non-empty")
 		}
-		results = append(results, knowledgeSearchItem{
-			DocumentID: hit.DocumentID,
-			Title:      hit.Title,
-			ChunkIndex: hit.ChunkIndex,
-			Content:    content,
-			Score:      hit.Score,
-			Citation:   hit.Citation,
-		})
-	}
-	result := knowledgeSearchResult{Results: results}
-	if len(results) == 0 {
-		result.Message = "未检索到匹配的知识，请改用其他查询词重试"
-	}
-	out, err := json.Marshal(result)
-	if err != nil {
-		return "", errors.WithStack(err)
-	}
-	return string(out), nil
-}
+		format, err := knowledgeSearchFormat(in.Format)
+		if err != nil {
+			return knowledgeSearchResult{}, errors.WithStack(err)
+		}
+		rt, ok := knowledgeRuntimeFrom(ctx)
+		if !ok || rt.Searcher == nil {
+			return knowledgeSearchResult{}, errors.New("knowledge_search: no knowledge runtime in context")
+		}
+		hits, err := rt.Searcher.Search(ctx, query, format)
+		if err != nil {
+			return knowledgeSearchResult{}, errors.WithStack(err)
+		}
+		results := make([]knowledgeSearchItem, 0, len(hits))
+		for _, hit := range hits {
+			// 整篇展开的命中（Complete）已是完整规格，截断只会让模型看不到字段定义，故原样返回
+			content := hit.Content
+			if !hit.Complete {
+				content = truncateSnippet(hit.Content, rt.SnippetLimit)
+			}
+			results = append(results, knowledgeSearchItem{
+				DocumentID: hit.DocumentID,
+				Title:      hit.Title,
+				ChunkIndex: hit.ChunkIndex,
+				Content:    content,
+				Score:      hit.Score,
+				Citation:   hit.Citation,
+			})
+		}
+		result := knowledgeSearchResult{Results: results}
+		if len(results) == 0 {
+			result.Message = "未检索到匹配的知识，请改用其他查询词重试"
+		}
+		return result, nil
+	},
+)
 
 // knowledgeSearchFormat 校验并归一化可选分区：空串表示不限定；其余必须属于四类生成分区，
 // 其他取值返回英文错误，避免模型用人工导入格式绕过检索范围约定。
@@ -237,6 +201,6 @@ func truncateSnippet(s string, max int) string {
 // init 向内置工具实现注册表登记 knowledge_search；工具无状态，不消费 Deps。
 func init() {
 	Register("knowledge_search", func(_ context.Context, _ Deps) (tool.BaseTool, error) {
-		return &knowledgeSearchTool{}, nil
+		return knowledgeSearchTool, nil
 	})
 }

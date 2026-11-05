@@ -12,17 +12,16 @@ import (
 	"testing"
 
 	// 第三方
-	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
 )
 
 // ============================================================================
-// poly_solve
+// 多项式求解工具
 // ============================================================================
 
 // TestPolySolve_Info 覆盖 Info：工具名与入参 schema（coefficients 为 number 数组且必填）。
 func TestPolySolve_Info(t *testing.T) {
-	info, err := (&polySolveTool{}).Info(context.Background())
+	info, err := polySolveTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -61,7 +60,7 @@ func TestPolySolve_InvokableErrors(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := (&polySolveTool{}).InvokableRun(context.Background(), tc.args)
+			_, err := polySolveTool.InvokableRun(context.Background(), tc.args)
 			if err == nil {
 				t.Fatal("error = nil, want a rejection")
 			}
@@ -74,7 +73,7 @@ func TestPolySolve_InvokableErrors(t *testing.T) {
 
 // TestPolySolve_Smoke 锁定 poly_solve 的出参 JSON 线形状与字段名。
 func TestPolySolve_Smoke(t *testing.T) {
-	out, err := (&polySolveTool{}).InvokableRun(context.Background(), `{"coefficients":[1,0,-1]}`)
+	out, err := polySolveTool.InvokableRun(context.Background(), `{"coefficients":[1,0,-1]}`)
 	if err != nil {
 		t.Fatalf("InvokableRun error = %v", err)
 	}
@@ -87,12 +86,12 @@ func TestPolySolve_Smoke(t *testing.T) {
 }
 
 // ============================================================================
-// linear_solve
+// 线性方程求解工具
 // ============================================================================
 
 // TestLinearSolve_Info 覆盖 Info：工具名与入参 schema（a 为二维 number 数组、b 为 number 数组且均必填）。
 func TestLinearSolve_Info(t *testing.T) {
-	info, err := (&linearSolveTool{}).Info(context.Background())
+	info, err := linearSolveTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -132,7 +131,7 @@ func TestLinearSolve_InvokableErrors(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := (&linearSolveTool{}).InvokableRun(context.Background(), tc.args)
+			_, err := linearSolveTool.InvokableRun(context.Background(), tc.args)
 			if err == nil {
 				t.Fatal("error = nil, want a rejection")
 			}
@@ -145,7 +144,7 @@ func TestLinearSolve_InvokableErrors(t *testing.T) {
 
 // TestLinearSolve_Smoke 锁定 linear_solve 的出参 JSON 线形状与字段名。
 func TestLinearSolve_Smoke(t *testing.T) {
-	out, err := (&linearSolveTool{}).InvokableRun(context.Background(), `{"a":[[2,1],[1,-1]],"b":[1,2]}`)
+	out, err := linearSolveTool.InvokableRun(context.Background(), `{"a":[[2,1],[1,-1]],"b":[1,2]}`)
 	if err != nil {
 		t.Fatalf("InvokableRun error = %v", err)
 	}
@@ -156,12 +155,12 @@ func TestLinearSolve_Smoke(t *testing.T) {
 }
 
 // ============================================================================
-// root_find
+// 求根工具
 // ============================================================================
 
 // TestRootFind_Info 覆盖 Info：工具名与入参 schema（expression 为 string 且必填，interval 为 number 数组）。
 func TestRootFind_Info(t *testing.T) {
-	info, err := (&rootFindTool{}).Info(context.Background())
+	info, err := rootFindTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -200,7 +199,7 @@ func TestRootFind_InvokableErrors(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := (&rootFindTool{}).InvokableRun(context.Background(), tc.args)
+			_, err := rootFindTool.InvokableRun(context.Background(), tc.args)
 			if err == nil {
 				t.Fatal("error = nil, want a rejection")
 			}
@@ -213,7 +212,7 @@ func TestRootFind_InvokableErrors(t *testing.T) {
 
 // TestRootFind_Smoke 锁定 root_find 的出参 JSON 线形状与字段名（root/fValue/method）。
 func TestRootFind_Smoke(t *testing.T) {
-	out, err := (&rootFindTool{}).InvokableRun(context.Background(), `{"expression":"x^2-4","interval":[-5,5]}`)
+	out, err := rootFindTool.InvokableRun(context.Background(), `{"expression":"x^2-4","interval":[-5,5]}`)
 	if err != nil {
 		t.Fatalf("InvokableRun error = %v", err)
 	}
@@ -239,12 +238,12 @@ func TestRootFind_Smoke(t *testing.T) {
 }
 
 // ============================================================================
-// nonlinear_solve
+// 非线性方程求解工具
 // ============================================================================
 
 // TestNonlinearSolve_Info 覆盖 Info：工具名与入参 schema（equations / variables / initial 均必填）。
 func TestNonlinearSolve_Info(t *testing.T) {
-	info, err := (&nonlinearSolveTool{}).Info(context.Background())
+	info, err := nonlinearSolveTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -280,7 +279,7 @@ func TestNonlinearSolve_InvokableErrors(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := (&nonlinearSolveTool{}).InvokableRun(context.Background(), tc.args)
+			_, err := nonlinearSolveTool.InvokableRun(context.Background(), tc.args)
 			if err == nil {
 				t.Fatal("error = nil, want a rejection")
 			}
@@ -293,7 +292,7 @@ func TestNonlinearSolve_InvokableErrors(t *testing.T) {
 
 // TestNonlinearSolve_Smoke 锁定 nonlinear_solve 的出参 JSON 线形状与字段名。
 func TestNonlinearSolve_Smoke(t *testing.T) {
-	out, err := (&nonlinearSolveTool{}).InvokableRun(context.Background(),
+	out, err := nonlinearSolveTool.InvokableRun(context.Background(),
 		`{"equations":["x^2+y^2-1","x-y"],"variables":["x","y"],"initial":[1,1]}`)
 	if err != nil {
 		t.Fatalf("InvokableRun error = %v", err)
@@ -328,9 +327,3 @@ func TestEquationTools_BuildResolves(t *testing.T) {
 		}
 	}
 }
-
-// 仅用于确认四个工具满足 eino 的可调用工具接口（编译期断言）。
-var _ tool.InvokableTool = (*polySolveTool)(nil)
-var _ tool.InvokableTool = (*linearSolveTool)(nil)
-var _ tool.InvokableTool = (*rootFindTool)(nil)
-var _ tool.InvokableTool = (*nonlinearSolveTool)(nil)

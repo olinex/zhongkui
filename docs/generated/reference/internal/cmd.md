@@ -82,6 +82,7 @@ var RootCmd = &cobra.Command{
         provider.InjectMailSender(i)
         provider.InjectFeatureRegistry(i)
         provider.InjectMessagePool(i)
+        provider.InjectJSEngine(ctx, i)
         provider.InjectAi(ctx, i)
 
         _ = provider.MustInvokeKeyDerivation(i)
@@ -107,7 +108,11 @@ var RootCmd = &cobra.Command{
 
         shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
         defer shutdownCancel()
-        i.ShutdownWithContext(shutdownCtx)
+
+        report := i.ShutdownWithContext(shutdownCtx)
+        if !report.Succeed {
+            return errors.New(report.Error())
+        }
         pterm.Debug.Println(translate.T("cli.root.process-exit", nil))
         return nil
     },

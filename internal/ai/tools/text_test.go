@@ -11,18 +11,17 @@ import (
 	"testing"
 
 	// 第三方
-	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
 )
 
 // ============================================================================
-// regex
+// 正则工具
 // ============================================================================
 
 // TestRegex_Info 覆盖 Info：工具名为 regex；operation 为带枚举的 string 且必填；pattern/text 必填；
 // global 为 boolean。
 func TestRegex_Info(t *testing.T) {
-	info, err := (&regexTool{}).Info(context.Background())
+	info, err := regexTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -73,7 +72,7 @@ func TestRegex_InvokableErrors(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := (&regexTool{}).InvokableRun(context.Background(), tc.args)
+			_, err := regexTool.InvokableRun(context.Background(), tc.args)
 			if err == nil {
 				t.Fatal("error = nil, want a rejection")
 			}
@@ -86,7 +85,7 @@ func TestRegex_InvokableErrors(t *testing.T) {
 
 // TestRegex_Smoke 锁定 regex 的出参 JSON 线形状与字段名（test 与 replace 各一例）。
 func TestRegex_Smoke(t *testing.T) {
-	test, err := (&regexTool{}).InvokableRun(context.Background(), `{"operation":"test","pattern":"\\d+","text":"a12b345"}`)
+	test, err := regexTool.InvokableRun(context.Background(), `{"operation":"test","pattern":"\\d+","text":"a12b345"}`)
 	if err != nil {
 		t.Fatalf("InvokableRun(test) error = %v", err)
 	}
@@ -97,7 +96,7 @@ func TestRegex_Smoke(t *testing.T) {
 		t.Errorf("test = %q, want %q", test, wantTest)
 	}
 
-	replace, err := (&regexTool{}).InvokableRun(context.Background(),
+	replace, err := regexTool.InvokableRun(context.Background(),
 		`{"operation":"replace","pattern":"\\d+","text":"a12b345","replacement":"-","global":true}`)
 	if err != nil {
 		t.Fatalf("InvokableRun(replace) error = %v", err)
@@ -108,12 +107,12 @@ func TestRegex_Smoke(t *testing.T) {
 }
 
 // ============================================================================
-// json_diff
+// JSON 差异工具
 // ============================================================================
 
 // TestJSONDiff_Info 覆盖 Info：工具名为 json_diff；left / right 均为必填 string。
 func TestJSONDiff_Info(t *testing.T) {
-	info, err := (&jsonDiffTool{}).Info(context.Background())
+	info, err := jsonDiffTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -145,7 +144,7 @@ func TestJSONDiff_InvokableErrors(t *testing.T) {
 	}
 	for name, args := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := (&jsonDiffTool{}).InvokableRun(context.Background(), args)
+			_, err := jsonDiffTool.InvokableRun(context.Background(), args)
 			if err == nil {
 				t.Fatal("error = nil, want a rejection")
 			}
@@ -158,7 +157,7 @@ func TestJSONDiff_InvokableErrors(t *testing.T) {
 
 // TestJSONDiff_Smoke 锁定 json_diff 的出参 JSON 线形状与字段名。
 func TestJSONDiff_Smoke(t *testing.T) {
-	out, err := (&jsonDiffTool{}).InvokableRun(context.Background(),
+	out, err := jsonDiffTool.InvokableRun(context.Background(),
 		`{"left":"{\"a\":1,\"b\":2}","right":"{\"a\":1,\"b\":3,\"c\":4}"}`)
 	if err != nil {
 		t.Fatalf("InvokableRun error = %v", err)
@@ -172,12 +171,12 @@ func TestJSONDiff_Smoke(t *testing.T) {
 }
 
 // ============================================================================
-// text_stats
+// 文本统计工具
 // ============================================================================
 
 // TestTextStats_Info 覆盖 Info：工具名为 text_stats；text 为必填 string。
 func TestTextStats_Info(t *testing.T) {
-	info, err := (&textStatsTool{}).Info(context.Background())
+	info, err := textStatsTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -199,7 +198,7 @@ func TestTextStats_Info(t *testing.T) {
 
 // TestTextStats_Smoke 锁定 text_stats 的出参 JSON 线形状与字段名（spec 示例）。
 func TestTextStats_Smoke(t *testing.T) {
-	out, err := (&textStatsTool{}).InvokableRun(context.Background(), `{"text":"你好\nworld OK"}`)
+	out, err := textStatsTool.InvokableRun(context.Background(), `{"text":"你好\nworld OK"}`)
 	if err != nil {
 		t.Fatalf("InvokableRun error = %v", err)
 	}
@@ -237,8 +236,3 @@ func textTestRequiredContains(required []string, name string) bool {
 	}
 	return false
 }
-
-// 仅用于确认三个工具满足 eino 的可调用工具接口（编译期断言）。
-var _ tool.InvokableTool = (*regexTool)(nil)
-var _ tool.InvokableTool = (*jsonDiffTool)(nil)
-var _ tool.InvokableTool = (*textStatsTool)(nil)

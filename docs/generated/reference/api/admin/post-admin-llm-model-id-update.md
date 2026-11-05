@@ -30,7 +30,8 @@
   "extraBody": "string",
   "thinkingField": "string",
   "thinkingOnValue": "string",
-  "thinkingOffValue": "string"
+  "thinkingOffValue": "string",
+  "apiMode": "string"
 }
 ```
 
@@ -38,20 +39,21 @@
 
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
-| name | string | - | max=64 | - | - |
-| baseURL | string | - | max=512 | - | - |
+| name | string | 是 | required,trimmed,max=64 | - | - |
+| baseURL | string | 是 | required,trimmed,max=512 | - | - |
 | apiKey | string | - | - | - | - |
-| model | string | - | max=128 | - | - |
-| timeoutSeconds | int | - | - | - | - |
-| temperature | float64 | - | - | - | - |
-| maxTokens | int | - | - | - | - |
+| model | string | 是 | required,trimmed,max=128 | - | - |
+| timeoutSeconds | int | - | min=1 | - | - |
+| temperature | float64 | - | min=0,max=2 | - | - |
+| maxTokens | int | - | min=1 | - | - |
 | contextTokens | int | - | - | - | - |
-| enabled | bool | - | - | - | - |
-| description | string | - | max=512 | - | - |
 
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
+| enabled | bool | - | - | - | - |
+| description | string | - | max=512 | - | - |
 | extraBody | string | - | - | - | - |
 | thinkingField | string | - | max=64 | - | - |
 | thinkingOnValue | string | - | - | - | - |
 | thinkingOffValue | string | - | - | - | - |
+| apiMode | llm.APIMode | - | omitempty,enum=llmAPIMode | - | - |

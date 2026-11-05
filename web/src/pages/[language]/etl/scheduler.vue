@@ -74,7 +74,7 @@
             </v-row>
             <v-row density="compact">
               <v-col cols="6">
-                <v-text-field
+                <cron-field
                   v-model="createCronSpec"
                   v-bind="createCronSpecProps"
                   :label="$t('model.scheduler.field.cronSpec')"
@@ -201,7 +201,7 @@
             </v-row>
             <v-row density="compact">
               <v-col cols="6">
-                <v-text-field
+                <cron-field
                   v-model="editCronSpec"
                   v-bind="editCronSpecProps"
                   :label="$t('model.scheduler.field.cronSpec')"
@@ -384,6 +384,7 @@ import type { ItemActions, TableHeader } from "@/components/@types/table";
 import i18n from "@/utils/i18n";
 import { useColumnVisibility } from "@/utils/column";
 import { BackendDataType } from "@/types";
+import { EnumClass, ensureEnum } from "@/utils/enums";
 import { useForm } from "vee-validate";
 import { schedulerTaskSchema } from "@/schemas/scheduler";
 import { vuetifyCfg } from "@/utils/form";
@@ -447,6 +448,8 @@ const schedulerHeaders = ref([
     key: "typeName",
     title: i18n.global.t("model.scheduler.field.typeName"),
     type: BackendDataType.STRING,
+    // 任务类型名称按 taskType 枚举渲染 label，避免与任务页的类型展示不一致
+    enumType: EnumClass.taskType,
     align: "start",
     sortable: true,
   },
@@ -810,5 +813,9 @@ const runAction = async (item: Record<string, any>): Promise<void> => {
   );
 };
 
-onMounted(getSchedulerListAction);
+onMounted(() => {
+  // 预取任务类型枚举，使列表中的 typeName 列按 label 展示
+  void ensureEnum(EnumClass.taskType);
+  void getSchedulerListAction();
+});
 </script>

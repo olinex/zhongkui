@@ -142,6 +142,17 @@
           "owner": "@olinex"
         },
         {
+          "title": "AI 助手自定义 SSE 事件协议",
+          "summary": "定义 AI 助手的领域事件信封、内容块、事件目录、历史回放与断线续播契约。",
+          "output": "curated/explanation/ai-assistant-sse-schema.md",
+          "category": "解释",
+          "source": "策展",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
           "title": "LLM Agent + RAG 设计",
           "summary": "说明 LLM Agent 编排与 RAG 检索的整体设计。",
           "output": "generated/explanation/agent-rag-design.md",

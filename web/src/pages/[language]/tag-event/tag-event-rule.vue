@@ -87,7 +87,7 @@
                   v-model="createDescription"
                   v-bind="createDescriptionProps"
                   :label="$t('model.tagEventRule.field.description')"
-                  rows="1"
+                  rows="3"
                 />
               </v-col>
             </v-row>
@@ -230,7 +230,7 @@
                       v-model="cond.description"
                       :label="$t('model.tagEventCondition.field.description')"
                       :error-messages="cond.touched ? cond.fieldErrors.description : ''"
-                      rows="1"
+                      rows="3"
                     />
                   </v-col>
                 </v-row>
@@ -320,7 +320,7 @@
                   v-bind="editDescriptionProps"
                   :label="$t('model.tagEventRule.field.description')"
                   :disabled="!editable"
-                  rows="1"
+                  rows="3"
                 />
               </v-col>
             </v-row>
@@ -475,7 +475,7 @@
                       :label="$t('model.tagEventCondition.field.description')"
                       :disabled="!editable"
                       :error-messages="cond.touched ? cond.fieldErrors.description : ''"
-                      rows="1"
+                      rows="3"
                     />
                   </v-col>
                 </v-row>

@@ -59,6 +59,21 @@ const name = yup
 
 const kind = yup.string().nonNullable().required().label("model.llmModel.field.kind");
 
+// apiMode 仅对话模型有效：chat（Chat Completions，默认）/ responses（Responses API）。
+// 创建表单含 kind，非对话模型一律回落 chat；更新表单不含 kind，允许空串（历史模型未下发该字段）。
+const apiMode = yup
+  .string()
+  .nonNullable()
+  .oneOf(["chat", "responses"])
+  .default("chat")
+  .label("model.llmModel.field.apiMode");
+
+const apiModeUpdate = yup
+  .string()
+  .nonNullable()
+  .oneOf(["", "chat", "responses"])
+  .label("model.llmModel.field.apiMode");
+
 const baseURL = yup
   .string()
   .trim()
@@ -167,6 +182,7 @@ export const createLlmModelSchema = () =>
   yup.object({
     name,
     kind,
+    apiMode,
     baseURL,
     apiKey: apiKeyCreate,
     model,
@@ -186,6 +202,7 @@ export const createLlmModelSchema = () =>
 export const updateLlmModelSchema = () =>
   yup.object({
     name,
+    apiMode: apiModeUpdate,
     baseURL,
     apiKey: apiKeyUpdate,
     model,

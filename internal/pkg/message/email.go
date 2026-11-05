@@ -64,13 +64,13 @@ type EmailChannelConfig struct {
 	// Password 认证密码
 	Password string `json:"password" form:"kind=password"`
 	// From 发件人邮箱地址，必填
-	From string `json:"from" binding:"required" form:"kind=string"`
+	From string `json:"from" binding:"required,email" form:"kind=string"`
 }
 
 // EmailTarget 邮件目标级配置。
 type EmailTarget struct {
 	// To 收件人邮箱地址，必填
-	To string `json:"to" binding:"required" form:"kind=string"`
+	To string `json:"to" binding:"required,email" form:"kind=string"`
 }
 
 // Type 返回渠道类型键。
@@ -84,12 +84,8 @@ func (c *emailChannel) Send(ctx context.Context, target *Target, msg *RenderedMe
 	if err := json.Unmarshal(target.Config, &cfg); err != nil {
 		return "", errors.WithStack(err)
 	}
-	if err := validator.Validate.Struct(&cfg); err != nil {
-		return "", errors.WithStack(err)
-	}
-	// 校验收件人邮箱格式
-	if !strings.Contains(cfg.To, "@") {
-		return "", errors.New("email: invalid recipient address")
+	if err := validator.Check(&cfg); err != nil {
+		return "", errors.Wrapf(err, "email: invalid recipient address")
 	}
 	if c.client == nil {
 		return "", errors.New("email: smtp connection not open, call Open first")
@@ -221,7 +217,7 @@ func init() {
 				return nil, errors.WithStack(err)
 			} else if err := json.Unmarshal(config, &cfg); err != nil {
 				return nil, errors.WithStack(err)
-			} else if err := validator.Validate.Struct(&cfg); err != nil {
+			} else if err := validator.Check(&cfg); err != nil {
 				return nil, errors.WithStack(err)
 			}
 			return &emailChannel{

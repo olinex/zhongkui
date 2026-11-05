@@ -24,6 +24,7 @@ import (
 
 	// 项目内部
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // ChatClient 包装 eino OpenAI 兼容对话模型（eino-ext components/model/openai），
@@ -44,22 +45,16 @@ type ChatClient struct {
 }
 
 // Generate 以非流式方式生成回复，调用时注入温度与 maxTokens。以模型超时给 context 施加
-// 整请求截止时间（等价于原 http.Client.Timeout），超时为正数时才生效。
+// 整请求截止时间（等价于原 http.Client.Timeout），超时为正数时才生效；命中超时且启用了
+// TimeoutRetry 时按策略逐次放宽截止时间重试。
 func (c *ChatClient) Generate(ctx context.Context, messages []*schema.Message, opts ...model.Option) (*schema.Message, error) {
-	if c.cfg.Timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, c.cfg.Timeout)
-		defer cancel()
-	}
 	opts = append([]model.Option{
 		model.WithTemperature(float32(c.cfg.Temperature)),
 		model.WithMaxTokens(c.cfg.MaxTokens),
 	}, opts...)
-	if msg, err := c.model.Generate(ctx, messages, opts...); err != nil {
-		return nil, errors.WithStack(err)
-	} else {
-		return msg, nil
-	}
+	return retryOnTimeout(ctx, c.cfg.Timeout, c.cfg.TimeoutRetry, func(attemptCtx context.Context) (*schema.Message, error) {
+		return c.model.Generate(attemptCtx, messages, opts...)
+	})
 }
 
 // Stream 以流式方式生成回复（底层请求 stream:true），调用时注入温度与 maxTokens。
@@ -139,8 +134,8 @@ func (c *ChatClient) ModelName() string {
 // NewChatClient 依据模型端点配置快照构造 ChatClient。
 // 要求 baseURL/apiKey/model 均非空，否则返回英文错误（不允许静默降级）。
 func NewChatClient(ctx context.Context, cfg ModelConfig) (*ChatClient, error) {
-	if cfg.BaseURL == "" || cfg.APIKey == "" || cfg.Model == "" {
-		return nil, errors.New("incomplete chat config: baseURL/apiKey/model must all be non-empty")
+	if err := cfg.validateEndpoint(); err != nil {
+		return nil, errors.Newf("incomplete chat config: %s", validator.Describe(err))
 	}
 	maxTokens := cfg.MaxTokens
 	config := &einoopenai.ChatModelConfig{
@@ -226,8 +221,8 @@ func (e *EmbedClient) ModelName() string {
 // NewEmbedClient 依据模型端点配置快照构造 EmbedClient。
 // 要求 baseURL/apiKey/model 均非空，否则返回英文错误（不允许静默降级）。
 func NewEmbedClient(ctx context.Context, cfg ModelConfig) (*EmbedClient, error) {
-	if cfg.BaseURL == "" || cfg.APIKey == "" || cfg.Model == "" {
-		return nil, errors.New("incomplete embedding config: baseURL/apiKey/model must all be non-empty")
+	if err := cfg.validateEndpoint(); err != nil {
+		return nil, errors.Newf("incomplete embedding config: %s", validator.Describe(err))
 	}
 	config := &embeddingopenai.EmbeddingConfig{
 		BaseURL: cfg.BaseURL,

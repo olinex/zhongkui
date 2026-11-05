@@ -122,9 +122,9 @@ type Ipv6TcpListGetListItemOut struct {
 	FpMtu uint16 `json:"fpMtu"`
 	// ---- 流与载荷 ----
 	// TcpStreamID TCP 流标识
-	TcpStreamID string `json:"tcpStreamID"`
+	TcpStreamID string `json:"tcpStreamID" form:"kind=hex"`
 	// Payload 数据包载荷（base64 密文，明文经明文权限接口查看）
-	Payload *serializer.Crypto `json:"payload" form:"kind:crypto"`
+	Payload *serializer.Crypto `json:"payload" form:"kind=crypto"`
 }
 
 // Ipv6TcpListGet 处理 IPv6 TCP 包列表查询请求

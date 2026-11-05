@@ -30,6 +30,12 @@ func setupEngine(t *testing.T) (*tagengine.Engine, *database.DB) {
 		t.Fatal(err)
 	}
 	db := testdb.Core(t)
+	// tag_rules.namespace_name 现为 namespaces(name) 外键；命名空间隔离用例使用 tenant-b。
+	if err := db.Exec(
+		`INSERT INTO namespaces (name, description) VALUES ('tenant-b', '') ON CONFLICT (name) DO NOTHING`,
+	).Error; err != nil {
+		t.Fatalf("seed tenant-b namespace: %v", err)
+	}
 	return tagengine.NewEngine(db, logger, nil), db
 }
 

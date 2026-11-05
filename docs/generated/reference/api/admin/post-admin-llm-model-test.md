@@ -32,13 +32,16 @@
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
 | id | uint64 | - | - | - | - |
-| kind | llm.ModelKind | - | max=16 | llmModelKind：chat、embedding | - |
-| baseURL | string | - | max=512 | - | - |
-| apiKey | string | - | - | - | - |
-| model | string | - | max=128 | - | - |
-| timeoutSeconds | int | - | - | - | 60 |
-| temperature | float64 | - | - | - | 0.2 |
-| maxTokens | int | - | - | - | 4096 |
+| kind | llm.ModelKind | 是 | required_if=ID 0,omitempty,enum=llmModelKind | llmModelKind：chat、embedding | - |
+| baseURL | string | 是 | required_if=ID 0,omitempty,trimmed,max=512 | - | - |
+| apiKey | string | 是 | required_if=ID 0 | - | - |
+| model | string | 是 | required_if=ID 0,omitempty,trimmed,max=128 | - | - |
+| timeoutSeconds | int | - | min=1 | - | 60 |
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| temperature | float64 | - | min=0,max=2 | - | 0.2 |
+| maxTokens | int | - | min=1 | - | 4096 |
 
 ## 出参
 

@@ -414,7 +414,7 @@ type NotificationChannelDetailOut struct {
     // Config 渠道级配置的密文。密文由 gorm 模型经 crypto 序列化器落库/读取，
     // 本 Out 结构直接复用模型 *serializer.Crypto，经其 MarshalJSON 输出 base64 密文；
     // 字段经 form 标签标记为 crypto，由 meta options 告知前端该字段已加密（明文经明文权限接口查看）
-    Config *serializer.Crypto `json:"config" form:"kind:crypto"`
+    Config *serializer.Crypto `json:"config" form:"kind=crypto"`
     // Description 渠道描述
     Description string `json:"description"`
 }
@@ -729,7 +729,7 @@ type NotificationTargetDetailOut struct {
     // Config 目标级配置的密文。密文由 gorm 模型经 crypto 序列化器落库/读取，
     // 本 Out 结构直接复用模型 *serializer.Crypto，经其 MarshalJSON 输出 base64 密文；
     // 字段经 form 标签标记为 crypto，由 meta options 告知前端该字段已加密（明文经明文权限接口查看）
-    Config *serializer.Crypto `json:"config" form:"kind:crypto"`
+    Config *serializer.Crypto `json:"config" form:"kind=crypto"`
     // Language 目标偏好的消息语言（base.Language），空表示平台默认
     Language base.Language `json:"language"`
     // Description 目标描述
@@ -797,7 +797,7 @@ type NotificationTargetTestSendChannelOut struct {
     // Enabled 渠道是否启用
     Enabled bool `json:"enabled"`
     // Config 渠道级配置密文（base64），前端可经 plaintext 接口解密
-    Config *serializer.Crypto `json:"config" form:"kind:crypto"`
+    Config *serializer.Crypto `json:"config" form:"kind=crypto"`
 }
 ```
 
@@ -837,7 +837,7 @@ type NotificationTargetTestSendTargetOut struct {
     // Enabled 目标是否启用
     Enabled bool `json:"enabled"`
     // Config 目标级配置密文（base64），前端可经 plaintext 接口解密
-    Config *serializer.Crypto `json:"config" form:"kind:crypto"`
+    Config *serializer.Crypto `json:"config" form:"kind=crypto"`
 }
 ```
 

@@ -72,4 +72,7 @@ var enumBindings = map[string]map[string]string{
 	"AgentMemoryStatusIn": {
 		"status": "memoryStatus",
 	},
+	"ETLPipelineInspectorTaskListIn": {
+		"type": "taskType",
+	},
 }

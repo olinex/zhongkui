@@ -29,7 +29,7 @@ const toKeys = (value: unknown): string[] => {
   return Array.isArray(value) ? value.filter((key): key is string => typeof key === "string") : [];
 };
 
-// 从 localStorage 读取列配置；兼容旧版数组格式（当时数组即可见列，顺序即全量顺序）
+// 从 localStorage 读取列配置（order 为全量可切换列顺序，visible 为可见列子集）
 const loadColumnConfig = (storageKey: string): ColumnConfig => {
   try {
     const raw = localStorage.getItem(`${COLUMN_STORAGE_PREFIX}${storageKey}`);
@@ -37,11 +37,7 @@ const loadColumnConfig = (storageKey: string): ColumnConfig => {
       return { order: [], visible: [] };
     }
     const parsed: unknown = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      const keys = toKeys(parsed);
-      return { order: keys, visible: keys };
-    }
-    if (parsed && typeof parsed === "object") {
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
       const cfg = parsed as Partial<ColumnConfig>;
       return { order: toKeys(cfg.order), visible: toKeys(cfg.visible) };
     }

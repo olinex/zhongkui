@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"zhongkuisec.com/zhongkui/internal/ai/llminfra"
 	// 标准库
 	"encoding/json"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 
 	// 项目内部
 
-	"zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/ai/change"
 	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
 	"zhongkuisec.com/zhongkui/internal/manager/response"
 	"zhongkuisec.com/zhongkui/internal/manager/views"
@@ -81,7 +82,7 @@ type McpServerDetailOut struct {
 	// URL MCP 端点地址
 	URL string `json:"url"`
 	// Headers 请求头的密文；明文不回显，需经明文权限接口查看
-	Headers *serializer.Crypto `json:"headers" form:"kind:crypto"`
+	Headers *serializer.Crypto `json:"headers" form:"kind=crypto"`
 	// TimeoutSeconds 单次请求超时秒数
 	TimeoutSeconds int `json:"timeoutSeconds"`
 	// Enabled 是否启用
@@ -237,7 +238,7 @@ func McpServerCreate(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	afterConfigWrite(c, ai.ChangeKindMcp, instance.Name)
+	afterConfigWrite(c, change.ChangeKindMcp, instance.Name)
 	response.SimpleOK.AbortWithGinH(c)
 }
 
@@ -311,7 +312,7 @@ func McpServerUpdate(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	afterConfigWrite(c, ai.ChangeKindMcp, in.Name)
+	afterConfigWrite(c, change.ChangeKindMcp, in.Name)
 	response.SimpleOK.AbortWithGinH(c)
 }
 
@@ -355,13 +356,13 @@ func McpServerBatchDelete(c *gin.Context) {
 		},
 	)
 	if deleted > 0 {
-		afterConfigWrite(c, ai.ChangeKindMcp, fmt.Sprintf("%d servers deleted", deleted))
+		afterConfigWrite(c, change.ChangeKindMcp, fmt.Sprintf("%d servers deleted", deleted))
 	}
 }
 
 // McpServerTest 处理 MCP 服务器连通性测试请求。
 // 不落库、不产生任何副作用；支持「已注册服务器 id」（读取解密凭据）与「完整端点配置」两种用法。
-// 探测经 ai.ProbeMCPServer 执行 MCP initialize 握手 + tools/list，返回远端发现的工具数量与名称
+// 探测经 llminfra.ProbeMCPServer 执行 MCP initialize 握手 + tools/list，返回远端发现的工具数量与名称
 // 清单；失败（不可达、握手失败等）返回明确的英文错误。本接口耗时较长，服务端不设额外上限，
 // 超时由 timeoutSeconds / 请求上下文约束。
 func McpServerTest(c *gin.Context) {
@@ -409,7 +410,7 @@ func McpServerTest(c *gin.Context) {
 		transport, endpoint, headers = in.Transport, in.URL, decoded
 		timeout = time.Duration(in.TimeoutSeconds) * time.Second
 	}
-	tools, err := ai.ProbeMCPServer(c, transport, endpoint, headers, timeout)
+	tools, err := llminfra.ProbeMCPServer(c, transport, endpoint, headers, timeout)
 	if err != nil {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
@@ -422,7 +423,7 @@ func McpServerTest(c *gin.Context) {
 }
 
 // McpServerSync 处理把远端工具清单同步到工具注册表的请求。
-// 经 ai.ProbeMCPServer 取回远端 tools/list 后与 llm_tools 中该服务器的行（source='mcp'、
+// 经 llminfra.ProbeMCPServer 取回远端 tools/list 后与 llm_tools 中该服务器的行（source='mcp'、
 // mcp_server_id=:id）对账：新工具以 enabled=false 新增，已存在工具保留 enabled 并刷新
 // description / remote_name，远端已不存在的工具被删除。全程在一个事务里完成，一致后重建运行时
 // 并广播变更。
@@ -446,7 +447,7 @@ func McpServerSync(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	tools, err := ai.ProbeMCPServer(c, instance.Transport, instance.URL, headers,
+	tools, err := llminfra.ProbeMCPServer(c, instance.Transport, instance.URL, headers,
 		time.Duration(instance.TimeoutSeconds)*time.Second)
 	if err != nil {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
@@ -457,14 +458,14 @@ func McpServerSync(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	afterConfigWrite(c, ai.ChangeKindTool, instance.Name)
+	afterConfigWrite(c, change.ChangeKindTool, instance.Name)
 	response.SimpleOK.AbortWithGinW(c, out)
 }
 
 // reconcileMCPTools 把远端工具清单与 llm_tools 中该服务器的行对账，返回新增/刷新/清理的数量。
 // 全程在一个事务里完成；发现任何违反一致性约束（source='mcp' ⟺ mcp_server_id IS NOT NULL）的
 // 行、远端工具名为空、或新增工具名与既有工具重名时返回英文错误并回滚。
-func reconcileMCPTools(db *gorm.DB, server *aimodel.McpServer, remote []ai.MCPRemoteTool) (McpServerSyncOut, error) {
+func reconcileMCPTools(db *gorm.DB, server *aimodel.McpServer, remote []llminfra.MCPRemoteTool) (McpServerSyncOut, error) {
 	out := McpServerSyncOut{}
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 该服务器的既有工具行：按 remote_name 索引

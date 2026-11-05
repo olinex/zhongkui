@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"zhongkuisec.com/zhongkui/internal/ai/llminfra"
 	// 标准库
 	"time"
 
@@ -9,7 +10,7 @@ import (
 
 	// 项目内部
 
-	"zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/ai/change"
 	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
 	"zhongkuisec.com/zhongkui/internal/manager/response"
 	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
@@ -18,20 +19,20 @@ import (
 )
 
 // verifyEmbeddingCompat 取 core 库 knowledge_chunks.embedding 列的维度，交由
-// ai.VerifyEmbeddingCompat 完成「端点实际维度 vs 列维度」的兼容性判定（两步探测的顺序
+// llminfra.VerifyEmbeddingCompat 完成「端点实际维度 vs 列维度」的兼容性判定（两步探测的顺序
 // 与判定规则见该函数），本函数只负责取列维度：列不可用时返回按请求语言本地化的 400 拒绝，
 // 其余探测与判定失败转成错误。二者同为「绑定 embedding 档位」的前置校验：不兼容时由调用方
 // 以 400 拒绝请求。
 func verifyEmbeddingCompat(c *gin.Context, cfg pkgllm.ModelConfig) (int, error) {
 	db := middlewares.GetCoreDatabase(c)
-	colDim, found, err := ai.ChunkEmbeddingDimension(c, db)
+	colDim, found, err := llminfra.ChunkEmbeddingDimension(c, db)
 	if err != nil {
 		return 0, errors.WithStack(err)
 	}
 	if !found {
 		return 0, response.CreateBadBodyMessageError("llmKnowledgeIndexUnavailable")
 	}
-	return ai.VerifyEmbeddingCompat(c, cfg, colDim)
+	return llminfra.VerifyEmbeddingCompat(c, cfg, colDim)
 }
 
 // modelConfigOf 把模型注册表记录映射为模型端点配置（含解密后的明文凭据）。
@@ -73,11 +74,11 @@ func modelConfigOf(m *aimodel.LlmModel) (pkgllm.ModelConfig, error) {
 // 先整体重建本进程的 AI 运行时（配置立即生效），再经 etcd 广播变更事件通知其他
 // manager 实例失效本地快照。两步均为 best-effort：失败仅记录告警，不阻断已提交的业务
 // 变更（DB 已提交；重建失败时运行时按 AI 运行时约定保留上一可用快照）。
-func afterConfigWrite(c *gin.Context, kind ai.ChangeKind, name string) {
+func afterConfigWrite(c *gin.Context, kind change.ChangeKind, name string) {
 	if err := middlewares.GetAiRuntime(c).Invalidate(c); err != nil {
 		middlewares.GetLogger(c).Warnf(c, nil, "ai runtime rebuild failed after %s write, name=%s, err=%v", kind, name, err)
 	}
-	if err := ai.BroadcastChange(c, middlewares.GetEtcdClient(c), &ai.ChangeEvent{Kind: kind, Name: name}); err != nil {
+	if err := change.BroadcastChange(c, middlewares.GetEtcdClient(c), &change.ChangeEvent{Kind: kind, Name: name}); err != nil {
 		middlewares.GetLogger(c).Warnf(c, nil, "broadcast ai change failed, kind=%s, name=%s, err=%v", kind, name, err)
 	}
 }

@@ -90,7 +90,8 @@ func formatCursor(t time.Time) string {
 // 触发点依次为 09:01、09:02、09:03、09:04、09:05。
 //
 // 积压行为由 BacklogPolicy 控制：
-//   - Enabled=false 时跳过全部积压，不生成任何历史触发点，游标直接对齐到当前网格点；
+//   - Enabled=false 时跳过全部积压，仅投递不晚于当前时刻的最近一次网格点（未超出游标时
+//     不重复投递），游标推进到该网格点；
 //   - Window 大于 0 时仅补投 [now-Window, now] 内的触发点，更早的积压直接丢弃；
 //   - Limit 限制单次最多生成的触发点个数，防止长间隔导致的积压一次性实例化海量时间戳。
 //
@@ -107,9 +108,14 @@ func ComputeCursorTriggers(last, now time.Time, interval time.Duration, p Backlo
 		return time.Unix(0, t.UnixNano()/step*step).In(t.Location())
 	}
 	gridNow := floorGrid(now)
-	// 禁用积压补投：游标对齐到当前网格点，不生成任何历史触发点
+	// 禁用积压补投：跳过全部历史触发点，但仍需投递「不晚于当前时刻的最近一次网格点」。
+	// 若直接返回 (nil, gridNow) 把游标对齐到当前网格点，每轮都不会产出触发点，
+	// 该任务从此永远不会执行；游标已覆盖该网格点时则既不投递也不回退游标。
 	if !p.Enabled {
-		return nil, gridNow
+		if !last.IsZero() && !gridNow.After(last) {
+			return nil, last
+		}
+		return []time.Time{gridNow}, gridNow
 	}
 	var prev time.Time
 	if last.IsZero() {

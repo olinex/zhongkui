@@ -7,6 +7,8 @@ export interface InspectorTaskListIn {
   pageSize: number;
   queue: string;
   state: string;
+  // 任务类型筛选（可选，取值见 taskType 枚举类）
+  type?: string;
   group?: string;
 }
 

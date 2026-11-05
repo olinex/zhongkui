@@ -247,7 +247,7 @@ func (srv *ReporterService) Watch(req *reporter_v1.WatchRequest, stream g.Server
 					if event.IsCreate() {
 						// 资源创建事件
 						totel.RecordWatchEvent(ctx, "CREATE")
-						stream.Send(&reporter_v1.WatchResponse{
+						return stream.Send(&reporter_v1.WatchResponse{
 							Timestamp: time.Now().UnixMilli(),
 							Content: &reporter_v1.WatchResponse_Event{
 								Event: &reporter_v1.Event{
@@ -338,7 +338,12 @@ func (srv *ReporterService) Watch(req *reporter_v1.WatchRequest, stream g.Server
 //  5. 客户端发送完成后，返回空的响应
 func (srv *ReporterService) Feedback(stream g.ClientStreamingServer[reporter_v1.FeedbackRequest, emptypb.Empty]) (err error) {
 	// 确保函数退出时发送并关闭流，返回空的响应
-	defer stream.SendAndClose(&emptypb.Empty{})
+	defer func() {
+		// 关闭流失败（客户端已断开）时仍需向上返回，避免调用方误以为反馈已送达。
+		if closeErr := stream.SendAndClose(&emptypb.Empty{}); closeErr != nil && err == nil {
+			err = errors.WithStack(closeErr)
+		}
+	}()
 
 	// 获取请求上下文
 	ctx := stream.Context()

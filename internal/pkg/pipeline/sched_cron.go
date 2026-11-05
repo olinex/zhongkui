@@ -66,7 +66,8 @@ func parseCronSchedule(spec string, loc *time.Location) (cron.Schedule, error) {
 // 与游标模式一致：积压期间错过的每个触发点都会被逐一补投，且同一触发点不会被重复投递。
 //
 // 积压行为由 BacklogPolicy 控制：
-//   - Enabled=false 时跳过全部积压，不生成任何历史触发点，游标直接推进到下一次未来触发点；
+//   - Enabled=false 时跳过全部积压，仅投递不晚于当前时刻的最近一次触发点（保证当次触发
+//     不会被 schedule.Next 跳过），游标推进到该触发点；
 //   - Window 大于 0 时仅补投 [now-Window, now] 内的触发点，更早的积压直接丢弃；
 //   - Limit 限制单次最多生成的触发点个数，达到上限即截断本轮的 nextCursor，
 //     交由下一轮继续追赶，避免一次性实例化海量时间戳；
@@ -84,9 +85,28 @@ func ComputeCronTriggers(last, now time.Time, schedule cron.Schedule, p BacklogP
 		first := schedule.Next(now)
 		return []time.Time{first}, first
 	}
-	// 禁用积压补投：不生成历史触发点，游标直接推进到下一次未来触发点
+	// 禁用积压补投：跳过全部历史触发点，但仍需投递「不晚于当前时刻的最近一次触发点」。
+	// 不能直接返回 schedule.Next(now)：它严格指向未来，会把游标推过当前触发点，
+	// 之后每轮又取更晚的触发点，导致该任务从此永远不会执行。
 	if !p.Enabled {
-		return nil, schedule.Next(now)
+		latest := time.Time{}
+		cursor := last
+		for {
+			next := schedule.Next(cursor)
+			if next.After(now) {
+				break
+			}
+			// 严格递增守卫：库异常不前进时立即退出，避免死循环
+			if !next.After(cursor) {
+				break
+			}
+			latest = next
+			cursor = next
+		}
+		if latest.IsZero() {
+			return nil, last
+		}
+		return []time.Time{latest}, latest
 	}
 	// 窗口裁剪：超窗积压直接丢弃，仅保留窗口期 [now-Window, now] 内的触发点（含边界）
 	var triggers []time.Time

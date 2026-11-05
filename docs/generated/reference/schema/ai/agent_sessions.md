@@ -31,6 +31,7 @@ AgentSession 表示一个 AI 助手会话，聚合同一话题下的多轮问答
 | summary | BYTEA | 是 | - | Summary 会话滚动摘要，压缩已折叠进其中的历史消息，无摘要时为空 （正文含用户原文，经 crypto 序列化器加密落库） |
 | message_seq | BIGINT | 否 | - | MessageSeq 会话内已分配的最大消息序号（seq），供消息 seq 原子分配 |
 | summary_upto_seq | BIGINT | 是 | - | SummaryUptoSeq 滚动摘要已覆盖的最后一条消息的会话内序号（seq），0 表示尚未摘要任何消息 |
+| pending_interrupt_id | VARCHAR(256) | 否 | '' | PendingInterruptID 会话当前挂起的根 interrupt ID（ADK 中断续跑键），无挂起时为空；续跑 / 重连 据此定位待恢复的引擎现场 |
 
 ## 索引与外键
 

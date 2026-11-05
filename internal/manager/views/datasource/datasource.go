@@ -66,7 +66,7 @@ type DatasourceDetailOut struct {
 	// Config 连接配置的密文。密文由 gorm 模型经 crypto 序列化器落库/读取，
 	// 本 Out 结构直接复用模型 *serializer.Crypto，经其 MarshalJSON 输出 base64 密文；
 	// 字段经 form 标签标记为 crypto，由 meta options 告知前端该字段已加密
-	Config *serializer.Crypto `json:"config" form:"kind:crypto"`
+	Config *serializer.Crypto `json:"config" form:"kind=crypto"`
 	// Description 数据源描述
 	Description string `json:"description"`
 }
@@ -224,6 +224,7 @@ func DatasourceCreate(c *gin.Context) {
 	var file io.Reader
 	if strings.HasPrefix(c.ContentType(), "multipart/form-data") {
 		var err error
+		var enabledParseErr error
 		if file, err = views.ReadMultipartFile(c, func(name string, body []byte) {
 			switch name {
 			case "name":
@@ -231,7 +232,12 @@ func DatasourceCreate(c *gin.Context) {
 			case "type":
 				in.Type = string(body)
 			case "enabled":
-				in.Enabled, _ = strconv.ParseBool(string(body))
+				parsed, perr := strconv.ParseBool(string(body))
+				if perr != nil {
+					enabledParseErr = errors.Newf("invalid enabled value %q", string(body))
+					return
+				}
+				in.Enabled = parsed
 			case "config":
 				in.Config = string(body)
 			case "description":
@@ -239,6 +245,10 @@ func DatasourceCreate(c *gin.Context) {
 			}
 		}); err != nil {
 			response.CreateBadBodyError(err).AbortWithGinH(c)
+			return
+		}
+		if enabledParseErr != nil {
+			response.CreateBadBodyError(enabledParseErr).AbortWithGinH(c)
 			return
 		}
 		if closer, ok := file.(io.ReadCloser); ok {
@@ -278,7 +288,7 @@ func DatasourceCreate(c *gin.Context) {
 	// 先注册（即校验）：配置非法或建数据源自省失败时在此报错，不落库
 	if err := pools.Register(c, namespace, in.Name, in.Type, []byte(in.Config)); err != nil {
 		if objectKey != "" {
-			_ = pools.RemoveSQLiteObject(c, namespace, in.Name)
+			warnDatasourcePoolRollback(c, "remove sqlite object", in.Name, pools.RemoveSQLiteObject(c, namespace, in.Name))
 		}
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
@@ -293,16 +303,16 @@ func DatasourceCreate(c *gin.Context) {
 	}
 	if err := middlewares.GetCoreDatabase(c).WithContext(c).Create(instance).Error; err != nil {
 		// 落库失败时回滚已注册的 vtable 与已上传的 S3 对象，保持内存池/对象与 DB 一致
-		_ = pools.Unregister(c, namespace, in.Name)
+		warnDatasourcePoolRollback(c, "unregister", in.Name, pools.Unregister(c, namespace, in.Name))
 		if objectKey != "" {
-			_ = pools.RemoveSQLiteObject(c, namespace, in.Name)
+			warnDatasourcePoolRollback(c, "remove sqlite object", in.Name, pools.RemoveSQLiteObject(c, namespace, in.Name))
 		}
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
 	// 停用创建的数据源不常驻 vtable：注册仅为校验配置，落库成功后按启用状态收敛注册器
 	if !in.Enabled {
-		_ = pools.Unregister(c, namespace, in.Name)
+		warnDatasourcePoolRollback(c, "unregister", in.Name, pools.Unregister(c, namespace, in.Name))
 	}
 	// 广播变更事件，通知 worker 等消费进程同步本地 vtable 池（best-effort）
 	broadcastDatasourceChange(c, namespace, in.Name)
@@ -363,10 +373,16 @@ func DatasourceUpdate(c *gin.Context) {
 	var file io.Reader
 	if strings.HasPrefix(c.ContentType(), "multipart/form-data") {
 		var err error
+		var enabledParseErr error
 		if file, err = views.ReadMultipartFile(c, func(name string, body []byte) {
 			switch name {
 			case "enabled":
-				in.Enabled, _ = strconv.ParseBool(string(body))
+				parsed, perr := strconv.ParseBool(string(body))
+				if perr != nil {
+					enabledParseErr = errors.Newf("invalid enabled value %q", string(body))
+					return
+				}
+				in.Enabled = parsed
 			case "config":
 				in.Config = string(body)
 			case "description":
@@ -374,6 +390,10 @@ func DatasourceUpdate(c *gin.Context) {
 			}
 		}); err != nil {
 			response.CreateBadBodyError(err).AbortWithGinH(c)
+			return
+		}
+		if enabledParseErr != nil {
+			response.CreateBadBodyError(enabledParseErr).AbortWithGinH(c)
 			return
 		}
 		if closer, ok := file.(io.ReadCloser); ok {
@@ -420,9 +440,9 @@ func DatasourceUpdate(c *gin.Context) {
 		// 落库失败：恢复注册状态（启用用原配置覆盖注册，停用则注销）
 		if in.Enabled {
 			if instance.Enabled {
-				_ = pools.Register(c, namespace, instance.Name, instance.Type, instance.ConfigData())
+				warnDatasourcePoolRollback(c, "register", instance.Name, pools.Register(c, namespace, instance.Name, instance.Type, instance.ConfigData()))
 			} else {
-				_ = pools.Unregister(c, namespace, instance.Name)
+				warnDatasourcePoolRollback(c, "unregister", instance.Name, pools.Unregister(c, namespace, instance.Name))
 			}
 		}
 		response.CreateAccidentError(err).AbortWithGinH(c)
@@ -430,7 +450,7 @@ func DatasourceUpdate(c *gin.Context) {
 	}
 	// 落库成功后，按目标启用状态收敛注册器（启用已注册/停用已注销）
 	if !in.Enabled {
-		_ = pools.Unregister(c, namespace, instance.Name)
+		warnDatasourcePoolRollback(c, "unregister", instance.Name, pools.Unregister(c, namespace, instance.Name))
 	}
 	// 广播变更事件，通知 worker 等消费进程同步本地 vtable 池（best-effort）
 	broadcastDatasourceChange(c, namespace, instance.Name)
@@ -529,7 +549,7 @@ func DatasourceBatchSetEnabled(enabled bool) gin.HandlerFunc {
 					if err := db.WithContext(c).Model(&core.Datasource{}).
 						Where("id = ? AND namespace_name = ?", instance.ID, namespace).
 						Update("enabled", true).Error; err != nil {
-						_ = pools.Unregister(c, namespace, instance.Name)
+						warnDatasourcePoolRollback(c, "unregister", instance.Name, pools.Unregister(c, namespace, instance.Name))
 						return errors.WithStack(err)
 					}
 					// 广播变更事件，通知 worker 等消费进程同步本地 vtable 池（best-effort）
@@ -560,6 +580,14 @@ func DatasourceBatchSetEnabled(enabled bool) gin.HandlerFunc {
 func broadcastDatasourceChange(c *gin.Context, namespace, name string) {
 	if err := datasource.BroadcastChange(c, middlewares.GetEtcdClient(c), namespace, name); err != nil {
 		middlewares.GetLogger(c).Warnf(c, nil, "broadcast datasource change failed, name=%s, err=%v", name, err)
+	}
+}
+
+// warnDatasourcePoolRollback 记录数据源注册器 / S3 对象回滚失败的告警：回滚失败会让内存池与
+// DB 短暂不一致，必须留痕以便排查，但不改变主流程的返回结果。
+func warnDatasourcePoolRollback(c *gin.Context, action, name string, err error) {
+	if err != nil {
+		middlewares.GetLogger(c).Warnf(c, nil, "datasource %s %q failed: %v", action, name, err)
 	}
 }
 

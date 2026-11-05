@@ -166,7 +166,7 @@ type DatasourceDetailOut struct {
     // Config 连接配置的密文。密文由 gorm 模型经 crypto 序列化器落库/读取，
     // 本 Out 结构直接复用模型 *serializer.Crypto，经其 MarshalJSON 输出 base64 密文；
     // 字段经 form 标签标记为 crypto，由 meta options 告知前端该字段已加密
-    Config *serializer.Crypto `json:"config" form:"kind:crypto"`
+    Config *serializer.Crypto `json:"config" form:"kind=crypto"`
     // Description 数据源描述
     Description string `json:"description"`
 }

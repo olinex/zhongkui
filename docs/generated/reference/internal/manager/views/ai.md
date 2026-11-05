@@ -4,7 +4,11 @@
 
 ## Index
 
-- [func AgentAssistantInputRerun\(c \*gin.Context\)](<#AgentAssistantInputRerun>)
+- [func AgentAbort\(c \*gin.Context\)](<#AgentAbort>)
+- [func AgentAction\(c \*gin.Context\)](<#AgentAction>)
+- [func AgentChat\(c \*gin.Context\)](<#AgentChat>)
+- [func AgentEvents\(c \*gin.Context\)](<#AgentEvents>)
+- [func AgentInteractionReopen\(c \*gin.Context\)](<#AgentInteractionReopen>)
 - [func AgentMemoryBatchDelete\(c \*gin.Context\)](<#AgentMemoryBatchDelete>)
 - [func AgentMemoryDetailGet\(c \*gin.Context\)](<#AgentMemoryDetailGet>)
 - [func AgentMemoryListGet\(c \*gin.Context\)](<#AgentMemoryListGet>)
@@ -12,7 +16,7 @@
 - [func AgentMessageListGet\(c \*gin.Context\)](<#AgentMessageListGet>)
 - [func AgentMessageTruncate\(c \*gin.Context\)](<#AgentMessageTruncate>)
 - [func AgentPromptOptimize\(c \*gin.Context\)](<#AgentPromptOptimize>)
-- [func AgentRunCancel\(c \*gin.Context\)](<#AgentRunCancel>)
+- [func AgentRender\(c \*gin.Context\)](<#AgentRender>)
 - [func AgentSessionBranch\(c \*gin.Context\)](<#AgentSessionBranch>)
 - [func AgentSessionCompact\(c \*gin.Context\)](<#AgentSessionCompact>)
 - [func AgentSessionCreate\(c \*gin.Context\)](<#AgentSessionCreate>)
@@ -21,10 +25,14 @@
 - [func AgentSessionListGet\(c \*gin.Context\)](<#AgentSessionListGet>)
 - [func AgentSessionRename\(c \*gin.Context\)](<#AgentSessionRename>)
 - [func AgentSessionValveSet\(c \*gin.Context\)](<#AgentSessionValveSet>)
+- [func AgentSkillBatchDelete\(c \*gin.Context\)](<#AgentSkillBatchDelete>)
+- [func AgentSkillCreate\(c \*gin.Context\)](<#AgentSkillCreate>)
+- [func AgentSkillDetailGet\(c \*gin.Context\)](<#AgentSkillDetailGet>)
+- [func AgentSkillListGet\(c \*gin.Context\)](<#AgentSkillListGet>)
+- [func AgentSkillOptionsGet\(c \*gin.Context\)](<#AgentSkillOptionsGet>)
+- [func AgentSkillSetEnabled\(c \*gin.Context\)](<#AgentSkillSetEnabled>)
+- [func AgentSkillUpdate\(c \*gin.Context\)](<#AgentSkillUpdate>)
 - [func AgentStatusGet\(c \*gin.Context\)](<#AgentStatusGet>)
-- [func AgentStream\(c \*gin.Context\)](<#AgentStream>)
-- [func AgentStreamResume\(c \*gin.Context\)](<#AgentStreamResume>)
-- [func AgentToolResult\(c \*gin.Context\)](<#AgentToolResult>)
 - [func KnowledgeDocumentBatchDelete\(c \*gin.Context\)](<#KnowledgeDocumentBatchDelete>)
 - [func KnowledgeDocumentChunksGet\(c \*gin.Context\)](<#KnowledgeDocumentChunksGet>)
 - [func KnowledgeDocumentCreate\(c \*gin.Context\)](<#KnowledgeDocumentCreate>)
@@ -37,27 +45,37 @@
 - [func KnowledgeSystemDocumentChunksGet\(c \*gin.Context\)](<#KnowledgeSystemDocumentChunksGet>)
 - [func KnowledgeSystemDocumentDetailGet\(c \*gin.Context\)](<#KnowledgeSystemDocumentDetailGet>)
 - [func KnowledgeSystemDocumentListGet\(c \*gin.Context\)](<#KnowledgeSystemDocumentListGet>)
+- [func PeriodicReportFeedListGet\(c \*gin.Context\)](<#PeriodicReportFeedListGet>)
+- [func PeriodicReportPlanCreate\(c \*gin.Context\)](<#PeriodicReportPlanCreate>)
+- [func PeriodicReportPlanDelete\(c \*gin.Context\)](<#PeriodicReportPlanDelete>)
+- [func PeriodicReportPlanListGet\(c \*gin.Context\)](<#PeriodicReportPlanListGet>)
+- [func PeriodicReportPlanRun\(c \*gin.Context\)](<#PeriodicReportPlanRun>)
+- [func PeriodicReportPlanToggle\(c \*gin.Context\)](<#PeriodicReportPlanToggle>)
+- [func PeriodicReportPlanUpdate\(c \*gin.Context\)](<#PeriodicReportPlanUpdate>)
+- [func PeriodicReportRunDelete\(c \*gin.Context\)](<#PeriodicReportRunDelete>)
+- [func PeriodicReportRunDetailGet\(c \*gin.Context\)](<#PeriodicReportRunDetailGet>)
+- [func PeriodicReportRunListGet\(c \*gin.Context\)](<#PeriodicReportRunListGet>)
+- [func PeriodicReportSkillOptionsGet\(c \*gin.Context\)](<#PeriodicReportSkillOptionsGet>)
+- [func PeriodicReportWatchListGet\(c \*gin.Context\)](<#PeriodicReportWatchListGet>)
+- [func PeriodicReportWatchSet\(c \*gin.Context\)](<#PeriodicReportWatchSet>)
 - [func RegisterRoutes\(ctx \*views.RegisterContext\)](<#RegisterRoutes>)
 - [func RetrievalDryRunStream\(c \*gin.Context\)](<#RetrievalDryRunStream>)
 - [func RetrievalOptions\(c \*gin.Context\)](<#RetrievalOptions>)
-- [type AgentAssistantInputRerunIn](<#AgentAssistantInputRerunIn>)
-- [type AgentAssistantInputRerunOut](<#AgentAssistantInputRerunOut>)
 - [type AgentCancelOut](<#AgentCancelOut>)
+- [type AgentChatIn](<#AgentChatIn>)
+- [type AgentInteractionReopenIn](<#AgentInteractionReopenIn>)
 - [type AgentLiveRunOut](<#AgentLiveRunOut>)
 - [type AgentMemoryBatchIn](<#AgentMemoryBatchIn>)
 - [type AgentMemoryDetailOut](<#AgentMemoryDetailOut>)
 - [type AgentMemoryItemOut](<#AgentMemoryItemOut>)
 - [type AgentMemoryListOut](<#AgentMemoryListOut>)
 - [type AgentMemoryStatusIn](<#AgentMemoryStatusIn>)
-- [type AgentMessageBlockOut](<#AgentMessageBlockOut>)
 - [type AgentMessageCompressOut](<#AgentMessageCompressOut>)
 - [type AgentMessageItemOut](<#AgentMessageItemOut>)
 - [type AgentMessageListOut](<#AgentMessageListOut>)
 - [type AgentMessageTruncateIn](<#AgentMessageTruncateIn>)
-- [type AgentPendingCallOut](<#AgentPendingCallOut>)
 - [type AgentPromptOptimizeIn](<#AgentPromptOptimizeIn>)
 - [type AgentPromptOptimizeOut](<#AgentPromptOptimizeOut>)
-- [type AgentQuestionnaireOut](<#AgentQuestionnaireOut>)
 - [type AgentSessionBranchIn](<#AgentSessionBranchIn>)
 - [type AgentSessionCompactIn](<#AgentSessionCompactIn>)
 - [type AgentSessionCreateIn](<#AgentSessionCreateIn>)
@@ -65,13 +83,18 @@
 - [type AgentSessionListOut](<#AgentSessionListOut>)
 - [type AgentSessionRenameIn](<#AgentSessionRenameIn>)
 - [type AgentSessionValveIn](<#AgentSessionValveIn>)
+- [type AgentSkillBatchIn](<#AgentSkillBatchIn>)
+- [type AgentSkillCreateIn](<#AgentSkillCreateIn>)
+- [type AgentSkillDetailOut](<#AgentSkillDetailOut>)
+- [type AgentSkillItemOut](<#AgentSkillItemOut>)
+- [type AgentSkillListOut](<#AgentSkillListOut>)
+- [type AgentSkillOptionListOut](<#AgentSkillOptionListOut>)
+- [type AgentSkillOptionOut](<#AgentSkillOptionOut>)
+- [type AgentSkillStatusIn](<#AgentSkillStatusIn>)
+- [type AgentSkillUpdateIn](<#AgentSkillUpdateIn>)
 - [type AgentSlotStatusOut](<#AgentSlotStatusOut>)
 - [type AgentStatusIn](<#AgentStatusIn>)
 - [type AgentStatusOut](<#AgentStatusOut>)
-- [type AgentStreamIn](<#AgentStreamIn>)
-- [type AgentStreamResumeIn](<#AgentStreamResumeIn>)
-- [type AgentToolResultIn](<#AgentToolResultIn>)
-- [type AgentToolResultItemIn](<#AgentToolResultItemIn>)
 - [type DryRunIn](<#DryRunIn>)
 - [type DryRunOut](<#DryRunOut>)
 - [type KnowledgeDocumentBatchIn](<#KnowledgeDocumentBatchIn>)
@@ -85,26 +108,73 @@
 - [type KnowledgeDocumentReindexOut](<#KnowledgeDocumentReindexOut>)
 - [type KnowledgeDocumentUpdateIn](<#KnowledgeDocumentUpdateIn>)
 - [type KnowledgeDocumentUploadOut](<#KnowledgeDocumentUploadOut>)
+- [type PeriodicReportFeedItemOut](<#PeriodicReportFeedItemOut>)
+- [type PeriodicReportFeedListOut](<#PeriodicReportFeedListOut>)
+- [type PeriodicReportPlanCreateIn](<#PeriodicReportPlanCreateIn>)
+- [type PeriodicReportPlanItemOut](<#PeriodicReportPlanItemOut>)
+- [type PeriodicReportPlanListOut](<#PeriodicReportPlanListOut>)
+- [type PeriodicReportPlanToggleIn](<#PeriodicReportPlanToggleIn>)
+- [type PeriodicReportPlanUpdateIn](<#PeriodicReportPlanUpdateIn>)
+- [type PeriodicReportRunDetailOut](<#PeriodicReportRunDetailOut>)
+- [type PeriodicReportRunItemOut](<#PeriodicReportRunItemOut>)
+- [type PeriodicReportRunListOut](<#PeriodicReportRunListOut>)
+- [type PeriodicReportSkillInputFieldOut](<#PeriodicReportSkillInputFieldOut>)
+- [type PeriodicReportSkillOptionListOut](<#PeriodicReportSkillOptionListOut>)
+- [type PeriodicReportSkillOptionOut](<#PeriodicReportSkillOptionOut>)
+- [type PeriodicReportWatchListOut](<#PeriodicReportWatchListOut>)
+- [type PeriodicReportWatchPlanItemOut](<#PeriodicReportWatchPlanItemOut>)
+- [type PeriodicReportWatchSetIn](<#PeriodicReportWatchSetIn>)
 - [type RetrievalOptionsOut](<#RetrievalOptionsOut>)
 - [type RetrievalWeightsIn](<#RetrievalWeightsIn>)
 - [type RetrievalWeightsOut](<#RetrievalWeightsOut>)
+- [type SkillInputFieldIn](<#SkillInputFieldIn>)
+- [type SkillInputFieldOut](<#SkillInputFieldOut>)
 
 
-<a name="AgentAssistantInputRerun"></a>
-## func AgentAssistantInputRerun
+<a name="AgentAbort"></a>
+## func AgentAbort
 
 ```go
-func AgentAssistantInputRerun(c *gin.Context)
+func AgentAbort(c *gin.Context)
 ```
 
-AgentAssistantInputRerun 处理「回退到助手待输入回合」的请求（路由 POST /agent/:sessionID/input/rerun）。 泛化既有「问卷重新回答」语义，同时覆盖两类历史待输入回合（由该回合现场中的挂起调用判定）：
+AgentAbort 处理中止当前回合的请求（路由 POST /agent/:sessionID/abort）。 turns.Manager.Abort 立即停止 TurnLoop、以 turn.completed\(cancelled\) 收敛缓冲并作废挂起现场； 无在途回合时幂等。
 
-- 问卷回合（含 ask\_user 调用）：删除锚点之后的全部消息、清空锚点本轮产出并重置为 suspended，把承载 现场重置为 pending（刷新存活期限），出参以 Questionnaire 返回题目 \+ 上次答案，供前端预填重开问卷；
-- 工具授权回合（其余调用）：同样截断与重置，出参以 PendingCalls 返回待审批调用清单，供前端重建 审批面板完成重新授权。
+<a name="AgentAction"></a>
+## func AgentAction
 
-两类回合均使改答 / 重新授权后经既有 tool\-result 接口按新决策续跑、写回同一锚点行。出参附带回退后的 交互主状态（与 StateOf 同口径），供前端立即刷新状态驱动 UI。
+```go
+func AgentAction(c *gin.Context)
+```
 
-处理顺序：命名空间 → 会话 ID → AI 启用 → 属主 → 会话归属（404 语义同详情接口）→ 状态守卫 （CanRerunUserInput，运行中 / 等待中被拒、已锁定放行；在绑定请求体与任何写库之前，被拒时不得产生任何 改动）→ 绑定请求体 → 执行回退。锚点消息不存在 / 不是待输入回合、或承载现场不存在均返回 404（避免泄露 资源存在性）；现场已过期按既有「已过期」语义以 400 拒绝（前端按后端本地化提示）。
+AgentAction 处理审批 / 问卷动作的请求（SSE，路由 POST /agent/:sessionID/action）。 请求体直接绑定 contract.ActionRequest；动作到 ResumeParams 的映射、校验与 pending 现场认领全部由 turns.Manager.Action 完成，本接口只负责续跑与转发。
+
+<a name="AgentChat"></a>
+## func AgentChat
+
+```go
+func AgentChat(c *gin.Context)
+```
+
+AgentChat 处理启动（或抢占）一轮对话的请求（SSE，路由 POST /agent/:sessionID/chat）。 校验命名空间 / AI 功能 / 属主 / 会话归属后，按会话锁定状态拒绝已达轮次上限的会话；请求可选指定 本轮技能（SkillID），非 0 时须存在、属于当前命名空间且已启用，否则以 400 拒绝（绝不静默忽略）； 随后把请求装配为 turns.ChatInput 交给 turns.Manager.Chat，运行在独立 goroutine 中执行，本接口只 负责订阅并转发事件。客户端断开只 detach 订阅，回合继续执行并写入会话缓冲。
+
+<a name="AgentEvents"></a>
+## func AgentEvents
+
+```go
+func AgentEvents(c *gin.Context)
+```
+
+AgentEvents 处理运行中重连订阅的请求（SSE，路由 GET /agent/:sessionID/events?after=）。 先回放缓冲中序号 \> after 的消息，再转发后续实时消息；无在途回合时回放后即结束。
+
+<a name="AgentInteractionReopen"></a>
+## func AgentInteractionReopen
+
+```go
+func AgentInteractionReopen(c *gin.Context)
+```
+
+AgentInteractionReopen 处理「重新审批 / 重新回答」请求（路由 POST /agent/:sessionID/interaction/reopen）。 与「重新提问」不同，这里不重跑整轮回答：把会话回退到该次交互挂起的状态——删除该交互之后的回答与 更晚交互、把交互重置为待处理、并以挂起时的图现场重建现场，使前端刷新后重新展示批准 / 拒绝按钮 或待作答问卷，用户可重选决策 / 重新作答。依次校验命名空间 / AI 功能 / 属主 / 会话归属（404 语义同 详情接口）→ 交互状态守卫（仅 \`运行中\` 以 409 \+ 1306 拒绝；\`暂停\` / \`已锁定\` / \`等待中\` 放行）→ 绑定请求体 → 执行回退。目标交互不可回退（快照缺失 / 回退点已被摘要覆盖）返回 404，避免泄露现场 存在性。
 
 <a name="AgentMemoryBatchDelete"></a>
 ## func AgentMemoryBatchDelete
@@ -131,7 +201,7 @@ AgentMemoryDetailGet 处理长期记忆详情查询的请求。 记忆不存在�
 func AgentMemoryListGet(c *gin.Context)
 ```
 
-AgentMemoryListGet 处理长期记忆列表查询的请求。 仅返回当前命名空间内的记忆，支持分页、按 keyword/agentKind/kind/status 过滤与字段投影； 过滤与落库语义复用 ai.Memory.List（MemoryStore），视图层不自写 SQL。
+AgentMemoryListGet 处理长期记忆列表查询的请求。 仅返回当前命名空间内属于当前用户的记忆，支持分页、keyword/agentKind/kind/status 过滤、排序与 字段投影；查询构建与总数统计统一委托 utils.BuildSearchCountQuery，视图层不自写过滤 SQL。
 
 <a name="AgentMemorySetStatus"></a>
 ## func AgentMemorySetStatus
@@ -158,7 +228,7 @@ AgentMessageListGet 处理获取 AI 助手会话消息列表的请求。 会话�
 func AgentMessageTruncate(c *gin.Context)
 ```
 
-AgentMessageTruncate 处理从某一轮用户消息起截断会话消息的请求（路由 POST /session/:id/messages/truncate）。 供前端「回退 / 删除到某一轮对话」使用：按 UserMessageIndex（仅计用户消息）定位该轮提问，删除其 自身及之后的全部消息（含助手回复）。会话不存在 / 归属不符返回 404；目标用户消息不存在（序号越界） 同样返回 404，避免泄露会话内容细节。 状态守卫（口径来源见 ai.CanRollback）：回滚是一次「改动有效轮次」的既成事实操作，仅在 \`暂停\` / \`已锁定\` 允许发起——已锁定非死路，回滚把轮次降到上限以下即自动解锁；\`运行中\` / \`等待中\` 无稳定截断对象，一律 以 409 \+ 业务码 1125 拒绝（守卫在绑定请求体与调用 store 之前生效，绝不产生半截截断）。 截断同时作废该轮及之后的挂起现场（见 store）；内存中的在途运行再显式取消一次，作为「读取事实」与 「执行截断」之间竞态窗口的兜底（并发发送可能恰在守卫判定后启动一次运行）——否则客户端刷新 / 重开抽屉时 会探测到这个仍在「运行中」的 live\-run 并续播，把已删除回合的回答重新拼回消息区。取消为尽力而为， 失败不影响截断结果。 截断成功后重算并向该会话在内存运行广播交互状态（须走 broadcastInteractionState 同一入口，不得就地拼 状态）：回滚改变有效轮次，可能由 \`已锁定\` 派生回落 \`暂停\`。
+AgentMessageTruncate 处理从某一轮用户消息起截断会话消息的请求（路由 POST /session/:id/messages/truncate）。 供前端「回退 / 删除到某一轮对话」使用：按 UserMessageIndex（仅计用户消息）定位该轮提问，删除其 自身及之后的全部消息（含助手回复）。会话不存在 / 归属不符返回 404；目标用户消息不存在（序号越界） 同样返回 404，避免泄露会话内容细节。 状态守卫（口径来源见 interaction.CanRollback）：回滚是一次「改动有效轮次」的既成事实操作，\`暂停\` / \`已锁定\` / \`等待中\` 均允许发起——等待中回滚会直接放弃当前待输入回合（store 在同一事务内把该会话的 pending 现场 置为已消费）；只有 \`运行中\` 无稳定截断对象，一律以 409 \+ 业务码 1306 拒绝（守卫在绑定请求体与调用 store 之前生效，绝不产生半截截断）。 截断同时作废该会话的挂起现场（见 store）；内存中的回合再显式中止一次，作为「读取事实」与「执行截断」 之间竞态窗口的兜底（并发发送可能恰在守卫判定后启动一次回合）——否则客户端刷新 / 重开抽屉时会探测到 这个仍在「运行中」的回合并续播已删除的内容。中止为尽力而为，失败不影响截断结果。
 
 <a name="AgentPromptOptimize"></a>
 ## func AgentPromptOptimize
@@ -169,14 +239,14 @@ func AgentPromptOptimize(c *gin.Context)
 
 AgentPromptOptimize 处理优化用户提问的请求（路由 POST /prompt/optimize）。 单轮、非流式的轻量能力：以参数 agent.promptOptimizeSystemPrompt 驱动 flash 档位模型把当前诉求 改写为更清晰、更易被正确理解的提问，成功时回传改写文本供前端整体替换输入框。依次校验命名空间与 AI 功能；绑定请求体后诉求裁剪为空返回 400（本地化），模型调用失败或返回空内容以统一错误封套返回。
 
-<a name="AgentRunCancel"></a>
-## func AgentRunCancel
+<a name="AgentRender"></a>
+## func AgentRender
 
 ```go
-func AgentRunCancel(c *gin.Context)
+func AgentRender(c *gin.Context)
 ```
 
-AgentRunCancel 处理取消某会话在途运行的请求（路由 POST /agent/:sessionID/run/cancel）。 校验会话归属后经 RunHub.Cancel 立即取消运行（落 cancelled 终态，回放可见）；运行不存在 / 归属不符以 JSON 中断，已收敛终态时幂等返回 cancelled=true。
+AgentRender 处理会话历史回放的请求（SSE，路由 GET /agent/:sessionID/render）。 输出历史快照、已作答交互与当前挂起卡片后结束连接；前端随后可经 /events 订阅后续增量。
 
 <a name="AgentSessionBranch"></a>
 ## func AgentSessionBranch
@@ -194,7 +264,7 @@ AgentSessionBranch 处理以某一轮对话为结尾创建会话分支的请求�
 func AgentSessionCompact(c *gin.Context)
 ```
 
-AgentSessionCompact 处理压缩 AI 助手会话上下文并抽取长期记忆的请求（SSE，路由 POST /session/:id/compact）。 口径（Task 8）：入参以选中的助手回答为折叠边界——折叠「当前滚动摘要游标 summary\_upto\_seq（下界） 之后、到该助手回答 seq（上界）为止」的尚未摘要消息并把游标推进到该答案，更晚的消息保持原文； 边界为 0 时折叠全部尚未摘要消息（全量语义）。压缩本身是一次在途活动（RunHub.StartActivity）： 期间会话为 运行中/上下文压缩中、可中止，完成后经活动终局自然回落 暂停；失败仅告警且不产生半截检查点。 处理顺序严格：校验命名空间 / AI 功能 / 属主 / 会话归属（404 语义同详情接口）→ 交互状态守卫（仅 暂停 / 已锁定 可发起，运行中 / 等待中 → 409\+1125）→ 绑定请求体 → 解析边界 seq（消息不存在 / 非助手消息 → 本地化 404）→ 读未摘要消息并选出折叠集合 → 启动在途活动 → 订阅透传 SSE。所有可能 返回 JSON 错误的步骤（尤其边界解析与读库）都必须在启动活动与构造 SSE 写手之前完成，被拒时尚未 产生在途活动。
+AgentSessionCompact 处理压缩 AI 助手会话上下文并抽取长期记忆的请求（SSE，路由 POST /session/:id/compact）。 口径：入参以选中的助手回答为折叠边界——折叠「当前滚动摘要游标 summary\_upto\_seq（下界）之后、到该 助手回答 seq（上界）为止」的尚未摘要消息并把游标推进到该答案，更晚的消息保持原文；边界为 0 时折叠 全部尚未摘要消息（全量语义）。压缩进度以 message.compress 事件下发：开始（running）、 摘要增量（draft）与完成 / 失败；失败仅降级为「未产生摘要」，不中断 SSE。 处理顺序严格：校验命名空间 / AI 功能 / 属主 / 会话归属（404 语义同详情接口）→ 交互状态守卫（仅 暂停 / 已锁定 可发起，运行中 / 等待中 → 409\+1306）→ 绑定请求体 → 解析边界 seq（消息不存在 → 本地化 404）→ 读未摘要消息并选出折叠集合 → 构造 SSE 写手并同步执行压缩。所有可能返回 JSON 错误的 步骤都在写出 SSE 响应头之前完成。
 
 <a name="AgentSessionCreate"></a>
 ## func AgentSessionCreate
@@ -250,6 +320,69 @@ func AgentSessionValveSet(c *gin.Context)
 
 AgentSessionValveSet 处理更新 AI 助手会话审核阀门的请求（路由 /session/:id/valve）。 依次校验命名空间、会话 ID、AI 功能与会话归属（404 语义同其它接口，避免泄露资源存在性）， 绑定请求体（阀门取值经 enum=reviewValve 绑定标签校验，非法取值以 400 拒绝、不落库）， 随后更新该会话的审核阀门并返回更新后的会话项（与详情/列表出参同构）。
 
+<a name="AgentSkillBatchDelete"></a>
+## func AgentSkillBatchDelete
+
+```go
+func AgentSkillBatchDelete(c *gin.Context)
+```
+
+AgentSkillBatchDelete 批量软删除 AI 技能。 逐条按 \(id, namespace\) 确认技能存在（不存在记录失败明细），再软删；返回批量结果汇总。
+
+<a name="AgentSkillCreate"></a>
+## func AgentSkillCreate
+
+```go
+func AgentSkillCreate(c *gin.Context)
+```
+
+AgentSkillCreate 处理创建 AI 技能的请求。 新建技能默认启用；周期能力、输入字段与固定参数由用户提交，周期技能必须包含 nowTime 输入字段， 且固定参数必须包含 timeOffset 与 timeWindow（timeWindow 须大于 0）。 同命名空间下已存在同名技能返回 400（aiSkillNameExists）。名称 / 描述 / 正文与输入字段结构的 必填、长度与空白约束由 binding 统一校验。
+
+<a name="AgentSkillDetailGet"></a>
+## func AgentSkillDetailGet
+
+```go
+func AgentSkillDetailGet(c *gin.Context)
+```
+
+AgentSkillDetailGet 处理 AI 技能详情查询的请求。 技能不存在或不属于当前命名空间时返回 404。
+
+<a name="AgentSkillListGet"></a>
+## func AgentSkillListGet
+
+```go
+func AgentSkillListGet(c *gin.Context)
+```
+
+AgentSkillListGet 处理 AI 技能列表查询的请求。 返回当前命名空间的自定义技能与全局内置技能（内置技能由代码注册表声明、fixture 注入注册行， 跨命名空间可见但只读），支持分页、keyword / source / enabled 过滤、排序与字段投影；与项目其它 列表接口一致，查询构建与总数统计统一委托 utils.BuildSearchCountQuery，视图层不自写过滤 SQL。 列表不返回加密正文；只读语义由 source='builtin' 直接表达，不再单独下发布尔标记。
+
+<a name="AgentSkillOptionsGet"></a>
+## func AgentSkillOptionsGet
+
+```go
+func AgentSkillOptionsGet(c *gin.Context)
+```
+
+AgentSkillOptionsGet 处理技能选择器选项查询的请求。 先返回 agent\_skills 中位于系统命名空间且已启用的内置技能注册行（按 id 升序，即 fixture 注入顺序；代码侧正文缺失的行按编程缺陷跳过），再返回当前命名空间已启用的自定义技能（按创建 时间倒序）。本接口只服务聊天框选择器，不返回技能正文；管理页仍走 AgentSkillListGet，内置 技能按 source='builtin' 在管理列表可见且只读。
+
+<a name="AgentSkillSetEnabled"></a>
+## func AgentSkillSetEnabled
+
+```go
+func AgentSkillSetEnabled(c *gin.Context)
+```
+
+AgentSkillSetEnabled 处理启停 AI 技能的请求。 技能不存在或不属于当前命名空间时返回 404；停用的技能不参与运行时装配。
+
+<a name="AgentSkillUpdate"></a>
+## func AgentSkillUpdate
+
+```go
+func AgentSkillUpdate(c *gin.Context)
+```
+
+AgentSkillUpdate 处理更新 AI 技能的请求。 按 \(id, namespace\) 定位技能，不存在返回 404；其余写入错误与创建同口径映射。名称、描述、 正文与周期能力、输入字段、固定参数全部整体覆盖，周期技能同样必须包含 nowTime 输入字段， 且固定参数必须包含 timeOffset 与 timeWindow（timeWindow 须大于 0）。
+
 <a name="AgentStatusGet"></a>
 ## func AgentStatusGet
 
@@ -257,39 +390,7 @@ AgentSessionValveSet 处理更新 AI 助手会话审核阀门的请求（路由 
 func AgentStatusGet(c *gin.Context)
 ```
 
-AgentStatusGet 处理获取 AI 助手状态的请求（不强制启用，始终 200）。 从运行时快照读取 AI 能力是否启用、各档位绑定的模型与可用性、生效的参数覆盖数量； 未启用时给出明确原因（按请求语言本地化）。启用时额外查询数据库 knowledge\_chunks.embedding 与 agent\_memories.embedding 两列的实际维度并与绑定模型维度对比，不一致时提示风险；请求体携带 可选 SessionID 时再附上该会话当前在途运行的快照（供刷新后前端发现在跑 / 待审批的运行）。
-
-<a name="AgentStream"></a>
-## func AgentStream
-
-```go
-func AgentStream(c *gin.Context)
-```
-
-AgentStream 处理 AI 助手流式生成的请求（SSE，路由 POST /agent/:sessionID/stream）。 先校验会话归属（404 语义同详情接口），再经驻留运行执行器 RunHub 启动一次运行：运行在独立 goroutine 中以脱管上下文执行，浏览器断开（关抽屉 / 刷新 / 断网）不中止运行；本接口随即以 after 为起点订阅该运行并把回放 \+ 实时事件透传为带序号的 SSE 事件（事件语义 delta/stage/ tool\_request/done/error 与旧实现一致）。本次生成的档位由 Agent 按「请求 slot → 会话档位 → agent.defaultSlot」解析，指定档位未绑定时以 error 事件返回，不静默回落。
-
-<a name="AgentStreamResume"></a>
-## func AgentStreamResume
-
-```go
-func AgentStreamResume(c *gin.Context)
-```
-
-AgentStreamResume 处理续播某会话在途运行的请求（SSE，路由 GET /agent/:sessionID/stream）。 校验会话归属后以查询参数 after 为起点订阅运行：先回放 seq \> after 的已落库 / 已缓冲事件， 再挂接实时广播（运行已结束时回放后即以 EOF 结束）。运行不存在 / 已过期 / 归属不符以 JSON 中断。
-
-<a name="AgentToolResult"></a>
-## func AgentToolResult
-
-```go
-func AgentToolResult(c *gin.Context)
-```
-
-AgentToolResult 处理回传客户端工具调用结果并续跑挂起运行的请求（SSE，路由 /agent/:sessionID/tool\-result）。 挂起运行由 Agent 命中 client 来源工具时落库，本接口把前端在用户自身凭据下、经人工审批后得到的 执行结果回灌，从中断处续跑。流程：
-
-1. 校验命名空间、会话 ID、AI 功能与会话归属（404 语义同其它接口，避免泄露资源存在性）；
-2. 绑定请求体（须覆盖挂起时下发的全部 callID；同一轮多个调用一次性回传）；
-3. 经驻留运行执行器 RunHub 启动续跑（StartResume）：它先同步认领运行现场（校验归属/状态/过期并 原子消费），再以与首轮生成一致的登记 / 广播 / 收敛路径执行——因此续跑同样拥有独立的在途登记并 在收敛时写入终态，不会残留挂起现场留下的 suspended 登记（否则前端刷新后会据它误判「仍在等待 审批」，并以陈旧的挂起事件回放覆盖已落库的正文与思考）；认领失败按 errors.Is 映射业务码以 JSON 中断（此时尚未构造 SSE 写手）；
-4. 成功后订阅该运行并把回放 \+ 实时事件透传为带序号的 SSE 事件（事件语义 delta/stage/done 与首轮 生成一致），再次命中 client 工具时再次下发 tool\_request 并以运行收敛结束。
+AgentStatusGet 处理获取 AI 助手状态的请求（不强制启用，始终 200）。 从运行时快照读取 AI 能力是否启用、各档位绑定的模型与可用性、生效的参数覆盖数量； 未启用时给出明确原因（按请求语言本地化）。启用时额外查询数据库 knowledge\_chunks.embedding 与 agent\_memories.embedding 两列的实际维度并与绑定模型维度对比，不一致时提示风险；请求体携带 可选 SessionID 时再附上该会话当前回合状态快照（供刷新后前端发现在跑 / 挂起待输入）。
 
 <a name="KnowledgeDocumentBatchDelete"></a>
 ## func KnowledgeDocumentBatchDelete
@@ -405,6 +506,123 @@ func KnowledgeSystemDocumentListGet(c *gin.Context)
 
 KnowledgeSystemDocumentListGet 处理获取系统命名空间知识库文档列表的请求。 与 KnowledgeDocumentListGet 同构，唯一区别是数据范围恒为内置系统命名空间 （base.SystemNamespace），不取自客户端命名空间，故为纯只读接口。
 
+<a name="PeriodicReportFeedListGet"></a>
+## func PeriodicReportFeedListGet
+
+```go
+func PeriodicReportFeedListGet(c *gin.Context)
+```
+
+PeriodicReportFeedListGet 处理报告中心信息流查询的请求。 只返回当前用户关注计划的成功运行记录，支持排序、分页与字段投影；查询构建与总数统计统一委托 utils.BuildSearchCountQuery。planName 按 plan\_id 第二趟批量回填，未关注任何计划时直接返回空列表。
+
+<a name="PeriodicReportPlanCreate"></a>
+## func PeriodicReportPlanCreate
+
+```go
+func PeriodicReportPlanCreate(c *gin.Context)
+```
+
+PeriodicReportPlanCreate 处理创建报告计划的请求。 校验与落库由领域层完成；下次执行时间留空，由分发器按 cron 计算。
+
+<a name="PeriodicReportPlanDelete"></a>
+## func PeriodicReportPlanDelete
+
+```go
+func PeriodicReportPlanDelete(c *gin.Context)
+```
+
+PeriodicReportPlanDelete 处理删除报告计划的请求。 按 \(id, namespace\) 定位并软删除计划，分发器不再选取已删除计划。
+
+<a name="PeriodicReportPlanListGet"></a>
+## func PeriodicReportPlanListGet
+
+```go
+func PeriodicReportPlanListGet(c *gin.Context)
+```
+
+PeriodicReportPlanListGet 处理报告计划列表查询的请求。 仅返回当前命名空间内的计划，支持 keyword（计划名称模糊）与 enabled 过滤、排序、分页与字段投影； 查询构建与总数统计统一委托 utils.BuildSearchCountQuery。skillName 不落库，按 skill\_id 第二趟批量回填。
+
+<a name="PeriodicReportPlanRun"></a>
+## func PeriodicReportPlanRun
+
+```go
+func PeriodicReportPlanRun(c *gin.Context)
+```
+
+PeriodicReportPlanRun 处理立即执行报告计划的请求。 计划不存在返回 404；计划已过期返回 400（periodicReportPlanExpired）；否则立即投递一条生成任务。
+
+<a name="PeriodicReportPlanToggle"></a>
+## func PeriodicReportPlanToggle
+
+```go
+func PeriodicReportPlanToggle(c *gin.Context)
+```
+
+PeriodicReportPlanToggle 处理启停报告计划的请求。 按 \(id, namespace\) 定位计划，不存在返回 404；启用时清空下次执行时间，交由分发器重新计算。
+
+<a name="PeriodicReportPlanUpdate"></a>
+## func PeriodicReportPlanUpdate
+
+```go
+func PeriodicReportPlanUpdate(c *gin.Context)
+```
+
+PeriodicReportPlanUpdate 处理更新报告计划的请求。 按 \(id, namespace\) 定位计划，不存在返回 404；更新会清空下次执行时间，交由分发器重新计算。
+
+<a name="PeriodicReportRunDelete"></a>
+## func PeriodicReportRunDelete
+
+```go
+func PeriodicReportRunDelete(c *gin.Context)
+```
+
+PeriodicReportRunDelete 处理删除报告运行记录的请求。 按 \(id, namespace\) 定位记录：先删除对象存储中的报告正文（对象已不存在视为已删除），再软删除 运行记录。运行中与已结束的记录都允许删除；删除后生成任务的结果不再回写该记录。
+
+<a name="PeriodicReportRunDetailGet"></a>
+## func PeriodicReportRunDetailGet
+
+```go
+func PeriodicReportRunDetailGet(c *gin.Context)
+```
+
+PeriodicReportRunDetailGet 处理报告运行详情查询的请求。 运行记录不存在或跨命名空间返回 404；无产出时正文为空；对象缺失返回 404 （periodicReportRunObjectMissing），其余读取失败返回意外错误。
+
+<a name="PeriodicReportRunListGet"></a>
+## func PeriodicReportRunListGet
+
+```go
+func PeriodicReportRunListGet(c *gin.Context)
+```
+
+PeriodicReportRunListGet 处理报告运行记录列表查询的请求。 仅返回当前命名空间内的运行记录，支持 planID / status 过滤、排序、分页与字段投影； 查询构建与总数统计统一委托 utils.BuildSearchCountQuery。
+
+<a name="PeriodicReportSkillOptionsGet"></a>
+## func PeriodicReportSkillOptionsGet
+
+```go
+func PeriodicReportSkillOptionsGet(c *gin.Context)
+```
+
+PeriodicReportSkillOptionsGet 处理报告技能选项查询的请求。 只返回当前命名空间内可周期执行的自定义技能（含时间窗口字段），供前端渲染计划创建表单。
+
+<a name="PeriodicReportWatchListGet"></a>
+## func PeriodicReportWatchListGet
+
+```go
+func PeriodicReportWatchListGet(c *gin.Context)
+```
+
+PeriodicReportWatchListGet 处理关注计划候选列表查询的请求。 仅返回当前命名空间内的报告计划，支持 keyword / enabled 过滤、排序、分页与字段投影； 查询构建与总数统计统一委托 utils.BuildSearchCountQuery。watched 不落库，按当前用户的 关注关系第二趟回填。
+
+<a name="PeriodicReportWatchSet"></a>
+## func PeriodicReportWatchSet
+
+```go
+func PeriodicReportWatchSet(c *gin.Context)
+```
+
+PeriodicReportWatchSet 处理设置计划关注状态的请求。 关注时校验计划属于当前命名空间（不存在 404）；幂等设置，重复关注不会重复插入。
+
 <a name="RegisterRoutes"></a>
 ## func RegisterRoutes
 
@@ -416,12 +634,13 @@ RegisterRoutes 注册 /api/v1/ai AI 助手（RAG \+ Agent）接口。 分组挂�
 
 - /doc 知识库文档 CRUD/list/reindex/chunks \+ 导入上传/原件下载
 - /session Agent 会话 create/list/get/rename/valve/delete/messages
-- /memory 长期记忆 create/list/get/update/delete/status
-- /agent/:sessionID/stream SSE 流式生成
-- /agent/:sessionID/tool\-result 回传客户端工具调用结果并续跑挂起运行（SSE）
-- /status AI 状态（可用性 \+ 维度差异）
+- /memory 长期记忆 create/list\(get/update\)/delete/status
+- /skill 技能 create/list/detail/update/delete/status
+- /periodic\-report 周期性报告：技能选项、计划 CRUD/启停/立即执行、运行记录、关注与信息流
+- /agent/:sessionID/\{chat,render,action,events,abort\} 事件流式接口
+- /status AI 状态（可用性 \+ 维度差异 \+ 会话回合快照）
 
-知识库文档导入需 S3 原件存储与解析任务异步投递，故在父组挂 S3（原件读写）、对象缓存 （原件加密上传/下载/清理）与管道投递客户端（asynq 解析任务入队）中间件供子路由共享。
+知识库文档导入需 S3 原件存储与解析任务异步投递，故在父组挂 S3（原件读写）、对象缓存 （原件加密上传/下载/清理）与管道投递客户端（asynq 解析任务与报告计划任务入队）中间件供 子路由共享。报告计划由分发器按 next\_run\_at 调度，视图层不再读写 etcd。
 
 <a name="RetrievalDryRunStream"></a>
 ## func RetrievalDryRunStream
@@ -441,73 +660,81 @@ func RetrievalOptions(c *gin.Context)
 
 RetrievalOptions 处理检索试运行参数默认值请求：从 AI 运行时参数解析器（当前 AI 组件 携带的参数解析器，即注册表默认值叠加 agent\_params 覆盖值）读取 retrieval.\* 键， 返回 topK/candidates/fusion/weights 默认值供前端对话框预填展示。
 
-<a name="AgentAssistantInputRerunIn"></a>
-## type AgentAssistantInputRerunIn
-
-AgentAssistantInputRerunIn 定义「回退到助手待输入回合」的请求输入。
-
-```go
-type AgentAssistantInputRerunIn struct {
-    // MessageID 助手待输入回合的锚点消息 ID（会话消息列表出参的 id），必填
-    MessageID uint `json:"messageID" binding:"required"`
-}
-```
-
-<a name="AgentAssistantInputRerunOut"></a>
-## type AgentAssistantInputRerunOut
-
-AgentAssistantInputRerunOut 定义「回退到助手待输入回合」的出参：按回合种类给出对应载荷，并附上 回退后的会话交互主状态（与 StateOf 同口径，供前端立即刷新状态驱动 UI）。Kind 与回退后的会话 交互子状态同值（answer=问卷作答 / approval=工具授权）。
-
-```go
-type AgentAssistantInputRerunOut struct {
-    // Kind 回合种类：answer（问卷作答）/ approval（工具授权）
-    Kind string `json:"kind"`
-    // InteractionState 回退后的会话交互主状态（供前端立即刷新状态驱动 UI）
-    InteractionState string `json:"interactionState"`
-    // Questionnaires 问卷回合按轮次先后并列的各轮载荷（题目 + 上次答案 + 待执行调用），仅问卷回合携带
-    Questionnaires []AgentQuestionnaireOut `json:"questionnaires,omitempty"`
-    // PendingCalls 该回合的待执行调用清单，授权回合据此重建审批面板
-    PendingCalls []AgentPendingCallOut `json:"pendingCalls,omitempty"`
-}
-```
-
 <a name="AgentCancelOut"></a>
 ## type AgentCancelOut
 
-AgentCancelOut 定义取消某会话在途运行的输出。
+AgentCancelOut 定义中止某会话当前回合的输出。
 
 ```go
 type AgentCancelOut struct {
-    // Cancelled 是否已受理取消（运行已收敛终态时幂等返回 true）
+    // Cancelled 是否已受理中止（无在途回合时幂等返回 true）
     Cancelled bool `json:"cancelled"`
+}
+```
+
+<a name="AgentChatIn"></a>
+## type AgentChatIn
+
+AgentChatIn 定义启动（或抢占）一轮对话的请求输入。
+
+```go
+type AgentChatIn struct {
+    // Query 用户本次提问文本，必填且不能为空白
+    Query string `json:"query" binding:"required,notBlank"`
+    // DocIDs 检索限定的文档 ID 列表，为空表示不限定
+    DocIDs []uint `json:"docIDs"`
+    // BusinessData 前端透传的当前业务现场（注入前经 SanitizeBusinessData 清洗限界）
+    BusinessData map[string]any `json:"businessData"`
+    // Thinking 思考模式，取 on/off，空表示不注入思考开关
+    Thinking string `json:"thinking" binding:"omitempty,oneof=on off"`
+    // Slot 本次生成的显式档位（flash/standard/advanced），可选；为空时依次回退到会话档位与
+    // agent.defaultSlot 参数
+    Slot string `json:"slot"`
+    // SkillID 本轮选用的技能 ID（内置与自定义统一），可选；为 0 表示不注入技能指引，
+    // 非 0 时须存在且已启用（自定义技能还须属于当前命名空间）
+    SkillID uint `json:"skillID"`
+}
+```
+
+<a name="AgentInteractionReopenIn"></a>
+## type AgentInteractionReopenIn
+
+AgentInteractionReopenIn 定义「重新审批 / 重新回答」的请求输入：审批回退按调用 ID 定位，问卷回退 按根中断 ID 定位，二者至少提供其一。
+
+```go
+type AgentInteractionReopenIn struct {
+    // CallIDs 审批卡片上的工具调用 ID（审批回退使用）：与 InterruptIDs 至少提供其一
+    CallIDs []string `json:"callIDs" binding:"required_without=InterruptIDs,dive,notBlank"`
+    // InterruptIDs 问卷卡片上的根中断 ID（问卷回退使用）：与 CallIDs 至少提供其一
+    InterruptIDs []string `json:"interruptIDs" binding:"required_without=CallIDs,dive,notBlank"`
 }
 ```
 
 <a name="AgentLiveRunOut"></a>
 ## type AgentLiveRunOut
 
-AgentLiveRunOut 定义一次驻留运行的当前状态快照（供刷新后发现在途运行与待审批现场）。
+AgentLiveRunOut 定义一轮会话的实时生命周期快照（turns.Manager.State）。
 
 ```go
 type AgentLiveRunOut struct {
-    // RunID 运行标识
-    RunID serializer.HexUUID `json:"runID"`
-    // Phase 运行生命周期阶段（running/done/failed/cancelled/suspended）
-    Phase string `json:"phase"`
-    // LastSeq 已发布的最大事件序号（续播起点）
-    LastSeq uint64 `json:"lastSeq"`
-    // AwaitingApproval 是否挂起待审批（phase 为 suspended 时为 true）
-    AwaitingApproval bool `json:"awaitingApproval"`
-    // PendingCalls 挂起待审批时的待执行调用列表，非挂起时为空数组
-    PendingCalls []AgentPendingCallOut `json:"pendingCalls"`
+    // RunID 在途轮次的运行标识；无在途运行时为空。前端据此订阅 /events?after= 续播。
+    RunID string `json:"runID"`
+    // Running 当前是否有回合正在执行
+    Running bool `json:"running"`
+    // Interrupted 是否挂起等待用户输入（审批 / 问卷）
+    Interrupted bool `json:"interrupted"`
+    // PendingInterruptIDs 挂起中的根 interrupt ID 列表
+    PendingInterruptIDs []string `json:"pendingInterruptIds"`
+    // UserTurns 该会话有效轮次
+    UserTurns int `json:"userTurns"`
+    // LastErr 最近一轮的错误文本，空表示最近一轮成功（或尚无回合）
+    LastErr string `json:"lastErr,omitempty"`
     // InteractionState 该会话当前交互主状态（与 AgentSessionItemOut 同口径）
     InteractionState string `json:"interactionState"`
     // InteractionSubstate 该会话当前交互子状态
     InteractionSubstate string `json:"interactionSubstate"`
     // Locked 该会话是否已锁定
     Locked bool `json:"locked"`
-    // UserTurns 该会话有效轮次
-    UserTurns int `json:"userTurns"`
     // MaxUserTurns 该会话轮次上限（参数 session.maxUserTurns 的生效值）
     MaxUserTurns int `json:"maxUserTurns"`
 }
@@ -613,25 +840,6 @@ type AgentMemoryStatusIn struct {
 }
 ```
 
-<a name="AgentMessageBlockOut"></a>
-## type AgentMessageBlockOut
-
-AgentMessageBlockOut 定义助手消息所承载的\*\*一块\*\*内容块的展示项：块在消息内的序号、块类型与该块的 明文 JSON 载荷。载荷不经视图层再解码（原样透传块表明文 JSON），与前端的块渲染、流式 block 事件的 payload 同源，故前端刷新 / 重进会话与实时会话由同一数据源驱动。
-
-```go
-type AgentMessageBlockOut struct {
-    // Seq 块在所属消息内的单调序号（从 1 起），即内容的真实产生顺序
-    Seq uint64 `json:"seq"`
-    // Kind 块类型：reasoning（思考段）/ tool_calls（工具调用组）/ approval（授权待审）/
-    // questionnaire（主动提问）/ content（正文段）/ next_steps（推荐的下一步）
-    Kind string `json:"kind"`
-    // Payload 该块的明文 JSON 载荷（对象）：按块类型为 reasoning/content 的文本、tool_calls 的调用记录
-    // 列表、approval 的待审批清单、questionnaire 的题目与作答或 next_steps 的推荐项列表，形状与流式
-    // block 事件的 payload 一致
-    Payload json.RawMessage `json:"payload"`
-}
-```
-
 <a name="AgentMessageCompressOut"></a>
 ## type AgentMessageCompressOut
 
@@ -646,8 +854,7 @@ type AgentMessageCompressOut struct {
     // FoldedCount 本次折叠进摘要的消息条数（三种原因均为真实条数）
     FoldedCount int `json:"foldedCount"`
     // TokensAfter 本次推进后上下文占用的即时估算 token（仅 auto / manual 给出，静默滚动与估算
-    // 不可用时为 0）：供刷新 / 重进会话后仍回显压缩前后对比；为 0 时前端回落为仅展示压缩前占用与
-    // 折叠条数
+    // 不可用时为 0）
     TokensAfter int `json:"tokensAfter"`
 }
 ```
@@ -655,7 +862,7 @@ type AgentMessageCompressOut struct {
 <a name="AgentMessageItemOut"></a>
 ## type AgentMessageItemOut
 
-AgentMessageItemOut 定义 AI 助手会话消息的输出项结构。
+AgentMessageItemOut 定义 AI 助手会话消息的输出项结构。正文由消息的原生载荷（eino 消息 JSON） 解码得到，仅含正文的行回落为 Content；时间线由 /agent/:sessionID/render 重建， 本出参只承担会话消息的只读展示。
 
 ```go
 type AgentMessageItemOut struct {
@@ -665,10 +872,8 @@ type AgentMessageItemOut struct {
     Role string `json:"role"`
     // Content 消息正文内容
     Content string `json:"content"`
-    // Draft 助手回复的结构化草稿载荷（JSON 对象），无草稿时省略
-    Draft json.RawMessage `json:"draft,omitempty"`
     // Citations 助手回复的检索引用来源列表，无引用时省略
-    Citations []ai.RetrievalResult `json:"citations,omitempty"`
+    Citations []retrieval.RetrievalResult `json:"citations,omitempty"`
     // PromptTokens 本轮助手回答全部模型调用的输入 token 累加（用户消息为 0）
     PromptTokens int `json:"promptTokens"`
     // CompletionTokens 本轮助手回答全部模型调用的输出 token 累加（用户消息为 0）
@@ -677,20 +882,15 @@ type AgentMessageItemOut struct {
     TotalTokens int `json:"totalTokens"`
     // ElapsedMs 本轮助手回答的总耗时（毫秒，用户消息为 0）
     ElapsedMs int64 `json:"elapsedMs"`
-    // Phase 本条助手消息所属运行的生命周期终态阶段（done/failed/cancelled），空表示尚未终结
-    // （用户消息与在途运行的阶段性落库行）；前端据 failed/cancelled 展示「本轮被中断」提示
+    // Phase 本条助手消息所属回合的生命周期终态阶段（done/failed/cancelled），空表示尚未终结
     Phase string `json:"phase,omitempty"`
+    // SkillID 本条用户消息所在轮次选用的技能 ID，0 表示未选技能（用户消息才有值）
+    SkillID uint `json:"skillID,omitempty"`
+    // SkillName 本条用户消息所在轮次选用的技能名称快照，空表示未选技能（用户消息才有值）
+    SkillName string `json:"skillName,omitempty"`
     // Compress 该消息所锚定的历史压缩记录（压缩游标 upto_seq 等于本条消息 seq 时给出），
     // 无则为 nil；供前端刷新 / 重进会话后回显过往的压缩推进（含静默滚动 rolling）
     Compress *AgentMessageCompressOut `json:"compress,omitempty"`
-    // Blocks 该助手消息的有序内容块（按 block_seq 升序）：思考段 / 工具调用组 / 授权待审 / 主动提问 /
-    // 正文段各按其真实产生时序排列，是消息体的唯一展示来源，与流式 block 事件同源；无块时省略
-    Blocks []AgentMessageBlockOut `json:"blocks,omitempty"`
-    // PendingCalls 该助手消息若承载「仍待用户输入」的挂起现场（问卷待作答 / 工具待授权），此处给出该
-    // 现场的待执行调用清单：回退重开（重新回答 / 重新授权）只重置挂起现场、不产生在途运行，故刷新 /
-    // 重进会话时无从经在途快照（AgentLiveRunOut）重建可交互面板，改由此处随消息下发（提交 / 取消续跑
-    // 需原样回传其中的 callID）；其余消息不带此字段
-    PendingCalls []AgentPendingCallOut `json:"pendingCalls,omitempty"`
     // CreatedAt 创建时间
     CreatedAt time.Time `json:"createdAt"`
 }
@@ -718,29 +918,6 @@ type AgentMessageTruncateIn struct {
 }
 ```
 
-<a name="AgentPendingCallOut"></a>
-## type AgentPendingCallOut
-
-AgentPendingCallOut 定义一条待执行的工具调用（供刷新后重建待审批现场）。
-
-```go
-type AgentPendingCallOut struct {
-    // CallID 与模型 tool call id 一致
-    CallID string `json:"callID"`
-    // ToolName 待执行的工具名
-    ToolName string `json:"toolName"`
-    // Arguments 模型给出的调用入参（原始 JSON 文本）
-    Arguments string `json:"arguments"`
-    // AuditLevel 本条调用的审核重要级（取值集合与展示文案由后端枚举类 auditLevel 下发）
-    AuditLevel string `json:"auditLevel"`
-    // ApprovalRequired 由审核重要级与会话阀门合成得出的最终结论：false 表示无需人工审批
-    ApprovalRequired bool `json:"approvalRequired"`
-    // ExecOwner 执行归属（client / backend）：client 由前端在用户自身凭据下执行，backend 由后端
-    // 在恢复续跑时自行执行（已批准的 builtin / MCP 工具）
-    ExecOwner string `json:"execOwner"`
-}
-```
-
 <a name="AgentPromptOptimizeIn"></a>
 ## type AgentPromptOptimizeIn
 
@@ -748,8 +925,8 @@ AgentPromptOptimizeIn 定义提示词优化的请求输入。
 
 ```go
 type AgentPromptOptimizeIn struct {
-    // Query 待优化的用户诉求，必填
-    Query string `json:"query" binding:"required"`
+    // Query 待优化的用户诉求，必填且不能为空白
+    Query string `json:"query" binding:"required,notBlank"`
 }
 ```
 
@@ -762,26 +939,6 @@ AgentPromptOptimizeOut 定义提示词优化的输出。
 type AgentPromptOptimizeOut struct {
     // Query 优化后的提问文本，供前端整体替换输入框内容
     Query string `json:"query"`
-}
-```
-
-<a name="AgentQuestionnaireOut"></a>
-## type AgentQuestionnaireOut
-
-AgentQuestionnaireOut 定义助手消息所承载的\*\*一轮\*\*问卷展示项：题目、用户作答与是否仍待回答。供前端 把该轮渲染成一个独立问答框，并提供「重新回答」入口（仅末轮）与在刷新 / 重进后据 phase=suspended 重建 问卷面板。
-
-```go
-type AgentQuestionnaireOut struct {
-    // Questions 本轮问卷题目列表（每题含候选项与可选说明）
-    Questions []ai.QuestionnaireQuestion `json:"questions"`
-    // Answers 本轮用户作答列表（未作答或取消回答时为空）
-    Answers []ai.QuestionnaireAnswer `json:"answers,omitempty"`
-    // Awaiting 本轮是否仍待用户回答：仅可能落在末轮——消息 phase 为 suspended，且末轮仍存在未作答的题目；
-    // 由 AgentAssistantInputRerun 对「回退重开」回合另行显式置位
-    Awaiting bool `json:"awaiting"`
-    // PendingCalls 承载该问卷的运行现场中的待执行调用：在「重新回答」接口出参中给出（供重答后经既有
-    // tool-result 原样回传续跑）；现场不可用时（已消费 / 已过期）不携带，前端据此把面板降级为不可用
-    PendingCalls []AgentPendingCallOut `json:"pendingCalls,omitempty"`
 }
 ```
 
@@ -855,7 +1012,7 @@ type AgentSessionItemOut struct {
     // Summary 会话滚动摘要，无摘要时为空串
     Summary string `json:"summary"`
     // ContextTokens 会话的上下文占用度量：最近一条有用量记录的助手消息的输入 token 数
-    // （无可用测量为 0，0 表示「尚无测量」而非「占用为 0」，见 ai.SessionStore.ContextTokens）
+    // （无可用测量为 0，0 表示「尚无测量」而非「占用为 0」，见 sessionstore.Store.ContextTokens）
     ContextTokens int `json:"contextTokens"`
     // ContextLimit 会话有效档位的上下文 token 容量（≤ 0 表示该档位关闭占用展示与自动压缩）
     ContextLimit int `json:"contextLimit"`
@@ -911,6 +1068,184 @@ type AgentSessionValveIn struct {
 }
 ```
 
+<a name="AgentSkillBatchIn"></a>
+## type AgentSkillBatchIn
+
+AgentSkillBatchIn 定义批量删除 AI 技能的请求输入；Ids 接受标量或数组。
+
+```go
+type AgentSkillBatchIn struct {
+    // Ids 待批量删除的技能 ID 列表
+    Ids views.FlexList[uint] `json:"ids"`
+}
+```
+
+<a name="AgentSkillCreateIn"></a>
+## type AgentSkillCreateIn
+
+AgentSkillCreateIn 定义创建 AI 技能的请求输入。 名称须非空、首尾无空白且不超过 64 个字符；描述不超过 256 个字符；正文须含非空白内容且 不超过 32768 个字符。上述约束统一由 binding 校验，存储层不再重复校验。
+
+```go
+type AgentSkillCreateIn struct {
+    // Name 技能名称，必填（1..64 个字符，首尾不能有空白）
+    Name string `json:"name" binding:"required,trimmed,max=64"`
+    // Description 技能描述，可选（不超过 256 个字符）
+    Description string `json:"description" binding:"max=256"`
+    // Content 技能正文，必填（不能为纯空白，不超过 32768 个字符）
+    Content string `json:"content" binding:"required,notBlank,max=32768"`
+    // PeriodicCapable 技能是否可周期执行；为 true 时输入字段必须包含 name=nowTime、type=date
+    PeriodicCapable bool `json:"periodicCapable"`
+    // InputFields 技能输入字段（由用户填写）
+    InputFields []SkillInputFieldIn `json:"inputFields" binding:"dive"`
+    // FixedFields 技能固定参数（由用户填写），值为原始 JSON
+    FixedFields map[string]json.RawMessage `json:"fixedFields"`
+}
+```
+
+<a name="AgentSkillDetailOut"></a>
+## type AgentSkillDetailOut
+
+AgentSkillDetailOut 定义 AI 技能详情的输出结构（含解密后的技能正文）。
+
+```go
+type AgentSkillDetailOut struct {
+    // ID 技能 ID
+    ID  uint `json:"id"`
+    // NamespaceName 所属命名空间
+    NamespaceName string `json:"namespaceName"`
+    // Source 技能来源：custom | builtin；builtin 只读（可启停）
+    Source string `json:"source"`
+    // Name 技能名称（同一命名空间内唯一）
+    Name string `json:"name"`
+    // Description 技能描述，便于在列表中识别技能用途
+    Description string `json:"description"`
+    // Content 技能正文内容（由 crypto 序列化器解密后输出明文）
+    Content string `json:"content"`
+    // Enabled 技能是否启用；停用的技能不参与运行时装配
+    Enabled bool `json:"enabled"`
+    // PeriodicCapable 技能是否可周期执行（由用户声明）
+    PeriodicCapable bool `json:"periodicCapable"`
+    // InputFields 技能输入字段（由用户填写），供报告计划渲染输入表单
+    InputFields []SkillInputFieldOut `json:"inputFields"`
+    // FixedFields 技能固定参数（由用户填写），保留各键的原始 JSON 类型
+    FixedFields map[string]json.RawMessage `json:"fixedFields"`
+    // CreatedAt 创建时间
+    CreatedAt time.Time `json:"createdAt"`
+    // UpdatedAt 更新时间
+    UpdatedAt time.Time `json:"updatedAt"`
+}
+```
+
+<a name="AgentSkillItemOut"></a>
+## type AgentSkillItemOut
+
+AgentSkillItemOut 定义 AI 技能列表项的输出结构（独立于模型层，逐字段映射）。 列表不返回加密正文，正文仅在详情与创建 / 更新结果中给出。
+
+```go
+type AgentSkillItemOut struct {
+    // ID 技能 ID
+    ID  uint `json:"id"`
+    // Name 技能名称（同一命名空间内唯一；内置技能为全局名称）
+    Name string `json:"name"`
+    // Source 技能来源：custom | builtin；builtin 由代码注册表声明，只读（可启停）
+    Source string `json:"source"`
+    // Description 技能描述（明文），便于在列表中识别技能用途
+    Description string `json:"description"`
+    // Enabled 技能是否启用；停用的技能不参与运行时装配
+    Enabled bool `json:"enabled"`
+    // PeriodicCapable 技能是否可周期执行（由用户声明）
+    PeriodicCapable bool `json:"periodicCapable"`
+    // InputFields 技能输入字段（由用户填写），供报告计划渲染输入表单；
+    // 列表按 JSON 展示（form kind=json，经 OPTIONS 自省下发前端）
+    InputFields []SkillInputFieldOut `json:"inputFields" gorm:"-" form:"kind=json"`
+    // InputFieldsRaw 列表扫描用的原始 JSON 列，映射为 InputFields 后不直接对外输出
+    InputFieldsRaw datatypes.JSON `json:"-" gorm:"column:input_fields"`
+    // FixedFields 技能固定参数（由用户填写），保留各键的原始 JSON 类型；
+    // 列表按 JSON 展示（form kind=json，经 OPTIONS 自省下发前端）
+    FixedFields map[string]json.RawMessage `json:"fixedFields" gorm:"-" form:"kind=json"`
+    // FixedFieldsRaw 列表扫描用的原始 JSON 列，映射为 FixedFields 后不直接对外输出
+    FixedFieldsRaw datatypes.JSON `json:"-" gorm:"column:fixed_fields"`
+    // CreatedAt 创建时间
+    CreatedAt time.Time `json:"createdAt"`
+    // UpdatedAt 更新时间
+    UpdatedAt time.Time `json:"updatedAt"`
+}
+```
+
+<a name="AgentSkillListOut"></a>
+## type AgentSkillListOut
+
+AgentSkillListOut 定义 AI 技能列表输出（嵌入 BaseTotalOut 支持分页总数）。
+
+```go
+type AgentSkillListOut struct {
+    AgentSkillItemOut
+    utils.BaseTotalOut
+}
+```
+
+<a name="AgentSkillOptionListOut"></a>
+## type AgentSkillOptionListOut
+
+AgentSkillOptionListOut 定义技能选择器选项列表输出：内置技能在前、当前命名空间已启用 自定义技能在后；不返回技能正文。
+
+```go
+type AgentSkillOptionListOut struct {
+    // Items 合并后的技能选项
+    Items []AgentSkillOptionOut `json:"items"`
+}
+```
+
+<a name="AgentSkillOptionOut"></a>
+## type AgentSkillOptionOut
+
+AgentSkillOptionOut 定义技能选择器的选项输出：内置与自定义技能统一以 agent\_skills 行 ID 作为选择标识，选择器与聊天请求都以 ID 表达一次技能选择。
+
+```go
+type AgentSkillOptionOut struct {
+    // ID 技能 ID（agent_skills.id）
+    ID  uint `json:"id"`
+    // Name 技能名称
+    Name string `json:"name"`
+    // Description 技能说明，可为空
+    Description string `json:"description"`
+}
+```
+
+<a name="AgentSkillStatusIn"></a>
+## type AgentSkillStatusIn
+
+AgentSkillStatusIn 定义启停 AI 技能的请求输入。
+
+```go
+type AgentSkillStatusIn struct {
+    // Enabled 目标启用状态（true 启用 / false 停用）；前端总会显式传入，故不使用 binding 必填
+    Enabled bool `json:"enabled"`
+}
+```
+
+<a name="AgentSkillUpdateIn"></a>
+## type AgentSkillUpdateIn
+
+AgentSkillUpdateIn 定义更新 AI 技能的请求输入（全部定义字段整体覆盖）。
+
+```go
+type AgentSkillUpdateIn struct {
+    // Name 技能名称，必填（1..64 个字符，首尾不能有空白）
+    Name string `json:"name" binding:"required,trimmed,max=64"`
+    // Description 技能描述，可选（不超过 256 个字符）
+    Description string `json:"description" binding:"max=256"`
+    // Content 技能正文，必填（不能为纯空白，不超过 32768 个字符）
+    Content string `json:"content" binding:"required,notBlank,max=32768"`
+    // PeriodicCapable 技能是否可周期执行；为 true 时输入字段必须包含 name=nowTime、type=date
+    PeriodicCapable bool `json:"periodicCapable"`
+    // InputFields 技能输入字段（由用户填写）
+    InputFields []SkillInputFieldIn `json:"inputFields" binding:"dive"`
+    // FixedFields 技能固定参数（由用户填写），值为原始 JSON
+    FixedFields map[string]json.RawMessage `json:"fixedFields"`
+}
+```
+
 <a name="AgentSlotStatusOut"></a>
 ## type AgentSlotStatusOut
 
@@ -926,6 +1261,8 @@ type AgentSlotStatusOut struct {
     ProviderModel string `json:"providerModel"`
     // Kind 绑定模型类型（chat/embedding；无绑定时为空）
     Kind llm.ModelKind `json:"kind"`
+    // APIMode 对话模型接入的 API 形态（chat / responses；非对话档位为空）
+    APIMode llm.APIMode `json:"apiMode,omitempty"`
     // Enabled 绑定模型是否启用
     Enabled bool `json:"enabled"`
     // Bound 绑定是否可用（模型已启用且类型与档位匹配）
@@ -946,7 +1283,7 @@ AgentStatusIn 定义查询 AI 助手状态的请求输入。
 
 ```go
 type AgentStatusIn struct {
-    // SessionID 需要查询在途运行的会话 ID，可选；为 0 时不查询任何会话的在途运行
+    // SessionID 需要查询回合状态的会话 ID，可选；为 0 时不查询任何会话
     SessionID uint `json:"sessionID"`
 }
 ```
@@ -989,76 +1326,9 @@ type AgentStatusOut struct {
     MaxUserTurns int `json:"maxUserTurns"`
     // Reason AI 能力不可用的原因说明（按请求语言本地化；可用时为空）
     Reason string `json:"reason"`
-    // LiveRun 指定会话当前在途运行的状态快照（请求未指定会话或该会话无在途运行时为 nil），
-    // 供刷新后前端发现在跑 / 待审批的运行
+    // LiveRun 指定会话当前回合的状态快照（请求未指定会话或该会话尚未产生回合时为 nil），
+    // 供刷新后前端发现在跑 / 挂起待输入的会话
     LiveRun *AgentLiveRunOut `json:"liveRun,omitempty"`
-}
-```
-
-<a name="AgentStreamIn"></a>
-## type AgentStreamIn
-
-AgentStreamIn 定义 AI 助手流式生成的请求输入。
-
-```go
-type AgentStreamIn struct {
-    // Query 用户本次提问文本，必填
-    Query string `json:"query" binding:"required"`
-    // DocIDs 检索限定的文档 ID 列表，为空表示不限定
-    DocIDs []uint `json:"docIDs"`
-    // BusinessData 前端透传的当前业务现场（注入前经 SanitizeBusinessData 清洗限界）
-    BusinessData map[string]any `json:"businessData"`
-    // RegoRule 可选的结构化草稿 Rego 校验规则源码，为空跳过规则校验
-    RegoRule string `json:"regoRule"`
-    // Thinking 思考模式，取 on/off，空表示不注入思考开关
-    Thinking string `json:"thinking" binding:"omitempty,oneof=on off"`
-    // Slot 本次生成的显式档位（flash/standard/advanced），可选；为空时依次回退到会话档位与
-    // agent.defaultSlot 参数
-    Slot string `json:"slot"`
-    // After 订阅起点序号（仅转发序号 > after 的事件）；0 表示从头转发，供重连续播时跳过已收事件
-    After uint64 `json:"after"`
-}
-```
-
-<a name="AgentStreamResumeIn"></a>
-## type AgentStreamResumeIn
-
-AgentStreamResumeIn 定义续播某会话在途运行的请求输入（经 URL 查询参数传入）。
-
-```go
-type AgentStreamResumeIn struct {
-    // After 回放起点序号（仅回放 seq > after 的事件）；0 表示从头回放
-    After uint64 `json:"after" form:"after"`
-}
-```
-
-<a name="AgentToolResultIn"></a>
-## type AgentToolResultIn
-
-AgentToolResultIn 定义恢复挂起运行、回传客户端工具调用结果的请求输入。
-
-```go
-type AgentToolResultIn struct {
-    // Results 本次回传的执行结果列表；须覆盖挂起时下发的全部 callID（缺失者按「未提供结果」回灌）
-    Results []AgentToolResultItemIn `json:"results" binding:"required,dive"`
-}
-```
-
-<a name="AgentToolResultItemIn"></a>
-## type AgentToolResultItemIn
-
-AgentToolResultItemIn 定义单条客户端工具调用结果：与挂起时下发的 tool\_request 按 callID 对应。
-
-```go
-type AgentToolResultItemIn struct {
-    // CallID 挂起时下发的调用 ID，必填
-    CallID string `json:"callID" binding:"required"`
-    // Approved 用户是否批准执行该调用
-    Approved bool `json:"approved"`
-    // Result 前端以用户自身凭据执行成功后的结果文本
-    Result string `json:"result"`
-    // Error 前端执行失败时的错误文本
-    Error string `json:"error"`
 }
 ```
 
@@ -1087,10 +1357,10 @@ type DryRunIn struct {
 <a name="DryRunOut"></a>
 ## type DryRunOut
 
-DryRunOut 定义知识库检索试运行响应输出（与 ai.DryRunResult 同构）。
+DryRunOut 定义知识库检索试运行响应输出（与 knowledge.DryRunResult 同构）。
 
 ```go
-type DryRunOut = ai.DryRunResult
+type DryRunOut = knowledge.DryRunResult
 ```
 
 <a name="KnowledgeDocumentBatchIn"></a>
@@ -1328,6 +1598,310 @@ type KnowledgeDocumentUploadOut struct {
 }
 ```
 
+<a name="PeriodicReportFeedItemOut"></a>
+## type PeriodicReportFeedItemOut
+
+PeriodicReportFeedItemOut 定义报告中心信息流的条目输出。
+
+```go
+type PeriodicReportFeedItemOut struct {
+    // RunID 运行记录 ID
+    RunID uint `json:"runID"`
+    // PlanID 所属报告计划 ID
+    PlanID uint `json:"planID"`
+    // PlanName 所属计划名称快照；计划已删除时为空
+    PlanName string `json:"planName"`
+    // Title 生成报告的标题
+    Title string `json:"title"`
+    // Status 运行状态（running/success/failed）
+    Status string `json:"status"`
+    // TriggerAt 计划触发时间点
+    TriggerAt time.Time `json:"triggerAt"`
+    // CreatedAt 创建时间
+    CreatedAt time.Time `json:"createdAt"`
+}
+```
+
+<a name="PeriodicReportFeedListOut"></a>
+## type PeriodicReportFeedListOut
+
+PeriodicReportFeedListOut 定义报告中心信息流列表项输出（嵌入 BaseTotalOut 支持分页总数）。 字段与 search.toml 的 PeriodicReportFeedListGet.selectFields 一一对应。
+
+```go
+type PeriodicReportFeedListOut struct {
+    PeriodicReportFeedItemOut
+    utils.BaseTotalOut
+}
+```
+
+<a name="PeriodicReportPlanCreateIn"></a>
+## type PeriodicReportPlanCreateIn
+
+PeriodicReportPlanCreateIn 定义创建报告计划的请求输入：字段格式与保留天数范围由视图层 binding 与 default 标签统一校验，技能资格、cron 与输入偏置由领域层校验。
+
+```go
+type PeriodicReportPlanCreateIn struct {
+    // Name 计划名称，必填（不超过 128 个字符）
+    Name string `json:"name" binding:"required,max=128"`
+    // Description 计划说明，可选（不超过 512 个字符）
+    Description string `json:"description" binding:"max=512"`
+    // SkillID 计划使用的技能 ID，必填
+    SkillID uint `json:"skillID" binding:"required"`
+    // CronSpec 计划执行的 cron 表达式，必填、不超过 64 个字符且须通过 cron 语法校验
+    CronSpec string `json:"cronSpec" binding:"required,max=64,cron"`
+    // InputValues 技能输入字段的实参（键为字段名），保留原始 JSON 类型
+    InputValues map[string]json.RawMessage `json:"inputValues"`
+    // RetentionDays 报告保留天数，缺省 90 天，允许 1..3650 天
+    RetentionDays int `json:"retentionDays" default:"90" binding:"min=1,max=3650"`
+    // ExpiresAt 计划失效时间，空表示长期有效
+    ExpiresAt *time.Time `json:"expiresAt"`
+}
+```
+
+<a name="PeriodicReportPlanItemOut"></a>
+## type PeriodicReportPlanItemOut
+
+PeriodicReportPlanItemOut 定义报告计划列表项的输出结构（独立于模型层，逐字段映射）。
+
+```go
+type PeriodicReportPlanItemOut struct {
+    // ID 计划 ID
+    ID  uint `json:"id"`
+    // Name 计划名称
+    Name string `json:"name"`
+    // Description 计划说明，可为空
+    Description string `json:"description"`
+    // SkillID 计划使用的技能 ID
+    SkillID uint `json:"skillID"`
+    // SkillName 计划关联的技能名称（按 skill_id 关联读取，不落库快照）
+    SkillName string `json:"skillName"`
+    // CronSpec 计划执行的 cron 表达式
+    CronSpec string `json:"cronSpec"`
+    // InputValues 技能输入字段的实参（键为字段名），保留原始 JSON 类型；
+    // 列表按 JSON 展示（form kind=json，经 OPTIONS 自省下发前端）
+    InputValues map[string]json.RawMessage `json:"inputValues" form:"kind=json"`
+    // Enabled 计划是否启用
+    Enabled bool `json:"enabled"`
+    // RetentionDays 报告保留天数
+    RetentionDays int `json:"retentionDays"`
+    // ExpiresAt 计划失效时间，nil 表示长期有效
+    ExpiresAt *time.Time `json:"expiresAt"`
+    // NextRunAt 下一次计划执行时间，nil 表示待分发器计算
+    NextRunAt *time.Time `json:"nextRunAt"`
+    // SessionID 计划关联的会话 ID，0 表示尚未创建
+    SessionID uint `json:"sessionID"`
+    // CreatedAt 创建时间
+    CreatedAt time.Time `json:"createdAt"`
+    // UpdatedAt 更新时间
+    UpdatedAt time.Time `json:"updatedAt"`
+}
+```
+
+<a name="PeriodicReportPlanListOut"></a>
+## type PeriodicReportPlanListOut
+
+PeriodicReportPlanListOut 定义报告计划列表项输出（嵌入 BaseTotalOut 支持分页总数）。 字段与 search.toml 的 PeriodicReportPlanListGet.selectFields 一一对应。
+
+```go
+type PeriodicReportPlanListOut struct {
+    PeriodicReportPlanItemOut
+    utils.BaseTotalOut
+}
+```
+
+<a name="PeriodicReportPlanToggleIn"></a>
+## type PeriodicReportPlanToggleIn
+
+PeriodicReportPlanToggleIn 定义启停报告计划的请求输入。
+
+```go
+type PeriodicReportPlanToggleIn struct {
+    // Enabled 目标启用状态（true 启用 / false 停用）
+    Enabled bool `json:"enabled"`
+}
+```
+
+<a name="PeriodicReportPlanUpdateIn"></a>
+## type PeriodicReportPlanUpdateIn
+
+PeriodicReportPlanUpdateIn 定义更新报告计划的请求输入（可编辑字段整体覆盖）。
+
+```go
+type PeriodicReportPlanUpdateIn struct {
+    // Name 计划名称，必填（不超过 128 个字符）
+    Name string `json:"name" binding:"required,max=128"`
+    // Description 计划说明，可选（不超过 512 个字符）
+    Description string `json:"description" binding:"max=512"`
+    // SkillID 计划使用的技能 ID，必填
+    SkillID uint `json:"skillID" binding:"required"`
+    // CronSpec 计划执行的 cron 表达式，必填、不超过 64 个字符且须通过 cron 语法校验
+    CronSpec string `json:"cronSpec" binding:"required,max=64,cron"`
+    // InputValues 技能输入字段的实参（键为字段名），保留原始 JSON 类型
+    InputValues map[string]json.RawMessage `json:"inputValues"`
+    // RetentionDays 报告保留天数，缺省 90 天，允许 1..3650 天
+    RetentionDays int `json:"retentionDays" default:"90" binding:"min=1,max=3650"`
+    // ExpiresAt 计划失效时间，空表示长期有效
+    ExpiresAt *time.Time `json:"expiresAt"`
+}
+```
+
+<a name="PeriodicReportRunDetailOut"></a>
+## type PeriodicReportRunDetailOut
+
+PeriodicReportRunDetailOut 定义报告运行详情输出：在列表项基础上补充报告正文。
+
+```go
+type PeriodicReportRunDetailOut struct {
+    PeriodicReportRunItemOut
+    // Content 报告正文；无产出或未生成时为空
+    Content string `json:"content"`
+}
+```
+
+<a name="PeriodicReportRunItemOut"></a>
+## type PeriodicReportRunItemOut
+
+PeriodicReportRunItemOut 定义报告运行记录列表项的输出结构（独立于模型层，逐字段映射）。
+
+```go
+type PeriodicReportRunItemOut struct {
+    // ID 运行记录 ID
+    ID  uint `json:"id"`
+    // PlanID 所属报告计划 ID
+    PlanID uint `json:"planID"`
+    // Status 运行状态（running/success/failed）
+    Status string `json:"status"`
+    // Title 生成报告的标题
+    Title string `json:"title"`
+    // ObjectKey 报告对象的存储键，无产出时为空
+    ObjectKey string `json:"objectKey"`
+    // SizeBytes 生成报告的字节大小
+    SizeBytes int64 `json:"sizeBytes"`
+    // Error 运行失败原因，成功时为空
+    Error string `json:"error"`
+    // TriggerAt 计划触发时间点
+    TriggerAt time.Time `json:"triggerAt"`
+    // StartedAt 实际开始执行时间，nil 表示尚未开始
+    StartedAt *time.Time `json:"startedAt"`
+    // FinishedAt 执行结束时间，nil 表示尚未结束
+    FinishedAt *time.Time `json:"finishedAt"`
+    // CreatedAt 创建时间
+    CreatedAt time.Time `json:"createdAt"`
+}
+```
+
+<a name="PeriodicReportRunListOut"></a>
+## type PeriodicReportRunListOut
+
+PeriodicReportRunListOut 定义报告运行记录列表项输出（嵌入 BaseTotalOut 支持分页总数）。 字段与 search.toml 的 PeriodicReportRunListGet.selectFields 一一对应。
+
+```go
+type PeriodicReportRunListOut struct {
+    PeriodicReportRunItemOut
+    utils.BaseTotalOut
+}
+```
+
+<a name="PeriodicReportSkillInputFieldOut"></a>
+## type PeriodicReportSkillInputFieldOut
+
+PeriodicReportSkillInputFieldOut 定义报告可用技能输入字段的输出结构（独立于模型层，逐字段映射）。
+
+```go
+type PeriodicReportSkillInputFieldOut struct {
+    // Name 字段名称，作为计划 inputValues 中的键
+    Name string `json:"name"`
+    // Type 字段类型，取值为 date / number / string / enum / boolean；nowTime 是字段名，其类型为 date
+    Type string `json:"type"`
+    // Required 该字段是否必填
+    Required bool `json:"required"`
+    // Description 字段用途说明，可为空
+    Description string `json:"description"`
+}
+```
+
+<a name="PeriodicReportSkillOptionListOut"></a>
+## type PeriodicReportSkillOptionListOut
+
+PeriodicReportSkillOptionListOut 定义报告技能选项列表输出。
+
+```go
+type PeriodicReportSkillOptionListOut struct {
+    // Items 可选择作为报告来源的技能
+    Items []PeriodicReportSkillOptionOut `json:"items"`
+}
+```
+
+<a name="PeriodicReportSkillOptionOut"></a>
+## type PeriodicReportSkillOptionOut
+
+PeriodicReportSkillOptionOut 定义可作为周期性报告来源的技能选项输出。
+
+```go
+type PeriodicReportSkillOptionOut struct {
+    // ID 技能 ID（agent_skills.id）
+    ID  uint `json:"id"`
+    // Name 技能名称
+    Name string `json:"name"`
+    // Description 技能说明，可为空
+    Description string `json:"description"`
+    // InputFields 技能输入字段，供前端渲染计划输入表单
+    InputFields []PeriodicReportSkillInputFieldOut `json:"inputFields"`
+    // FixedFields 技能固定参数，保留原始 JSON 类型；前端只读展示并作为计划偏置默认值
+    FixedFields map[string]json.RawMessage `json:"fixedFields"`
+}
+```
+
+<a name="PeriodicReportWatchListOut"></a>
+## type PeriodicReportWatchListOut
+
+PeriodicReportWatchListOut 定义关注计划候选列表项输出（嵌入 BaseTotalOut 支持分页总数）。
+
+```go
+type PeriodicReportWatchListOut struct {
+    PeriodicReportWatchPlanItemOut
+    utils.BaseTotalOut
+}
+```
+
+<a name="PeriodicReportWatchPlanItemOut"></a>
+## type PeriodicReportWatchPlanItemOut
+
+PeriodicReportWatchPlanItemOut 定义关注计划候选列表项输出（独立于模型层，逐字段映射）。 字段与 search.toml 的 PeriodicReportWatchListGet.selectFields 一一对应。
+
+```go
+type PeriodicReportWatchPlanItemOut struct {
+    // ID 计划 ID
+    ID  uint `json:"id"`
+    // Name 计划名称
+    Name string `json:"name"`
+    // Description 计划说明，可为空
+    Description string `json:"description"`
+    // Enabled 计划是否启用
+    Enabled bool `json:"enabled"`
+    // Watched 当前用户是否已关注该计划（处理器按关注关系回填）
+    Watched bool `json:"watched"`
+    // CreatedAt 创建时间
+    CreatedAt time.Time `json:"createdAt"`
+    // UpdatedAt 更新时间
+    UpdatedAt time.Time `json:"updatedAt"`
+}
+```
+
+<a name="PeriodicReportWatchSetIn"></a>
+## type PeriodicReportWatchSetIn
+
+PeriodicReportWatchSetIn 定义设置计划关注状态的请求输入。
+
+```go
+type PeriodicReportWatchSetIn struct {
+    // PlanID 计划 ID，必填
+    PlanID uint `json:"planID" binding:"required"`
+    // Watched 目标关注状态（true 关注 / false 取消关注）
+    Watched bool `json:"watched"`
+}
+```
+
 <a name="RetrievalOptionsOut"></a>
 ## type RetrievalOptionsOut
 
@@ -1371,5 +1945,41 @@ type RetrievalWeightsOut struct {
     Vector float64 `json:"vector"`
     // Keyword 关键词检索路权重
     Keyword float64 `json:"keyword"`
+}
+```
+
+<a name="SkillInputFieldIn"></a>
+## type SkillInputFieldIn
+
+SkillInputFieldIn 定义用户填写的技能输入字段：结构约束由 binding 校验，周期 nowTime 契约 与固定参数约束由模型层统一校验。
+
+```go
+type SkillInputFieldIn struct {
+    // Name 字段名称，必填（1..64 个字符，首尾不能有空白）
+    Name string `json:"name" binding:"required,trimmed,max=64"`
+    // Type 字段类型，取值为 date / number / string / enum / boolean
+    Type modelsai.SkillInputFieldType `json:"type" binding:"required,oneof=date number string enum boolean"`
+    // Required 该字段是否必填
+    Required bool `json:"required"`
+    // Description 字段用途说明，可为空（不超过 256 个字符）
+    Description string `json:"description" binding:"max=256"`
+}
+```
+
+<a name="SkillInputFieldOut"></a>
+## type SkillInputFieldOut
+
+SkillInputFieldOut 定义技能输入字段的输出结构（独立于模型层，逐字段映射）。
+
+```go
+type SkillInputFieldOut struct {
+    // Name 字段名称，作为报告计划 inputValues 中的键
+    Name string `json:"name"`
+    // Type 字段类型，取值为 date / number / string / enum / boolean；nowTime 是字段名，其类型为 date
+    Type string `json:"type"`
+    // Required 该字段是否必填
+    Required bool `json:"required"`
+    // Description 字段用途说明，可为空
+    Description string `json:"description"`
 }
 ```

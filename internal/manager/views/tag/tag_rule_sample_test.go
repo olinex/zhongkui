@@ -297,6 +297,11 @@ func TestTagRuleSampleList(t *testing.T) {
 			So(db.Rollback().Error, ShouldBeNil)
 		})
 		r := setupTagRuleSampleTestRouterWithNamespace(db, tagRuleSampleTestNamespace)
+		// tag_rule_samples.namespace_name 为 namespaces(name) 外键，测试专用命名空间需先落库。
+		So(db.Exec(
+			`INSERT INTO namespaces (name) VALUES (?) ON CONFLICT (name) DO NOTHING`,
+			tagRuleSampleTestNamespace,
+		).Error, ShouldBeNil)
 
 		Convey("列表返回全部样例且可按模型过滤", func() {
 			So(doTagRuleRequest(r, http.MethodPost, "/tag-event/tag-rule-sample/create", map[string]any{

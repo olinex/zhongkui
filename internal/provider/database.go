@@ -59,12 +59,15 @@ func CoreModels() []any {
 		&aimodel.KnowledgeChunk{},
 		&aimodel.AgentSession{},
 		&aimodel.AgentMessage{},
-		&aimodel.AgentMessageBlock{},
 		&aimodel.AgentSessionCompaction{},
 		&aimodel.AgentMemory{},
 		&aimodel.AgentRun{},
-		&aimodel.AgentLiveRun{},
-		&aimodel.AgentRunEvent{},
+		&aimodel.AgentInteraction{},
+		&aimodel.AgentCheckpoint{},
+		&aimodel.AgentSkill{},
+		&aimodel.PeriodicReportPlan{},
+		&aimodel.PeriodicReportRun{},
+		&aimodel.PeriodicReportPlanWatch{},
 	}
 }
 

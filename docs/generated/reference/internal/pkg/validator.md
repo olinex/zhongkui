@@ -6,6 +6,13 @@
 
 - [Constants](<#constants>)
 - [Variables](<#variables>)
+- [func Check\(v any\) error](<#Check>)
+- [func CheckPartial\(v any, fields ...string\) error](<#CheckPartial>)
+- [func DecodeObject\(raw string, dst any\) error](<#DecodeObject>)
+- [func DecodeObjectLenient\(raw string, dst any\) error](<#DecodeObjectLenient>)
+- [func DecodeOptionalObject\(raw string, dst any\) \(present bool, err error\)](<#DecodeOptionalObject>)
+- [func DecodeOptionalValue\(raw string, dst any\) \(present bool, err error\)](<#DecodeOptionalValue>)
+- [func Describe\(err error\) string](<#Describe>)
 - [func Funcs\(\) map\[string\]validator.Func](<#Funcs>)
 - [func GenerateStrongPassword\(length int\) \(string, error\)](<#GenerateStrongPassword>)
 - [func GetTranslator\(lang \*base.Language\) ut.Translator](<#GetTranslator>)
@@ -25,6 +32,7 @@
 - [func IsHex\(value string\) bool](<#IsHex>)
 - [func IsInt\(value string\) bool](<#IsInt>)
 - [func IsMD5\(value string\) bool](<#IsMD5>)
+- [func IsNotBlank\(value string\) bool](<#IsNotBlank>)
 - [func IsNull\(value string\) bool](<#IsNull>)
 - [func IsSHA1\(value string\) bool](<#IsSHA1>)
 - [func IsSHA256\(value string\) bool](<#IsSHA256>)
@@ -33,6 +41,7 @@
 - [func IsTrimmed\(value string\) bool](<#IsTrimmed>)
 - [func IsUUID\(value string\) bool](<#IsUUID>)
 - [func IsValidAlphanumSpecial\(value, specialChars string\) bool](<#IsValidAlphanumSpecial>)
+- [func IsValidCronSpec\(expr string\) bool](<#IsValidCronSpec>)
 - [func IsValidDirPath\(value string\) bool](<#IsValidDirPath>)
 - [func IsValidEnum\(className, value string\) bool](<#IsValidEnum>)
 - [func IsValidFileName\(value string\) bool](<#IsValidFileName>)
@@ -46,7 +55,9 @@
 - [func IsYearWeek\(value string\) bool](<#IsYearWeek>)
 - [func MustGetTranslator\(lang \*base.Language\) ut.Translator](<#MustGetTranslator>)
 - [func RegisterTranslation\(tag string, lang \*base.Language\) error](<#RegisterTranslation>)
+- [func StripJSONFence\(content string\) string](<#StripJSONFence>)
 - [func ValidateAlphanumSpecial\(fl validator.FieldLevel\) bool](<#ValidateAlphanumSpecial>)
+- [func ValidateCronSpec\(fl validator.FieldLevel\) bool](<#ValidateCronSpec>)
 - [func ValidateDirPath\(fl validator.FieldLevel\) bool](<#ValidateDirPath>)
 - [func ValidateEnum\(fl validator.FieldLevel\) bool](<#ValidateEnum>)
 - [func ValidateFileName\(fl validator.FieldLevel\) bool](<#ValidateFileName>)
@@ -54,11 +65,15 @@
 - [func ValidateHTTPURL\(fl validator.FieldLevel\) bool](<#ValidateHTTPURL>)
 - [func ValidateJSONObject\(fl validator.FieldLevel\) bool](<#ValidateJSONObject>)
 - [func ValidateLtCurrentTime\(fl validator.FieldLevel\) bool](<#ValidateLtCurrentTime>)
+- [func ValidateNotBlank\(fl validator.FieldLevel\) bool](<#ValidateNotBlank>)
 - [func ValidateStrictFileName\(fl validator.FieldLevel\) bool](<#ValidateStrictFileName>)
 - [func ValidateStrongPassword\(fl validator.FieldLevel\) bool](<#ValidateStrongPassword>)
 - [func ValidateTrimmed\(fl validator.FieldLevel\) bool](<#ValidateTrimmed>)
 - [func ValidateUnixFileName\(fl validator.FieldLevel\) bool](<#ValidateUnixFileName>)
 - [func ValidateWindowsFileName\(fl validator.FieldLevel\) bool](<#ValidateWindowsFileName>)
+- [type JSONKind](<#JSONKind>)
+  - [func JSONKindOrInvalid\(raw json.RawMessage\) JSONKind](<#JSONKindOrInvalid>)
+  - [func JSONValueKind\(raw json.RawMessage\) \(JSONKind, error\)](<#JSONValueKind>)
 
 
 ## Constants
@@ -89,6 +104,8 @@ const (
     TagJSONObject = "jsonObject"
     // TagTrimmed 已去除首尾空白标签
     TagTrimmed = "trimmed"
+    // TagNotBlank 非空白字符串标签（去首尾空白后非空）
+    TagNotBlank = "notBlank"
 )
 ```
 
@@ -125,6 +142,12 @@ const (
 )
 ```
 
+<a name="TagCron"></a>TagCron 是 cron 表达式合法性校验的 binding 标签名。
+
+```go
+const TagCron = "cron"
+```
+
 ## Variables
 
 <a name="UniversalTranslator"></a>UniversalTranslator 全局通用翻译器实例。
@@ -142,6 +165,69 @@ var (
     Validate *validator.Validate
 )
 ```
+
+<a name="Check"></a>
+## func Check
+
+```go
+func Check(v any) error
+```
+
+Check 使用全局校验引擎校验结构体，是 HTTP 之外场景（worker / CLI / LLM 输出等）的统一校验入口。 校验失败时原样返回 validator.ValidationErrors，便于上层继续按类型断言分流。
+
+<a name="CheckPartial"></a>
+## func CheckPartial
+
+```go
+func CheckPartial(v any, fields ...string) error
+```
+
+CheckPartial 使用全局校验引擎只校验指定字段，是局部校验场景（如部分更新）的统一入口。 校验失败时原样返回 validator.ValidationErrors。
+
+<a name="DecodeObject"></a>
+## func DecodeObject
+
+```go
+func DecodeObject(raw string, dst any) error
+```
+
+DecodeObject 严格解析裸 JSON 对象：去除首尾空白后必须非空，且必须以 '\{' 开头、以 '\}' 结尾； 代码块围栏与前后解释文字均视为非法帧。非法帧或 JSON 语法错误时返回英文错误。
+
+<a name="DecodeObjectLenient"></a>
+## func DecodeObjectLenient
+
+```go
+func DecodeObjectLenient(raw string, dst any) error
+```
+
+DecodeObjectLenient 先剥离单层 \`\`\`json / \`\`\` 代码块围栏，再按 DecodeObject 的严格规则解析。 适用于模型输出等可能被围栏包裹的裸 JSON 对象。
+
+<a name="DecodeOptionalObject"></a>
+## func DecodeOptionalObject
+
+```go
+func DecodeOptionalObject(raw string, dst any) (present bool, err error)
+```
+
+DecodeOptionalObject 解析可选的裸 JSON 对象：去首尾空白后为空或字面量 null 视为未提供， 返回 present=false 且不修改 dst；否则按 DecodeObject 的严格规则解析并返回 present=true。 该函数统一「空值 / null 等价于未提供」的对象解析语义，调用方不再各自书写字符串判断。
+
+<a name="DecodeOptionalValue"></a>
+## func DecodeOptionalValue
+
+```go
+func DecodeOptionalValue(raw string, dst any) (present bool, err error)
+```
+
+DecodeOptionalValue 解析可选的任意 JSON 值：去首尾空白后为空或字面量 null 视为未提供， 返回 present=false 且不修改 dst；否则把整段文本交给 json.Unmarshal 解析（bool / object / string / number / array 均可）。用于允许任意 JSON 类型的可选配置列。
+
+<a name="Describe"></a>
+## func Describe
+
+```go
+func Describe(err error) string
+```
+
+Describe 把校验错误渲染为稳定的英文摘要：按出现顺序输出「字段: tag」或「字段: tag=参数」， 多项以 "; " 连接。err 为 nil 时返回空串，非校验错误返回其原始消息；校验错误即使被包装也能识别。
 
 <a name="Funcs"></a>
 ## func Funcs
@@ -325,6 +411,15 @@ func IsMD5(value string) bool
 
 IsMD5 判断字符串是否为 32 位十六进制 MD5 摘要。
 
+<a name="IsNotBlank"></a>
+## func IsNotBlank
+
+```go
+func IsNotBlank(value string) bool
+```
+
+IsNotBlank 判断字符串去除首尾空白后是否非空；纯空白（含空串）视为空白。 与 trimmed 的区别：trimmed 拒绝任何首尾空白（须由前端先行去除），notBlank 只要求内容 里存在非空白字符，允许正文类字段保留有语义的缩进与换行。
+
 <a name="IsNull"></a>
 ## func IsNull
 
@@ -396,6 +491,15 @@ func IsValidAlphanumSpecial(value, specialChars string) bool
 ```
 
 IsValidAlphanumSpecial 判断字符串是否仅由字母数字（含 Unicode）与 指定的特殊字符组成，且至少包含一个字母或数字（不允许仅有特殊符号）。 specialChars 为允许的特殊字符集合（如 "\-\_"）。
+
+<a name="IsValidCronSpec"></a>
+## func IsValidCronSpec
+
+```go
+func IsValidCronSpec(expr string) bool
+```
+
+IsValidCronSpec 判断 cron 表达式是否合法：去除首尾空白后必须非空，且能被 robfig/cron 的 标准解析器接受（支持 5 段标准 cron 与 @daily 等描述符，不支持带秒的 6 段表达式）。 该函数不依赖校验器实例，是纯函数。
 
 <a name="IsValidDirPath"></a>
 ## func IsValidDirPath
@@ -557,6 +661,15 @@ fmt.Println("4. Handle any errors that occur")
 </p>
 </details>
 
+<a name="StripJSONFence"></a>
+## func StripJSONFence
+
+```go
+func StripJSONFence(content string) string
+```
+
+StripJSONFence 去除可能包裹的 \`\`\`json / \`\`\` 代码围栏与前后空白，返回裸 JSON 文本； 该函数是 JSON 围栏剥离的唯一实现，供对象解码与任意 JSON 载荷解析复用。
+
 <a name="ValidateAlphanumSpecial"></a>
 ## func ValidateAlphanumSpecial
 
@@ -565,6 +678,15 @@ func ValidateAlphanumSpecial(fl validator.FieldLevel) bool
 ```
 
 ValidateAlphanumSpecial 是 alphanumspecial 标签的验证函数，标签参数为允许的特殊字符集合。
+
+<a name="ValidateCronSpec"></a>
+## func ValidateCronSpec
+
+```go
+func ValidateCronSpec(fl validator.FieldLevel) bool
+```
+
+ValidateCronSpec 是 \`cron\` 标签的校验函数：仅接受字符串字段，非法或非字符串均返回 false。
 
 <a name="ValidateDirPath"></a>
 ## func ValidateDirPath
@@ -671,6 +793,15 @@ type User struct {
 }
 ```
 
+<a name="ValidateNotBlank"></a>
+## func ValidateNotBlank
+
+```go
+func ValidateNotBlank(fl validator.FieldLevel) bool
+```
+
+ValidateNotBlank 是 notBlank 标签的验证函数。
+
 <a name="ValidateStrictFileName"></a>
 ## func ValidateStrictFileName
 
@@ -715,3 +846,52 @@ func ValidateWindowsFileName(fl validator.FieldLevel) bool
 ```
 
 ValidateWindowsFileName 是 windowsFileName 标签的验证函数。
+
+<a name="JSONKind"></a>
+## type JSONKind
+
+JSONKind 是 JSON 规范定义的值类型名：string / number / boolean / object / array / null。 作为类型化枚举声明，供原始 JSON 值识别与类型匹配统一引用，避免调用方就地书写类型名字面量。 JSONKindInvalid 是解析失败的哨兵值（不是 JSON 规范类型），零值 "" 仍表示「未返回类型」。
+
+```go
+type JSONKind string
+```
+
+<a name="JSONKindString"></a>JSON 规范值类型常量。
+
+```go
+const (
+    // JSONKindString JSON 字符串
+    JSONKindString JSONKind = "string"
+    // JSONKindNumber JSON 数字
+    JSONKindNumber JSONKind = "number"
+    // JSONKindBoolean JSON 布尔
+    JSONKindBoolean JSONKind = "boolean"
+    // JSONKindObject JSON 对象
+    JSONKindObject JSONKind = "object"
+    // JSONKindArray JSON 数组
+    JSONKindArray JSONKind = "array"
+    // JSONKindNull JSON null
+    JSONKindNull JSONKind = "null"
+    // JSONKindInvalid 不是合法 JSON 值（空值或语法错误）；由 JSONValueKind 在错误时返回，
+    // 仅用于错误文案等展示场景，不参与类型匹配。
+    JSONKindInvalid JSONKind = "invalid"
+)
+```
+
+<a name="JSONKindOrInvalid"></a>
+### func JSONKindOrInvalid
+
+```go
+func JSONKindOrInvalid(raw json.RawMessage) JSONKind
+```
+
+JSONKindOrInvalid 返回原始 JSON 值的类型名；空值或非法 JSON 返回 JSONKindInvalid。 供错误文案等只需安全展示类型名的场景使用；需要判定合法性时请使用 JSONValueKind。
+
+<a name="JSONValueKind"></a>
+### func JSONValueKind
+
+```go
+func JSONValueKind(raw json.RawMessage) (JSONKind, error)
+```
+
+JSONValueKind 返回原始 JSON 值的类型名（按 JSON 规范）：string / number / boolean / object / array / null；空值或非法 JSON 返回 JSONKindInvalid 与英文错误。识别只看首个 非空白字节，合法性由 json.Valid 兜底，因此缩进与首尾空白不影响结果。 调用方须以 error 判定成功与否：kind 为 JSONKindInvalid 时即使用于展示也代表解析失败。

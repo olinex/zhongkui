@@ -157,6 +157,7 @@ $zk-centered-surface-width: 420px;
 //   preview-max-height         明文 / 长文本预览区最大高度
 //   reasoning-max-height       思考过程滚动区最大高度（取 preview-max-height 的 1/3：
 //                              思考过程是流式增量长文本，独占一屏高度会挤掉正文
+//   inline-preview-max-height  消息内嵌预览（压缩摘要增量、审批参数 / 结果）最大高度
 // ---------------------------------------------------------------------------
 
 $zk-dropdown-max-height: 300px;
@@ -169,6 +170,7 @@ $zk-popover-max-width: 420px;
 $zk-popover-max-height: 320px;
 $zk-preview-max-height: 480px;
 $zk-reasoning-max-height: 160px;
+$zk-inline-preview-max-height: 240px;
 $zk-placeholder-min-height: 48px;
 
 // ---------------------------------------------------------------------------
@@ -188,12 +190,15 @@ $zk-resize-grip-opacity: 0.24;
 // 编辑器外壳（CodeMirror 族）
 //   editor-font-size           编辑器正文与 CodeMirror 内部文本字号
 //   editor-min-height          编辑器正文最小高度
+//   editor-body-height        编辑器正文固定高度（Markdown 编辑 / 预览、JSON 编辑器同高，
+//                              超出在区内纵向滚动；全屏模式下改为铺满视口）
 //   editor-padding             编辑器外壳内边距
 //   editor-header-min-height   编辑器区块标题行最小高度（标题 + 校验状态图标）
 // ---------------------------------------------------------------------------
 
 $zk-editor-font-size: 0.8125rem; // 13px
 $zk-editor-min-height: 160px;
+$zk-editor-body-height: 240px;
 $zk-editor-padding: $zk-space-2;
 $zk-editor-header-min-height: 24px;
 
@@ -206,6 +211,13 @@ $zk-editor-header-min-height: 24px;
 
 $zk-surface-subtle-opacity: 0.06;
 $zk-surface-raised-opacity: 0.1;
+
+// ---------------------------------------------------------------------------
+// 不透明度
+//   opacity-disabled  被闸住 / 禁用的整体弱化（仍保持形态可辨）
+// ---------------------------------------------------------------------------
+
+$zk-opacity-disabled: 0.6;
 
 // ---------------------------------------------------------------------------
 // 开关（Switch）轨道
@@ -301,16 +313,19 @@ $zk-shadow-md:
   --zk-popover-max-height: #{$zk-popover-max-height};
   --zk-preview-max-height: #{$zk-preview-max-height};
   --zk-reasoning-max-height: #{$zk-reasoning-max-height};
+  --zk-inline-preview-max-height: #{$zk-inline-preview-max-height};
   --zk-placeholder-min-height: #{$zk-placeholder-min-height};
   --zk-resize-grip-length: #{$zk-resize-grip-length};
   --zk-resize-grip-thickness: #{$zk-resize-grip-thickness};
   --zk-resize-grip-opacity: #{$zk-resize-grip-opacity};
   --zk-editor-font-size: #{$zk-editor-font-size};
   --zk-editor-min-height: #{$zk-editor-min-height};
+  --zk-editor-body-height: #{$zk-editor-body-height};
   --zk-editor-padding: #{$zk-editor-padding};
   --zk-editor-header-min-height: #{$zk-editor-header-min-height};
   --zk-surface-subtle-opacity: #{$zk-surface-subtle-opacity};
   --zk-surface-raised-opacity: #{$zk-surface-raised-opacity};
+  --zk-opacity-disabled: #{$zk-opacity-disabled};
   --zk-switch-track-opacity: #{$zk-switch-track-opacity};
   --zk-switch-disabled-opacity: #{$zk-switch-disabled-opacity};
   --zk-z-dialog: #{$zk-z-dialog};

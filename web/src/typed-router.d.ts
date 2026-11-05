@@ -28,6 +28,8 @@ declare module 'vue-router/auto-routes' {
     'AI Document Detail': RouteRecordInfo<'AI Document Detail', '/:language/ai/document/:id', { language: ParamValue<true>, id: ParamValue<true> }, { language: ParamValue<false>, id: ParamValue<false> }>,
     'AI Knowledge List': RouteRecordInfo<'AI Knowledge List', '/:language/ai/knowledge', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'AI Memory List': RouteRecordInfo<'AI Memory List', '/:language/ai/memory', { language: ParamValue<true> }, { language: ParamValue<false> }>,
+    'AI Periodic Report List': RouteRecordInfo<'AI Periodic Report List', '/:language/ai/periodic-report', { language: ParamValue<true> }, { language: ParamValue<false> }>,
+    'AI Skill List': RouteRecordInfo<'AI Skill List', '/:language/ai/skill', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Already Signed In': RouteRecordInfo<'Already Signed In', '/:language/auth/already-signed-in', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Forgot Password': RouteRecordInfo<'Forgot Password', '/:language/auth/forgot-password', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Reset Password': RouteRecordInfo<'Reset Password', '/:language/auth/reset-password', { language: ParamValue<true> }, { language: ParamValue<false> }>,

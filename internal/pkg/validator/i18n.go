@@ -231,7 +231,11 @@ func RegisterTranslation(tag string, lang *base.Language) error {
 		func(trans ut.Translator, fErr validator.FieldError) string {
 			// 获取翻译后的错误消息
 			// 参数为验证标签和字段名
-			t, _ := trans.T(tag, fErr.Field())
+			t, err := trans.T(tag, fErr.Field())
+			if err != nil {
+				// 翻译缺失时回退到字段名，避免返回空消息掩盖校验失败原因。
+				return fErr.Field()
+			}
 			return t
 		})
 }

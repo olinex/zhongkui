@@ -109,17 +109,17 @@ code.1100 = "username or password check failed"
 code.1101 = "old password check failed"
 code.1102 = "username or password check failed"
 code.1103 = "username or email already exist"
-code.1104 = "too many access key"
-code.1105 = "tag event rule invalid"
-code.1106 = "tag rule runtime invalid"
-code.1107 = "tag rule target model not registered"
-code.1108 = "frontend config conflict"
-code.1109 = "frontend config sync disabled"
-code.1110 = "tag rule sample input invalid"
-code.1111 = "notification send failed"
-code.1112 = "scheduler task config invalid"
-code.1113 = "password reset unavailable"
-code.1114 = "password reset token invalid"
+code.1200 = "too many access key"
+code.1201 = "tag event rule invalid"
+code.1202 = "tag rule runtime invalid"
+code.1203 = "tag rule target model not registered"
+code.1400 = "frontend config conflict"
+code.1401 = "frontend config sync disabled"
+code.1204 = "tag rule sample input invalid"
+code.1402 = "notification send failed"
+code.1403 = "scheduler task config invalid"
+code.1104 = "password reset unavailable"
+code.1105 = "password reset token invalid"
 error.emptyUrlParam = "empty url param: %s"
 error.badUrlParam = "bad url param: %s"
 error.schedulerScheduleConflict = "cronSpec and interval are mutually exclusive, set only one"
@@ -680,7 +680,7 @@ func TestTagRuleValidate(t *testing.T) {
 	})
 }
 
-// TestTagRuleModelMetadata 目标模型元信息接口返回字段列表，未注册模型返回错误码 1107。
+// TestTagRuleModelMetadata 目标模型元信息接口返回字段列表，未注册模型返回错误码 1203。
 func TestTagRuleModelMetadata(t *testing.T) {
 	Convey("测试标签规则目标模型元信息接口", t, func() {
 		db := createTagRuleTestDB(t)
@@ -727,7 +727,7 @@ func TestTagRuleModelMetadata(t *testing.T) {
 			})
 		})
 
-		Convey("未注册模型返回错误码 1107", func() {
+		Convey("未注册模型返回错误码 1203", func() {
 			w := doTagRuleRequest(r, http.MethodPost, "/tag-event/tag-rule/model/metadata", map[string]any{
 				"model": "zhongkuisec.com/zhongkui/internal/models/network.NotExist",
 			})
@@ -741,7 +741,7 @@ func TestTagRuleModelMetadata(t *testing.T) {
 	})
 }
 
-// TestTagRuleModelSamples 目标模型样例接口懒供给样例并返回，未注册模型返回错误码 1107。
+// TestTagRuleModelSamples 目标模型样例接口懒供给样例并返回，未注册模型返回错误码 1203。
 func TestTagRuleModelSamples(t *testing.T) {
 	Convey("测试标签规则目标模型样例接口", t, func() {
 		db := createTagRuleTestDB(t)
@@ -775,7 +775,7 @@ func TestTagRuleModelSamples(t *testing.T) {
 			So(found, ShouldBeTrue)
 		})
 
-		Convey("未注册模型返回错误码 1107", func() {
+		Convey("未注册模型返回错误码 1203", func() {
 			w := doTagRuleRequest(r, http.MethodPost, "/tag-event/tag-rule/model/samples", map[string]any{
 				"model": "zhongkuisec.com/zhongkui/internal/models/network.NotExist",
 			})
@@ -1062,7 +1062,7 @@ func TestTagRuleCreateRuntimeInvalidRejected(t *testing.T) {
 		}
 		So(db.Create(sample).Error, ShouldBeNil)
 
-		Convey("运行期报错的规则创建被拒绝并返回错误码 1106", func() {
+		Convey("运行期报错的规则创建被拒绝并返回错误码 1202", func() {
 			w := doTagRuleRequest(r, http.MethodPost, "/tag-event/tag-rule/create", map[string]any{
 				"name":    "runtime-bad",
 				"model":   targetType,
@@ -1090,7 +1090,7 @@ func TestTagRuleCreateRuntimeInvalidRejected(t *testing.T) {
 	})
 }
 
-// TestTagRuleCreateModelNotRegisteredRejected 未注册目标模型的规则创建被拒绝（错误码 1107）。
+// TestTagRuleCreateModelNotRegisteredRejected 未注册目标模型的规则创建被拒绝（错误码 1203）。
 // 未注册模型的规则引擎永不加载（按实际数据实例的类型键分组），属于死规则，写入时应拒绝。
 func TestTagRuleCreateModelNotRegisteredRejected(t *testing.T) {
 	Convey("测试未注册目标模型的拒绝逻辑", t, func() {
@@ -1103,7 +1103,7 @@ func TestTagRuleCreateModelNotRegisteredRejected(t *testing.T) {
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 
-		Convey("未注册模型的规则创建被拒绝并返回错误码 1107", func() {
+		Convey("未注册模型的规则创建被拒绝并返回错误码 1203", func() {
 			w := doTagRuleRequest(r, http.MethodPost, "/tag-event/tag-rule/create", map[string]any{
 				"name":    "unregistered-model",
 				"model":   "unregistered.model.Type",

@@ -17,6 +17,9 @@ importers:
       '@codemirror/lang-json':
         specifier: ^6.0.2
         version: 6.0.2
+      '@codemirror/lang-markdown':
+        specifier: ^6.3.4
+        version: 6.5.2
       '@codemirror/language':
         specifier: ^6.12.4
         version: 6.12.4
@@ -68,6 +71,9 @@ importers:
       echarts:
         specifier: ^6.0.0
         version: 6.0.0
+      html-to-image:
+        specifier: ^1.11.13
+        version: 1.11.13
       js-cookie:
         specifier: ^3.0.5
         version: 3.0.5
@@ -2549,6 +2555,9 @@ packages:
   html-tags@5.1.0:
     resolution: {integrity: sha512-n6l5uca7/y5joxZ3LUePhzmBFUJ+U2YWzhMa8XUTecSeSlQiZdF5XAd/Q3/WUl0VsXgUwWi8I7CNIwdI5WN1SQ==}
     engines: {node: '>=20.10'}
+
+  html-to-image@1.11.13:
+    resolution: {integrity: sha512-cuOPoI7WApyhBElTTb9oqsawRvZ0rHhaHwghRLlTuffoD1B2aDemlCruLeZrUIIdvG7gs9xeELEPm6PhuASqrg==}
 
   htmlparser2@9.1.0:
     resolution: {integrity: sha512-5zfg6mHUoaer/97TxnGpxmbR7zJtPwIYFMZ/H5ucTlPZhKvtum05yiPK3Mgai3a0DyVxv7qYqoweaEd2nrYQzQ==}
@@ -6659,6 +6668,8 @@ snapshots:
   hookified@2.2.0: {}
 
   html-tags@5.1.0: {}
+
+  html-to-image@1.11.13: {}
 
   htmlparser2@9.1.0:
     dependencies:

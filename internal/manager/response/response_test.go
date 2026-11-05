@@ -77,14 +77,19 @@ func TestErrorCodeConstants(t *testing.T) {
 	})
 
 	Convey("测试业务错误码常量", t, func() {
-		Convey("业务错误码应从 1100 开始递增", func() {
+		Convey("业务错误码按领域区间分配", func() {
 			So(CodeUsernamePasswordCheckFailed, ShouldEqual, 1100)
 			So(CodeOldPasswordCheckFailed, ShouldEqual, 1101)
 			So(CodeUsernameOrEmailAlreadyExist, ShouldEqual, 1102)
 			So(CodeTooManyAccessKey, ShouldEqual, 1103)
-			So(CodePasswordResetUnavailable, ShouldEqual, 1113)
-			So(CodePasswordResetTokenInvalid, ShouldEqual, 1114)
-			So(CodeLlmBindingIncompatible, ShouldEqual, 1115)
+			So(CodePasswordResetUnavailable, ShouldEqual, 1104)
+			So(CodePasswordResetTokenInvalid, ShouldEqual, 1105)
+			So(CodeTooManyRequests, ShouldEqual, 1106)
+			So(CodeTagRuleInvalid, ShouldEqual, 1200)
+			So(CodeAgentRunNotFound, ShouldEqual, 1300)
+			So(CodeAgentInteractionBusy, ShouldEqual, 1306)
+			So(CodeLlmBindingIncompatible, ShouldEqual, 1404)
+			So(CodeSystemNamespaceProtected, ShouldEqual, 1405)
 		})
 	})
 }

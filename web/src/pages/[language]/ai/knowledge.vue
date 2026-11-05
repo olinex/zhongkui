@@ -4,7 +4,7 @@
       <!--
         知识范围分栏：当前命名空间（可写）与系统知识库（只读共享）各为一个 tab、各挂一张独立列表卡片。
         分栏形式与 /admin/llm-config 的 tab 栏一致；两张卡片各自持有筛选 / 列设置 / 勾选状态，
-        切换分栏即切换卡片，不再共用一张表切换数据源（旧实现需清勾选与骨架化避免旧数据错位）。
+        切换分栏即切换卡片，无需在切换时清空勾选或做骨架化处理。
         只读分栏不挂新建 / 批量 / 页面动作三处入口，故其列表恒为只读。
       -->
       <tab-view
@@ -189,11 +189,10 @@
             </v-row>
             <v-row density="compact">
               <v-col cols="12">
-                <v-textarea
+                <markdown-editor
                   v-model="createContent"
-                  v-bind="createContentProps"
                   :label="$t('model.aiDocument.field.content')"
-                  rows="10"
+                  :error-message="createForm.errors.value.content"
                 />
               </v-col>
             </v-row>
@@ -234,13 +233,12 @@
             </v-row>
             <v-row density="compact">
               <v-col cols="12">
-                <v-textarea
+                <markdown-editor
                   v-model="editContent"
-                  v-bind="editContentProps"
                   :label="$t('model.aiDocument.field.content')"
+                  :error-message="updateForm.errors.value.content"
                   :readonly="editDocumentImported"
                   :disabled="!editable"
-                  rows="10"
                 />
               </v-col>
             </v-row>
@@ -768,10 +766,11 @@ const createForm = useForm({ validationSchema: createDocSchema });
 const updateForm = useForm({ validationSchema: updateDocSchema });
 
 const [createTitle, createTitleProps] = createForm.defineField("title", vuetifyCfg);
-const [createContent, createContentProps] = createForm.defineField("content", vuetifyCfg);
+// 正文由 MarkdownEditor 承载，错误信息经 errorMessage 单独下发，不再透传 vuetify 字段配置
+const [createContent] = createForm.defineField("content", vuetifyCfg);
 
 const [editTitle, editTitleProps] = updateForm.defineField("title", vuetifyCfg);
-const [editContent, editContentProps] = updateForm.defineField("content", vuetifyCfg);
+const [editContent] = updateForm.defineField("content", vuetifyCfg);
 
 // ---- 创建对话框 ----
 const openCreateDialogAction = (): void => {

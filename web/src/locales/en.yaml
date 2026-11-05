@@ -17,6 +17,8 @@ navbar:
     self: AI
     knowledge: Knowledge Base
     memory: Memory
+    skill: Skills
+    periodicReport: Periodic Reports
   notification:
     self: Notifications
     channel: Notification Channels
@@ -289,7 +291,11 @@ model:
       originalName: Original Filename
       parseError: Parse Error
       createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
       updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
   aiSession:
     name: AI Session
     field:
@@ -305,6 +311,7 @@ model:
     name: Memory
     field:
       id: ID
+      keyword: Keyword
       agentKind: Agent Kind
       kind: Memory Kind
       title: Title
@@ -313,15 +320,72 @@ model:
       useCount: Hit Count
       lastUsedAt: Last Hit
       createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
       updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
       namespaceName: Namespace
       sessionID: Source Session
+  agentSkill:
+    name: Skill
+    field:
+      id: ID
+      name: Name
+      source: Source
+      keyword: Keyword
+      description: Description
+      content: Content
+      enabled: Enabled
+      periodicCapable: Periodic-capable
+      inputFields: Input Fields
+      noInputFields: No input fields
+      fixedFields: Fixed Fields
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+  periodicReportPlan:
+    name: Periodic Report Plan
+    field:
+      id: ID
+      name: Name
+      description: Description
+      skillID: Skill ID
+      skill: Skill
+      skillName: Skill
+      keyword: Keyword
+      cronSpec: Cron Expression
+      inputValues: Input Values
+      retentionDays: Retention Days
+      nextRunAt: Next Run
+      expiresAt: Expires At
+      sessionID: Session ID
+      enabled: Enabled
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+  periodicReportRun:
+    name: Periodic Report Run
+    field:
+      status: Status
+      title: Title
+      triggerAt: Triggered At
+      createdAt: Created At
+      sizeBytes: Size
+      error: Error
   llmModel:
     name: LLM Model
     field:
       id: ID
       name: Name
       kind: Model Kind
+      apiMode: API Mode
       baseURL: Base URL
       apiKey: API Key
       model: Model
@@ -342,6 +406,9 @@ model:
       updatedAt: Updated At
       updatedAtTime: Updated At Time
       updatedAtDate: Updated At Date
+    apiMode:
+      chat: Chat Completions
+      responses: Responses
     validation:
       jsonObject: "{path} must be a valid JSON object"
       jsonValue: "{path} must be a valid JSON value"
@@ -436,7 +503,7 @@ model:
   scheduler:
     name: Scheduler
     field:
-      typeName: Task Type Name
+      typeName: Type
       cronSpec: Cron Expression
       interval: Interval
       queue: Queue
@@ -451,6 +518,8 @@ model:
       backlogLimit: Backlog Limit
   task:
     name: Task
+    value:
+      allTypes: All Types
     field:
       id: ID
       type: Type
@@ -1145,6 +1214,11 @@ chart:
     failed: Failed
   serie:
     queueSize: Queue Size
+enum:
+  periodicReportRunStatus:
+    running: Running
+    success: Success
+    failed: Failed
 action:
   signIn: Sign In
   signOut: Sign Out
@@ -1160,6 +1234,8 @@ action:
   expand: Expand
   collapse: Collapse
   scrollToBottom: Jump to Bottom
+  jumpToContainerTop: Jump to container top
+  jumpToContainerBottom: Jump to container bottom
   resizeWidth: Drag to resize width
   resizeHeight: Drag to resize height
   reset: Reset
@@ -1189,6 +1265,8 @@ action:
   archive: Archive
   cancel: Cancel
   run: Run
+  runNow: Run Now
+  history: History
   previousDate: Previous Date
   currentDate: Current Date
   nextDate: Next Date
@@ -1212,6 +1290,8 @@ action:
   addCondition: Add Condition
   removeCondition: Remove Condition
   beautifyJson: Beautify JSON
+  markdownSource: Markdown
+  markdownPreview: Preview
   validatePassed: Validation Passed
   validateFailed: Validation Failed
   viewPlaintext: View Plaintext
@@ -1221,6 +1301,11 @@ action:
   viewInput: View input
   fullscreen: Fullscreen edit
   exitFullscreen: Exit fullscreen
+  fullscreenView: View fullscreen
+  exportPdf: Export PDF
+  exportImage: Export image
+  exportHtml: Export HTML
+  print: Print
   favoriteSample: Save as Sample
   resetFrontendConfig: Reset Frontend Config
   download: Download
@@ -1284,6 +1369,8 @@ title:
   accessKey: Access Key
   aiKnowledge: Knowledge Base
   aiMemory: Memory
+  aiSkill: Skill Management
+  aiPeriodicReport: Periodic Report Plans
   aiDocumentDetail: Knowledge Document Detail
   passwordReset: Password Reset
   userAdmin: Admin - User
@@ -1321,6 +1408,14 @@ title:
   dryRunEventHits: Matched {count} conditions
 home:
   subtitle: Network Security Audit Platform
+  periodicReportBoard:
+    self: Periodic Report Board
+    settings: Manage Follows
+    empty: No followed periodic reports yet. Pick a plan to start following.
+    selectPlans: Choose Plans to Follow
+    loadMore: Load More
+    viewDetail: View Details
+    noPlans: No periodic report plans available to follow in this namespace
   quickStart:
     self: Quick Start
     addGroup: New Group
@@ -1359,6 +1454,9 @@ page:
     optimizePrompt: Optimize prompt
     optimizePromptFailed: Prompt optimization failed
     undoOptimizePrompt: Undo optimization
+    skillsLoading: Loading skills…
+    skillsEmpty: No skills available. Create and enable one in Skill Management first.
+    composerPlaceholder: Type / to pick a skill; type / again to close the skill list and keep a literal slash
     error: Generation failed
     runFailed: This answer did not finish normally (the run errored or timed out); the above is what had been generated before the interruption.
     runCancelled: This answer was cancelled; the above is what had been generated before the cancellation.
@@ -1388,7 +1486,12 @@ page:
     compressFailed: Context compaction failed
     approvalTitle: Tool Call Approval
     approvalWaiting: Awaiting approval
+    approvalHint: Approve or reject each call; the run continues automatically once all are decided
+    approvalPrev: Previous
+    approvalNext: Next
     approvalParams: Arguments
+    approvalResult: Call result
+    approvalError: Call error
     approve: Approve
     reject: Reject
     approved: Approved
@@ -1401,7 +1504,6 @@ page:
     autoApproved: Auto-approved
     approvalBackendNote: This call runs on the server — you only need to approve or reject
     apiInvokeInvalidArgs: The call arguments could not be parsed, so the read-only endpoint was not invoked
-    apiInvokeFailed: "Failed to invoke the read-only capability: {error}"
     thinking: Thinking
     thinkingHint: When enabled, the model's reasoning process is requested and shown with the answer
     reasoningDefaultOnHint: This model enables thinking by default, so reasoning is output even without a thinking switch; fill in the model's Thinking Field and its on/off values under Advanced in "LLM Model" to control it manually.
@@ -1414,6 +1516,8 @@ page:
     branchTitle: "{title} (branch)"
     branchCreated: Branch session created
     usageTokens: "{count} tokens"
+    usagePromptTokens: "Input {count} tokens"
+    usageCompletionTokens: "Output {count} tokens"
     usageElapsed: "{seconds}s"
     rollbackMessage: Roll back
     deleteMessage: Delete
@@ -1430,13 +1534,16 @@ page:
     questionnaireUnavailable: This question is no longer active, so your answer cannot be submitted. Please ask a new question.
     questionnaireReanswer: Reanswer
     questionnaireReanswerBusy: Still generating this turn. You can reanswer once it finishes.
-    confirmReanswerQuestionnaire: Reanswer this question? Everything after it will be cleared and regenerated.
-    approvalRerun: Rerun approval
-    approvalRerunBusy: Still generating this turn. You can rerun the approval once it finishes.
-    confirmRerunApproval: Rerun this approval? Everything after it will be cleared and regenerated.
+    confirmReanswerQuestionnaire: Reopen this question? Everything after it will be cleared so you can answer it again.
+    approvalRerun: Reopen approval
+    approvalRerunBusy: Still generating this turn. You can reopen the approval once it finishes.
+    confirmRerunApproval: Reopen this approval? Everything after it will be cleared so you can approve or reject it again.
     questionnaireNoAnswer: Not answered
     questionnairePendingHint: AI is waiting for your answer above. Please answer first.
     questionnaireJump: View Question
+    blockNav: Quick block navigation
+    blockPrev: Previous block
+    blockNext: Next block
     lockedHint: "Session {label} ({used}/{max} turns). Roll back a message to keep asking."
     lockedReject: This session has reached the turn limit. Roll back an earlier message to keep asking.
     stateGuardReject: The session is not ready for this action. Please try again later.
@@ -1522,6 +1629,67 @@ page:
     scopeSystem: System knowledge base
     scopeSystemHint: System knowledge is code-declared shared knowledge, read-only for viewing
     documentUnreadable: This knowledge document does not exist or is out of readable scope
+  aiSkill:
+    scopeHint: Builtin skills are code-declared global capabilities and can only be enabled or disabled; custom skills are isolated by namespace
+    builtinReadonly: Builtin skills are maintained by code and cannot be edited or deleted
+    create: Create Skill
+    edit: Edit Skill
+    importMarkdown: Import Markdown
+    importHint: Supports .md / .markdown / .txt files; the content fills the body, and a blank name is prefilled with the filename (without extension)
+    importFailed: Failed to read file {name}. Please retry or paste the content directly
+    namePlaceholder: Identifies the skill in the list, e.g. log troubleshooting
+    descriptionPlaceholder: One sentence about what the skill does; can be left blank
+    contentPlaceholder: Paste the skill body; Markdown steps and notes are supported
+    addInputField: Add Input Field
+    inputFieldsHint: Input fields render the periodic plan form; nowTime is injected by the system at runtime
+    inputFieldName: Field Name
+    inputFieldType: Type
+    inputFieldRequired: Required
+    inputFieldDescription: Description
+    fixedFieldsHint: Fixed fields must be a JSON object; periodic skills must include timeOffset and timeWindow (Go durations such as -24h or 24h)
+    invalidFixedFields: Fixed fields must be a valid JSON object
+    inputFieldNameRequired: Input field names cannot be empty
+    nowTimeRequired: A periodic skill must contain an input field named nowTime with type date
+    nowTimeLocked: nowTime is injected by the system at runtime and cannot be removed or renamed
+  periodicReportPlan:
+    scopeHint: Only custom periodic skills whose fixed fields define a valid time window and whose input fields include nowTime can be used for periodic report plans; fixed fields follow the skill defaults unless overridden
+    nowTimeInjected: nowTime is injected by the system at runtime
+    inputFieldsTitle: Input Fields
+    fixedFieldsTitle: Fixed Fields
+    fixedFieldsHint: Edit the whole JSON object, including nested objects and arrays; fixed fields follow the skill defaults unless changed, and only changed fields are submitted
+    fixedFieldsInvalid: Fixed fields must be a valid JSON object
+    noInputValues: No input values
+    create: New Periodic Report Plan
+    edit: Edit Periodic Report Plan
+    history: Run History
+    viewReport: View Report
+    viewSession: View Session
+    sessionReadonlyHint: The session is frozen after the run finishes; this view is for review and audit only and cannot be edited or continued
+    sessionEmpty: This run has no session records to show
+    sessionUserLabel: User Prompt
+    sessionAssistantLabel: Assistant Answer
+    sessionToolCalls: Tool Calls
+    sessionArguments: Arguments
+    sessionResult: Result
+    sessionQuestionnaire: User Questions
+    sessionNextSteps: Suggested Next Steps
+    sessionToolRunning: Running
+    sessionToolDone: Done
+    sessionToolFailed: Failed
+    sessionApproved: Approved
+    sessionDeclined: Declined
+    sessionPendingDecision: Pending
+    noRuns: No runs for this plan yet
+    runsTitle: Run History
+    cronPlaceholder: "0 9 * * *"
+    expiresHint: Leave empty for no expiry
+    longTerm: No expiry
+    pendingSchedule: Pending
+    retentionHint: Periodic reports are retained for 1 to 3650 days; default is 90
+    runNow: Run Now
+    runNowConfirm: Run periodic report plan "{name}" now??
+    deleteRun: Delete Run
+    deleteRunConfirm: Delete this run record? Its generated report content will also be removed and cannot be recovered.
   llmModelAdmin:
     baseURLHint: OpenAI-compatible base URL of the provider (e.g. https://dashscope.aliyuncs.com/compatible-mode/v1)
     apiKeyKeepHint: The key is never echoed in plaintext; leave blank to keep the existing key
@@ -1529,6 +1697,7 @@ page:
     dimensionsHint: The vector dimensions are probed by the backend when an embedding slot is bound; to change the index dimensions, contact the operations team to run the server-side command
     extraBodyHint: 'A JSON object merged into every request for this model (e.g. {''{"top_k": 20}''}); leave blank to add nothing'
     thinkingHint: "Takes effect only when the field name and both on/off values are provided; leave blank to disable it for this model"
+    apiModeHint: "Chat models only; Responses uses the Agentic message protocol with the same tool-call and resume semantics"
     advancedTitle: Advanced Settings
     advancedHint: "Extra request fields and the thinking switch are both optional; chat models only"
   llmBindingAdmin:
@@ -1597,6 +1766,12 @@ notice:
     expectedOperand: 'Expected a label or "(", but found "{token}"'
   copied: Copied!
   copyFailed: Copy Failed!
+  copyImageFallback: The image clipboard is unavailable (HTTPS and clipboard permission required); copied the diagram source instead
+  exportImageSuccess: Image exported
+  exportHtmlSuccess: HTML exported
+  exportFailed: Export failed, please try again later
+  printReady: 'Print view opened; choose "Save as PDF" in the print dialog'
+  printBlocked: The print view was blocked by the browser; allow this site to open new windows and try again
   deleteConfirm: "Confirm deleting {category} {key}?"
   archiveConfirm: "Confirm archiving {category} {key}?"
   cancelConfirm: "Confirm canceling {category} {key}?"
@@ -1687,12 +1862,76 @@ option:
     lte: Less Than Or Equal
     gt: Greater Than
     gte: Greater Than Or Equal
+    fts: Full Text Search
   language:
     "*": All Languages
     en: English
     zh-Hans: Simplified Chinese
   channel:
     "*": All Channels
+# Cron expression field: builder panel and validation messages
+# (components/forms/CronField.vue and utils/cron.ts)
+cron:
+  builder: Schedule Builder
+  title: Schedule
+  frequency: Frequency
+  frequencyOption:
+    minute: Every minute
+    hourly: Hourly
+    daily: Daily
+    weekly: Weekly
+    monthly: Monthly
+    yearly: Yearly
+  field:
+    minute: Minute
+    hour: Hour
+    dayOfMonth: Day of month
+    month: Month
+    dayOfWeek: Day of week
+  weekday:
+    sun: Sunday
+    mon: Monday
+    tue: Tuesday
+    wed: Wednesday
+    thu: Thursday
+    fri: Friday
+    sat: Saturday
+  descriptorHint: "This mode only accepts macro descriptors such as {'@hourly'} / {'@daily'} / {'@weekly'} / {'@monthly'} / {'@yearly'}"
+  nextRuns: Next runs
+  noNextRuns: Unable to compute the next run
+  customHint: The current expression is custom; changing the options above overwrites it
+  weekdayRequired: Select at least one weekday
+  descriptorTitle: Common descriptors
+  guide: "minute 0-59 · hour 0-23 · day 1-31 · month 1-12 · weekday 0-6 (0 = Sunday); supports *, a-b, a,b, */n"
+  error:
+    empty: Expression is required
+    fieldCount: "Expected 5 fields (minute hour day month weekday) or descriptors such as {'@daily'}"
+    descriptorOnly: "Only macro descriptors such as {'@hourly'} / {'@daily'} / {'@weekly'} / {'@monthly'} / {'@yearly'} are allowed"
+    cronOnly: "Only 5-field cron expressions (minute hour day month weekday) are allowed; {'@daily'} and other descriptors are not"
+    syntax: "Invalid {field} field"
+    range: "The {field} field must be between {min} and {max}"
+    order: "The start of the {field} field must not exceed its end"
+    descriptor: "Unsupported schedule descriptor {token}"
+  describe:
+    everyMinute: Every minute
+    hourlyAt: "At minute {minute} of every hour"
+    dailyAt: "Daily at {time}"
+    weeklyAt: "Every {weekdays} at {time}"
+    monthlyAt: "On day {day} of every month at {time}"
+    yearlyAt: "Every year on {month}/{day} at {time}"
+    every: "Every {duration}"
+    custom: Custom schedule
+# Markdown syntax check strings (components/forms/MarkdownEditor.vue)
+markdown:
+  fullscreenTitle: Document preview
+  lint:
+    fenceUnclosed: Unclosed code fence
+    linkMissingParen: Link is missing a closing parenthesis
+    linkEmptyTarget: Link target is empty
+    headingMissingSpace: Missing space after heading #
+    listMissingSpace: Missing space after list marker
+    summary: "Line {line}: {message}"
+    summaryMore: "Line {line}: {message} ({count} issues)"
 validation:
   mixed:
     default: "{path} is invalid"
