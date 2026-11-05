@@ -330,4 +330,3 @@ func MergeParameters(sources ...map[string]json.RawMessage) map[string]json.RawM
 	}
 	return merged
 }
-
