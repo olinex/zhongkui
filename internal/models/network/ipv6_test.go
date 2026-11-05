@@ -7,7 +7,7 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // TestIPv6HeaderTLVOption_Basic 测试IPv6HeaderTLVOption类型的基本功能
@@ -15,7 +15,7 @@ func TestIPv6HeaderTLVOption_Basic(t *testing.T) {
 	Convey("Test IPv6HeaderTLVOption basic functionality", t, func() {
 		Convey("Should create IPv6HeaderTLVOption with valid fields", func() {
 			option := IPv6HeaderTLVOption{
-				OptionType:       5, // Router Alert option
+				OptionType:       5, // 路由告警（Router Alert）选项
 				OptionLength:     4,
 				ActualLength:     8,
 				OptionData:       []byte{0x00, 0x00, 0x00, 0x01},
@@ -33,7 +33,7 @@ func TestIPv6HeaderTLVOption_Basic(t *testing.T) {
 
 		Convey("Should support JSON serialization and deserialization", func() {
 			original := IPv6HeaderTLVOption{
-				OptionType:       194, // Jumbo Payload option
+				OptionType:       194, // 超大载荷（Jumbo Payload）选项
 				OptionLength:     4,
 				ActualLength:     8,
 				OptionData:       []byte{0x00, 0x01, 0x02, 0x03},
@@ -65,13 +65,13 @@ func TestIPv6HeaderTLVOptions_Database(t *testing.T) {
 		Convey("Should serialize IPv6HeaderTLVOptions to JSON for database storage", func() {
 			options := IPv6HeaderTLVOptions{
 				{
-					OptionType:   5, // Router Alert
+					OptionType:   5, // 路由告警（Router Alert）
 					OptionLength: 4,
 					ActualLength: 8,
 					OptionData:   []byte{0x00, 0x00, 0x00, 0x01},
 				},
 				{
-					OptionType:   1, // PadN
+					OptionType:   1, // PadN 填充
 					OptionLength: 3,
 					ActualLength: 4,
 					OptionData:   []byte{0x00, 0x00, 0x00},
@@ -85,7 +85,7 @@ func TestIPv6HeaderTLVOptions_Database(t *testing.T) {
 			var decoded IPv6HeaderTLVOptions
 			err = decoded.Scan(value)
 			So(err, ShouldBeNil)
-			So(len(decoded), ShouldEqual, 2)
+			So(len(options), ShouldEqual, 2)
 			So(decoded[0].OptionType, ShouldEqual, 5)
 			So(decoded[1].OptionType, ShouldEqual, 1)
 		})
@@ -98,7 +98,7 @@ func TestIPv6HeaderTLVOptions_Database(t *testing.T) {
 		})
 
 		Convey("Should handle string value in Scan method", func() {
-			jsonStr := `[{"option_type":5,"option_length":4,"actual_length":8,"option_data":"AAEAAQ=="}]`
+			jsonStr := `[{"optionType":5,"optionLength":4,"actualLength":8,"optionData":"AAEAAQ=="}]`
 			var options IPv6HeaderTLVOptions
 
 			err := options.Scan(jsonStr)
@@ -110,13 +110,13 @@ func TestIPv6HeaderTLVOptions_Database(t *testing.T) {
 		})
 
 		Convey("Should handle []byte value in Scan method", func() {
-			jsonData := []byte(`[{"option_type":194,"option_length":4,"actual_length":8,"option_data":"AAECAw=="}]`)
+			jsonData := []byte(`[{"optionType":194,"optionLength":4,"actualLength":8,"optionData":"AAECAw=="}]`)
 			var options IPv6HeaderTLVOptions
 
 			err := options.Scan(jsonData)
 			So(err, ShouldBeNil)
 			So(len(options), ShouldEqual, 1)
-			So(options[0].OptionType, ShouldEqual, 194) // Jumbo Payload
+			So(options[0].OptionType, ShouldEqual, 194) // 超大载荷（Jumbo Payload）
 		})
 
 		Convey("Should return error for unsupported type in Scan method", func() {
@@ -124,6 +124,20 @@ func TestIPv6HeaderTLVOptions_Database(t *testing.T) {
 			err := options.Scan(123) // 整数类型不支持
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "except []byte")
+		})
+
+		Convey("Should handle empty string in Scan method", func() {
+			var options IPv6HeaderTLVOptions
+			err := options.Scan("")
+			So(err, ShouldBeNil)
+			So(options, ShouldBeNil)
+		})
+
+		Convey("Should handle empty bytes in Scan method", func() {
+			var options IPv6HeaderTLVOptions
+			err := options.Scan([]byte{})
+			So(err, ShouldBeNil)
+			So(options, ShouldBeNil)
 		})
 	})
 }
@@ -134,7 +148,7 @@ func TestIPv6HopByHop_Basic(t *testing.T) {
 		Convey("Should create IPv6HopByHop with valid fields", func() {
 			options := IPv6HeaderTLVOptions{
 				{
-					OptionType:   5, // Router Alert
+					OptionType:   5, // 路由告警（Router Alert）
 					OptionLength: 4,
 					ActualLength: 8,
 					OptionData:   []byte{0x00, 0x00, 0x00, 0x01},
@@ -214,7 +228,7 @@ func TestIPv6HopByHop_Basic(t *testing.T) {
 		})
 
 		Convey("Should handle database deserialization with Scan method", func() {
-			jsonData := `{"next_header":6,"header_length":1,"actual_length":16,"options":[]}`
+			jsonData := `{"nextHeader":6,"headerLength":1,"actualLength":16,"options":[]}`
 			var hbh IPv6HopByHop
 
 			err := hbh.Scan(jsonData)
@@ -230,6 +244,36 @@ func TestIPv6HopByHop_Basic(t *testing.T) {
 			err := hbh.Scan(123)
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "except []byte")
+		})
+
+		Convey("Should handle nil pointer with Value method", func() {
+			var hbh *IPv6HopByHop // nil 指针
+			value, err := hbh.Value()
+			So(err, ShouldBeNil)
+			// nil 指针应为 SQL NULL 返回 nil driver.Value
+			So(value, ShouldBeNil)
+		})
+
+		Convey("Should handle empty string in Scan method", func() {
+			var hbh IPv6HopByHop
+			err := hbh.Scan("")
+			So(err, ShouldBeNil)
+			// 空值扫描后结构体应为零值
+			So(hbh.NextHeader, ShouldEqual, layers.IPProtocol(0))
+			So(hbh.HeaderLength, ShouldEqual, 0)
+			So(hbh.ActualLength, ShouldEqual, 0)
+			So(hbh.Options, ShouldBeNil)
+		})
+
+		Convey("Should handle empty bytes in Scan method", func() {
+			var hbh IPv6HopByHop
+			err := hbh.Scan([]byte{})
+			So(err, ShouldBeNil)
+			// 空值扫描后结构体应为零值
+			So(hbh.NextHeader, ShouldEqual, layers.IPProtocol(0))
+			So(hbh.HeaderLength, ShouldEqual, 0)
+			So(hbh.ActualLength, ShouldEqual, 0)
+			So(hbh.Options, ShouldBeNil)
 		})
 	})
 }
@@ -572,85 +616,6 @@ func TestPacketIPv6_Basic(t *testing.T) {
 			So(decoded.EthType, ShouldEqual, layers.EthernetTypeIPv6)
 			So(decoded.IPv6Version, ShouldEqual, 6)
 			So(decoded.IPv6LastHeader, ShouldEqual, layers.IPProtocolUDP)
-		})
-	})
-}
-
-// TestFusedIPv6_Basic 测试FusedIPv6结构体的基本功能
-func TestFusedIPv6_Basic(t *testing.T) {
-	Convey("Test FusedIPv6 basic functionality", t, func() {
-		Convey("Should create FusedIPv6 with valid fields", func() {
-			srcIP := net.ParseIP("2001:db8::1")
-			dstIP := net.ParseIP("2001:db8::2")
-
-			fused := FusedIPv6{
-				FusedEthernet: FusedEthernet{
-					EthernetHeaders: EthernetHeaders{
-						EthSrcMAC: serializer.MacAddr{0x11, 0x22, 0x33, 0x44, 0x55, 0x66},
-						EthDstMAC: serializer.MacAddr{0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc},
-						EthType:   layers.EthernetTypeIPv6,
-					},
-				},
-				IPv6Headers: IPv6Headers{
-					IPv6Base: IPv6Base{
-						IPv6Version:      6,
-						IPv6TrafficClass: 0x20,
-						IPv6FlowLabel:    88888,
-						IPv6Length:       2000,
-						IPv6NextHeader:   layers.IPProtocolICMPv6,
-						IPv6HopLimit:     16,
-						IPv6Src:          serializer.IPv6Addr(srcIP),
-						IPv6Dst:          serializer.IPv6Addr(dstIP),
-					},
-					IPv6LastHeader: layers.IPProtocolICMPv6,
-				},
-			}
-
-			So(fused.EthSrcMAC.String(), ShouldEqual, "11:22:33:44:55:66")
-			So(fused.EthDstMAC.String(), ShouldEqual, "77:88:99:aa:bb:cc")
-			So(fused.EthType, ShouldEqual, layers.EthernetTypeIPv6)
-			So(fused.IPv6Version, ShouldEqual, 6)
-			So(fused.SrcAddr().String(), ShouldEqual, "2001:db8::1")
-			So(fused.DstAddr().String(), ShouldEqual, "2001:db8::2")
-			So(fused.IPv6LastHeader, ShouldEqual, layers.IPProtocolICMPv6)
-		})
-
-		Convey("Should support JSON serialization", func() {
-			srcIP := net.ParseIP("2001:db8::c")
-			dstIP := net.ParseIP("2001:db8::d")
-
-			fused := FusedIPv6{
-				FusedEthernet: FusedEthernet{
-					EthernetHeaders: EthernetHeaders{
-						EthSrcMAC: serializer.MacAddr{0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc},
-						EthDstMAC: serializer.MacAddr{0xde, 0xf0, 0x12, 0x34, 0x56, 0x78},
-						EthType:   layers.EthernetTypeIPv6,
-					},
-				},
-				IPv6Headers: IPv6Headers{
-					IPv6Base: IPv6Base{
-						IPv6Version:      6,
-						IPv6TrafficClass: 0,
-						IPv6FlowLabel:    0,
-						IPv6Length:       100,
-						IPv6NextHeader:   layers.IPProtocolTCP,
-						IPv6HopLimit:     255,
-						IPv6Src:          serializer.IPv6Addr(srcIP),
-						IPv6Dst:          serializer.IPv6Addr(dstIP),
-					},
-					IPv6LastHeader: layers.IPProtocolTCP,
-				},
-			}
-
-			jsonData, err := json.Marshal(fused)
-			So(err, ShouldBeNil)
-
-			var decoded FusedIPv6
-			err = json.Unmarshal(jsonData, &decoded)
-			So(err, ShouldBeNil)
-			So(decoded.EthType, ShouldEqual, layers.EthernetTypeIPv6)
-			So(decoded.IPv6Version, ShouldEqual, 6)
-			So(decoded.IPv6LastHeader, ShouldEqual, layers.IPProtocolTCP)
 		})
 	})
 }

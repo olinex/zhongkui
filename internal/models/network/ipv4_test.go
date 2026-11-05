@@ -8,7 +8,7 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // TestIPv4Options_Basic 测试IPv4Options类型的基本功能
@@ -24,12 +24,12 @@ func TestIPv4Options_Basic(t *testing.T) {
 		Convey("Should serialize IPv4Options to JSON for database storage", func() {
 			options := IPv4Options{
 				{
-					OptionType:   1, // IPv4 NOP option
+					OptionType:   1, // IPv4 NOP 选项
 					OptionLength: 1,
 					OptionData:   []byte{},
 				},
 				{
-					OptionType:   0, // IPv4 EOL option
+					OptionType:   0, // IPv4 EOL 选项
 					OptionLength: 1,
 					OptionData:   []byte{},
 				},
@@ -44,8 +44,8 @@ func TestIPv4Options_Basic(t *testing.T) {
 			err = decoded.Scan(value)
 			So(err, ShouldBeNil)
 			So(len(decoded), ShouldEqual, 2)
-			So(decoded[0].OptionType, ShouldEqual, uint8(1)) // NOP
-			So(decoded[1].OptionType, ShouldEqual, uint8(0)) // EOL
+			So(decoded[0].OptionType, ShouldEqual, uint8(1)) // NOP 选项
+			So(decoded[1].OptionType, ShouldEqual, uint8(0)) // EOL 选项
 		})
 
 		Convey("Should handle nil value in Scan method", func() {
@@ -61,7 +61,7 @@ func TestIPv4Options_Basic(t *testing.T) {
 			err := options.Scan(jsonStr)
 			So(err, ShouldBeNil)
 			So(len(options), ShouldEqual, 1)
-			So(options[0].OptionType, ShouldEqual, uint8(1)) // NOP
+			So(options[0].OptionType, ShouldEqual, uint8(1)) // NOP 选项
 		})
 
 		Convey("Should return error for unsupported type in Scan method", func() {
@@ -74,7 +74,7 @@ func TestIPv4Options_Basic(t *testing.T) {
 		Convey("Should support JSON serialization and deserialization", func() {
 			original := IPv4Options{
 				{
-					OptionType:   68, // IPv4 Timestamp option
+					OptionType:   68, // IPv4 时间戳选项
 					OptionLength: 4,
 					OptionData:   []byte{0x01, 0x02, 0x03, 0x04},
 				},
@@ -89,9 +89,31 @@ func TestIPv4Options_Basic(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			So(len(decoded), ShouldEqual, 1)
-			So(decoded[0].OptionType, ShouldEqual, uint8(68)) // Timestamp
+			So(decoded[0].OptionType, ShouldEqual, uint8(68)) // 时间戳选项
 			So(decoded[0].OptionLength, ShouldEqual, 4)
 			So(decoded[0].OptionData, ShouldResemble, []byte{0x01, 0x02, 0x03, 0x04})
+		})
+
+		Convey("Should handle nil slice with Value method", func() {
+			var options IPv4Options // nil 切片
+			value, err := options.Value()
+			So(err, ShouldBeNil)
+			// nil 切片对应 SQL NULL，应返回 nil driver.Value
+			So(value, ShouldBeNil)
+		})
+
+		Convey("Should handle empty string in Scan method", func() {
+			var options IPv4Options
+			err := options.Scan("")
+			So(err, ShouldBeNil)
+			So(options, ShouldBeNil)
+		})
+
+		Convey("Should handle empty bytes in Scan method", func() {
+			var options IPv4Options
+			err := options.Scan([]byte{})
+			So(err, ShouldBeNil)
+			So(options, ShouldBeNil)
 		})
 	})
 }
@@ -109,7 +131,7 @@ func TestIPv4Headers_Basic(t *testing.T) {
 				IPv4IHL:        5,
 				IPv4TOS:        0,
 				IPv4Length:     1500,
-				IPv4Id:         12345,
+				IPv4ID:         12345,
 				IPv4Flags:      layers.IPv4DontFragment,
 				IPv4FragOffset: 0,
 				IPv4TTL:        64,
@@ -118,13 +140,13 @@ func TestIPv4Headers_Basic(t *testing.T) {
 				IPv4Src:        serializer.IPv4Addr(srcIP),
 				IPv4Dst:        serializer.IPv4Addr(dstIP),
 				IPv4Options:    IPv4Options{},
-				IPv4Padding:    []byte{},
+				IPv4Padding:    "",
 			}
 
 			So(headers.IPv4Version, ShouldEqual, 4)
 			So(headers.IPv4IHL, ShouldEqual, 5)
 			So(headers.IPv4Length, ShouldEqual, 1500)
-			So(headers.IPv4Id, ShouldEqual, 12345)
+			So(headers.IPv4ID, ShouldEqual, 12345)
 			So(headers.IPv4Flags, ShouldEqual, layers.IPv4DontFragment)
 			So(headers.IPv4TTL, ShouldEqual, 64)
 			So(headers.IPv4IPProtocol, ShouldEqual, layers.IPProtocolTCP)
@@ -165,7 +187,7 @@ func TestIPv4Headers_Basic(t *testing.T) {
 				IPv4IHL:        5,
 				IPv4TOS:        0,
 				IPv4Length:     1500,
-				IPv4Id:         12345,
+				IPv4ID:         12345,
 				IPv4Flags:      layers.IPv4DontFragment,
 				IPv4FragOffset: 0,
 				IPv4TTL:        64,
@@ -174,7 +196,7 @@ func TestIPv4Headers_Basic(t *testing.T) {
 				IPv4Src:        serializer.IPv4Addr(srcIP),
 				IPv4Dst:        serializer.IPv4Addr(dstIP),
 				IPv4Options:    IPv4Options{},
-				IPv4Padding:    []byte{},
+				IPv4Padding:    "",
 			}
 
 			// 序列化为JSON
@@ -191,7 +213,7 @@ func TestIPv4Headers_Basic(t *testing.T) {
 			So(decoded.IPv4Version, ShouldEqual, original.IPv4Version)
 			So(decoded.IPv4IHL, ShouldEqual, original.IPv4IHL)
 			So(decoded.IPv4Length, ShouldEqual, original.IPv4Length)
-			So(decoded.IPv4Id, ShouldEqual, original.IPv4Id)
+			So(decoded.IPv4ID, ShouldEqual, original.IPv4ID)
 			So(decoded.IPv4Flags, ShouldEqual, original.IPv4Flags)
 			So(decoded.IPv4TTL, ShouldEqual, original.IPv4TTL)
 			So(decoded.IPv4IPProtocol, ShouldEqual, original.IPv4IPProtocol)
@@ -211,7 +233,7 @@ func TestIPv4Headers_Basic(t *testing.T) {
 				IPv4Dst:     serializer.IPv4Addr(dstIP),
 				IPv4Options: IPv4Options{
 					{
-						OptionType:   1, // IPv4 NOP option
+						OptionType:   1, // IPv4 NOP 选项
 						OptionLength: 1,
 						OptionData:   []byte{},
 					},
@@ -225,7 +247,7 @@ func TestIPv4Headers_Basic(t *testing.T) {
 			err = json.Unmarshal(jsonData, &decoded)
 			So(err, ShouldBeNil)
 			So(len(decoded.IPv4Options), ShouldEqual, 1)
-			So(decoded.IPv4Options[0].OptionType, ShouldEqual, uint8(1)) // NOP
+			So(decoded.IPv4Options[0].OptionType, ShouldEqual, uint8(1)) // NOP 选项
 		})
 	})
 }
@@ -253,7 +275,7 @@ func TestNewIPv4Headers(t *testing.T) {
 				DstIP:      dstIP,
 				Options: []layers.IPv4Option{
 					{
-						OptionType:   1, // IPv4 NOP option
+						OptionType:   1, // IPv4 NOP 选项
 						OptionLength: 1,
 						OptionData:   []byte{},
 					},
@@ -267,7 +289,7 @@ func TestNewIPv4Headers(t *testing.T) {
 			So(headers.IPv4Version, ShouldEqual, 4)
 			So(headers.IPv4IHL, ShouldEqual, 5)
 			So(headers.IPv4Length, ShouldEqual, 1500)
-			So(headers.IPv4Id, ShouldEqual, 12345)
+			So(headers.IPv4ID, ShouldEqual, 12345)
 			So(headers.IPv4Flags, ShouldEqual, layers.IPv4DontFragment)
 			So(headers.IPv4TTL, ShouldEqual, 64)
 			So(headers.IPv4IPProtocol, ShouldEqual, layers.IPProtocolTCP)
@@ -275,8 +297,8 @@ func TestNewIPv4Headers(t *testing.T) {
 			So(headers.SrcAddr().String(), ShouldEqual, "192.168.1.100")
 			So(headers.DstAddr().String(), ShouldEqual, "10.0.0.1")
 			So(len(headers.IPv4Options), ShouldEqual, 1)
-			So(headers.IPv4Options[0].OptionType, ShouldEqual, uint8(1)) // NOP
-			So(headers.IPv4Padding, ShouldResemble, []byte{0x00, 0x00})
+			So(headers.IPv4Options[0].OptionType, ShouldEqual, uint8(1)) // NOP 选项
+			So(headers.IPv4Padding, ShouldEqual, "\x00\x00")
 		})
 
 		Convey("Should handle IPv4 layer without options and padding", func() {
@@ -306,7 +328,7 @@ func TestNewIPv4Headers(t *testing.T) {
 			So(headers.IPv4Version, ShouldEqual, 4)
 			So(headers.IPv4TOS, ShouldEqual, 0x10)
 			So(headers.IPv4Length, ShouldEqual, 576)
-			So(headers.IPv4Id, ShouldEqual, 54321)
+			So(headers.IPv4ID, ShouldEqual, 54321)
 			So(headers.IPv4Flags, ShouldEqual, layers.IPv4MoreFragments)
 			So(headers.IPv4FragOffset, ShouldEqual, 100)
 			So(headers.IPv4TTL, ShouldEqual, 128)
@@ -315,7 +337,7 @@ func TestNewIPv4Headers(t *testing.T) {
 			So(headers.SrcAddr().String(), ShouldEqual, "10.0.0.2")
 			So(headers.DstAddr().String(), ShouldEqual, "192.168.1.200")
 			So(headers.IPv4Options, ShouldBeNil)
-			So(headers.IPv4Padding, ShouldBeNil)
+			So(headers.IPv4Padding, ShouldBeEmpty)
 		})
 
 		Convey("Should handle IPv4 layer with multiple options", func() {
@@ -330,17 +352,17 @@ func TestNewIPv4Headers(t *testing.T) {
 				DstIP:    dstIP,
 				Options: []layers.IPv4Option{
 					{
-						OptionType:   1, // IPv4 NOP option
+						OptionType:   1, // IPv4 NOP 选项
 						OptionLength: 1,
 						OptionData:   []byte{},
 					},
 					{
-						OptionType:   0, // IPv4 EOL option
+						OptionType:   0, // IPv4 EOL 选项
 						OptionLength: 1,
 						OptionData:   []byte{},
 					},
 					{
-						OptionType:   68, // IPv4 Timestamp option
+						OptionType:   68, // IPv4 时间戳选项
 						OptionLength: 4,
 						OptionData:   []byte{0x01, 0x02, 0x03, 0x04},
 					},
@@ -352,9 +374,9 @@ func TestNewIPv4Headers(t *testing.T) {
 			So(headers, ShouldNotBeNil)
 			So(headers.IPv4IHL, ShouldEqual, 6)
 			So(len(headers.IPv4Options), ShouldEqual, 3)
-			So(headers.IPv4Options[0].OptionType, ShouldEqual, uint8(1))  // NOP
-			So(headers.IPv4Options[1].OptionType, ShouldEqual, uint8(0))  // EOL
-			So(headers.IPv4Options[2].OptionType, ShouldEqual, uint8(68)) // Timestamp
+			So(headers.IPv4Options[0].OptionType, ShouldEqual, uint8(1))  // NOP 选项
+			So(headers.IPv4Options[1].OptionType, ShouldEqual, uint8(0))  // EOL 选项
+			So(headers.IPv4Options[2].OptionType, ShouldEqual, uint8(68)) // 时间戳选项
 			So(headers.IPv4Options[2].OptionData, ShouldResemble, []byte{0x01, 0x02, 0x03, 0x04})
 		})
 	})
@@ -505,60 +527,6 @@ func TestPacketIPv4_Structure(t *testing.T) {
 
 			So(srcAddr.String(), ShouldEqual, "192.168.1.100")
 			So(dstAddr.String(), ShouldEqual, "10.0.0.1")
-		})
-	})
-}
-
-// TestFusedIPv4_Structure 测试FusedIPv4结构体的组合关系
-func TestFusedIPv4_Structure(t *testing.T) {
-	Convey("Test FusedIPv4 structure", t, func() {
-		Convey("Should correctly embed FusedEthernet and IPv4Headers", func() {
-			srcMAC, _ := net.ParseMAC("00:11:22:33:44:55")
-			dstMAC, _ := net.ParseMAC("aa:bb:cc:dd:ee:ff")
-			srcIP := net.ParseIP("192.168.1.100")
-			dstIP := net.ParseIP("10.0.0.1")
-
-			sessionID, _ := serializer.HexUUIDv4FromString("123e4567-e89b-12d3-a456-426614174000")
-			fused := FusedIPv4{
-				FusedEthernet: FusedEthernet{
-					AsFused: AsFused{
-						BaseMeta: BaseMeta{
-							SessionID: sessionID,
-							Namespace: "fused-namespace",
-							Capture:   "fused-capture",
-							Version:   "v2.0",
-						},
-					},
-					EthernetHeaders: EthernetHeaders{
-						EthDstMAC: serializer.MacAddr(dstMAC),
-						EthSrcMAC: serializer.MacAddr(srcMAC),
-						EthType:   layers.EthernetTypeIPv4,
-						EthLength: 1500,
-					},
-				},
-				IPv4Headers: IPv4Headers{
-					IPv4Version:    4,
-					IPv4IHL:        5,
-					IPv4IPProtocol: layers.IPProtocolUDP,
-					IPv4TTL:        128,
-					IPv4Src:        serializer.IPv4Addr(srcIP),
-					IPv4Dst:        serializer.IPv4Addr(dstIP),
-				},
-			}
-
-			So(fused, ShouldNotBeNil)
-			So(fused.SessionID.String(), ShouldEqual, "123e4567-e89b-12d3-a456-426614174000")
-			So(fused.Namespace, ShouldEqual, "fused-namespace")
-			So(fused.Capture, ShouldEqual, "fused-capture")
-			So(fused.Version, ShouldEqual, "v2.0")
-			So(fused.EthSrcMAC.String(), ShouldEqual, "00:11:22:33:44:55")
-			So(fused.EthDstMAC.String(), ShouldEqual, "aa:bb:cc:dd:ee:ff")
-			So(fused.EthType, ShouldEqual, layers.EthernetTypeIPv4)
-			So(fused.IPv4Version, ShouldEqual, 4)
-			So(fused.SrcAddr().String(), ShouldEqual, "192.168.1.100")
-			So(fused.DstAddr().String(), ShouldEqual, "10.0.0.1")
-			So(fused.IPv4IPProtocol, ShouldEqual, layers.IPProtocolUDP)
-			So(fused.IPv4TTL, ShouldEqual, 128)
 		})
 	})
 }

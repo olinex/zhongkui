@@ -12,8 +12,8 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // otelRoundTripper 是实现了 http.RoundTripper 接口的包装结构体，
@@ -42,9 +42,9 @@ func (t *otelRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 	// 从 URL 路径中解析 bucket 和 object key
 	bucket, objectKey := parseS3Path(req.URL.Path)
 
-	spanName := fmt.Sprintf(`%s.%s/%s`, PREFIX, req.Method, req.URL.Host)
+	spanName := fmt.Sprintf(`%s.%s/%s`, Prefix, req.Method, req.URL.Host)
 
-	ctx, span := otel.Tracer(fmt.Sprintf(`%s-%s`, base.GLOBAL_PREFIX, PREFIX)).Start(ctx, spanName)
+	ctx, span := otel.Tracer(fmt.Sprintf(`%s-%s`, base.GlobalPrefix, Prefix)).Start(ctx, spanName)
 	defer span.End()
 
 	span.SetAttributes(
@@ -53,10 +53,10 @@ func (t *otelRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 		semconv.ServerAddressKey.String(req.URL.Host),
 	)
 	if bucket != "" {
-		span.SetAttributes(attribute.String(fmt.Sprintf(`%s.bucket`, PREFIX), bucket))
+		span.SetAttributes(attribute.String(fmt.Sprintf(`%s.bucket`, Prefix), bucket))
 	}
 	if objectKey != "" {
-		span.SetAttributes(attribute.String(fmt.Sprintf(`%s.object_key`, PREFIX), objectKey))
+		span.SetAttributes(attribute.String(fmt.Sprintf(`%s.object_key`, Prefix), objectKey))
 	}
 
 	// 将上下文注入到请求中，确保传播

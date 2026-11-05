@@ -1,0 +1,409 @@
+{
+  "generatedBy": "internal/docs/registry.go",
+  "sections": [
+    {
+      "key": "getting-started",
+      "label": "开始使用",
+      "items": [
+        {
+          "title": "快速开始：从零运行 zhongkui",
+          "summary": "从安装、配置到启动服务，完成一次最小可运行的部署。",
+          "output": "curated/tutorials/quick-start.md",
+          "category": "教程",
+          "source": "策展",
+          "roles": [
+            "运维"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "教程：看到你的第一条风险告警",
+          "summary": "编写一条 rego 规则、触发标签窗口统计，收到第一封风险告警。",
+          "output": "curated/tutorials/first-alert.md",
+          "category": "教程",
+          "source": "策展",
+          "roles": [
+            "安全运营"
+          ],
+          "owner": "@olinex"
+        }
+      ]
+    },
+    {
+      "key": "concepts",
+      "label": "核心概念",
+      "items": [
+        {
+          "title": "系统总览：组件、数据流与部署拓扑",
+          "summary": "从全局视角说明运行组件、数据流、部署拓扑与关键边界。",
+          "output": "curated/explanation/system-overview.md",
+          "category": "解释",
+          "source": "策展",
+          "roles": [
+            "运维",
+            "研发",
+            "安全运营"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "领域模型：实体、关系与生命周期",
+          "summary": "说明多租户下的核心实体、实体关系、生命周期与存储归属。",
+          "output": "curated/explanation/domain-model.md",
+          "category": "解释",
+          "source": "策展",
+          "roles": [
+            "研发",
+            "安全运营"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "术语表",
+          "summary": "统一项目术语、英文名、代码位置与常见误解。",
+          "output": "curated/explanation/glossary.md",
+          "category": "解释",
+          "source": "策展",
+          "roles": [
+            "运维",
+            "安全运营",
+            "研发",
+            "管理员"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "采集架构：wire/XDP、快照与上报",
+          "summary": "说明采集侧的 wire/XDP 抓包、快照生成与上报链路。",
+          "output": "generated/explanation/capture-architecture.md",
+          "category": "解释",
+          "source": "生成",
+          "roles": [
+            "运维",
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "网络指纹与 TCP 检测原理",
+          "summary": "解释网络指纹的计算方式与 TCP 流检测原理。",
+          "output": "generated/explanation/network-detection.md",
+          "category": "解释",
+          "source": "生成",
+          "roles": [
+            "安全运营",
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "流水线与调度",
+          "summary": "说明流水线的阶段划分与调度协作方式。",
+          "output": "generated/explanation/pipeline.md",
+          "category": "解释",
+          "source": "生成",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "异步任务与队列",
+          "summary": "说明基于队列的异步任务调度与执行模型。",
+          "output": "generated/explanation/async-worker.md",
+          "category": "解释",
+          "source": "生成",
+          "roles": [
+            "运维",
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "数据源插件体系与 sqlite vtab",
+          "summary": "说明数据源插件体系与 sqlite 虚拟表机制的配合方式。",
+          "output": "generated/explanation/datasource-plugin.md",
+          "category": "解释",
+          "source": "生成",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "AI Agent 功能架构详解",
+          "summary": "用白话讲解 AI 助手的数据结构、数据流转、流程图与抽象设计关系，面向初级研发。",
+          "output": "curated/explanation/agent-architecture.md",
+          "category": "解释",
+          "source": "策展",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "AI 助手自定义 SSE 事件协议",
+          "summary": "定义 AI 助手的领域事件信封、内容块、事件目录、历史回放与断线续播契约。",
+          "output": "curated/explanation/ai-assistant-sse-schema.md",
+          "category": "解释",
+          "source": "策展",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "LLM Agent + RAG 设计",
+          "summary": "说明 LLM Agent 编排与 RAG 检索的整体设计。",
+          "output": "generated/explanation/agent-rag-design.md",
+          "category": "解释",
+          "source": "生成",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "Agent 工具契约",
+          "summary": "约定 Agent 可调用工具的入参、出参与错误契约。",
+          "output": "generated/explanation/agent-tools.md",
+          "category": "解释",
+          "source": "生成",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "管理端分层与视图 In/Out 解耦",
+          "summary": "说明管理端分层结构以及视图层 In/Out 解耦约束。",
+          "output": "generated/explanation/manager-layering.md",
+          "category": "解释",
+          "source": "生成",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "依赖注入与生命周期",
+          "summary": "说明 samber/do 依赖注入三层模式与资源生命周期管理。",
+          "output": "generated/explanation/dependency-injection.md",
+          "category": "解释",
+          "source": "生成",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "前端设计体系分层",
+          "summary": "说明前端样式体系的分层与设计令牌组织方式。",
+          "output": "curated/explanation/frontend-design-system.md",
+          "category": "解释",
+          "source": "策展",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "前端功能开关与不可用态",
+          "summary": "说明前端功能开关的接入方式与不可用态呈现约定。",
+          "output": "curated/explanation/frontend-feature-flags.md",
+          "category": "解释",
+          "source": "策展",
+          "roles": [
+            "管理员",
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "XDP/BPF 设计说明",
+          "summary": "说明内核侧 XDP/BPF 程序的设计与数据交互方式。",
+          "output": "curated/kernel/xdp_bpf_design.md",
+          "category": "解释",
+          "source": "策展",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "文档体系架构与执行规划",
+          "summary": "说明文档大纲、生成与策展的来源隔离、事实投影、AI 上下文分层与开源治理。",
+          "output": "curated/explanation/documentation-architecture.md",
+          "category": "解释",
+          "source": "策展",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        }
+      ]
+    },
+    {
+      "key": "guides",
+      "label": "操作指南",
+      "items": [
+        {
+          "title": "故障排查：启动、采集、标签、通知与检索",
+          "summary": "按症状定位常见故障，并给出验证与恢复步骤。",
+          "output": "curated/how-to/troubleshooting.md",
+          "category": "操作指南",
+          "source": "策展",
+          "roles": [
+            "运维",
+            "安全运营",
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "如何接入新的数据源插件",
+          "summary": "实现数据源接口并注册一个新的数据源插件。",
+          "output": "curated/how-to/add-datasource-plugin.md",
+          "category": "操作指南",
+          "source": "策展",
+          "roles": [
+            "运维",
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "如何新增通知渠道与模板",
+          "summary": "扩展通知渠道类型并维护对应的多语言模板。",
+          "output": "curated/how-to/add-notify-channel.md",
+          "category": "操作指南",
+          "source": "策展",
+          "roles": [
+            "运维",
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "如何编写一次数据库迁移",
+          "summary": "新增一次向前/向后兼容的数据库迁移脚本。",
+          "output": "curated/how-to/write-migration.md",
+          "category": "操作指南",
+          "source": "策展",
+          "roles": [
+            "运维",
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "如何新增枚举类并生成绑定",
+          "summary": "在枚举注册表中新增枚举类并生成前后端绑定。",
+          "output": "curated/how-to/add-enum-class.md",
+          "category": "操作指南",
+          "source": "策展",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "如何新增一个管理端页面",
+          "summary": "说明新增管理端页面时的路由、视图与 API 接入步骤。",
+          "output": "curated/how-to/frontend-add-page.md",
+          "category": "操作指南",
+          "source": "策展",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        }
+      ]
+    },
+    {
+      "key": "reference",
+      "label": "参考",
+      "items": [
+        {
+          "title": "接口参考索引",
+          "summary": "按业务域分组列出全部原生接口，每个接口一页。",
+          "output": "generated/reference/api/index.md",
+          "category": "参考",
+          "source": "生成",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "数据表参考索引",
+          "summary": "按域列出全部已迁移数据表，每张表一页。",
+          "output": "generated/reference/schema/index.md",
+          "category": "参考",
+          "source": "生成",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "枚举参考",
+          "summary": "列出全部已注册枚举类的 key、存储值与展示名。",
+          "output": "generated/reference/enums.md",
+          "category": "参考",
+          "source": "生成",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "配置参考",
+          "summary": "列出全部配置项、类型、默认值与说明。",
+          "output": "generated/reference/config.md",
+          "category": "参考",
+          "source": "生成",
+          "roles": [
+            "运维",
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "CLI 参考",
+          "summary": "按命令树列出全部子命令、用途、别名、示例与参数。",
+          "output": "generated/reference/cli.md",
+          "category": "参考",
+          "source": "生成",
+          "roles": [
+            "运维",
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "AI 能力地图",
+          "summary": "按业务域列出 AI 助手可感知的原生接口、访问性质与关联实体。",
+          "output": "generated/reference/capability-map.md",
+          "category": "参考",
+          "source": "生成",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "逐包参考索引",
+          "summary": "后端全部包自动导出的符号参考索引，按导入路径排序。",
+          "output": "generated/reference/index.md",
+          "category": "参考",
+          "source": "生成",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        }
+      ]
+    }
+  ]
+}

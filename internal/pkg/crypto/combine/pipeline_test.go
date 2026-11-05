@@ -10,6 +10,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+// TestPipelineWithZstd 测试 Zstd 压缩 + AES-GCM 加密管道的往返与自描述头部。
 func TestPipelineWithZstd(t *testing.T) {
 	Convey("Test Pipeline with ZstdCompressor and AESGCMEncryptor", t, func() {
 		key := make([]byte, 32)
@@ -64,9 +65,9 @@ func TestPipelineWithZstd(t *testing.T) {
 			// version 应为 1
 			So(data[4], ShouldEqual, 0x01)
 			// compressID 应为 Zstd
-			So(data[5], ShouldEqual, MODE_COMPRESSION_ZSTD)
+			So(data[5], ShouldEqual, ModeCompressionZstd)
 			// encryptID 应为 AES-GCM
-			So(data[6], ShouldEqual, MODE_ENCRYPTION_AES_GCM)
+			So(data[6], ShouldEqual, ModeEncryptionAesGcm)
 		})
 
 		Convey("Should handle empty data", func() {
@@ -120,6 +121,7 @@ func TestPipelineWithZstd(t *testing.T) {
 	})
 }
 
+// TestPipelineWithGzip 测试 Gzip 压缩 + AES-GCM 加密管道的往返与头部算法标识。
 func TestPipelineWithGzip(t *testing.T) {
 	Convey("Test Pipeline with GzipCompressor and AESGCMEncryptor", t, func() {
 		key := make([]byte, 32)
@@ -152,12 +154,13 @@ func TestPipelineWithGzip(t *testing.T) {
 			w.Close()
 
 			data := buf.Bytes()
-			So(data[5], ShouldEqual, MODE_COMPRESSION_GZIP)
-			So(data[6], ShouldEqual, MODE_ENCRYPTION_AES_GCM)
+			So(data[5], ShouldEqual, ModeCompressionGzip)
+			So(data[6], ShouldEqual, ModeEncryptionAesGcm)
 		})
 	})
 }
 
+// TestPipelineAlgorithmMismatch 测试管道对算法不匹配、非法 magic 与不支持版本的拒绝行为。
 func TestPipelineAlgorithmMismatch(t *testing.T) {
 	Convey("Test Pipeline algorithm mismatch detection", t, func() {
 		key := make([]byte, 32)
@@ -212,6 +215,7 @@ func TestPipelineAlgorithmMismatch(t *testing.T) {
 	})
 }
 
+// TestPipelineConstructErrors 测试构造管道时缺少 AlgoIDer 的错误处理。
 func TestPipelineConstructErrors(t *testing.T) {
 	Convey("Test Pipeline construction errors", t, func() {
 		Convey("Should reject compressor without AlgoIDer", func() {
@@ -233,6 +237,7 @@ func TestPipelineConstructErrors(t *testing.T) {
 	})
 }
 
+// TestPipelineConcurrent 测试同一管道实例在并发场景下的正确性。
 func TestPipelineConcurrent(t *testing.T) {
 	Convey("Test Pipeline concurrent usage", t, func() {
 		key := make([]byte, 32)
@@ -287,6 +292,7 @@ func TestPipelineConcurrent(t *testing.T) {
 // mockTransform 实现 Transform 但不实现 AlgoIDer，用于测试构造错误
 type mockTransform struct{}
 
+// WrapWriter 返回一个无操作包装的写入器，模拟未实现算法标识的转换。
 func (m *mockTransform) WrapWriter(w io.Writer) (io.WriteCloser, error) {
 	return struct {
 		io.Writer
@@ -294,6 +300,7 @@ func (m *mockTransform) WrapWriter(w io.Writer) (io.WriteCloser, error) {
 	}{w, io.NopCloser(nil)}, nil
 }
 
+// WrapReader 返回一个无操作包装的读取器，模拟未实现算法标识的转换。
 func (m *mockTransform) WrapReader(r io.Reader) (io.ReadCloser, error) {
 	return io.NopCloser(r), nil
 }
@@ -311,14 +318,17 @@ type trackingCloser struct {
 	records *[]string
 }
 
+// Read 透传读取被包裹的 reader。
 func (tc *trackingCloser) Read(p []byte) (int, error) {
 	return tc.reader.Read(p)
 }
 
+// Write 透传写入被包裹的 writer。
 func (tc *trackingCloser) Write(p []byte) (int, error) {
 	return tc.writer.Write(p)
 }
 
+// Close 记录一次关闭调用并返回 nil。
 func (tc *trackingCloser) Close() error {
 	*tc.records = append(*tc.records, tc.name)
 	return nil
@@ -331,18 +341,22 @@ type trackingTransform struct {
 	records    *[]string
 }
 
+// ModeID 返回该转换对应的算法标识字节。
 func (t *trackingTransform) ModeID() byte { return t.algoID }
 
+// WrapWriter 返回一个记录关闭调用的写入器包装。
 func (t *trackingTransform) WrapWriter(w io.Writer) (io.WriteCloser, error) {
 	tc := &trackingCloser{name: t.readerName, writer: w, records: t.records}
 	return tc, nil
 }
 
+// WrapReader 返回一个记录关闭调用的读取器包装。
 func (t *trackingTransform) WrapReader(r io.Reader) (io.ReadCloser, error) {
 	tc := &trackingCloser{name: t.readerName, reader: r, records: t.records}
 	return tc, nil
 }
 
+// TestPipelineReadCloserCloseOrder 测试 pipelineReadCloser 的关闭顺序（decomp → enc → src）。
 func TestPipelineReadCloserCloseOrder(t *testing.T) {
 	Convey("Test pipelineReadCloser Close order", t, func() {
 		Convey("Should close decomp → enc → src in order", func() {
@@ -382,13 +396,14 @@ func TestPipelineReadCloserCloseOrder(t *testing.T) {
 	})
 }
 
+// TestDecryptDecompressCloseAllResources 测试 DecryptDecompress 关闭各层资源（含源 io.Closer）。
 func TestDecryptDecompressCloseAllResources(t *testing.T) {
 	Convey("Test DecryptDecompress closes all layers including source io.Closer", t, func() {
 		var records []string
 
 		// 创建带追踪的 compressor 和 encryptor
-		compressor := &trackingTransform{readerName: "decomp", algoID: MODE_COMPRESSION_ZSTD, records: &records}
-		encryptor := &trackingTransform{readerName: "enc", algoID: MODE_ENCRYPTION_AES_GCM, records: &records}
+		compressor := &trackingTransform{readerName: "decomp", algoID: ModeCompressionZstd, records: &records}
+		encryptor := &trackingTransform{readerName: "enc", algoID: ModeEncryptionAesGcm, records: &records}
 
 		pipeline, err := NewCompressEncryptPipeline(compressor, encryptor)
 		So(err, ShouldBeNil)

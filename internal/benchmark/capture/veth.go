@@ -21,7 +21,7 @@ func SetupVethPair() (capIface, sendIface string, cleanup func(), err error) {
 
 	// 创建 veth pair
 	if out, e := exec.Command("ip", "link", "add", capIface, "type", "veth", "peer", "name", sendIface).CombinedOutput(); e != nil {
-		return "", "", nil, fmt.Errorf("创建 veth pair 失败: %v\n%s", e, out)
+		return "", "", nil, fmt.Errorf("failed to create veth pair: %v\n%s", e, out)
 	}
 
 	clean := func() {
@@ -31,11 +31,11 @@ func SetupVethPair() (capIface, sendIface string, cleanup func(), err error) {
 	// 启动两端网卡
 	if out, e := exec.Command("ip", "link", "set", capIface, "up").CombinedOutput(); e != nil {
 		clean()
-		return "", "", nil, fmt.Errorf("启动 %s 失败: %v\n%s", capIface, e, out)
+		return "", "", nil, fmt.Errorf("failed to bring up %s: %v\n%s", capIface, e, out)
 	}
 	if out, e := exec.Command("ip", "link", "set", sendIface, "up").CombinedOutput(); e != nil {
 		clean()
-		return "", "", nil, fmt.Errorf("启动 %s 失败: %v\n%s", sendIface, e, out)
+		return "", "", nil, fmt.Errorf("failed to bring up %s: %v\n%s", sendIface, e, out)
 	}
 
 	return capIface, sendIface, clean, nil

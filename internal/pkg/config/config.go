@@ -19,19 +19,20 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
 
 	"github.com/creasty/defaults"
+	"github.com/go-playground/validator/v10"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // NewViper 创建一个新的 Viper 实例，用于加载和管理配置。
@@ -66,6 +67,10 @@ func NewViper(
 	v := viper.New()
 	v.SetEnvPrefix(envPrefix)
 	v.AutomaticEnv()
+	// 环境变量键名替换：将配置键中的 '.' 映射为 '_'（如 health.port → ZKI_HEALTH_PORT）。
+	// viper 的 AutomaticEnv 在无 EnvKeyReplacer 时按原始点路径查找（ZKI_HEALTH.PORT），
+	// 与真实环境变量命名（不允许含点）永不匹配，导致所有带前缀的 env 覆盖静默失效。
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	// 如果命令行通过 --config / -c 指定了配置文件路径，则直接加载该文件
 	if flags != nil {
@@ -101,7 +106,7 @@ func NewViper(
 // NewDefaultViper 创建一个使用默认参数的 Viper 实例。
 //
 // 默认参数说明：
-//   - 环境变量前缀: base.GLOBAL_PREFIX（即 "zki"）
+//   - 环境变量前缀: base.GlobalPrefix（即 "zki"）
 //   - 配置文件名:   "config"
 //   - 配置文件类型: "toml"
 //   - 默认搜索路径: "/etc/zhongkui"
@@ -112,7 +117,7 @@ func NewViper(
 // 返回值：
 //   - *viper.Viper: 使用默认参数初始化的 Viper 实例
 func NewDefaultViper(flags *pflag.FlagSet) *viper.Viper {
-	return NewViper(base.GLOBAL_PREFIX, "config", "toml", "/etc/zhongkui", flags)
+	return NewViper(base.GlobalPrefix, "config", "toml", "/etc/zhongkui", flags)
 }
 
 // NewDefaultViperWithCmd 基于 cobra.Command 创建默认的 Viper 实例。
@@ -133,17 +138,14 @@ func NewDefaultViperWithCmd(cmd *cobra.Command) *viper.Viper {
 //
 // 该结构体用于生成配置文档，每个实例对应配置结构体中的一个字段。
 // 通过反射从结构体标签（mapstructure、default、comment）中提取信息填充。
-//
-// 字段说明：
-//   - Path:    配置项的完整路径，例如 "zap.default.level"，
-//     由前缀和 mapstructure 标签（或小写字段名）拼接而成
-//   - Kind:    配置项的 Go 类型名称，例如 "string"、"bool"、"slice"
-//   - Default: 配置项的默认值，来自 default 标签
-//   - Comment: 配置项的说明文字，来自 comment 标签
 type ConfigDescription struct {
-	Path    string `json:"path"`
-	Kind    string `json:"kind"`
+	// Path 配置项的完整路径，由前缀和 mapstructure 标签（或小写字段名）拼接而成，如 "zap.default.level"。
+	Path string `json:"path"`
+	// Kind 配置项的 Go 类型名称，如 "string"、"bool"。
+	Kind string `json:"kind"`
+	// Default 配置项的默认值，来自 default 标签。
 	Default string `json:"default"`
+	// Comment 配置项的说明文字，来自 comment 标签。
 	Comment string `json:"comment"`
 }
 
@@ -169,12 +171,25 @@ func (descs *ConfigDescriptions) Join(others ConfigDescriptions) {
 // Describe 将配置描述以表格形式输出到标准输出。
 //
 // 输出包含四列：path（配置路径）、kind（类型）、default（默认值）、comment（说明）。
+// localize 用于本地化表头文本，接收翻译键与中文回退文案，返回本地化文本；
+// 传 nil 时表头直接使用中文回退文案。
 //
 // 返回值：
 //   - error: 表格写入或渲染过程中的错误，包装为 errors.WithStack
-func (descs ConfigDescriptions) Describe() error {
+func (descs ConfigDescriptions) Describe(localize func(key, fallback string) string) error {
+	header := func(key, fallback string) string {
+		if localize == nil {
+			return fallback
+		}
+		return localize(key, fallback)
+	}
 	data := pterm.TableData{
-		{"path", "kind", "default", "comment"},
+		{
+			header("cli.config.col-path", "路径"),
+			header("cli.config.col-kind", "类型"),
+			header("cli.config.col-default", "默认值"),
+			header("cli.config.col-comment", "说明"),
+		},
 	}
 	for _, desc := range descs {
 		data = append(data, []string{desc.Path, desc.Kind, desc.Default, desc.Comment})
@@ -317,8 +332,7 @@ func DescribeConfig[C any](prefix string) ConfigDescriptions {
 //	    log.Fatal(err)
 //	}
 //	fmt.Println(cfg.Host) // "10.0.0.1"
-func ExtractConfig[C any](v *viper.Viper, prefix string) (*C, error) {
-	validator.Init()
+func ExtractConfig[C any](v *viper.Viper, validate *validator.Validate, prefix string) (*C, error) {
 	var cfg C
 	if err := defaults.Set(&cfg); err != nil {
 		return nil, errors.WithStack(err)
@@ -332,8 +346,46 @@ func ExtractConfig[C any](v *viper.Viper, prefix string) (*C, error) {
 		),
 	)); err != nil {
 		return nil, errors.WithStack(err)
-	} else if err := validator.Validate.Struct(&cfg); err != nil {
+	} else if err := validate.Struct(&cfg); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &cfg, nil
+}
+
+// GetContextParam 从 context 中按指定键提取参数映射并解码为泛型类型。
+// 调用方（如任务/处理器参数注入）通过 context.WithValue 存入 map[string]any 参数，
+// 此处读取后经默认值填充与弱类型 mapstructure 解码得到目标配置结构体。
+//
+// 类型参数：
+//   - T: 目标配置结构体类型，支持 mapstructure 与 default 标签
+//
+// 参数：
+//   - ctx:  携带参数值的 context，参数以 name 为键存储
+//   - name: 参数在 context 中的键名
+//
+// 返回值：
+//   - *T:    成功时返回解码并填充默认值的配置结构体指针
+//   - error: 上下文无该键、键值类型不匹配或解码失败时返回错误
+func GetContextParam[T any](ctx context.Context, name string) (*T, error) {
+	raw, ok := ctx.Value(name).(map[string]any)
+	if !ok {
+		return nil, errors.Newf(`param %s not found in context`, name)
+	}
+	var target T
+	cfg := mapstructure.DecoderConfig{
+		Result:           &target,
+		WeaklyTypedInput: true,
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			mapstructure.TextUnmarshallerHookFunc(),
+			mapstructure.StringToTimeDurationHookFunc(),
+		),
+	}
+	if err := defaults.Set(&target); err != nil {
+		return nil, errors.WithStack(err)
+	} else if decoder, err := mapstructure.NewDecoder(&cfg); err != nil {
+		return nil, errors.WithStack(err)
+	} else if err := decoder.Decode(raw); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return &target, nil
 }

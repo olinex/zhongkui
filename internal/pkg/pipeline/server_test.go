@@ -1,5 +1,6 @@
-// Package pipeline 提供基于 asynq 的任务队列和调度器功能测试。
-// 此文件包含 pipeline 包中服务器功能的单元测试，重点测试 Server 结构体的创建、启动和关闭功能。
+// Package queue 提供基于 asynq 的任务队列和调度器功能测试。
+// 此文件包含 queue 包中服务器功能的单元测试，重点测试 Server 结构体的创建、启动和关闭功能。
+
 package pipeline
 
 import (
@@ -11,8 +12,9 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/etl"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // mockTaskHandler 是一个模拟的任务处理函数，用于测试。
@@ -40,14 +42,6 @@ func TestNewServer(t *testing.T) {
 		_ = observedLogger.Sugar() // 使用下划线忽略，避免未使用错误
 
 		Convey("应该验证类型别名和常量的定义", func() {
-			// 测试 HandlerFunc 类型别名
-			var hf HandlerFunc
-			So(hf, ShouldHaveSameTypeAs, asynq.HandlerFunc(nil))
-
-			// 测试 HandlerFuncs 类型别名
-			var hfs HandlerFuncs
-			So(hfs, ShouldHaveSameTypeAs, map[string]asynq.HandlerFunc{})
-
 			// 测试 RawConfig 类型别名
 			var cfg RawConfig
 			So(cfg, ShouldHaveSameTypeAs, asynq.Config{})
@@ -299,11 +293,13 @@ func TestServer_EdgeCases(t *testing.T) {
 func TestServer_DocumentationExamples(t *testing.T) {
 	Convey("测试文档示例概念", t, func() {
 		Convey("应该验证 HandlerFuncs 的示例用法", func() {
-			// 验证文档中的示例类型
-			hFuncs := HandlerFuncs{
-				"email:send":      mockTaskHandler,
-				"report:generate": mockTaskHandler,
-				"image:process":   mockTaskHandler,
+			// 验证文档中的示例类型（契约定义于 etl 包）
+			hFuncs := etl.HandlerFuncs{
+				"email:send": func(ctx context.Context, task etl.Task) error { return nil },
+				"report:generate": func(ctx context.Context, task etl.Task) error {
+					return nil
+				},
+				"image:process": func(ctx context.Context, task etl.Task) error { return nil },
 			}
 
 			So(hFuncs, ShouldNotBeNil)
@@ -332,8 +328,8 @@ func TestServer_DocumentationExamples(t *testing.T) {
 		})
 
 		Convey("应该验证任务处理函数的签名", func() {
-			// 验证 HandlerFunc 的签名
-			var hf HandlerFunc = func(ctx context.Context, task *asynq.Task) error {
+			// 验证 HandlerFunc 的签名（契约定义于 etl 包，*asynq.Task 满足 etl.Task）
+			var hf etl.HandlerFunc = func(ctx context.Context, task etl.Task) error {
 				// 验证参数类型
 				So(ctx, ShouldNotBeNil)
 				So(task, ShouldNotBeNil)

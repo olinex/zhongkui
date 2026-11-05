@@ -1,17 +1,22 @@
 //go:build profile
 // +build profile
 
+// Package test 提供测试与基准测试的通用辅助设施：阶段耗时追踪（StageTracer）
+// 与基准运行、性能剖析工具。
 package test
 
 import (
 	"fmt"
+	"io"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/pterm/pterm"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
+// Tracer 全局阶段耗时追踪器实例，供各包在热点路径埋点。
 var Tracer = NewStageTracer()
 
 type stageRecord struct {
@@ -27,13 +32,19 @@ type stackEntry struct {
 	start time.Time
 }
 
+// StageTracer 阶段耗时追踪器：以 Begin/End 配对记录各阶段的调用次数与耗时分布。
 type StageTracer struct {
-	mu      sync.Mutex
+	// mu 保护 records 与 stack 的互斥锁。
+	mu sync.Mutex
+	// records 各阶段名称到耗时记录的映射。
 	records map[string]*stageRecord
-	stack   []stackEntry
+	// stack 未结束阶段的嵌套计时栈。
+	stack []stackEntry
+	// written 标记报告是否已输出。
 	written bool
 }
 
+// NewStageTracer 创建一个 StageTracer 实例。
 func NewStageTracer() *StageTracer {
 	return &StageTracer{
 		records: make(map[string]*stageRecord, 64),
@@ -41,12 +52,14 @@ func NewStageTracer() *StageTracer {
 	}
 }
 
+// Begin 开始一个命名阶段的计时，支持嵌套调用。
 func (t *StageTracer) Begin(name string) {
 	t.mu.Lock()
 	t.stack = append(t.stack, stackEntry{name: name, start: time.Now()})
 	t.mu.Unlock()
 }
 
+// End 结束最近一次 Begin 开启的阶段并累计其耗时。
 func (t *StageTracer) End() {
 	t.mu.Lock()
 	if len(t.stack) == 0 {
@@ -74,6 +87,7 @@ func (t *StageTracer) End() {
 	t.mu.Unlock()
 }
 
+// Report 汇总各阶段的调用次数与耗时并输出统计报告。
 func (t *StageTracer) Report() {
 	t.mu.Lock()
 	records := make([]*stageRecord, 0, len(t.records))
@@ -90,19 +104,28 @@ func (t *StageTracer) Report() {
 		return records[i].totalNs > records[j].totalNs
 	})
 
-	printReport(records, totalNs)
+	printReport(nil, records, totalNs)
 }
 
-func printReport(records []*stageRecord, totalNs int64) {
-	pterm.DefaultHeader.WithFullWidth().Println("阶段耗时统计报告")
+// printReport 将阶段耗时统计报告渲染到指定的 writer（nil 表示 pterm 默认输出）
+func printReport(w io.Writer, records []*stageRecord, totalNs int64) {
+	pterm.DefaultHeader.WithFullWidth().WithWriter(w).Println(translate.T("cli.tracer.report-title", nil))
 
 	if len(records) == 0 {
-		pterm.Warning.Println("无数据")
+		pterm.Warning.WithWriter(w).Println(translate.T("cli.tracer.no-data", nil))
 		return
 	}
 
 	data := pterm.TableData{
-		{"阶段名称", "调用次数", "总耗时", "平均耗时", "最小耗时", "最大耗时", "占比"},
+		{
+			translate.T("cli.tracer.col-stage", nil),
+			translate.T("cli.tracer.col-calls", nil),
+			translate.T("cli.tracer.col-total", nil),
+			translate.T("cli.tracer.col-avg", nil),
+			translate.T("cli.tracer.col-min", nil),
+			translate.T("cli.tracer.col-max", nil),
+			translate.T("cli.tracer.col-ratio", nil),
+		},
 	}
 
 	for _, rec := range records {
@@ -123,10 +146,10 @@ func printReport(records []*stageRecord, totalNs int64) {
 		})
 	}
 
-	if err := pterm.DefaultTable.WithHasHeader().WithData(data).Render(); err != nil {
-		pterm.Error.Printf("error rendering report table: %v\n", err)
+	if err := pterm.DefaultTable.WithHasHeader().WithData(data).WithWriter(w).Render(); err != nil {
+		pterm.Error.WithWriter(w).Println(translate.T("cli.tracer.render-error", map[string]any{"Err": err}))
 	}
-	pterm.Info.Printf("总记录数: %d\n", len(records))
+	pterm.Info.WithWriter(w).Println(translate.T("cli.tracer.total-records", map[string]any{"Count": len(records)}))
 }
 
 func formatNS(ns int64) string {

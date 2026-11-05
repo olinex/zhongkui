@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // Cache 是全局的命名空间缓存实例，用于存储所有命名空间名称的缓存

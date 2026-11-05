@@ -8,7 +8,7 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // TestEthernetHeaders_Basic 测试EthernetHeaders结构体的基本功能
@@ -73,7 +73,7 @@ func TestEthernetHeaders_Basic(t *testing.T) {
 
 		Convey("Should handle empty MAC addresses in JSON", func() {
 			var headers EthernetHeaders
-			err := json.Unmarshal([]byte(`{"eth_dst_mac": "", "eth_src_mac": ""}`), &headers)
+			err := json.Unmarshal([]byte(`{"ethDstMac": "", "ethSrcMac": ""}`), &headers)
 			So(err, ShouldBeNil)
 			So(headers.EthDstMAC, ShouldBeNil)
 			So(headers.EthSrcMAC, ShouldBeNil)
@@ -81,7 +81,7 @@ func TestEthernetHeaders_Basic(t *testing.T) {
 
 		Convey("Should handle null values in JSON", func() {
 			var headers EthernetHeaders
-			err := json.Unmarshal([]byte(`{"eth_dst_mac": null, "eth_src_mac": null}`), &headers)
+			err := json.Unmarshal([]byte(`{"ethDstMac": null, "ethSrcMac": null}`), &headers)
 			So(err, ShouldBeNil)
 			So(headers.EthDstMAC, ShouldBeNil)
 			So(headers.EthSrcMAC, ShouldBeNil)
@@ -257,104 +257,6 @@ func TestPacketEthernet(t *testing.T) {
 	})
 }
 
-// TestFusedEthernet 测试FusedEthernet结构体的功能
-// 验证融合数据结构和数据库映射
-func TestFusedEthernet(t *testing.T) {
-	Convey("Test FusedEthernet structure", t, func() {
-		Convey("Should compose AsFused and EthernetHeaders correctly", func() {
-			sessionID, _ := serializer.HexUUIDv4FromString("12345678-1234-1234-1234-123456789012")
-			now := time.Now()
-			dstMAC, _ := net.ParseMAC("00:11:22:33:44:55")
-			srcMAC, _ := net.ParseMAC("aa:bb:cc:dd:ee:ff")
-
-			fused := FusedEthernet{
-				AsFused: AsFused{
-					BaseMeta: BaseMeta{
-						Namespace: "test",
-						Capture:   "eth0",
-						Version:   "v1",
-						SessionID: sessionID,
-					},
-					TimestampMeta: TimestampMeta{Timestamp: now},
-					FusedMeta: FusedMeta{
-						FrameStack: FrameStack{
-							{
-								Timestamp: now.Add(-time.Second),
-								LayerStack: LayerStack{
-									{
-										Level:   LayerLevelLink,
-										Proto:   layers.LayerTypeEthernet,
-										Headers: map[string]any{"test": "value"},
-									},
-								},
-							},
-						},
-					},
-				},
-				EthernetHeaders: EthernetHeaders{
-					EthDstMAC: serializer.MacAddr(dstMAC),
-					EthSrcMAC: serializer.MacAddr(srcMAC),
-					EthType:   layers.EthernetTypeIPv4,
-					EthLength: 1500,
-				},
-			}
-
-			// 验证基础元数据
-			So(fused.Namespace, ShouldEqual, "test")
-			So(fused.Capture, ShouldEqual, "eth0")
-			So(fused.Version, ShouldEqual, "v1")
-			So(fused.SessionID.String(), ShouldEqual, "12345678-1234-1234-1234-123456789012")
-			So(fused.Timestamp.Unix(), ShouldEqual, now.Unix())
-
-			// 验证帧堆栈
-			So(len(fused.FrameStack), ShouldEqual, 1)
-			So(fused.FrameStack[0].Timestamp.Unix(), ShouldEqual, now.Add(-time.Second).Unix())
-			So(len(fused.FrameStack[0].LayerStack), ShouldEqual, 1)
-
-			// 验证以太网头部
-			So(fused.EthDstMAC.String(), ShouldEqual, "00:11:22:33:44:55")
-			So(fused.EthSrcMAC.String(), ShouldEqual, "aa:bb:cc:dd:ee:ff")
-			So(fused.EthType, ShouldEqual, layers.EthernetTypeIPv4)
-			So(fused.EthLength, ShouldEqual, 1500)
-		})
-
-		Convey("Should support JSON serialization for FusedEthernet", func() {
-			sessionID := serializer.NewHexUUIDv4()
-			dstMAC, _ := net.ParseMAC("00:11:22:33:44:55")
-			srcMAC, _ := net.ParseMAC("aa:bb:cc:dd:ee:ff")
-
-			fused := FusedEthernet{
-				AsFused: AsFused{
-					BaseMeta: BaseMeta{
-						Namespace: "test",
-						Capture:   "eth0",
-						Version:   "v1",
-						SessionID: sessionID,
-					},
-					TimestampMeta: TimestampMeta{Timestamp: time.Now()},
-				},
-				EthernetHeaders: EthernetHeaders{
-					EthDstMAC: serializer.MacAddr(dstMAC),
-					EthSrcMAC: serializer.MacAddr(srcMAC),
-					EthType:   layers.EthernetTypeIPv4,
-					EthLength: 1500,
-				},
-			}
-
-			jsonData, err := json.Marshal(fused)
-			So(err, ShouldBeNil)
-
-			var decoded FusedEthernet
-			err = json.Unmarshal(jsonData, &decoded)
-			So(err, ShouldBeNil)
-
-			So(decoded.Namespace, ShouldEqual, "test")
-			So(decoded.EthDstMAC.String(), ShouldEqual, "00:11:22:33:44:55")
-			So(decoded.EthType, ShouldEqual, layers.EthernetTypeIPv4)
-		})
-	})
-}
-
 // TestEthernetHeaders_FieldTags 测试EthernetHeaders字段标签的正确性
 // 验证GORM和JSON标签的配置
 func TestEthernetHeaders_FieldTags(t *testing.T) {
@@ -393,10 +295,10 @@ func TestEthernetHeaders_FieldTags(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			// 验证JSON字段名
-			So(decoded, ShouldContainKey, "eth_dst_mac")
-			So(decoded, ShouldContainKey, "eth_src_mac")
-			So(decoded, ShouldContainKey, "eth_type")
-			So(decoded, ShouldContainKey, "eth_length")
+			So(decoded, ShouldContainKey, "ethDstMac")
+			So(decoded, ShouldContainKey, "ethSrcMac")
+			So(decoded, ShouldContainKey, "ethType")
+			So(decoded, ShouldContainKey, "ethLength")
 		})
 	})
 }

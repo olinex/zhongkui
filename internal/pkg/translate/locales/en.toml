@@ -76,10 +76,3222 @@
 1101 = "User Old Password Check Failed"
 1102 = "User Username Or Email Already Exist"
 1103 = "Too Many Access Key"
+1104 = "Password reset is unavailable. Please contact the administrator or try again later"
+1105 = "The password reset link is invalid or expired, please request a new one"
+1106 = "Too many requests, please try again later"
+1107 = "Invalid or expired access key"
+1200 = "Tag Rule Validation Failed"
+1201 = "Tag Event Rule Validation Failed"
+1202 = "Tag Rule Runtime Validation Failed"
+1203 = "Tag Rule Target Model Not Registered"
+1204 = "Tag Rule Sample Input Cannot Be Deserialized Into Target Model"
+1300 = "The pending API invocation no longer exists, please start a new question"
+1301 = "This API invocation has already been processed, please do not submit it again"
+1302 = "There is no live run for this session"
+1303 = "The live run of this session has expired"
+1304 = "You are not allowed to access the live run of this session"
+1305 = "The session has reached the maximum number of turns, please roll back and retry"
+1306 = "The current session state does not allow this operation, please try again later"
+1400 = "Frontend Config Has Been Updated By Another Browser, Please Refresh And Retry"
+1401 = "Frontend Config Sync Is Not Enabled"
+1402 = "Notification Send Failed"
+1403 = "Invalid Scheduler Task Config"
+1404 = "The slot binding is incompatible with the current system configuration, adjust it as described in the error details and retry"
+1405 = "The builtin system namespace is protected and cannot be deleted"
 
 [error]
 emptyUrlParam = "The url param `%s` is nil or empty"
 badUrlParam = "The url param `%s` is invalid cause: %s"
+schedulerScheduleConflict = "cronSpec and interval are mutually exclusive, set only one"
+schedulerScheduleEmpty = "either cronSpec or interval must be set"
+schedulerTaskCreateExist = "Scheduler task type %s already exists"
+schedulerTaskUpdateNotExist = "Scheduler task type %s does not exist"
+llmBindingModelIDInvalid = "modelId must be a positive integer"
+llmBindingModelDisabled = "model %s is disabled and cannot be bound to a slot"
+llmBindingKindMismatch = "model %s is a %s model and cannot be bound to the %s slot (which requires a %s model)"
+llmBindingIncompatibleDimension = "embedding model %s is incompatible with the knowledge index dimension %d (the model returned %d dimensions); unbind the embedding slot if it is bound, then run `sync embedding-dimensions --dimensions %d` before binding"
+enumUnknownType = "unknown enum type `%s`"
+aiFeatureDisabled = "the AI feature is disabled"
+aiSkillUnavailable = "the skill is unavailable or disabled"
+aiSkillNameExists = "a skill with the same name already exists"
+aiSkillBuiltinReadonly = "builtin skills are maintained by code and cannot be edited or deleted"
+aiSkillInvalidFields = "invalid skill input fields or fixed fields: %v"
+aiSkillPeriodicNowTimeRequired = "a periodic skill must contain an input field named nowTime with type date"
+periodicReportSkillNotEligible = "the selected skill cannot be used for periodic reports; choose an enabled skill that supports periodic execution, has valid timeOffset/timeWindow fixed parameters, and includes a nowTime input field"
+periodicReportScheduleInvalid = "invalid cron expression"
+periodicReportInputMissing = "required skill inputs are missing"
+periodicReportInputInvalid = "invalid skill input values: keys must belong to the skill fixed or input fields, values must keep the original field type, and nowTime or invalid time windows cannot be overridden"
+periodicReportPlanExpired = "the report plan has expired and cannot be run immediately"
+periodicReportRunObjectMissing = "the report body does not exist or has been cleaned up"
+knowledgeImportedContentReadOnly = "imported document content is read-only; reparse the document to refresh it"
+knowledgeDocumentParsing = "the document is already being parsed; wait for it to finish before reindexing"
+knowledgeDocumentNotFound = "knowledge document %d not found"
+knowledgeUploadTooLarge = "request body exceeds the maximum upload size of %d bytes"
+knowledgeUploadFileRequired = "multipart field `file` is required"
+knowledgeUnsupportedFormat = "unsupported document format `%s` (only .md/.markdown/.txt/.pdf/.docx are supported)"
+datasourceSqliteFileRequired = "creating a sqlite datasource requires an uploaded .db file"
+datasourceSqliteS3Required = "a sqlite datasource requires S3 object storage to be enabled"
+llmToolBuiltinUndeletable = "the batch contains %d builtin tool(s), which cannot be deleted"
+llmParamItemsEmpty = "items must not be empty"
+llmParamNotDeclared = "parameter `%q` is not declared in the registry"
+llmParamGroupNotDeclared = "parameter group `%q` is not declared in the registry"
+llmParamKeysOrGroup = "either keys or group must be provided"
+llmParamValueTypeInvalid = "parameter `%q` expects a value of type %s, please check the input"
+llmParamValueNotAllowed = "parameter `%q` expects one of %s, got `%q`"
+llmModelNameEmpty = "model name must be non-empty"
+llmModelNameExists = "model name `%q` already exists"
+llmModelContextTokensInvalid = "context tokens must be a positive integer (required for chat models)"
+apiModeInvalid = "api mode must be chat or responses; responses is only available for chat models"
+llmModelBound = "model `%q` is bound to a slot; unbind it before deleting"
+extraBodyInvalid = "the advanced request config must be a valid JSON object"
+thinkingValueInvalid = "the thinking on/off values must be valid JSON"
+mcpServerNameExists = "mcp server name `%q` already exists"
+mcpToolEmptyName = "a tool returned by the remote has an empty name and cannot be synchronized"
+mcpToolNameTaken = "tool name `%q` is already taken by tool #%d and cannot be synchronized from MCP server `%q`"
+mcpHeadersInvalid = "the request headers are not a valid JSON object"
+llmKnowledgeIndexUnavailable = "the knowledge index column is not available; run migrate up before binding an embedding model"
+plaintextModelNotRegistered = "plaintext: model `%q` not registered"
+notificationTargetDisabled = "the notification target or its channel is disabled"
+notificationChannelBuiltin = "channel `%q` is a builtin placeholder and cannot be deleted"
+notificationGroupTargetInvalid = "the notification group target does not belong to the current namespace"
+notificationTemplateUnknownEvent = "notification template: unknown event `%q`"
+notificationTemplateUnsupportedChannel = "notification template: unsupported channel type `%q`"
+notificationTemplateUnsupportedLanguage = "notification template: unsupported language `%q`"
+notificationTemplateInvalidTitle = "notification template title has invalid syntax: %s"
+notificationTemplateInvalidContent = "notification template content has invalid syntax: %s"
+notificationTemplateExists = "notification template for event `%q`, channel `%q`, language `%q` already exists"
+notificationTemplateTitleRequired = "notification template: title is required"
+notificationTemplateContentRequired = "notification template: content is required"
+multipartFieldTooLarge = "multipart field `%q` exceeds the maximum size of %d bytes"
+sampleFieldNotString = "sample: field `%q` of model `%q` is not a string"
+tagEventRuleNotifyMutuallyExclusive = "notification group and notification target are mutually exclusive, set at most one"
+tagEventRuleNotifyGroupNotFound = "notification group %d does not exist in namespace %s"
+tagEventRuleNotifyTargetNotFound = "notification target %d does not exist in namespace %s"
 
 [validator]
-strongPassword = "The field must be a strong password (containing at least one lowercase letter, one uppercase letter, one number, and one special character @$!%*?& respectivelyw"
+strongPassword = "The field must be a strong password (containing at least one lowercase letter, one uppercase letter, one number, and one special character @$!%*?& respectively)"
+windowsFileName = "The field must be a valid Windows file name (must not be a reserved name, must not contain illegal characters, and must not end with a space or dot)"
+unixFileName = "The field must be a valid Unix file name (must not start with a dot, and must not contain a slash or NUL)"
+fileName = "The field must be a valid file name"
+strictFileName = "The field must be a strictly valid file name (must not start with a hyphen, and must not contain spaces or control characters)"
+dirpath = "The field must be a valid directory path"
+alphanumspecial = "The field must contain only letters, numbers and the specified special characters"
+enum = "The field value is not among the allowed options"
+httpUrl = "The field must be an absolute http or https URL"
+jsonObject = "The field must be JSON object text whose values are all strings"
+trimmed = "The field must not contain leading or trailing whitespace"
+notBlank = "The field must not be blank"
+gtCurrentTime = "The field must be a time later than the current time"
+ltCurrentTime = "The field must be a time earlier than the current time"
+cron = "The field must be a valid cron expression (5-field standard cron or descriptors such as @daily)"
+
+# =============================================================================
+# CLI command descriptions & flag usages
+# Key layout: cmd.<path>.short/long, flag.<path>.<name>, cli.<topic>
+# Command tree fields store the i18n key itself; translate.T resolves them and
+# returns the key when missing (zh-Hans.toml is the fallback locale).
+# Set ZKI_LANG=en to enable English output.
+# =============================================================================
+
+[cmd.short]
+other = "zhongkui root command"
+
+[cmd.help.short]
+other = "Show help for any command"
+
+[cmd.help.long]
+other = "Help shows help for any command in the application.\nType zhongkui help [command path] for full details."
+
+[cmd.completion.short]
+other = "Generate the autocompletion script for the specified shell"
+
+[cmd.completion.long]
+other = "Generate the zhongkui autocompletion script for the specified shell.\nSee each sub-command's help for usage details."
+
+[cmd.completion.bash.short]
+other = "Generate the autocompletion script for the bash shell"
+
+[cmd.completion.bash.long]
+other = "Generate the autocompletion script for the bash shell.\n\nThis script depends on the 'bash-completion' package.\nIf it is not installed already, you can install it via your OS's package manager.\n\nTo load completions in your current shell session:\n\n\tsource <(zhongkui completion bash)\n\nTo load completions for every new session, execute once:\n\n#### Linux:\n\n\tzhongkui completion bash > /etc/bash_completion.d/zhongkui\n\n#### macOS:\n\n\tzhongkui completion bash > $(brew --prefix)/etc/bash_completion.d/zhongkui\n\nYou will need to start a new shell for this setup to take effect."
+
+[cmd.completion.zsh.short]
+other = "Generate the autocompletion script for the zsh shell"
+
+[cmd.completion.zsh.long]
+other = "Generate the autocompletion script for the zsh shell.\n\nIf shell completion is not already enabled in your environment you will need to enable it. You can execute the following once:\n\n\techo \"autoload -U compinit; compinit\" >> ~/.zshrc\n\nTo load completions in your current shell session:\n\n\tsource <(zhongkui completion zsh)\n\nTo load completions for every new session, execute once:\n\n#### Linux:\n\n\tzhongkui completion zsh > \"${fpath[1]}/_zhongkui\"\n\n#### macOS:\n\n\tzhongkui completion zsh > $(brew --prefix)/share/zsh/site-functions/_zhongkui\n\nYou will need to start a new shell for this setup to take effect."
+
+[cmd.completion.fish.short]
+other = "Generate the autocompletion script for the fish shell"
+
+[cmd.completion.fish.long]
+other = "Generate the autocompletion script for the fish shell.\n\nTo load completions in your current shell session:\n\n\tzhongkui completion fish | source\n\nTo load completions for every new session, execute once:\n\n\tzhongkui completion fish > ~/.config/fish/completions/zhongkui.fish\n\nYou will need to start a new shell for this setup to take effect."
+
+[cmd.completion.powershell.short]
+other = "Generate the autocompletion script for PowerShell"
+
+[cmd.completion.powershell.long]
+other = "Generate the autocompletion script for PowerShell.\n\nTo load completions in your current shell session:\n\n\tzhongkui completion powershell | Out-String | Invoke-Expression\n\nTo load completions for every new session, add the output of the above command to your PowerShell profile."
+
+[cmd.version.short]
+other = "Show version information"
+
+[cmd.version.long]
+other = "Show version information, default prints the semantic version, use --verbose for full details"
+
+[cmd.describe.short]
+other = "Show configuration details"
+
+[cmd.describe.config.short]
+other = "Show default configuration item descriptions"
+
+[cmd.describe.scheduler.short]
+other = "Print scheduler task configs from etcd"
+
+[cmd.describe.scheduler.long]
+other = "Print scheduler task configs from etcd.\nUse --name to specify one or more task types. Without --name, list all tasks.\n\nExamples:\n  zhongkui describe scheduler\n  zhongkui describe scheduler --name network:periodic:ipv4reassemble\n  zhongkui describe scheduler --name network:periodic:ipv4reassemble --name network:periodic:ipv6reassemble"
+
+[cmd.describe.deps.short]
+other = "Show external dependency status"
+
+[cmd.run.short]
+other = "Run the zhongkui server process"
+
+[cmd.run.web.short]
+other = "Run the zhongkui HTTP Web API process"
+
+[cmd.run.grpc.short]
+other = "Run the zhongkui gRPC API process"
+
+[cmd.run.worker.short]
+other = "Run the zhongkui worker node process"
+
+[cmd.run.capture.short]
+other = "Run the zhongkui capture process"
+
+[cmd.clear.short]
+other = "Clear zhongkui data"
+
+[cmd.clear.database.short]
+other = "Truncate all database tables (rollback all migrations)"
+
+[cmd.clear.etcd.short]
+other = "Clear etcd cache (capturer configs, watermarks, scheduler configs)"
+
+[cmd.migrate.short]
+other = "Database migration management"
+
+[cmd.migrate.up.short]
+other = "Apply all pending migrations"
+
+[cmd.migrate.down.short]
+other = "Rollback all applied migrations"
+
+[cmd.migrate.up-to.short]
+other = "Migrate to the specified version"
+
+[cmd.migrate.down-to.short]
+other = "Rollback to the specified version"
+
+[cmd.migrate.status.short]
+other = "Show migration status"
+
+[cmd.migrate.dry-run.short]
+other = "Try running migrations on a temporary database"
+
+[cmd.migrate.diff.short]
+other = "Compare database schema differences"
+
+[cmd.migrate.check.short]
+other = "Check whether model definitions match the database schema"
+
+[cmd.migrate.create.short]
+other = "Create a SQL migration file in the migration directory"
+
+[cmd.create.short]
+other = "Create resources (user, TLS cert, access key)"
+
+[cmd.create.user.short]
+other = "Create a user via the command line"
+
+[cmd.create.user.long]
+other = "Create a new user. Parameters can be provided via command-line flags; missing parameters are prompted interactively."
+
+[cmd.create.tls.short]
+other = "Create a self-signed TLS certificate"
+
+[cmd.create.tls.long]
+other = "Generate a self-signed TLS certificate and key pair. Parameters can be provided via command-line flags or interactive prompts."
+
+[cmd.create.access-key.short]
+other = "Create an access key for a user"
+
+[cmd.create.access-key.long]
+other = "Create an API access key for an existing user. Parameters can be provided via command-line flags or interactive prompts."
+
+[cmd.create.capturer.short]
+other = "Create a network capturer"
+
+[cmd.create.capturer.long]
+other = "Create a new network capturer with device configuration. Parameters can be provided via command-line flags or interactive prompts."
+
+[cmd.create.password-book.short]
+other = "Generate a password book file for key derivation"
+
+[cmd.create.password-book.long]
+other = "Generate a cryptographically secure random password book file (65536 bytes) used for sub-key derivation."
+
+[cmd.create.testcase.short]
+other = "Extract HTTP test cases from a pcap file"
+
+[cmd.create.testcase.long]
+other = "Use tshark to extract HTTP request/response data from a pcap file and generate JSON test case files for verifying TCP reassembly and HTTP protocol detection logic.\n\nEach HTTP transaction (request-response pair) generates one JSON file.\nSupports multiple transactions per TCP stream for HTTP/1.1 keep-alive connections."
+
+[cmd.create.docs.short]
+other = "Generate Diátaxis-classified documentation from code comments"
+
+[cmd.create.docs.long]
+other = "Scan the documentation registry, use gomarkdoc to export each package's comments as Markdown (tutorials/how-to/reference/explanation), and generate the project-root README.md (cover + table of contents) as the documentation entry point."
+
+[cmd.sync.short]
+other = "Sync comment-generated docs and embedding vectors, and reconcile the embedding column dimension"
+
+[cmd.sync.docs.short]
+other = "Sync comment-generated documents into RAG"
+
+[cmd.sync.docs.long]
+other = "Extract source comments and generate narrative pages, then idempotently sync them into the builtin system namespace's RAG (format=generated) via a content-hash diff plan, visible to retrieval from every namespace. Additions/updates/deletions converge via the diff plan, unchanged content results in zero writes, the partition is read/written in isolation without touching manual documents, and nothing is written to disk."
+
+[cmd.sync.apis.short]
+other = "Sync native API knowledge into RAG"
+
+[cmd.sync.apis.long]
+other = "Assemble the native API catalog declared at view route registration (including purpose and request/response metadata), then idempotently sync it into the builtin system namespace's RAG (format=native_api) via a content-hash diff plan, visible to retrieval from every namespace. Additions/updates/deletions converge via the diff plan, unchanged content results in zero writes, the partition is read/written in isolation without touching narrative pages or manual documents, and nothing is written to disk."
+
+[cmd.sync.schema.short]
+other = "Sync database table knowledge into RAG"
+
+[cmd.sync.schema.long]
+other = "Parse model declarations and migrations to generate one knowledge document per migrated table (fields, nullability, indexes and foreign keys), then idempotently sync them into the builtin system namespace's RAG (format=schema) via a content-hash diff plan. Unchanged content results in zero writes, the partition is read/written in isolation without touching API, capability, narrative or manual documents, and nothing is written to disk."
+
+[cmd.sync.capabilities.short]
+other = "Sync platform capability knowledge into RAG"
+
+[cmd.sync.capabilities.long]
+other = "Generate one overall capability map plus one detail document per capability from the view-layer capability declarations, then idempotently sync them into the builtin system namespace's RAG (format=capability) via a content-hash diff plan. Unchanged content results in zero writes, the partition is read/written in isolation without touching API, table, narrative or manual documents, and nothing is written to disk."
+
+[cmd.sync.embeddings.short]
+other = "Recompute embedding vectors in a namespace with the current model"
+
+[cmd.sync.embeddings.long]
+other = "Recompute the embedding vectors in the target namespace with the current embedding model: knowledge documents are re-chunked and their chunk vectors rebuilt (knowledge_chunks), and long-term memories have their embedding column recomputed (agent_memories). Use this after switching the embedding model (dimension or semantic change) to align existing content with the current model; it does not modify document/memory bodies or full-text search columns, and does not touch other namespaces. For column-dimension changes, run sync embedding-dimensions first."
+
+[cmd.sync.embedding-dimensions.short]
+other = "Rebuild the embedding column and the HNSW index at the explicitly specified dimension"
+
+[cmd.sync.embedding-dimensions.long]
+other = "Rebuild the knowledge_chunks.embedding and agent_memories.embedding columns on the core database and their HNSW indexes at the target dimension explicitly specified by the operator: the target must be given through --dimensions and the embedding slot must be unbound before running it; the command drops the old index and all vectors, runs ALTER TYPE and rebuilds the HNSW index, and the knowledge base documents must be reindexed afterwards (run sync embeddings). It is the schema counterpart of sync embeddings and the two do not substitute for each other."
+
+[cmd.force-reset-password.short]
+other = "Force reset a user's password via the command line"
+
+[cmd.s3.short]
+other = "S3 object storage management"
+
+[cmd.s3.long]
+other = "S3 object storage management commands, including bucket lifecycle rule management"
+
+[cmd.s3.lifecycle.short]
+other = "Lifecycle rule management"
+
+[cmd.s3.lifecycle.long]
+other = "Inspect, apply and remove lifecycle rules of the default bucket; rules are executed by the S3 platform"
+
+[cmd.s3.lifecycle.apply.short]
+other = "Apply lifecycle rules"
+
+[cmd.s3.lifecycle.apply.long]
+other = "Collect lifecycle rules interactively and apply them to the default bucket as a whole (fully replacing the platform's existing rules).\n\nFlow: pick a target prefix from the built-in object path prefix enumeration, enter the expiration days, and optionally add more rules; preview and confirm before applying."
+
+[cmd.s3.lifecycle.apply.example]
+other = "  zki s3 lifecycle apply"
+
+[cmd.s3.lifecycle.status.short]
+other = "Show lifecycle rules"
+
+[cmd.s3.lifecycle.status.long]
+other = "Show the lifecycle rules currently configured on the default bucket, or a notice when none are configured"
+
+[cmd.s3.lifecycle.remove.short]
+other = "Remove lifecycle rules"
+
+[cmd.s3.lifecycle.remove.long]
+other = "Remove all lifecycle rules from the default bucket, restoring no automatic expiration"
+
+# =============================================================================
+# CLI flag usages
+# =============================================================================
+
+[flag.config]
+other = "config file path (e.g. /etc/zhongkui/config.toml)"
+
+[flag.help]
+other = "show help information"
+
+[flag.version.verbose]
+other = "print verbose build information"
+
+[flag.describe.scheduler.name]
+other = "task type name to print (repeatable)"
+
+[flag.migrate.db]
+other = "target database: core, raw, all"
+
+[flag.migrate.verbose]
+other = "print migration SQL"
+
+[flag.migrate.timeout]
+other = "migration timeout (0 means no timeout)"
+
+[flag.migrate.force]
+other = "skip confirmation"
+
+[flag.migrate.keep-temp]
+other = "keep the temporary database"
+
+[flag.run.capture.stats-print]
+other = "periodically print capture stats to stdout"
+
+[flag.run.capture.stats-interval]
+other = "interval for stats output (e.g. 5s, 10s, 1m)"
+
+[flag.clear.database.timeout]
+other = "timeout for clearing the database"
+
+[flag.clear.etcd.timeout]
+other = "timeout for clearing the etcd cache"
+
+[flag.create.user.username]
+other = "username of the new user (at least 6 characters)"
+
+[flag.create.docs.check]
+other = "only verify that generated docs match the code declarations without writing files (for CI)"
+
+[flag.create.user.password]
+other = "password of the new user (at least 8 characters)"
+
+[flag.create.user.nicklename]
+other = "nickname of the new user (at least 6 characters)"
+
+[flag.create.user.email]
+other = "email of the new user"
+
+[flag.create.user.timeout]
+other = "timeout for writing data to the database"
+
+[flag.force-reset-password.username]
+other = "username whose password to reset"
+
+[flag.force-reset-password.password]
+other = "new password of the user"
+
+[flag.force-reset-password.timeout]
+other = "timeout for writing data to the database"
+
+[flag.create.access-key.username]
+other = "username for whom to create the access key"
+
+[flag.create.access-key.description]
+other = "description of the access key"
+
+[flag.create.access-key.enabled]
+other = "whether the access key is enabled"
+
+[flag.create.access-key.ttl]
+other = "validity period of the access key from now (0 means never expires)"
+
+[flag.create.access-key.timeout]
+other = "database operation timeout"
+
+[flag.create.tls.name]
+other = "TLS file name"
+
+[flag.create.tls.dir-path]
+other = "directory path for storing TLS files"
+
+[flag.create.tls.ttl]
+other = "validity period of the TLS files from now (e.g. 8760h)"
+
+[flag.create.tls.dns-names]
+other = "domain name list of the TLS files (comma separated)"
+
+[flag.create.password-book.output]
+other = "output file path (stdout if not specified)"
+
+[flag.create.capturer.namespace]
+other = "namespace of the capturer"
+
+[flag.create.capturer.name]
+other = "name of the capturer"
+
+[flag.create.capturer.version]
+other = "version of the capturer"
+
+[flag.create.capturer.device]
+other = "network device name (e.g. eth0)"
+
+[flag.create.capturer.snap-len]
+other = "capture length in bytes"
+
+[flag.create.capturer.promisc]
+other = "enable promiscuous mode"
+
+[flag.create.capturer.read-timeout]
+other = "read timeout in milliseconds"
+
+[flag.create.capturer.bpf-expr]
+other = "BPF filter expression (e.g. tcp port 80)"
+
+[flag.create.capturer.enabled]
+other = "enable this capturer"
+
+[flag.create.capturer.timeout]
+other = "database operation timeout"
+
+[flag.sync.namespace]
+other = "target namespace (required)"
+
+[flag.sync.embedding-dimensions.dimensions]
+other = "target vector dimensions (explicitly set by operators, must be a positive integer; resizing clears all knowledge base vectors and requires reindexing)"
+
+[flag.create.testcase.pcap]
+other = "pcap file path (required)"
+
+[flag.create.testcase.output]
+other = "output directory for test case files"
+
+[flag.completion.bash.no-descriptions]
+other = "disable completion descriptions"
+
+[flag.completion.zsh.no-descriptions]
+other = "disable completion descriptions"
+
+[flag.completion.fish.no-descriptions]
+other = "disable completion descriptions"
+
+[flag.completion.powershell.no-descriptions]
+other = "disable completion descriptions"
+
+# =============================================================================
+# CLI interactive prompts
+# =============================================================================
+
+[cli.confirm.enter]
+other = "Please enter `[[.Input]]` to confirm"
+
+[cli.confirm.reenter]
+other = "Please re-enter `[[.Input]]` to confirm"
+
+[cli.etcd.select-keys]
+other = "Enter the key numbers to delete (e.g. 1,3,5-[[.Total]]) or 'all' to delete all [[.Total]] keys"
+
+[cli.etcd.no-keys]
+other = "No keys selected, nothing to do"
+
+[cli.etcd.invalid-range]
+other = "Invalid range: [[.Range]]"
+
+[cli.etcd.invalid-number]
+other = "Invalid key number: [[.Number]]"
+
+[cli.etcd.delete-count]
+other = "Will delete [[.Count]] keys:"
+
+[cli.etcd.delete-item]
+other = "  - [[.Key]]"
+
+# -----------------------------------------------------------------------------
+# Interactive prompt texts (cliinput) - Key layout: cli.input.prompt.<Struct>.<Field>
+# -----------------------------------------------------------------------------
+
+["cli.input.prompt.UserProfileChangeIn.NickleName"]
+other = "Please enter nickname"
+
+["cli.input.prompt.UserProfileChangeIn.Email"]
+other = "Please enter the user's email"
+
+["cli.input.prompt.UserPasswordLoginIn.Username"]
+other = "Please enter username"
+
+["cli.input.prompt.UserPasswordLoginIn.Password"]
+other = "Please enter password"
+
+["cli.input.prompt.CapturerConfigIn.Device"]
+other = "Please enter network device (e.g. eth0)"
+
+["cli.input.prompt.CapturerConfigIn.SnapLen"]
+other = "Please enter snap length in bytes"
+
+["cli.input.prompt.CapturerConfigIn.Promisc"]
+other = "Enable promiscuous mode?"
+
+["cli.input.prompt.CapturerConfigIn.Timeout"]
+other = "Please enter read timeout (e.g. 5s, 1m30s)"
+
+["cli.input.prompt.CapturerConfigIn.BpfExpr"]
+other = "Please enter BPF filter expression (e.g. tcp port 80)"
+
+["cli.input.prompt.CapturerConfigIn.Enabled"]
+other = "Enable this capturer?"
+
+["cli.input.prompt.CapturerCreateIn.Namespace"]
+other = "Please enter namespace"
+
+["cli.input.prompt.CapturerCreateIn.Name"]
+other = "Please enter capturer name"
+
+["cli.input.prompt.CapturerCreateIn.Version"]
+other = "Please enter version"
+
+["cli.input.prompt.TLSInputs.Name"]
+other = "Please enter the TLS name"
+
+["cli.input.prompt.TLSInputs.DirPath"]
+other = "Please enter the directory path"
+
+["cli.input.prompt.TLSInputs.TTL"]
+other = "Please enter the validity TTL (e.g. 8760h means 1 year)"
+
+["cli.input.prompt.TLSInputs.DNSNames"]
+other = "Please enter the DNS domain list"
+
+["cli.input.prompt.createAccessKeyInput.Username"]
+other = "Please enter username"
+
+["cli.input.prompt.createAccessKeyInput.Description"]
+other = "Please enter description"
+
+["cli.input.prompt.createAccessKeyInput.Enabled"]
+other = "Enable this access key?"
+
+["cli.input.prompt.createAccessKeyInput.TTL"]
+other = "Please enter the validity TTL (e.g. 8760h, 0 means never expires)"
+
+["cli.input.prompt.createUserInput.Superuser"]
+other = "Create this user as a superuser?"
+
+["cli.input.prompt.confirm-suffix"]
+other = " (confirm)"
+
+["cli.input.prompt.comma-separated-suffix"]
+other = " (comma-separated)"
+
+["cli.input.mismatch"]
+other = "Values do not match, please try again!"
+
+# -----------------------------------------------------------------------------
+# CLI print messages (pterm output) - Key layout: cli.<topic>.<message>
+# Missing keys return the key itself; zh-Hans.toml is the fallback locale.
+# -----------------------------------------------------------------------------
+
+[cli.base.pterm-debug]
+other = "pterm debug is enabled"
+
+[cli.root.process-exit]
+other = "zhongkui server process exit"
+
+[cli.clear.rolling-back]
+other = "Rolling back all migrations..."
+
+[cli.clear.connect-failed]
+other = "Failed to connect [[.DB]] database: [[.Err]]"
+
+[cli.clear.rolling-back-db]
+other = "Rolling back [[.DB]]..."
+
+[cli.clear.rollback-failed]
+other = "[[.DB]] rollback failed: [[.Err]]"
+
+[cli.clear.database-complete]
+other = "Clear database complete"
+
+[cli.etcd.get-keys-failed]
+other = "Failed to get [[.Category]] keys: [[.Err]]"
+
+[cli.etcd.no-keys-found]
+other = "No etcd cache keys found"
+
+[cli.etcd.keys-header]
+other = "=== etcd cache keys ==="
+
+[cli.etcd.delete-failed]
+other = "Failed to delete [[.Key]]: [[.Err]]"
+
+[cli.etcd.deleted]
+other = "Deleted [[.Key]]"
+
+[cli.etcd.clear-complete]
+other = "Clear etcd cache complete"
+
+[cli.migrate.create-failed]
+other = "[[.DB]]: [[.Err]]"
+
+[cli.migrate.created]
+other = "Created [[.Path]]"
+
+[cli.migrate.section]
+other = "[[.Action]] ([[.DB]])"
+
+[cli.migrate.action-failed]
+other = "[[.DB]] [[.Action]] failed: [[.Err]]"
+
+[cli.migrate.completed]
+other = "Migrations completed successfully"
+
+[cli.migrate.dry-run-section]
+other = "dry-run [[.DB]]"
+
+[cli.migrate.dry-run-db-failed]
+other = "dry-run [[.DB]]: [[.Err]]"
+
+[cli.migrate.dry-run-succeeded]
+other = "dry-run succeeded"
+
+[cli.migrate.dry-run-failed]
+other = "dry-run failed: [[.Err]]"
+
+[cli.migrate.diff-section]
+other = "diff [[.DB]]"
+
+[cli.migrate.diff-failed]
+other = "diff [[.DB]]: [[.Err]]"
+
+[cli.migrate.check-section]
+other = "check [[.DB]]"
+
+[cli.migrate.check-failed]
+other = "check [[.DB]]: [[.Err]]"
+
+[cli.migrate.up]
+other = "Running goose up on [[.DB]]"
+
+[cli.migrate.up-to]
+other = "Running goose up-to to version [[.Version]] on [[.DB]]"
+
+[cli.migrate.down]
+other = "Running goose down on [[.DB]]"
+
+[cli.migrate.down-to]
+other = "Running goose down-to to version [[.Version]] on [[.DB]]"
+
+[cli.migrate.down-no-current-version]
+other = "[[.DB]] has no applied migrations, nothing to roll back"
+
+[cli.migrate.down-to-no-current-version]
+other = "[[.DB]] has no applied migrations, nothing to roll back"
+
+[cli.migrate.goose-migrated]
+other = "Database successfully migrated to version [[.Version]]"
+
+[cli.migrate.goose-no-migrations]
+other = "No migrations to run, current version [[.Version]]"
+
+[cli.migrate.goose-up-to]
+other = "Migrations up to version [[.Version]]"
+
+[cli.migrate.goose-down-to]
+other = "Rolled back to version [[.Version]]"
+
+[cli.migrate.goose-file-not-found]
+other = "Migration file for current version ([[.Version]]) not found: [[.Err]]"
+
+[cli.migrate.goose-ok]
+other = "OK   [[.Source]] ([[.Duration]])"
+
+[cli.migrate.goose-empty]
+other = "EMPTY [[.Source]] ([[.Duration]])"
+
+[cli.migrate.col-version]
+other = "Version"
+
+[cli.migrate.col-migration]
+other = "Migration"
+
+[cli.migrate.col-status]
+other = "Status"
+
+[cli.migrate.col-applied-at]
+other = "Applied At"
+
+[cli.migrate.status-pending]
+other = "Pending"
+
+[cli.migrate.status-applied]
+other = "Applied"
+
+[cli.migrate.no-file]
+other = "No migration file found"
+
+[cli.migrate.dry-run-creating]
+other = "Creating temporary database for dry-run..."
+
+[cli.migrate.dry-run-running]
+other = "Running migrations on temporary database [[.DB]]..."
+
+[cli.migrate.dry-run-migration-failed]
+other = "Dry-run migration failed: [[.Err]]"
+
+[cli.migrate.dry-run-completed]
+other = "Dry-run migration completed successfully on [[.DB]]"
+
+[cli.migrate.dry-run-cleanup]
+other = "Cleaning up temporary database [[.DB]]..."
+
+[cli.migrate.dry-run-drop-failed]
+other = "Warning: failed to drop temp database [[.DB]]: [[.Err]]"
+
+[cli.migrate.dry-run-preserved]
+other = "Temporary database [[.DB]] preserved (--keep-temp)"
+
+[cli.migrate.check-creating]
+other = "Creating temporary database for schema check..."
+
+[cli.migrate.check-running]
+other = "Running migrations on temporary database [[.DB]]..."
+
+[cli.migrate.check-comparing]
+other = "Comparing model definitions with database schema..."
+
+[cli.migrate.check-cleanup]
+other = "Cleaning up temporary database [[.DB]]..."
+
+[cli.migrate.check-drop-failed]
+other = "Warning: failed to drop temp database [[.DB]]: [[.Err]]"
+
+[cli.migrate.check-preserved]
+other = "Temporary database [[.DB]] preserved (--keep-temp)"
+
+[cli.migrate.check-ok]
+other = "All models match the database schema, no issues found"
+
+[cli.migrate.issue-missing-table]
+other = "Missing Table"
+
+[cli.migrate.issue-extra-table]
+other = "Extra Table"
+
+[cli.migrate.issue-missing-column]
+other = "Missing Column"
+
+[cli.migrate.issue-extra-column]
+other = "Extra Column"
+
+[cli.migrate.issue-mismatch]
+other = "Mismatch"
+
+[cli.migrate.col-issue]
+other = "Issue"
+
+[cli.migrate.col-table]
+other = "Table"
+
+[cli.migrate.col-column]
+other = "Column"
+
+[cli.migrate.col-expected-type]
+other = "Expected Type"
+
+[cli.migrate.col-actual-type]
+other = "Actual Type"
+
+[cli.migrate.issues-table-error]
+other = "Error rendering issues table: [[.Err]]"
+
+[cli.migrate.diff-identical]
+other = "Database schema is up to date, no changes pending"
+
+[cli.migrate.col-change]
+other = "Change"
+
+[cli.migrate.col-detail]
+other = "Detail"
+
+[cli.migrate.diff-new-table]
+other = "New Table"
+
+[cli.migrate.diff-dropped-table]
+other = "Dropped Table"
+
+[cli.migrate.diff-new-column]
+other = "New Column"
+
+[cli.migrate.diff-dropped-column]
+other = "Dropped Column"
+
+[cli.migrate.diff-modified]
+other = "Modified"
+
+[cli.user.create-success]
+other = "User [[.Username]] created successfully"
+
+[cli.user.reset-password-success]
+other = "Password of user [[.Username]] reset successfully"
+
+[cli.user.extract-config-failed]
+other = "Cannot extract config: [[.Err]]"
+
+[cli.user.not-found]
+other = "Cannot find user [[.Username]]: [[.Err]]"
+
+[cli.user.access-key-create-failed]
+other = "Cannot create access key: [[.Err]]"
+
+[cli.user.access-key-max]
+other = "User [[.Username]] already has [[.Max]] access keys (max: [[.Max]])"
+
+[cli.user.access-key-created]
+other = "Access key created for user [[.Username]]"
+
+[cli.user.access-key-id]
+other = "  AccessKeyID:     [[.Value]]"
+
+[cli.user.access-key-secret]
+other = "  AccessKeySecret: [[.Value]]"
+
+[cli.user.access-key-description]
+other = "  Description:     [[.Value]]"
+
+[cli.user.access-key-enabled]
+other = "  Enabled:         [[.Value]]"
+
+[cli.user.access-key-expired-at]
+other = "  ExpiredAt:       [[.Value]]"
+
+[cli.user.access-key-never-expires]
+other = "  ExpiredAt:       never"
+
+[cli.tls.key-created]
+other = "TLS key file [[.Path]] was created"
+
+[cli.tls.cert-created]
+other = "TLS cert file [[.Path]] was created"
+
+[cli.testcase.generated]
+other = "Test cases generated at [[.Dir]]"
+
+[cli.testcase.no-http]
+other = "No HTTP traffic found in pcap file"
+
+[cli.testcase.found-streams]
+other = "Found [[.Count]] HTTP stream(s)"
+
+[cli.testcase.processing-stream]
+other = "Processing TCP stream [[.Stream]]..."
+
+[cli.testcase.process-failed]
+other = "Failed to process stream [[.Stream]]: [[.Err]], skipping"
+
+[cli.testcase.generated-file]
+other = "  Generated [[.Path]]"
+
+[cli.testcase.total]
+other = "Total: [[.Tx]] HTTP transaction(s) across [[.Streams]] stream(s)"
+
+[cli.testcase.parse-request-failed]
+other = "  stream [[.Stream]]: failed to parse HTTP request at tx [[.Tx]]: [[.Err]]"
+
+[cli.testcase.response-missing]
+other = "  stream [[.Stream]] tx [[.Tx]]: HTTP response missing or incomplete: [[.Err]]"
+
+[cli.testcase.parse-response-failed]
+other = "  stream [[.Stream]] tx [[.Tx]]: failed to parse HTTP response: [[.Err]]"
+
+[cli.docs.generated]
+other = "Documentation generated at [[.Dir]]"
+
+[cli.sync.docs.disabled]
+other = "AI is not enabled; cannot sync comment-generated documents"
+
+[cli.sync.docs.done]
+other = "Synchronized [[.Narratives]] narrative page(s) for namespace [[.Namespace]]"
+
+[cli.sync.docs.failed]
+other = "Failed to sync comment-generated documents: [[.Err]]"
+
+[cli.sync.apis.disabled]
+other = "AI is not enabled; cannot sync native API knowledge"
+
+[cli.sync.apis.done]
+other = "Synchronized [[.Apis]] native API(s) for namespace [[.Namespace]]"
+
+[cli.sync.apis.failed]
+other = "Failed to sync native API knowledge: [[.Err]]"
+
+[cli.sync.schema.disabled]
+other = "AI is not enabled; cannot sync database table knowledge"
+
+[cli.sync.schema.done]
+other = "Synchronized [[.Tables]] database table(s) for namespace [[.Namespace]]"
+
+[cli.sync.schema.failed]
+other = "Failed to sync database table knowledge: [[.Err]]"
+
+[cli.sync.capabilities.disabled]
+other = "AI is not enabled; cannot sync platform capability knowledge"
+
+[cli.sync.capabilities.done]
+other = "Synchronized [[.Capabilities]] capability document(s) for namespace [[.Namespace]]"
+
+[cli.sync.capabilities.failed]
+other = "Failed to sync platform capability knowledge: [[.Err]]"
+
+[cli.sync.embeddings.no-namespace]
+other = "Missing --namespace: specify the target namespace"
+
+[cli.sync.embeddings.disabled]
+other = "AI is not enabled; cannot recompute embedding vectors"
+
+[cli.sync.embeddings.done]
+other = "Recomputed [[.Documents]] knowledge document(s) and [[.Memories]] long-term memory/memories for namespace [[.Namespace]]"
+
+[cli.sync.embeddings.failed]
+other = "Failed to recompute embedding vectors: [[.Err]]"
+
+[cli.sync.progress.header]
+other = "Namespace [[.Namespace]] · Model [[.Model]] · Pending [[.Total]] items"
+
+[cli.sync.progress.rate-title]
+other = "Rate [[.Rate]] items/s · ETA [[.Eta]] · Done [[.Done]]/[[.Total]]"
+
+[cli.sync.progress.empty]
+other = "Content is up to date, nothing to process"
+
+[cli.sync.progress.total-row]
+other = "Total"
+
+[cli.sync.progress.count]
+other = "[[.Count]] items"
+
+[cli.sync.progress.memory-item]
+other = "Long-term memories ([[.Count]])"
+
+[cli.sync.progress.col.item]
+other = "Item"
+
+[cli.sync.progress.col.action]
+other = "Action"
+
+[cli.sync.progress.col.elapsed]
+other = "Elapsed"
+
+[cli.sync.progress.col.prompt]
+other = "Input Tokens"
+
+[cli.sync.progress.col.completion]
+other = "Output Tokens"
+
+[cli.sync.progress.action.create]
+other = "Create"
+
+[cli.sync.progress.action.update]
+other = "Update"
+
+[cli.sync.progress.action.delete]
+other = "Delete"
+
+[cli.sync.progress.action.reindex]
+other = "Reindex"
+
+[cli.sync.progress.action.memory]
+other = "Memory"
+
+[cli.sync.embedding-dimensions-section]
+other = "Reconciling the embedding column dimension on [[.DB]]"
+
+[cli.sync.embedding-dimensions-failed]
+other = "Failed to reconcile the embedding column dimension on [[.DB]]: [[.Err]]"
+
+[cli.sync.embedding-dimensions-flag-required]
+other = "the --dimensions flag is required and must be a positive integer"
+
+[cli.sync.embedding-dimensions-slot-bound]
+other = "the embedding slot is bound to model \"[[.Name]]\" with [[.Dimensions]] dimensions; unbind it before resizing the index to [[.Target]]"
+
+[cli.sync.embedding-dimensions-reconciled]
+other = "Embedding column dimension reconciled to [[.Dimensions]], please reindex the knowledge base documents"
+
+[cli.sync.embedding-dimensions-in-sync]
+other = "Embedding column dimension already matches the specified dimension, no rebuild needed"
+
+[cli.s3.lifecycle.applied]
+other = "Applied [[.Count]] lifecycle rule(s) to bucket [[.Bucket]]"
+
+[cli.s3.lifecycle.removed]
+other = "Removed all lifecycle rules from bucket [[.Bucket]]"
+
+[cli.s3.lifecycle.no-rules]
+other = "Bucket [[.Bucket]] has no lifecycle rules configured"
+
+[cli.s3.lifecycle.rule-preview]
+other = "The following [[.Count]] lifecycle rule(s) will be applied to bucket [[.Bucket]]:"
+
+[cli.s3.lifecycle.prompt-prefix]
+other = "Select the object path prefix to configure expiration"
+
+[cli.s3.lifecycle.action-save]
+other = "Save and apply"
+
+[cli.s3.lifecycle.action-exit]
+other = "Exit"
+
+[cli.s3.lifecycle.prompt-expire-days]
+other = "Enter the number of days after object creation before expiry (positive integer)"
+
+[cli.s3.lifecycle.prompt-confirm-apply]
+other = "Apply the [[.Count]] rule(s) above to bucket [[.Bucket]]? This fully replaces the existing rules"
+
+[cli.s3.lifecycle.duplicate-prefix]
+other = "Prefix [[.Prefix]] already has a rule, please select another"
+
+[cli.s3.lifecycle.invalid-days]
+other = "Expiration days must be a positive integer, please try again"
+
+[cli.s3.lifecycle.no-rules-selected]
+other = "No lifecycle rule selected, aborted"
+
+[cli.s3.lifecycle.cancelled]
+other = "Cancelled, nothing was changed"
+
+[cli.s3.lifecycle.table-id]
+other = "ID"
+
+[cli.s3.lifecycle.table-status]
+other = "STATUS"
+
+[cli.s3.lifecycle.table-prefix]
+other = "PREFIX"
+
+[cli.s3.lifecycle.table-expire-days]
+other = "EXPIRE DAYS"
+
+[cli.run.capture-stats-enabled]
+other = "Capture stats enabled, printing every [[.Interval]] to stdout"
+
+[cli.run.processor-create-failed]
+other = "Failed to create processor [[.Name]]: [[.Err]]"
+
+[cli.scheduler.none-found]
+other = "No scheduled task configs found in etcd"
+
+[cli.scheduler.not-found]
+other = "Scheduled task config not found: [[.Name]]"
+
+[cli.crypto.book-generated-file]
+other = "Password book generated successfully: [[.Path]] ([[.Bytes]] bytes)"
+
+[cli.crypto.book-generated-stdout]
+other = "Password book generated ([[.Bytes]] bytes). Use --output to save to a file."
+
+[cli.crypto.parent-secret-key-warning]
+other = "WARNING: Using parent secret key from config file. This is NOT safe for production. Please switch to KMS as soon as possible."
+
+[cli.crypto.password-book-warning]
+other = "WARNING: Using embedded default password book. This is NOT safe for production. Please run 'zki create password-book' to generate your own password book file."
+
+[cli.capturer.create-failed]
+other = "Cannot create capturer: [[.Err]]"
+
+[cli.capturer.created]
+other = "Capturer [[.Namespace]]/[[.Name]] ([[.Version]]) created successfully"
+
+[cli.tracer.report-title]
+other = "Stage Timing Statistics Report"
+
+[cli.tracer.no-data]
+other = "No data"
+
+[cli.tracer.col-stage]
+other = "Stage"
+
+[cli.tracer.col-calls]
+other = "Calls"
+
+[cli.tracer.col-total]
+other = "Total"
+
+[cli.tracer.col-avg]
+other = "Avg"
+
+[cli.tracer.col-min]
+other = "Min"
+
+[cli.tracer.col-max]
+other = "Max"
+
+[cli.tracer.col-ratio]
+other = "Ratio"
+
+[cli.tracer.render-error]
+other = "Error rendering report table: [[.Err]]"
+
+[cli.tracer.total-records]
+other = "Total records: [[.Count]]"
+
+[cli.scheduler.col-name]
+other = "name"
+
+[cli.scheduler.col-cronspec]
+other = "cronSpec"
+
+[cli.scheduler.col-interval]
+other = "interval"
+
+[cli.scheduler.col-queue]
+other = "queue"
+
+[cli.scheduler.col-timeout]
+other = "timeout"
+
+[cli.scheduler.col-maxretry]
+other = "maxRetry"
+
+[cli.scheduler.col-enabled]
+other = "enabled"
+
+[cli.deps.col-name]
+other = "Name"
+
+[cli.deps.col-category]
+other = "Category"
+
+[cli.deps.col-configured]
+other = "Configured"
+
+[cli.deps.col-state]
+other = "State"
+
+[cli.deps.col-latency]
+other = "Latency"
+
+[cli.deps.col-message]
+other = "Message"
+
+[cli.deps.value.ok]
+other = "OK"
+
+[cli.deps.value.unreachable]
+other = "Unreachable"
+
+[cli.deps.value.disabled]
+other = "Disabled"
+
+[cli.config.col-path]
+other = "path"
+
+[cli.config.col-kind]
+other = "kind"
+
+[cli.config.col-default]
+other = "default"
+
+[cli.config.col-comment]
+other = "comment"
+
+[cli.capture.stats]
+other = "[capture stats] [[.Stats]]"
+
+[cli.pcap.nil-model]
+other = "[nil model] level=[[.Level]] stack_len=[[.Len]]"
+
+[cli.pcap.nil-model-stack]
+other = "[nil model]   stack[[[.Index]]] level=[[.Level]] proto=[[.Proto]] headers=[[.Headers]]"
+
+[cli.pcap.import-stats]
+other = "[pcap import stats] [[.Stats]]"
+
+[cli.bench.col-name]
+other = "Benchmark"
+
+[cli.bench.col-sent]
+other = "Sent"
+
+[cli.bench.col-captured]
+other = "Captured"
+
+[cli.bench.col-lost]
+other = "Lost"
+
+[cli.bench.col-loss-rate]
+other = "Loss Rate"
+
+[cli.bench.col-pps]
+other = "PPS"
+
+[cli.bench.col-bps]
+other = "BPS"
+
+[cli.bench.col-duration]
+other = "Duration"
+
+[cli.bench.report-save-failed]
+other = "Warning: failed to save benchmark report: [[.Err]]"
+
+[cli.bench.report-saved]
+other = "Benchmark report saved: [[.Path]]"
+
+# =============================================================================
+# Config comment translations (rendered by "describe config")
+# Key layout: config.<path>; Chinese comment in struct tags is the fallback.
+# Set ZKI_LANG=en to enable English output.
+# =============================================================================
+
+["config.zap.{api,database,etcd,grpc,pipeline}.level"]
+other = "Log level: debug, info, warn, error, dpanic, panic, fatal (ref: https://github.com/uber-go/zap/blob/master/level.go)"
+
+["config.zap.{api,database,etcd,grpc,pipeline}.development"]
+other = "Enable development mode, use the console encoder and add stack traces for warning and error logs (ref: https://pkg.go.dev/go.uber.org/zap#NewDevelopmentEncoderConfig)"
+
+["config.zap.{api,database,etcd,grpc,pipeline}.disableCaller"]
+other = "Disable caller information in log output; when false, file name and line number are printed (ref: https://pkg.go.dev/go.uber.org/zap#Config-DisableCaller)"
+
+["config.zap.{api,database,etcd,grpc,pipeline}.disableStacktrace"]
+other = "Disable stack traces for ErrorLevel and DPanicLevel logs; when false, stack traces are added to error logs (ref: https://pkg.go.dev/go.uber.org/zap#Config-DisableStacktrace)"
+
+["config.zap.{api,database,etcd,grpc,pipeline}.encoding"]
+other = "Log encoding format: json or console (ref: https://pkg.go.dev/go.uber.org/zap#Config-Encoding)"
+
+["config.zap.{api,database,etcd,grpc,pipeline}.outputPaths"]
+other = "List of log output targets, supports stdout, stderr and file paths (ref: https://pkg.go.dev/go.uber.org/zap#Config-OutputPaths)"
+
+["config.zap.{api,database,etcd,grpc,pipeline}.errorOutputPaths"]
+other = "List of internal log error output targets (ref: https://pkg.go.dev/go.uber.org/zap#Config-ErrorOutputPaths)"
+
+["config.api.host"]
+other = "HTTP service listen address; 0.0.0.0 listens on all network interfaces"
+
+["config.api.port"]
+other = "HTTP service listen port number"
+
+["config.api.namespace"]
+other = "Multi-namespace (multi-tenant) identification configuration"
+
+["config.api.namespace.headerName"]
+other = "HTTP request header name carrying the namespace identifier"
+
+["config.api.namespace.queryName"]
+other = "URL query parameter name carrying the namespace identifier"
+
+["config.api.namespace.namespace"]
+other = "Cookie name carrying the namespace identifier"
+
+["config.api.auth"]
+other = "JWT authentication configuration"
+
+["config.api.auth.issuer"]
+other = "JWT issuer identifier (iss claim), used to distinguish token sources"
+
+["config.api.auth.subject"]
+other = "JWT subject identifier (sub claim), identifies token purpose"
+
+["config.api.auth.audience"]
+other = "JWT audience list (aud claim), restricts token recipients"
+
+["config.api.auth.tokenPrefix"]
+other = "Token transport prefix, similar to the Bearer scheme in the Authorization header"
+
+["config.api.auth.tokenTimeout"]
+other = "JWT token validity duration; reissue or refresh after expiry"
+
+["config.api.auth.tokenRefreshTimeout"]
+other = "JWT token refresh timeout; a new login is required after timeout"
+
+["config.api.auth.headerName"]
+other = "HTTP request header name carrying the JWT token"
+
+["config.api.auth.cookie"]
+other = "Cookie storage configuration for the JWT token"
+
+["config.api.auth.cookie.name"]
+other = "Cookie name used to identify the JWT token cookie"
+
+["config.api.auth.cookie.domain"]
+other = "Cookie scope domain, restricts the cookie to be sent only under the specified domain"
+
+["config.api.auth.cookie.path"]
+other = "Cookie scope path, restricts the cookie to be sent only under the specified path"
+
+["config.api.auth.cookie.secure"]
+other = "Whether to send the cookie only over HTTPS to prevent token leakage over unencrypted connections"
+
+["config.api.auth.cookie.httpOnly"]
+other = "Whether to forbid JavaScript from accessing the cookie to prevent XSS from stealing tokens"
+
+["config.api.auth.accessKeyCount"]
+other = "Maximum number of access keys allowed per user"
+
+["config.api.secure"]
+other = "HTTP security response header configuration"
+
+["config.api.secure.frameOptions"]
+other = "Whether to allow pages to be embedded in iframes; DENY forbids, SAMEORIGIN allows only same origin"
+
+["config.api.secure.contentSecurityPolicy"]
+other = "Content Security Policy (CSP), controls loadable resource sources to defend against XSS and code injection"
+
+["config.api.secure.xssProtection"]
+other = "Browser built-in XSS filter behavior; 1; mode=block blocks rendering when an attack is detected"
+
+["config.api.secure.strictTransportSecurity"]
+other = "Force browsers to access only over HTTPS, HSTS policy"
+
+["config.api.secure.referrerPolicy"]
+other = "Policy for sending the HTTP Referer request header"
+
+["config.api.secure.contentTypeOptions"]
+other = "Prevent MIME type sniffing; nosniff forces the declared Content-Type"
+
+["config.api.secure.permissionsPolicy"]
+other = "Controls browser feature permissions (geolocation, camera, microphone, etc.)"
+
+["config.api.secure.cors"]
+other = "Cross-Origin Resource Sharing (CORS) policy configuration"
+
+["config.api.secure.cors.allowOrigins"]
+other = "List of allowed cross-origin request origins; * allows all origins (not recommended for production)"
+
+["config.api.secure.cors.allowCredentials"]
+other = "Whether to allow cross-origin requests to carry credentials (cookies, HTTP auth, etc.)"
+
+["config.api.secure.cors.allowHeaders"]
+other = "List of allowed cross-origin request headers, must be declared in preflight requests"
+
+["config.api.secure.cors.allowMethods"]
+other = "List of allowed cross-origin HTTP methods"
+
+["config.crypto.source"]
+other = "Master key source: config (config file) or kms (key management service)"
+
+["config.crypto.parent_secret_key"]
+other = "Master key plaintext value (only used when source is config)"
+
+["config.crypto.password_book_path"]
+other = "Password book file path, provides the salt for key derivation"
+
+["config.database.{core,raw}.driver"]
+other = "Database driver name, supported: postgres, clickhouse (ref: https://gorm.io/docs/connect.html)"
+
+["config.database.{core,raw}.dsn"]
+other = "Database data source name / connection string (ref: https://gorm.io/docs/connect.html#Connection-String)"
+
+["config.database.{core,raw}.meta"]
+other = "Database GORM configuration options (ref: https://pkg.go.dev/gorm.io/gorm#Config)"
+
+["config.database.{core,raw}.meta.skipDefaultTransaction"]
+other = "Skip the default transaction for each database operation (ref: https://pkg.go.dev/gorm.io/gorm#Config-SkipDefaultTransaction)"
+
+["config.database.{core,raw}.meta.fullSaveAssociations"]
+other = "Save associations when creating or updating (ref: https://pkg.go.dev/gorm.io/gorm#Config-FullSaveAssociations)"
+
+["config.database.{core,raw}.meta.dryRun"]
+other = "Generate SQL only without executing, for precompiled statements (ref: https://pkg.go.dev/gorm.io/gorm#Config-DryRun)"
+
+["config.database.{core,raw}.meta.prepareStmt"]
+other = "Cache prepared statements for subsequent calls (ref: https://pkg.go.dev/gorm.io/gorm#Config-PrepareStmt)"
+
+["config.database.{core,raw}.meta.disableAutomaticPing"]
+other = "Disable automatic ping to check database liveness (ref: https://pkg.go.dev/gorm.io/gorm#Config-DisableAutomaticPing)"
+
+["config.database.{core,raw}.meta.disableForeignKeyConstraintWhenMigrating"]
+other = "Disable foreign key constraints when migrating (ref: https://pkg.go.dev/gorm.io/gorm#Config-DisableForeignKeyConstraintWhenMigrating)"
+
+["config.database.{core,raw}.meta.ignoreRelationshipsWhenMigrating"]
+other = "Ignore relationships when migrating (ref: https://pkg.go.dev/gorm.io/gorm#Config-IgnoreRelationshipsWhenMigrating)"
+
+["config.database.{core,raw}.meta.disableNestedTransaction"]
+other = "Disable nested transactions; roll back to savepoint when already in a transaction (ref: https://pkg.go.dev/gorm.io/gorm#Config-DisableNestedTransaction)"
+
+["config.database.{core,raw}.meta.allowGlobalUpdate"]
+other = "Allow global updates without a where condition (ref: https://pkg.go.dev/gorm.io/gorm#Config-AllowGlobalUpdate)"
+
+["config.database.{core,raw}.meta.queryFields"]
+other = "Select all fields when querying (ref: https://pkg.go.dev/gorm.io/gorm#Config-QueryFields)"
+
+["config.database.{core,raw}.meta.createBatchSize"]
+other = "Batch size for create operations; 0 means no batching (ref: https://pkg.go.dev/gorm.io/gorm#Config-CreateBatchSize)"
+
+["config.database.{core,raw}.meta.translateError"]
+other = "Translate gorm errors into readable error messages (ref: https://pkg.go.dev/gorm.io/gorm#Config-TranslateError)"
+
+["config.database.{core,raw}.meta.propagateUnscoped"]
+other = "Propagate unscoped to nested queries (ref: https://pkg.go.dev/gorm.io/gorm#Config-PropagateUnscoped)"
+
+["config.etcd.endpoints"]
+other = "List of etcd server addresses (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-Endpoints)"
+
+["config.etcd.username"]
+other = "etcd authentication username (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-Username)"
+
+["config.etcd.password"]
+other = "etcd authentication password (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-Password)"
+
+["config.etcd.autoSyncInterval"]
+other = "Cluster member sync interval; 0 disables it (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-AutoSyncInterval)"
+
+["config.etcd.dialTimeout"]
+other = "etcd client dial timeout (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-DialTimeout)"
+
+["config.etcd.dialKeepAliveTime"]
+other = "Frequency of keep-alive pings (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-DialKeepAliveTime)"
+
+["config.etcd.dialKeepAliveTimeout"]
+other = "Timeout for keep-alive pings (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-DialKeepAliveTimeout)"
+
+["config.etcd.maxCallSendMsgSize"]
+other = "Maximum bytes for messages sent from client to server (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-MaxCallSendMsgSize)"
+
+["config.etcd.maxCallRecvMsgSize"]
+other = "Maximum bytes for messages received by client from server (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-MaxCallRecvMsgSize)"
+
+["config.etcd.rejectOldCluster"]
+other = "Reject client requests from clusters with too-old versions (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-RejectOldCluster)"
+
+["config.etcd.tls"]
+other = "TLS secure connection configuration (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"
+
+["config.etcd.tls.enabled"]
+other = "Enable TLS for etcd client connections (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"
+
+["config.etcd.tls.domain"]
+other = "TLS server name for certificate verification (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"
+
+["config.etcd.tls.cert"]
+other = "Inline PEM-encoded certificate content; cannot be used with CertFilePath (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"
+
+["config.etcd.tls.certFilePath"]
+other = "PEM-encoded certificate file path; cannot be used with Cert (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"
+
+["config.redis.{cache,pipeline}.type"]
+other = "Redis connection type: 'normal' for standalone Redis, 'sentinel' for Redis Sentinel (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#NewClient)"
+
+["config.redis.{cache,pipeline}.masterName"]
+other = "Redis Sentinel master name, used when Type is sentinel (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#FailoverOptions-MasterName)"
+
+["config.redis.{cache,pipeline}.sentinelAddrs"]
+other = "Sentinel address list, used when Type is sentinel (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#FailoverOptions-SentinelAddrs)"
+
+["config.redis.{cache,pipeline}.sentinelUsername"]
+other = "Sentinel authentication username, used when Type is sentinel (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#FailoverOptions-SentinelUsername)"
+
+["config.redis.{cache,pipeline}.sentinelPassword"]
+other = "Sentinel authentication password, used when Type is sentinel (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#FailoverOptions-SentinelPassword)"
+
+["config.redis.{cache,pipeline}.routeByLatency"]
+other = "Route commands to replicas by latency, used when Type is sentinel (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#FailoverOptions-RouteByLatency)"
+
+["config.redis.{cache,pipeline}.routeRandomly"]
+other = "Randomly route commands to replicas, used when Type is sentinel (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#FailoverOptions-RouteRandomly)"
+
+["config.redis.{cache,pipeline}.replicaOnly"]
+other = "Route read commands to replicas only, used when Type is sentinel (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#FailoverOptions-ReplicaOnly)"
+
+["config.redis.{cache,pipeline}.useDisconnectedReplicas"]
+other = "Use replicas even when disconnected, used when Type is sentinel (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#FailoverOptions-UseDisconnectedReplicas)"
+
+["config.redis.{cache,pipeline}.network"]
+other = "Network type: tcp or unix (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-Network)"
+
+["config.redis.{cache,pipeline}.addr"]
+other = "Redis server address, used when Type is normal (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-Addr)"
+
+["config.redis.{cache,pipeline}.username"]
+other = "Redis AUTH username (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-Username)"
+
+["config.redis.{cache,pipeline}.password"]
+other = "Redis AUTH password (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-Password)"
+
+["config.redis.{cache,pipeline}.clientName"]
+other = "Client name, set via CLIENT SETNAME (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-ClientName)"
+
+["config.redis.{cache,pipeline}.db"]
+other = "Database number (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-DB)"
+
+["config.redis.{cache,pipeline}.poolSize"]
+other = "Maximum number of connections in the pool (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-PoolSize)"
+
+["config.redis.{cache,pipeline}.minIdleConns"]
+other = "Minimum number of idle connections in the pool (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-MinIdleConns)"
+
+["config.redis.{cache,pipeline}.maxIdleConns"]
+other = "Maximum number of idle connections in the pool (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-MaxIdleConns)"
+
+["config.redis.{cache,pipeline}.maxActiveConns"]
+other = "Maximum number of active connections in the pool; 0 means unlimited (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-MaxActiveConns)"
+
+["config.redis.{cache,pipeline}.maxRetries"]
+other = "Maximum number of retries (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-MaxRetries)"
+
+["config.redis.{cache,pipeline}.minRetryBackoff"]
+other = "Minimum backoff time between retries (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-MinRetryBackoff)"
+
+["config.redis.{cache,pipeline}.maxRetryBackoff"]
+other = "Maximum backoff time between retries (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-MaxRetryBackoff)"
+
+["config.redis.{cache,pipeline}.dialTimeout"]
+other = "Timeout for establishing connections (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-DialTimeout)"
+
+["config.redis.{cache,pipeline}.readTimeout"]
+other = "Timeout for read operations (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-ReadTimeout)"
+
+["config.redis.{cache,pipeline}.writeTimeout"]
+other = "Timeout for write operations (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-WriteTimeout)"
+
+["config.redis.{cache,pipeline}.contextTimeoutEnabled"]
+other = "Whether pool operations use context timeouts (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-ContextTimeoutEnabled)"
+
+["config.s3.endpoint"]
+other = "S3-compatible object storage service endpoint URL (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#New)"
+
+["config.s3.accessKey"]
+other = "S3 authentication access key (ref: https://pkg.go.dev/github.com/minio/minio-go/v7/pkg/credentials#Static)"
+
+["config.s3.secretKey"]
+other = "S3 authentication secret key (ref: https://pkg.go.dev/github.com/minio/minio-go/v7/pkg/credentials#Static)"
+
+["config.s3.bucket"]
+other = "Default bucket name for upload, download, list object operations, etc. (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#Client-BucketExists)"
+
+["config.s3.region"]
+other = "S3 region identifier; auto-detected when empty (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#New)"
+
+["config.s3.useSSL"]
+other = "Whether to use HTTPS for S3 connections (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#New)"
+
+["config.s3.streamingUpload"]
+other = "Whether encrypted uploads use streaming pipeline + multipart; set to false for S3 servers with incomplete multipart support (e.g. RustFS alpha)"
+
+["config.grpc.client.{reporter}.baseconfig"]
+other = "Base configuration: host address and port"
+
+["config.grpc.client.{reporter}.baseconfig.host"]
+other = "gRPC server/client host bind address or remote server address (ref: https://pkg.go.dev/google.golang.org/grpc#Server)"
+
+["config.grpc.client.{reporter}.baseconfig.port"]
+other = "gRPC server/client port number (ref: https://pkg.go.dev/google.golang.org/grpc#Server)"
+
+["config.grpc.client.{reporter}.tls"]
+other = "TLS secure connection configuration (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromCert)"
+
+["config.grpc.client.{reporter}.tls.enabled"]
+other = "Enable TLS for gRPC client connections (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromCert)"
+
+["config.grpc.client.{reporter}.tls.domain"]
+other = "TLS server name verification (SNI) domain (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromCert)"
+
+["config.grpc.client.{reporter}.tls.cert"]
+other = "Inline PEM-encoded certificate content; cannot be used with CertFilePath (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromCert)"
+
+["config.grpc.client.{reporter}.tls.certFilePath"]
+other = "PEM-encoded certificate file path; cannot be used with Cert (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromFile)"
+
+["config.grpc.client.{reporter}.auth"]
+other = "Authentication configuration (ref: https://pkg.go.dev/google.golang.org/grpc#WithPerRPCCredentials)"
+
+["config.grpc.client.{reporter}.auth.enabled"]
+other = "Enable authentication for gRPC clients (ref: https://pkg.go.dev/google.golang.org/grpc#WithPerRPCCredentials)"
+
+["config.grpc.client.{reporter}.auth.authorize"]
+other = "Authentication protocol: accessKeySecret means access-key-based authentication (ref: https://pkg.go.dev/google.golang.org/grpc#WithPerRPCCredentials)"
+
+["config.grpc.client.{reporter}.auth.accessKeyID"]
+other = "Access key ID for authentication (ref: internal/pkg/grpc/authenticator.go)"
+
+["config.grpc.client.{reporter}.auth.accessKeySecret"]
+other = "Access key secret for authentication (ref: internal/pkg/grpc/authenticator.go)"
+
+["config.grpc.client.{reporter}.keepalive"]
+other = "Keep-alive connection management configuration (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters)"
+
+["config.grpc.client.{reporter}.keepalive.time"]
+other = "Client keep-alive ping interval (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters-Time)"
+
+["config.grpc.client.{reporter}.keepalive.timeout"]
+other = "Keep-alive ping timeout; closes the connection if no response (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters-Timeout)"
+
+["config.grpc.client.{reporter}.keepalive.permitWithoutStream"]
+other = "Whether to allow keep-alive pings without active streams (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters-PermitWithoutStream)"
+
+["config.grpc.client.{reporter}.serviceConfig"]
+other = "gRPC service config JSON for load balancing and retry policies (ref: https://pkg.go.dev/google.golang.org/grpc#WithDefaultServiceConfig)"
+
+["config.grpc.server.{reporter}.baseconfig"]
+other = "Base configuration: host address and port"
+
+["config.grpc.server.{reporter}.baseconfig.host"]
+other = "gRPC server/client host bind address or remote server address (ref: https://pkg.go.dev/google.golang.org/grpc#Server)"
+
+["config.grpc.server.{reporter}.baseconfig.port"]
+other = "gRPC server/client port number (ref: https://pkg.go.dev/google.golang.org/grpc#Server)"
+
+["config.grpc.server.{reporter}.tls"]
+other = "TLS secure connection configuration (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"
+
+["config.grpc.server.{reporter}.tls.enabled"]
+other = "Enable TLS for the gRPC server (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"
+
+["config.grpc.server.{reporter}.tls.cert"]
+other = "Inline PEM-encoded certificate content; cannot be used with CertFilePath (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"
+
+["config.grpc.server.{reporter}.tls.key"]
+other = "Inline PEM-encoded private key content; cannot be used with KeyFilePath (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"
+
+["config.grpc.server.{reporter}.tls.certFilePath"]
+other = "PEM-encoded certificate file path; cannot be used with Cert (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"
+
+["config.grpc.server.{reporter}.tls.keyFilePath"]
+other = "PEM-encoded private key file path; cannot be used with Key (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"
+
+["config.grpc.server.{reporter}.auth"]
+other = "gRPC server authentication configuration (ref: https://pkg.go.dev/google.golang.org/grpc#ServerOption)"
+
+["config.grpc.server.{reporter}.auth.accessKeyEnabled"]
+other = "Enable access key authentication (ref: https://pkg.go.dev/google.golang.org/grpc#ServerOption)"
+
+["config.grpc.server.{reporter}.keepalive"]
+other = "Keep-alive connection management configuration (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters)"
+
+["config.grpc.server.{reporter}.keepalive.time"]
+other = "Server ping interval, sends keep-alive pings every Time duration (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-Time)"
+
+["config.grpc.server.{reporter}.keepalive.timeout"]
+other = "Keep-alive ping timeout; closes the connection if no response (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-Timeout)"
+
+["config.grpc.server.{reporter}.keepalive.minTime"]
+other = "Minimum time a client must wait before sending keep-alive pings (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#EnforcementPolicy-MinTime)"
+
+["config.grpc.server.{reporter}.keepalive.maxConnectionAge"]
+other = "Maximum connection age; closes the connection after, 0 disables (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-MaxConnectionAge)"
+
+["config.grpc.server.{reporter}.keepalive.maxConnectionAgeGrace"]
+other = "Grace period before forcing connection close after MaxConnectionAge (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-MaxConnectionAgeGrace)"
+
+["config.grpc.server.{reporter}.keepalive.maxConnectionIdle"]
+other = "Maximum connection idle time; closes after, 0 disables (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-MaxConnectionIdle)"
+
+["config.grpc.server.{reporter}.keepalive.permitWithoutStream"]
+other = "Whether to allow keep-alive pings without active streams (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#EnforcementPolicy-PermitWithoutStream)"
+
+["config.grpc.server.{reporter}.health"]
+other = "Health check configuration for the gRPC health protocol (ref: https://github.com/grpc/grpc-go/blob/master/health/server.go)"
+
+["config.grpc.server.{reporter}.health.enabled"]
+other = "Enable the gRPC health check service (ref: https://github.com/grpc/grpc-go/blob/master/health/server.go)"
+
+["config.grpc.server.{reporter}.health.serviceName"]
+other = "Service name for health checks (ref: https://github.com/grpc/grpc-go/blob/master/health/server.go)"
+
+["config.pipeline.concurrency"]
+other = "Maximum number of concurrently processed tasks; -1 means unlimited (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-Concurrency)"
+
+["config.pipeline.taskCheckInterval"]
+other = "Interval for checking new tasks in the queue (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-TaskCheckInterval)"
+
+["config.pipeline.healthCheckInterval"]
+other = "Interval for checking worker node health status (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-HealthCheckInterval)"
+
+["config.pipeline.delayedTaskCheckInterval"]
+other = "Interval for checking delayed tasks (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-DelayedTaskCheckInterval)"
+
+["config.pipeline.shutdownTimeout"]
+other = "Maximum wait time for graceful shutdown (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-ShutdownTimeout)"
+
+["config.pipeline.queues"]
+other = "Queue priorities; higher values mean higher priority (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-Queues)"
+
+["config.pipeline.strictPriority"]
+other = "Strict priority mode, processes queues in order (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-StrictPriority)"
+
+["config.pipeline.scheduler"]
+other = "Scheduled task scheduler configuration (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"
+
+["config.pipeline.scheduler.tasks"]
+other = "Scheduled task configuration map, keyed by task name (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"
+
+["config.pipeline.scheduler.location"]
+other = "Timezone for parsing cron expressions (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"
+
+["config.pipeline.scheduler.syncInterval"]
+other = "Interval for syncing scheduler data from the database (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"
+
+["config.pipeline.scheduler.heartbeatInterval"]
+other = "Scheduler heartbeat interval (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"
+
+["config.pipeline.scheduler.forceFlush"]
+other = "Whether to force-flush the scheduler queue during sync (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"
+
+["config.pipeline.custom"]
+other = "Custom parameters, dynamically injecting task and handler functions at execution"
+
+["config.pipeline.custom.tasks"]
+other = "Task configuration map, dynamically injecting task functions at execution"
+
+["config.pipeline.custom.processors"]
+other = "Handler configuration map, dynamically injecting handler functions at execution"
+
+["config.i18n.rootPath"]
+other = "Root path for storing localization files (ref: https://pkg.go.dev/github.com/nicksnyder/go-i18n/v2/i18n#Bundle-ParseGlob)"
+
+["config.i18n.defaultLocale"]
+other = "Default language/locale (ref: https://pkg.go.dev/github.com/nicksnyder/go-i18n/v2/i18n#Bundle-Locale)"
+
+["config.i18n.supportLocales"]
+other = "List of supported languages/locales (ref: https://pkg.go.dev/github.com/nicksnyder/go-i18n/v2/i18n#Bundle-Locale)"
+
+# =============================================================================
+# Tag rule Rego error/lint messages - Key layout: tagrule.*
+# 标签规则 Rego 校验错误与字段 lint 告警文案，供接口层按请求语言翻译
+# =============================================================================
+
+[tagrule]
+rego-invalid = "Rego rule violates the tag rule contract: it must be package zki with a tags rule"
+lint-field-not-exist = "Field %s does not exist in the input document of this model, please check the spelling"
+lint-field-hint = "Please choose a valid field from the input field panel or the completion list"
+
+[tagrule.hint]
+parse-unexpected = "Syntax error: unexpected token or keyword, please check the spelling and paired brackets/quotes"
+parse-package = "Syntax error: invalid package declaration, expected: package zki"
+parse-if = "Missing if keyword: rule body should be written as tags contains <value> if { ... }"
+parse-contains = "Missing contains keyword: tag rules should be written as tags contains <value>"
+parse-empty = "Empty module: please write at least one rule"
+parse-illegal = "Syntax error: illegal expression, please check the code near this position"
+parse-builtin-conflict = "A built-in function name cannot be used as a bare call: assign the result to a variable, e.g. x := sqlite.query(\"SELECT 1 AS x\", [])"
+parse-fallback = "Rego syntax error: please check whether the code near this position is valid Rego"
+compile-shadow = "Rule name conflict: a rule name cannot shadow other rules or keywords, please rename it"
+compile-import-shadow = "Import conflict: the imported package name shadows another symbol, please adjust the import"
+compile-var-shadow = "Variable name conflict: the variable name shadows a keyword or another binding, please rename it"
+compile-fallback = "Rego compile error: rule definitions conflict or are invalid, please check rule names and assignment style"
+type-undefined-function = "Type error: calling an undefined function, please check the function name spelling"
+type-undefined-ref = "Type error: referencing a non-existent path, please check the field name spelling"
+type-conflicting-rules = "Type error: conflicting definitions of the same rule (e.g. full assignment coexists with contains), please unify the style"
+type-match-error = "Type error: operands on both sides of the expression do not match, please check the field types"
+type-function = "Type error: incorrect function call (argument count or syntax), please check the call"
+type-fallback = "Type error: operand types of the expression do not match, please check field types and function arguments"
+unsafe-var = "Undefined variable: the expression references an unbound variable, please check the spelling or declare it with some"
+recursion = "Recursion error: the rule references itself recursively, please check circular dependencies between rules"
+
+# =============================================================================
+# Input document field descriptions (input.<typeKey>.<field>)
+# Input document field descriptions: types registered as taggable target models
+# (tagengine registry) must provide Chinese/English descriptions for every input
+# field; tagengine derives the i18n message key and the API layer translates it
+# by request language (InputFieldMeta.Description)
+# =============================================================================
+
+# ---- BaseMeta ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.namespace"]
+other = "Namespace the record belongs to"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.capture"]
+other = "Capturer name"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.version"]
+other = "Data version"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.session_id"]
+other = "Session ID"
+
+# ---- TimestampMeta ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.timestamp"]
+other = "Packet capture timestamp"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.created_at"]
+other = "Record creation time"
+
+# ---- TraceMeta ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.trace_id"]
+other = "Trace ID"
+
+# ---- HttpBase ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_ip"]
+other = "Client IP address"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_port"]
+other = "Client port number"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_isn"]
+other = "Client ISN"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_ip"]
+other = "Server IP address"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_port"]
+other = "Server port number"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_isn"]
+other = "Server ISN"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.ip_version"]
+other = "IP protocol version"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.http_version"]
+other = "HTTP protocol version"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.stream_index"]
+other = "Stream index"
+
+# ---- TcpFingerprint ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_client_os"]
+other = "Client operating system (TCP fingerprint)"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_client_os_quality"]
+other = "Client OS identification quality"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fpTcpClientSig"]
+other = "Client TCP signature"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_os"]
+other = "Server operating system (TCP fingerprint)"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_os_quality"]
+other = "Server OS identification quality"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fpTcpServerSig"]
+other = "Server TCP signature"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_mtu"]
+other = "TCP MTU value"
+
+# ---- HttpURI ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.url"]
+other = "Full request URL"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.scheme"]
+other = "Protocol scheme"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.host"]
+other = "Host name or IP address"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.path"]
+other = "Request path"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.file_ext"]
+other = "File extension"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.queries"]
+other = "Query parameters"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fragment"]
+other = "Fragment identifier"
+
+# ---- HttpRequestBody ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.method"]
+other = "HTTP request method"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_body"]
+other = "Request body content"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_body_hash"]
+other = "SHA-256 digest of the request body"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_body_length"]
+other = "Request body length in bytes"
+
+# ---- HttpRequestHeaders ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_authorization"]
+other = "Authorization credentials"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_proxy_authorization"]
+other = "Proxy authorization credentials"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_cache_control"]
+other = "Cache control directives"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_match"]
+other = "Conditional match ETag"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_none_match"]
+other = "Conditional no-match ETag"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_modified_since"]
+other = "Conditional modified-since time"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_unmodified_since"]
+other = "Conditional unmodified-since time"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_range"]
+other = "Conditional range request"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_connection"]
+other = "Connection control"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_keep_alive"]
+other = "Persistent connection control"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_accept"]
+other = "Acceptable response content types"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_accept_encoding"]
+other = "Acceptable content encodings"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_accept_language"]
+other = "Acceptable natural languages"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_expect"]
+other = "Expected conditions"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_max_forwards"]
+other = "Maximum forwarding hops"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_cookie"]
+other = "HTTP cookie"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_origin"]
+other = "Request origin"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_access_control_request_headers"]
+other = "CORS preflight request headers"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_access_control_request_method"]
+other = "CORS preflight method"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_type"]
+other = "Request content type"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_length"]
+other = "Request content length"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_encoding"]
+other = "Request content encoding"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_language"]
+other = "Request content language"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_forwarded"]
+other = "Forwarded information"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_via"]
+other = "Proxy chain information"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_range"]
+other = "Range request"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_from"]
+other = "Sender email address"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_host"]
+other = "Target host"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_referer"]
+other = "Referrer source"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_referrer_policy"]
+other = "Referrer policy"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_user_agent"]
+other = "User agent string"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_te"]
+other = "Transfer encoding acceptance"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_transfer_encoding"]
+other = "Transfer encoding"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_trailer"]
+other = "Trailer field declaration"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_key"]
+other = "WebSocket handshake key"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_version"]
+other = "WebSocket protocol version"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_protocol"]
+other = "WebSocket subprotocol"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_extensions"]
+other = "WebSocket extensions"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_site"]
+other = "Fetch site relation"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_mode"]
+other = "Fetch request mode"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_user"]
+other = "Fetch user activation"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_dest"]
+other = "Fetch request destination"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_purpose"]
+other = "Request purpose"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_service_worker_navigation_preload"]
+other = "Service worker navigation preload"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua"]
+other = "User agent brand and version"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_arch"]
+other = "User agent CPU architecture"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_bitness"]
+other = "User agent CPU bitness"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_full_version"]
+other = "User agent full version"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_full_version_list"]
+other = "User agent brand full version list"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_mobile"]
+other = "Mobile device flag"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_model"]
+other = "Device model"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_platform"]
+other = "Underlying platform"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_platform_version"]
+other = "Platform version"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_wow64"]
+other = "WoW64 execution flag"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_prefers_color_scheme"]
+other = "Dark/light color scheme preference"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_prefers_reduced_motion"]
+other = "Reduced motion preference"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_prefers_reduced_transparency"]
+other = "Reduced transparency preference"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_want_content_digest"]
+other = "Content digest request"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_want_repr_digest"]
+other = "Representation digest request"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_upgrade_insecure_requests"]
+other = "Upgrade insecure requests"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_date"]
+other = "Request date"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_link"]
+other = "Link relations"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_upgrade"]
+other = "Protocol upgrade"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_priority"]
+other = "Resource priority"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_alt_used"]
+other = "Alternative service in use"
+
+# ---- HttpResponseBody ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_body"]
+other = "Response body content"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_body_hash"]
+other = "SHA-256 digest of the response body"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_body_length"]
+other = "Response body length in bytes"
+
+# ---- HttpResponseHeaders ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_www_authenticate"]
+other = "Authentication challenge"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_proxy_authenticate"]
+other = "Proxy authentication challenge"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_age"]
+other = "Cache age"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cache_control"]
+other = "Cache control directives"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_clear_site_data"]
+other = "Clear site data"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_expires"]
+other = "Expiration time"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_no_vary_search"]
+other = "No-Vary-Search"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_last_modified"]
+other = "Last modified time"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_etag"]
+other = "Entity tag"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_vary"]
+other = "Response variance basis"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_connection"]
+other = "Connection control"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_keep_alive"]
+other = "Persistent connection control"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_patch"]
+other = "Acceptable PATCH media types"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_post"]
+other = "Acceptable POST media types"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_set_cookie"]
+other = "Set-Cookie"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_credentials"]
+other = "CORS allow credentials"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_headers"]
+other = "CORS allowed headers"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_methods"]
+other = "CORS allowed methods"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_origin"]
+other = "CORS allowed origin"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_expose_headers"]
+other = "CORS exposed headers"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_max_age"]
+other = "CORS max cache time"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_timing_allow_origin"]
+other = "Timing allow origin"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_disposition"]
+other = "Content disposition"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_digest"]
+other = "Content digest"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_repr_digest"]
+other = "Representation digest"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_type"]
+other = "Response content type"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_length"]
+other = "Response content length"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_encoding"]
+other = "Response content encoding"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_language"]
+other = "Response content language"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_location"]
+other = "Content location"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_forwarded"]
+other = "Forwarded information"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_via"]
+other = "Proxy chain information"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_ranges"]
+other = "Acceptable ranges"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_range"]
+other = "Content range"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_location"]
+other = "Redirect location"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_refresh"]
+other = "Refresh/redirect"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_allow"]
+other = "Allowed methods"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_server"]
+other = "Server identifier"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cross_origin_embedder_policy"]
+other = "Cross-origin embedder policy"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cross_origin_opener_policy"]
+other = "Cross-origin opener policy"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cross_origin_resource_policy"]
+other = "Cross-origin resource policy"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_security_policy"]
+other = "Content security policy"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_security_policy_report_only"]
+other = "CSP report-only mode"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_expect_ct"]
+other = "Certificate transparency expectation"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_permissions_policy"]
+other = "Permissions policy"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_strict_transport_security"]
+other = "Strict transport security"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_content_type_options"]
+other = "Content type options"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_frame_options"]
+other = "Frame options"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_permitted_cross_domain_policies"]
+other = "Permitted cross-domain policies"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_powered_by"]
+other = "Technology engine identifier"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_xss_protection"]
+other = "XSS protection"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_reporting_endpoints"]
+other = "Reporting endpoints"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_report_to"]
+other = "Report-to destination"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_transfer_encoding"]
+other = "Transfer encoding"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_trailer"]
+other = "Trailer field declaration"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_sec_websocket_accept"]
+other = "WebSocket handshake accept"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_sec_websocket_protocol"]
+other = "WebSocket subprotocol"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_sec_websocket_extensions"]
+other = "WebSocket extensions"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_ch"]
+other = "Accept client hints"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_critical_ch"]
+other = "Critical client hints"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_attribution_reporting_eligible"]
+other = "Attribution reporting eligibility"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_attribution_reporting_register_source"]
+other = "Attribution reporting register source"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_attribution_reporting_register_trigger"]
+other = "Attribution reporting register trigger"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_date"]
+other = "Response date"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_link"]
+other = "Link relations"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_retry_after"]
+other = "Retry time"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_server_timing"]
+other = "Server timing"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_service_worker"]
+other = "Service worker identifier"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_service_worker_allowed"]
+other = "Service worker allowed paths"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_source_map"]
+other = "Source map"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_upgrade"]
+other = "Protocol upgrade"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_alt_svc"]
+other = "Alternative service"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_priority"]
+other = "Resource priority"
+
+# ---- HttpFingerprint ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_http_browser"]
+other = "Browser identification"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_http_browser_quality"]
+other = "Browser identification quality"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_http_server"]
+other = "Server identification"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_http_server_quality"]
+other = "Server identification quality"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_http_language"]
+other = "Language identification"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_device_guess"]
+other = "Device category guess"
+
+# ---- AppTailer ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_consumed"]
+other = "Bytes consumed by the client"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_start_payload_offset"]
+other = "Client start payload offset"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_end_payload_offset"]
+other = "Client end payload offset"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_start_timestamp"]
+other = "Client start timestamp"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_end_timestamp"]
+other = "Client end timestamp"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_consumed"]
+other = "Bytes consumed by the server"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_start_payload_offset"]
+other = "Server start payload offset"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_end_payload_offset"]
+other = "Server end payload offset"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_start_timestamp"]
+other = "Server start timestamp"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_end_timestamp"]
+other = "Server end timestamp"
+
+# ---- TagsMeta ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.tags"]
+other = "Risk tag combination"
+
+# notify.* default title/content: since the body is rendered via text/template ({{...}}
+# actions such as {{...}} that go-i18n does not own), translate globally injects the
+# [[ / ]] data delimiter (dataDelimParser), so these sources (no [[ in body) hit the
+# go-i18n fast-path and are returned verbatim, later handed to text/template rendering.
+# title = "@xx" is expanded by resolveExternalLocales into the other field's external
+# file body.
+[notify.password.reset.title]
+other = "Reset Your Account Password"
+
+[notify.password.reset.content]
+other = "@emails/password-reset-content.en.html"
+
+[notify.tag_event.alert.title]
+other = "Tag Event Alert: {{.RuleName}}"
+
+[notify.tag_event.alert.content]
+other = "@notify/tag-event-alert-content.en.txt"
+
+# =============================================================================
+# Enum label keys (backend single source, consumed by the frontend)
+# Unified as enum.<className>.<key>: labels are translated by key, and the value
+# (database storage value) is not part of the key. Entries duplicated across
+# entities under the old model.<entity>.option.<field>.<value> keys are merged
+# into a single enum class. Class names and keys are defined by the package each class
+# belongs to: a fixed value space is declared and registered in place by the package that
+# owns it, and a registry-sourced class is declared by its owning business package
+# (message / notify / vtab / tagengine, registered via enum.RegisterSource);
+# notification default templates render readable labels via the template function t, and the
+# frontend enum-label dataset is served from this section per request language through the
+# unified enum endpoints /admin/enum/get|list (entry.key + label).
+# =============================================================================
+
+# Notification channel type (enum class channelType, from the message.Types() registry)
+[enum.channelType.email]
+other = "Email"
+
+[enum.channelType.webhook]
+other = "Webhook"
+
+# Notification event (enum class notificationEvent, from the notify.TemplateSpecs() registry)
+[enum.notificationEvent.tag_event_record]
+other = "Tag Event Alert"
+
+# Datasource type (enum class datasourceType, from sqlitevtab vtab constants)
+[enum.datasourceType.mysql]
+other = "MySQL"
+
+[enum.datasourceType.postgres]
+other = "PostgreSQL"
+
+[enum.datasourceType.clickhouse]
+other = "ClickHouse"
+
+[enum.datasourceType.sqlite_file]
+other = "SQLite file"
+
+[enum.datasourceType.etcd]
+other = "etcd"
+
+[enum.datasourceType.mongo]
+other = "MongoDB"
+
+[enum.datasourceType.redis]
+other = "Redis"
+
+# Datasource struct (enum class datasourceStruct)
+[enum.datasourceStruct.hash]
+other = "Hash"
+
+[enum.datasourceStruct.list]
+other = "List"
+
+[enum.datasourceStruct.set]
+other = "Set"
+
+[enum.datasourceStruct.string]
+other = "String"
+
+[enum.datasourceStruct.zset]
+other = "Sorted Set"
+
+# Policy effect (enum class policyEffect)
+[enum.policyEffect.allow]
+other = "Allow"
+
+[enum.policyEffect.deny]
+other = "Deny"
+
+# Tag rule target model (enum class tagRuleModel, key is the tagengine.ModelKey short key)
+[enum.tagRuleModel.httpTransport]
+other = "HTTP Transport"
+
+# Tag event dimension (enum class tagEventDimension, from the legal dimension values
+# registered on each tagengine target model)
+[enum.tagEventDimension.fpTcpClientSig]
+other = "Client Fingerprint Signature"
+
+[enum.tagEventDimension.fpTcpServerSig]
+other = "Server Fingerprint Signature"
+
+# Notification template source (enum class notificationSource)
+[enum.notificationSource.default]
+other = "Default"
+
+[enum.notificationSource.override]
+other = "Override"
+
+# Notification record status (enum class notificationRecordStatus)
+[enum.notificationRecordStatus.failed]
+other = "Failed"
+
+[enum.notificationRecordStatus.pending]
+other = "Pending"
+
+[enum.notificationRecordStatus.success]
+other = "Success"
+
+# Tag event alert status (enum class tagAlertStatus)
+[enum.tagAlertStatus.alerting]
+other = "Alerting"
+
+[enum.tagAlertStatus.closed]
+other = "Closed"
+
+[enum.tagAlertStatus.pending]
+other = "Pending"
+
+[enum.tagAlertStatus.suppressed]
+other = "Suppressed"
+
+# Language (enum class language)
+[enum.language.en]
+other = "English"
+
+[enum.language.zh-Hans]
+other = "Simplified Chinese"
+
+# HTTP method (enum class httpMethod, label equals key)
+[enum.httpMethod.CONNECT]
+other = "CONNECT"
+
+[enum.httpMethod.DELETE]
+other = "DELETE"
+
+[enum.httpMethod.GET]
+other = "GET"
+
+[enum.httpMethod.HEAD]
+other = "HEAD"
+
+[enum.httpMethod.OPTIONS]
+other = "OPTIONS"
+
+[enum.httpMethod.PATCH]
+other = "PATCH"
+
+[enum.httpMethod.POST]
+other = "POST"
+
+[enum.httpMethod.PUT]
+other = "PUT"
+
+[enum.httpMethod.TRACE]
+other = "TRACE"
+
+# HTTP version (enum class httpVersion, label equals key; quoted keys for the "/")
+[enum.httpVersion."HTTP/1.0"]
+other = "HTTP/1.0"
+
+[enum.httpVersion."HTTP/1.1"]
+other = "HTTP/1.1"
+
+[enum.httpVersion."HTTP/2"]
+other = "HTTP/2"
+
+[enum.httpVersion."HTTP/3"]
+other = "HTTP/3"
+
+# LLM model kind (enum class llmModelKind)
+[enum.llmModelKind.chat]
+other = "Chat Model"
+
+[enum.llmModelKind.embedding]
+other = "Embedding Model"
+
+# LLM slot (enum class llmSlot)
+[enum.llmSlot.embedding]
+other = "Embedding Slot"
+
+[enum.llmSlot.flash]
+other = "Flash"
+
+[enum.llmSlot.standard]
+other = "Standard"
+
+[enum.llmSlot.advanced]
+other = "Advanced"
+
+# Tool source (enum class llmToolSource)
+[enum.llmToolSource.builtin]
+other = "Builtin Tool"
+
+[enum.llmToolSource.mcp]
+other = "MCP Tool"
+
+[enum.llmToolSource.client]
+other = "Client Tool"
+
+# Skill source (enum class agentSkillSource)
+[enum.agentSkillSource.custom]
+other = "Custom Skill"
+
+[enum.agentSkillSource.builtin]
+other = "Builtin Skill"
+
+# Report run status (enum class periodicReportRunStatus)
+[enum.periodicReportRunStatus.running]
+other = "Running"
+
+[enum.periodicReportRunStatus.success]
+other = "Success"
+
+[enum.periodicReportRunStatus.failed]
+other = "Failed"
+
+# Agent kind (enum class agentKind)
+[enum.agentKind.general]
+other = "General Assistant"
+
+[enum.agentKind.knowledge]
+other = "Knowledge Retrieval"
+
+[enum.agentKind.rego]
+other = "Rego Rule Generation"
+
+# Model API mode (enum class llmAPIMode)
+[enum.llmAPIMode.chat]
+other = "Chat Completions"
+
+[enum.llmAPIMode.responses]
+other = "Response API"
+
+# Long-term memory kind (enum class memoryKind)
+[enum.memoryKind.fact]
+other = "Fact"
+
+[enum.memoryKind.preference]
+other = "Preference"
+
+[enum.memoryKind.decision]
+other = "Decision"
+
+[enum.memoryKind.artifact]
+other = "Artifact"
+
+# Long-term memory status (enum class memoryStatus)
+[enum.memoryStatus.active]
+other = "Active"
+
+[enum.memoryStatus.archived]
+other = "Archived"
+
+# Agent run status (enum class agentRunStatus)
+[enum.agentRunStatus.pending]
+other = "Pending"
+
+[enum.agentRunStatus.consumed]
+other = "Consumed"
+
+[enum.agentRunStatus.expired]
+other = "Expired"
+
+# Live run lifecycle phase (enum class agentRunPhase)
+[enum.agentRunPhase.running]
+other = "Running"
+
+[enum.agentRunPhase.done]
+other = "Done"
+
+[enum.agentRunPhase.failed]
+other = "Failed"
+
+[enum.agentRunPhase.cancelled]
+other = "Cancelled"
+
+[enum.agentRunPhase.suspended]
+other = "Awaiting Approval"
+
+# Agent interaction state (enum class agentInteractionState)
+[enum.agentInteractionState.waiting]
+other = "Waiting"
+
+[enum.agentInteractionState.running]
+other = "Running"
+
+[enum.agentInteractionState.paused]
+other = "Paused"
+
+[enum.agentInteractionState.locked]
+other = "Locked"
+
+# Agent interaction substate (enum class agentInteractionSubstate)
+[enum.agentInteractionSubstate.approval]
+other = "Awaiting approval"
+
+[enum.agentInteractionSubstate.answer]
+other = "Awaiting answer"
+
+[enum.agentInteractionSubstate.generating]
+other = "Generating"
+
+[enum.agentInteractionSubstate.thinking]
+other = "Thinking"
+
+[enum.agentInteractionSubstate.tool_calling]
+other = "Calling tool"
+
+[enum.agentInteractionSubstate.compacting]
+other = "Compacting context"
+
+[enum.agentInteractionSubstate.success]
+other = "Succeeded"
+
+[enum.agentInteractionSubstate.failed]
+other = "Failed"
+
+[enum.agentInteractionSubstate.aborted]
+other = "Aborted by user"
+
+# MCP remote transport (enum class mcpTransport)
+[enum.mcpTransport.sse]
+other = "SSE"
+
+[enum.mcpTransport.streamable_http]
+other = "Streamable HTTP"
+
+# =============================================================================
+# Dry-run evaluation stages, stage statuses and improvement suggestion categories
+# (enum classes evalStage / evalStageStatus / diagnosisCategory, owned by internal/ai).
+# The tool-call stages of the assistant page share evalStage with the knowledge page stages.
+# =============================================================================
+
+[enum.evalStage.retrieve]
+other = "Hybrid Retrieval"
+
+[enum.evalStage.answer]
+other = "Answer Generation"
+
+[enum.evalStage.chunkRelevance]
+other = "Chunk Relevance"
+
+[enum.evalStage.claims]
+other = "Claim Faithfulness"
+
+[enum.evalStage.reverseQuestions]
+other = "Reverse Questions"
+
+[enum.evalStage.suggestions]
+other = "Improvement Suggestions"
+
+[enum.evalStage.toolCall]
+other = "Tool Call"
+
+[enum.evalStage.toolResult]
+other = "Tool Result"
+
+[enum.evalStageStatus.start]
+other = "Running"
+
+[enum.evalStageStatus.done]
+other = "Done"
+
+[enum.evalStageStatus.failed]
+other = "Failed"
+
+[enum.diagnosisCategory.coverage]
+other = "Missing Knowledge Coverage"
+
+[enum.diagnosisCategory.ranking]
+other = "Ranking Needs Tuning"
+
+[enum.diagnosisCategory.generation]
+other = "Answer Quality"
+
+[enum.diagnosisCategory.context]
+other = "Context Underused"
+
+[enum.diagnosisCategory.other]
+other = "Other"
+
+[enum.chunkUnitKind.paragraph]
+other = "Plain Text"
+
+[enum.chunkUnitKind.code]
+other = "Code Block"
+
+[enum.chunkUnitKind.table]
+other = "Table"
+
+[enum.chunkUnitKind.list]
+other = "List"
+
+[enum.chunkUnitKind.quote]
+other = "Quote"
+
+# =============================================================================
+# Knowledge document formats and import processing statuses
+# (enum classes documentFormat / knowledgeDocStatus, owned by
+# internal/pkg/docconv and internal/models/ai). documentFormat is the source format
+# when importing common document formats into the knowledge base, and
+# knowledgeDocStatus is the parse transition status of an imported document.
+# =============================================================================
+
+[enum.documentFormat.markdown]
+other = "Markdown"
+
+[enum.documentFormat.txt]
+other = "Plain text"
+
+[enum.documentFormat.pdf]
+other = "PDF"
+
+[enum.documentFormat.docx]
+other = "Word document"
+
+[enum.documentFormat.generated]
+other = "Generated"
+
+[enum.documentFormat.native_api]
+other = "Native API"
+
+[enum.documentFormat.schema]
+other = "Database table"
+
+[enum.documentFormat.capability]
+other = "Platform capability"
+
+[enum.knowledgeDocStatus.pending]
+other = "Pending"
+
+[enum.knowledgeDocStatus.parsing]
+other = "Parsing"
+
+[enum.knowledgeDocStatus.ready]
+other = "Ready"
+
+[enum.knowledgeDocStatus.failed]
+other = "Failed"
+
+# =============================================================================
+# Audit levels of client tool calls and the session-level review valve
+# (enum classes auditLevel / reviewValve, owned by internal/ai and internal/models/ai).
+# auditLevel is the four-level importance produced by the backend evaluation, and
+# reviewValve is the session-level three-level switch offered to users; the two are
+# composed to decide whether a call needs manual approval.
+# =============================================================================
+
+[enum.auditLevel.must]
+other = "Must review"
+
+[enum.auditLevel.suggest]
+other = "Suggested review"
+
+[enum.auditLevel.auto]
+other = "Auto review"
+
+[enum.auditLevel.none]
+other = "No review"
+
+[enum.reviewValve.each]
+other = "Review each"
+
+[enum.reviewValve.auto]
+other = "Auto review"
+
+[enum.reviewValve.none]
+other = "No review"
+
+# =============================================================================
+# AI capability disabled reasons (ai.disabled.*)
+# The operator-facing copy explaining why the AI capability is unavailable: judged by the
+# runtime snapshot of internal/ai and translated per request language by the view layer,
+# returned with the status API and the slot-binding API.
+# Keys and their data placeholders (uniformly written with the [[.X]] delimiter):
+#   not-assembled  : the runtime has not completed its first assembly (no placeholder)
+#   slot-unbound   : a required slot has no binding record ([[.Slot]])
+#   model-disabled : the bound model is disabled ([[.Slot]] / [[.Model]])
+#   kind-mismatch  : the bound model kind does not match the slot ([[.Slot]] / [[.Model]] / [[.Want]])
+#   separator      : the joiner between multiple reasons
+# =============================================================================
+
+[ai.disabled.not-assembled]
+other = "the runtime snapshot is not assembled yet"
+
+[ai.disabled.slot-unbound]
+other = "the [[.Slot]] slot has no bound model"
+
+[ai.disabled.model-disabled]
+other = "the model [[.Model]] bound to the [[.Slot]] slot is disabled"
+
+[ai.disabled.kind-mismatch]
+other = "the model [[.Model]] bound to the [[.Slot]] slot is not a [[.Want]] model"
+
+[ai.disabled.separator]
+other = "; "
+
+# =============================================================================
+# Agent tunable parameter metadata (param.<Key>.label|comment)
+# Keys map one-to-one onto the registry (Specs) of internal/ai and are globally unique,
+# so each one is reused directly as part of its copy key: label is the display name and
+# comment the description; the view layer translates them per request language and returns
+# them with param/list. This file is the single source of that copy (the registry holds no
+# duplicate): on a miss the label falls back to the short parameter name (the last key
+# segment) and the comment to the key itself, with the key-completeness test in
+# param_i18n_test.go as the backstop.
+# =============================================================================
+
+# ---- agent: Agent chat prompts, message section titles and context truncation ----
+[param.agent.systemPrompt.label]
+other = "System Prompt"
+
+[param.agent.systemPrompt.comment]
+other = "System prompt of the Agent conversation; the model must output JSON shaped as {\"content\":..., \"draft\":{...}}"
+
+[param.agent.generalSystemPrompt.label]
+other = "General chat system prompt"
+
+[param.agent.generalSystemPrompt.comment]
+other = "System prompt for the general chat agent (kind general), which must output Markdown directly."
+
+[param.agent.auditLevelSystemPrompt.label]
+other = "Audit level evaluation prompt"
+
+[param.agent.auditLevelSystemPrompt.comment]
+other = "System prompt that batch-classifies all pending calls of a run before client tools suspend, and must output only JSON levels (must/suggest/auto/none) aligned by callID"
+
+[param.agent.promptOptimizeSystemPrompt.label]
+other = "Prompt optimization system prompt"
+
+[param.agent.promptOptimizeSystemPrompt.comment]
+other = "System prompt that rewrites the user's original request into a clearer, more specific, more understandable question, and must output only the rewritten question text itself"
+
+[param.agent.nextStepsSystemPrompt.label]
+other = "Next-step recommendation system prompt"
+
+[param.agent.nextStepsSystemPrompt.comment]
+other = "System prompt that generates 1-3 recommended next steps (the first is the most recommended) from the session context after each answer, and must output only JSON"
+
+[param.agent.nextStepsEnabled.label]
+other = "Recommend next steps"
+
+[param.agent.nextStepsEnabled.comment]
+other = "Whether to automatically generate recommended next steps after each assistant answer; when disabled, nothing is generated or shown"
+
+[param.agent.retrievedDocSnippetLimit.label]
+other = "Knowledge Search Snippet Limit"
+
+[param.agent.retrievedDocSnippetLimit.comment]
+other = "Truncation length (characters) of each knowledge_search hit, controlling the tool result size in the model context"
+
+[param.agent.defaultSlot.label]
+other = "Default Slot"
+
+[param.agent.defaultSlot.comment]
+other = "Slot used when none is explicitly requested and the call site declares no preferred slot (flash/standard/advanced)"
+
+[param.agent.maxToolRounds.label]
+other = "Max Tool Rounds"
+
+[param.agent.maxToolRounds.comment]
+other = "Maximum tool-call rounds in one autonomous run (reset after a human approval/questionnaire); when the bound is reached with tool calls still pending, the text of that round becomes the answer"
+
+[param.agent.maxToolResultBytes.label]
+other = "Tool Result Byte Limit"
+
+[param.agent.maxToolResultBytes.comment]
+other = "Byte limit of a single tool result before it is injected into the model context; the excess is truncated"
+
+[param.agent.runDetachGraceSeconds.label]
+other = "Detach Grace Seconds"
+
+[param.agent.runDetachGraceSeconds.comment]
+other = "After the last subscriber of a live run detaches, the run is auto-cancelled if no subscriber returns within this many seconds; <=0 disables the auto-cancel"
+
+[param.agent.llmTimeoutRetryEnabled.label]
+other = "Timeout Auto Retry"
+
+[param.agent.llmTimeoutRetryEnabled.comment]
+other = "Whether non-streaming model calls (memory extraction, audit grading, retrieval reranking, etc.) retry after a timeout; streaming chat is unaffected"
+
+[param.agent.llmTimeoutRetryMaxRetries.label]
+other = "Timeout Retry Count"
+
+[param.agent.llmTimeoutRetryMaxRetries.comment]
+other = "Maximum retries after a timeout, excluding the first request; 0 disables retries"
+
+[param.agent.llmTimeoutRetryMultiplier.label]
+other = "Timeout Multiplier"
+
+[param.agent.llmTimeoutRetryMultiplier.comment]
+other = "Multiplier applied to the per-request timeout on each retry; e.g. with a 60s base and multiplier 2 the timeouts are 120s, 240s and 480s"
+
+# ---- retrieval: hybrid retrieval fusion and LLM reranking ----
+[param.retrieval.topK.label]
+other = "Final Reference Count"
+
+[param.retrieval.topK.comment]
+other = "Number of final references kept after LLM reranking"
+
+[param.retrieval.candidates.label]
+other = "Rerank Candidate Count"
+
+[param.retrieval.candidates.comment]
+other = "Number of candidates sent to LLM reranking after fusion (taken from each retrieval path)"
+
+[param.retrieval.expandDocLimit.label]
+other = "Whole-document Expansion Budget"
+
+[param.retrieval.expandDocLimit.comment]
+other = "Maximum total length (characters) of whole-document expansion within one retrieval: documents are expanded in result order, and a document exceeding the limit by itself, or exceeding the cumulative budget after expansion, falls back to its chunks without truncating the whole document; non-positive disables the expansion"
+
+[param.retrieval.fusion.label]
+other = "Fusion Strategy"
+
+[param.retrieval.fusion.comment]
+other = "Fusion strategy of the two retrieval paths: rrf or weighted"
+
+[param.retrieval.weightVector.label]
+other = "Vector Path Weight"
+
+[param.retrieval.weightVector.comment]
+other = "Weight of the vector retrieval path when the weighted fusion is used"
+
+[param.retrieval.weightKeyword.label]
+other = "Keyword Path Weight"
+
+[param.retrieval.weightKeyword.comment]
+other = "Weight of the keyword retrieval path when the weighted fusion is used"
+
+[param.retrieval.rerankSystemPrompt.label]
+other = "Rerank System Prompt"
+
+[param.retrieval.rerankSystemPrompt.comment]
+other = "System prompt of LLM reranking; the model must return only a JSON array of candidate indices"
+
+[param.retrieval.rerankSnippetLimit.label]
+other = "Rerank Snippet Limit"
+
+[param.retrieval.rerankSnippetLimit.comment]
+other = "Truncation length (characters) of each candidate snippet in the rerank request, controlling the prompt size"
+
+[param.retrieval.rerankTemperature.label]
+other = "Rerank Temperature"
+
+[param.retrieval.rerankTemperature.comment]
+other = "Generation temperature of the LLM rerank call; lower values make the ordering more deterministic"
+
+# ---- session: conversation context injection bounds ----
+[param.session.maxContextMessages.label]
+other = "Context Message Limit"
+
+[param.session.maxContextMessages.comment]
+other = "Maximum number of history messages injected into the LLM context"
+
+[param.session.maxContextBytes.label]
+other = "Business Data Injection Limit"
+
+[param.session.maxContextBytes.comment]
+other = "Total size limit (bytes) of a single businessData payload injected from the frontend"
+
+[param.session.compactThresholdRatio.label]
+other = "Auto-compaction Threshold"
+
+[param.session.compactThresholdRatio.comment]
+other = "Usage ratio threshold (context tokens / slot capacity) that triggers auto-compaction"
+
+[param.session.maxUserTurns.label]
+other = "Session Turn Limit"
+
+[param.session.maxUserTurns.comment]
+other = "Upper bound on effective turns (user messages currently present in the session); reaching it locks the session and rejects new questions, while rolling back below the bound unlocks it"
+
+[param.session.topicSystemPrompt.label]
+other = "Session Topic Prompt"
+
+[param.session.topicSystemPrompt.comment]
+other = "System prompt that generates the short session topic from the session's first user message"
+
+# ---- memory: long-term memory and session summary ----
+[param.memory.enabled.label]
+other = "Long-term Memory Switch"
+
+[param.memory.enabled.comment]
+other = "Master switch of long-term memory; when off, generation requests skip memory retrieval and injection without any error"
+
+[param.memory.topK.label]
+other = "Memory Injection Count"
+
+[param.memory.topK.comment]
+other = "Number of long-term memories injected into the prompt after retrieval"
+
+[param.memory.candidates.label]
+other = "Memory Candidate Count"
+
+[param.memory.candidates.comment]
+other = "Number of candidate memories recalled by the vector path and the keyword path respectively"
+
+[param.memory.maxItems.label]
+other = "Memory Injection Hard Bound"
+
+[param.memory.maxItems.comment]
+other = "Hard bound of the number of long-term memories injected in a single turn; a non-positive value means unlimited"
+
+[param.memory.maxItemBytes.label]
+other = "Memory Item Byte Limit"
+
+[param.memory.maxItemBytes.comment]
+other = "Byte limit of a single long-term memory before being injected into the prompt; the excess is truncated"
+
+[param.memory.dedupeThreshold.label]
+other = "Memory Dedupe Threshold"
+
+[param.memory.dedupeThreshold.comment]
+other = "Semantic deduplication/merge threshold (cosine similarity) applied when writing memories"
+
+[param.memory.summarySystemPrompt.label]
+other = "Session Summary Prompt"
+
+[param.memory.summarySystemPrompt.comment]
+other = "System prompt used when rolling up the session history into a summary"
+
+[param.memory.summaryMinEvictedMessages.label]
+other = "Summary Trigger Count"
+
+[param.memory.summaryMinEvictedMessages.comment]
+other = "Number of unsummarized messages outside the window that triggers the rolling summary"
+
+[param.memory.evictedMessageByteLimit.label]
+other = "Summary message byte limit"
+
+[param.memory.evictedMessageByteLimit.comment]
+other = "Byte cap for a single evicted message's content in the rolling-summary and memory-extraction prompts; longer values improve summary fidelity at the cost of more input tokens."
+
+[param.memory.extractSystemPrompt.label]
+other = "Memory Extraction Prompt"
+
+[param.memory.extractSystemPrompt.comment]
+other = "System prompt extracting long-term memories during session compaction"
+
+[param.memory.extractMaxItems.label]
+other = "Memory Extraction Count"
+
+[param.memory.extractMaxItems.comment]
+other = "Maximum number of long-term memories extracted by a single session compaction"
+
+# ---- chunking: Markdown structure-aware chunking ----
+[param.chunking.size.label]
+other = "Chunk Target Size"
+
+[param.chunking.size.comment]
+other = "Affinity target length (characters) of a chunk, staying inside structural atoms whenever possible"
+
+[param.chunking.overlap.label]
+other = "Chunk Overlap"
+
+[param.chunking.overlap.comment]
+other = "Overlap length (characters) shared by adjacent chunks"
+
+# ---- eval: RAG evaluation judge prompts and parameters ----
+[param.eval.answerSystemPrompt.label]
+other = "Answer Generation Prompt"
+
+[param.eval.answerSystemPrompt.comment]
+other = "System prompt of the judge generating an answer from the retrieved context during evaluation"
+
+[param.eval.chunkRelevanceSystemPrompt.label]
+other = "Chunk Relevance Prompt"
+
+[param.eval.chunkRelevanceSystemPrompt.comment]
+other = "System prompt of the judge deciding chunk relevance during evaluation"
+
+[param.eval.claimsSystemPrompt.label]
+other = "Claim Extraction Prompt"
+
+[param.eval.claimsSystemPrompt.comment]
+other = "System prompt of the judge extracting answer claims and deciding their support during evaluation"
+
+[param.eval.reverseQuestionsSystemPrompt.label]
+other = "Reverse Question Prompt"
+
+[param.eval.reverseQuestionsSystemPrompt.comment]
+other = "System prompt of the judge generating reverse questions during evaluation"
+
+[param.eval.suggestionsSystemPrompt.label]
+other = "Suggestion Generation Prompt"
+
+[param.eval.suggestionsSystemPrompt.comment]
+other = "System prompt of the judge generating improvement suggestions during the retrieval dry-run, categorized as knowledge coverage, retrieval ranking, generation quality and so on"
+
+[param.eval.reverseQuestionCount.label]
+other = "Reverse Question Count"
+
+[param.eval.reverseQuestionCount.comment]
+other = "Maximum number of reverse questions kept; a non-positive value means unlimited"
+
+[param.eval.snippetLimit.label]
+other = "Evaluation Snippet Limit"
+
+[param.eval.snippetLimit.comment]
+other = "Truncation length (characters) of each retrieved snippet in the evaluation request, controlling the prompt size"
+
+# ---- sanitize: bounds applied before business data injection ----
+[param.sanitize.maxItems.label]
+other = "Business Data Item Limit"
+
+[param.sanitize.maxItems.comment]
+other = "Maximum number of top-level business data items; a non-positive value means unlimited (truncation by the byte limit still applies)"
+
+[param.sanitize.maxBytes.label]
+other = "Business Data Byte Limit"
+
+[param.sanitize.maxBytes.comment]
+other = "Byte limit of the compact JSON serialization of business data; a non-positive value means unlimited (sanitization still applies)"
+
+# ---- tools: builtin tool display copy ----
+[tool.memory_write.label]
+other = "Long-term Memory Write"
+
+[tool.memory_write.comment]
+other = "Called by the agent on its own to write reusable conclusions, preferences or facts into the namespace-level long-term memory"
+
+[tool.knowledge_search.label]
+other = "Knowledge Base Search"
+
+[tool.knowledge_search.comment]
+other = "Called by the agent on demand to search the knowledge base of the current namespace; the agent decides when to search and which query to use, and may call it multiple times"
+
+[tool.ask_user.label]
+other = "Ask User"
+
+[tool.ask_user.comment]
+other = "Called by the model when information is insufficient or the user must choose among options; the frontend presents the questions and returns the user's answers, allowing multiple questions at once with candidate answers per question"
+
+[tool.api_invoke.label]
+other = "Invoke Platform Capability"
+
+[tool.api_invoke.comment]
+other = "Invoke a read or write capability under the user's own credentials after backend allowlist validation; requires human approval and is executed by the frontend, returning only the endpoint response"
+
+[tool.math_eval.label]
+other = "Expression evaluation"
+
+[tool.math_eval.comment]
+other = "Evaluate a single arithmetic or logical expression precisely so the model need not compute it mentally; supports arithmetic, power, comparison and logical operators"
+
+[tool.unit_convert.label]
+other = "Unit conversion"
+
+[tool.unit_convert.comment]
+other = "Convert a value between units of the same physical quantity, covering length, mass, time, area, volume, data size, speed and temperature"
+
+[tool.base_convert.label]
+other = "Base conversion"
+
+[tool.base_convert.comment]
+other = "Convert an arbitrary-precision integer between bases 2 and 36"
+
+[tool.datetime_calc.label]
+other = "Date and time arithmetic"
+
+[tool.datetime_calc.comment]
+other = "Get the current instant, convert time zones, add or subtract durations and compute differences, with IANA time zone support"
+
+[tool.regex.label]
+other = "Regex test and replace"
+
+[tool.regex.comment]
+other = "Test whether text matches a Go (RE2) pattern or perform replacement, returning matches or the replaced text"
+
+[tool.json_diff.label]
+other = "JSON diff"
+
+[tool.json_diff.comment]
+other = "Recursively compare two JSON documents and list added, removed and changed paths"
+
+[tool.text_stats.label]
+other = "Text statistics"
+
+[tool.text_stats.comment]
+other = "Count characters, bytes, words, lines and paragraphs of a text"
+
+[tool.hash.label]
+other = "Hash digest"
+
+[tool.hash.comment]
+other = "Compute MD5, SHA-1, SHA-256 or SHA-512 digests of a text, returning both hexadecimal and Base64 representations"
+
+[tool.encode_convert.label]
+other = "Encoding conversion"
+
+[tool.encode_convert.comment]
+other = "Encode or decode between Base64, Base64URL, Hex, URL and HTML encodings"
+
+[tool.uuid.label]
+other = "UUID generation"
+
+[tool.uuid.comment]
+other = "Generate UUIDs of a given version (v4 or v7), optionally in batch"
+
+[tool.json.label]
+other = "JSON processing"
+
+[tool.json.comment]
+other = "Validate, pretty-print, minify JSON text and read values by path"
+
+[tool.csv_parse.label]
+other = "CSV parsing"
+
+[tool.csv_parse.comment]
+other = "Parse CSV text into a header and data rows, with a custom delimiter and optional header"
+
+[tool.url_parse.label]
+other = "URL parsing"
+
+[tool.url_parse.comment]
+other = "Parse a URL into scheme, user, host, port, path, query parameters and fragment"
+
+[tool.mermaid_check.label]
+other = "Mermaid chart check"
+
+[tool.mermaid_check.comment]
+other = "Validate mermaid source before emitting a chart, returning per-line issues and fix hints so the agent can correct them; covers flowchart syntax, link notation and style class references"
+
+[tool.poly_solve.label]
+other = "Polynomial roots"
+
+[tool.poly_solve.comment]
+other = "Find all roots of a univariate polynomial, giving rational roots exactly and approximating the rest as complex numbers with multiplicities"
+
+[tool.linear_solve.label]
+other = "Linear system solver"
+
+[tool.linear_solve.comment]
+other = "Solve the linear system Ax=b, deciding between a unique solution, infinitely many solutions or none, and returning a particular solution plus a nullspace basis when solutions are infinite"
+
+[tool.root_find.label]
+other = "Numeric root finder"
+
+[tool.root_find.comment]
+other = "Find real roots of a univariate equation f(x)=0, either by scanning an interval for all roots or by Newton iteration from an initial guess"
+
+[tool.nonlinear_solve.label]
+other = "Nonlinear system solver"
+
+[tool.nonlinear_solve.comment]
+other = "Solve a system of nonlinear equations with the Newton-Raphson method, returning the solution vector, residual and iteration count"
+
+# =============================================================================
+# Custom OPA builtins metadata (tagengine.custom-functions.<name>.description)
+# Custom OPA builtin descriptions: localized by the view layer per request
+# language and returned with the function metadata, powering the frontend Rego
+# editor's hover hints and completion details
+# =============================================================================
+
+[tagengine.custom-functions.sqlite.query.description]
+other = "Query a third-party datasource: run a SELECT statement against a datasource registered as an sqlite vtable and return an array of row objects.\nArguments: the first argument is the query statement (supporting ? placeholders), the second is the array of parameters bound in order.\nResult: each row is an object keyed by column name, accessed by index plus column name (e.g. rows[0].value); an empty array is returned when nothing matches and indexing it makes the rule body undefined, so guard with count(rows) > 0 first"
+
+# Task type (enum class taskType, from the worker handler registry TaskTypes())
+[enum.taskType."network:pcapimport"]
+other = "PCAP capture file import"
+
+[enum.taskType."tag:event:detect"]
+other = "Tag event detection"
+
+[enum.taskType."tag:event:suppress"]
+other = "Tag event suppression evaluation"
+
+[enum.taskType."tag:event:cleanup"]
+other = "Tag event stale record cleanup"
+
+[enum.taskType."mail:send"]
+other = "System-level direct mail"
+
+[enum.taskType."notify:send:group"]
+other = "Notification group send"
+
+[enum.taskType."notify:send:target"]
+other = "Notification single-target send"
+
+[enum.taskType."ai:doc:parse"]
+other = "Knowledge document import parsing"
+
+[enum.taskType."periodic-report:plan:dispatch"]
+other = "Periodic report plan dispatch"
+
+[enum.taskType."periodic-report:plan:run"]
+other = "Periodic report generation"
+
+[enum.taskType."periodic-report:run:cleanup"]
+other = "Periodic report lifecycle cleanup"

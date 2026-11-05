@@ -8,15 +8,20 @@ import (
 	"testing"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/capture/wire"
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkuisec.com/zhongkui/internal/capture/wire"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 )
 
+// FlowLevel 流量档位，控制基准测试加载的 pcap 数据量。
 type FlowLevel int
 
+// 流量档位取值。
 const (
+	// LevelSmoke 冒烟档位，加载最小数据集。
 	LevelSmoke FlowLevel = iota
+	// LevelSmallFlows 小流量档位。
 	LevelSmallFlows
+	// LevelBigFlows 大流量档位。
 	LevelBigFlows
 )
 
@@ -201,14 +206,17 @@ drainLoop:
 	metrics.ReportToBenchmark(b)
 }
 
+// BenchmarkLibpcapSmoke libpcap 常规基线冒烟。
 func BenchmarkLibpcapSmoke(b *testing.B) {
 	runBaseline(b, "libpcap-smoke", LevelSmoke, wire.NewLibpcapWire)
 }
 
+// BenchmarkLibpcapSmallFlows libpcap 常规基线小流量。
 func BenchmarkLibpcapSmallFlows(b *testing.B) {
 	runBaseline(b, "libpcap-smallflows", LevelSmallFlows, wire.NewLibpcapWire)
 }
 
+// BenchmarkLibpcapBigFlows libpcap 常规基线大流量。
 func BenchmarkLibpcapBigFlows(b *testing.B) {
 	if testing.Short() {
 		b.Skip("skipping bigflows in short mode")
@@ -352,10 +360,12 @@ drainLoop:
 	metrics.ReportToBenchmark(b)
 }
 
+// BenchmarkLibpcapSlowSmoke libpcap 慢速回放基线冒烟。
 func BenchmarkLibpcapSlowSmoke(b *testing.B) {
 	runSlowBaseline(b, "libpcap-slow-smoke", LevelSmoke, wire.NewLibpcapWire, 1*time.Millisecond)
 }
 
+// BenchmarkLibpcapSlowSmallFlows libpcap 慢速回放基线小流量。
 func BenchmarkLibpcapSlowSmallFlows(b *testing.B) {
 	runSlowBaseline(b, "libpcap-slow-smallflows", LevelSmallFlows, wire.NewLibpcapWire, 1*time.Millisecond)
 }
@@ -415,7 +425,7 @@ func runRawBaseline(b *testing.B, wireName string, level FlowLevel, newWire func
 		}
 	}()
 
-	// warmup
+	// 预热
 	for i := 0; i < 5; i++ {
 		if err := handle.WritePacketData(packets[0].Data); err != nil {
 			b.Skipf("warmup send failed: %v (try running with sudo)", err)
@@ -459,14 +469,17 @@ func runRawBaseline(b *testing.B, wireName string, level FlowLevel, newWire func
 	metrics.ReportToBenchmark(b)
 }
 
+// BenchmarkRawLibpcapSmoke libpcap 纯计数（skip copy）基线冒烟。
 func BenchmarkRawLibpcapSmoke(b *testing.B) {
 	runRawBaseline(b, "raw-libpcap-smoke", LevelSmoke, wire.NewLibpcapWire)
 }
 
+// BenchmarkRawLibpcapSmallFlows libpcap 纯计数（skip copy）基线小流量。
 func BenchmarkRawLibpcapSmallFlows(b *testing.B) {
 	runRawBaseline(b, "raw-libpcap-smallflows", LevelSmallFlows, wire.NewLibpcapWire)
 }
 
+// BenchmarkRawLibpcapBigFlows libpcap 纯计数（skip copy）基线大流量。
 func BenchmarkRawLibpcapBigFlows(b *testing.B) {
 	if testing.Short() {
 		b.Skip("skipping bigflows in short mode")

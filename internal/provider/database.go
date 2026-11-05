@@ -2,101 +2,195 @@ package provider
 
 import (
 	"github.com/samber/do/v2"
-	"zhongkui.com/zhongkui/internal/pkg/config"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/otel"
-	_ "zhongkui.com/zhongkui/internal/pkg/serializer"
+	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
+	apimodel "zhongkuisec.com/zhongkui/internal/models/api"
+	coremodel "zhongkuisec.com/zhongkui/internal/models/core"
+	netmodel "zhongkuisec.com/zhongkui/internal/models/network"
+	tagmodel "zhongkuisec.com/zhongkui/internal/models/tag"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/otel"
+	_ "zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
+// 各数据库在依赖注入器中的命名标签。
 const (
-	CORE_DB_LABEL  = "database.core"
-	CORE_DB_PREFIX = "core"
-	RAW_DB_LABEL   = "database.raw"
-	RAW_DB_PREFIX  = "raw"
+	CoreDbLabel     = "database." + base.CoreDbName
+	RawDbLabel      = "database." + base.RawDbName
+	CoreTestDbLabel = "database." + base.CoreTestDbName
+	RawTestDbLabel  = "database." + base.RawTestDbName
 )
 
-func newDatabaseProvider(name string) do.Provider[*database.DB] {
-	return func(i do.Injector) (*database.DB, error) {
-		viper, err := InvokeViper(i)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		cfg, err := database.ExtractConfig(viper, name)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		logger, err := InvokeDatabaseLogger(i)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		db, err := database.NewDatabase(cfg, logger)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		// 如果 OTEL 已启用，为 GORM 添加 OTEL 追踪插件
-		if plugin := otel.GormPlugin(); plugin != nil {
-			if err := db.Use(plugin); err != nil {
-				return nil, errors.WithStack(err)
-			}
-		}
-		return db, nil
+// CoreModels 返回 core 数据库的全部打标模型清单，供迁移一致性检查使用。
+func CoreModels() []any {
+	return []any{
+		&coremodel.User{},
+		&coremodel.UserPasswordReset{},
+		&coremodel.Group{},
+		&coremodel.Namespace{},
+		&coremodel.Capturer{},
+		&coremodel.Datasource{},
+		&coremodel.AccessKey{},
+		&coremodel.RbacPolicy{},
+		&coremodel.RbacPolicyTemplate{},
+		&coremodel.NotificationChannel{},
+		&coremodel.NotificationTarget{},
+		&coremodel.NotificationGroup{},
+		&coremodel.NotificationGroupTarget{},
+		&coremodel.NotificationRecord{},
+		&coremodel.NotificationTemplate{},
+		&tagmodel.TagEventRule{},
+		&tagmodel.TagEventCondition{},
+		&tagmodel.TagEventRuleVersion{},
+		&tagmodel.TagEventRecord{},
+		&tagmodel.TagEventRecordHit{},
+		&tagmodel.TagRule{},
+		&tagmodel.TagRuleVersion{},
+		&tagmodel.TagRuleSample{},
+		&aimodel.LlmModel{},
+		&aimodel.LlmBinding{},
+		&aimodel.AgentParam{},
+		&aimodel.McpServer{},
+		&aimodel.LlmTool{},
+		&aimodel.KnowledgeDocument{},
+		&aimodel.KnowledgeChunk{},
+		&aimodel.AgentSession{},
+		&aimodel.AgentMessage{},
+		&aimodel.AgentSessionCompaction{},
+		&aimodel.AgentMemory{},
+		&aimodel.AgentRun{},
+		&aimodel.AgentInteraction{},
+		&aimodel.AgentCheckpoint{},
+		&aimodel.AgentSkill{},
+		&aimodel.PeriodicReportPlan{},
+		&aimodel.PeriodicReportRun{},
+		&aimodel.PeriodicReportPlanWatch{},
 	}
 }
 
+// RawModels 返回 raw 数据库的全部打标模型清单，供迁移一致性检查使用。
+func RawModels() []any {
+	return []any{
+		&netmodel.PacketIPv4{},
+		&netmodel.PacketIPv6{},
+		&netmodel.PacketIPv4TCP{},
+		&netmodel.PacketIPv6TCP{},
+		&netmodel.PacketIPv4UDP{},
+		&netmodel.PacketIPv6UDP{},
+		&netmodel.HttpTransport{},
+		&netmodel.NetworkStack{},
+		&apimodel.HttpApiMeta{},
+		&apimodel.HttpApiNode{},
+		&tagmodel.TagSumming{},
+	}
+}
+
+func newDatabaseProvider(name string) do.Provider[*database.DB] {
+	return func(i do.Injector) (*database.DB, error) {
+		if viper, err := InvokeViper(i); err != nil {
+			return nil, errors.WithStack(err)
+		} else if cfg, err := database.ExtractConfig(viper, validator.Validate, name); err != nil {
+			return nil, errors.WithStack(err)
+		} else if logger, err := InvokeDatabaseLogger(i); err != nil {
+			return nil, errors.WithStack(err)
+		} else if db, err := database.NewDatabase(cfg, logger); err != nil {
+			return nil, errors.WithStack(err)
+		} else if plugin := otel.GormPlugin(); plugin != nil {
+			if err := db.Use(plugin); err != nil {
+				return nil, errors.WithStack(err)
+			}
+			return db, nil
+		} else {
+			return db, nil
+		}
+	}
+}
+
+// NewCoreDatabase 返回构建 core 数据库的 provider 工厂。
 func NewCoreDatabase() do.Provider[*database.DB] {
-	return newDatabaseProvider(CORE_DB_PREFIX)
+	return newDatabaseProvider(base.CoreDbName)
 }
 
+// NewRawDatabase 返回构建 raw 数据库的 provider 工厂。
 func NewRawDatabase() do.Provider[*database.DB] {
-	return newDatabaseProvider(RAW_DB_PREFIX)
+	return newDatabaseProvider(base.RawDbName)
 }
 
+// Models 按数据库名返回对应的打标模型清单。
+func Models(dbName string) []any {
+	switch dbName {
+	case base.CoreDbName:
+		return CoreModels()
+	case base.RawDbName:
+		return RawModels()
+	default:
+		panic(errors.Newf("unknown schema: %s", dbName))
+	}
+}
+
+// InjectCoreDatabase 向依赖注入器注册 core 数据库 provider。
 func InjectCoreDatabase(i do.Injector) {
-	do.ProvideNamed(i, CORE_DB_LABEL, NewCoreDatabase())
+	do.ProvideNamed(i, CoreDbLabel, NewCoreDatabase())
 }
+
+// InjectRawDatabase 向依赖注入器注册 raw 数据库 provider。
 func InjectRawDatabase(i do.Injector) {
-	do.ProvideNamed(i, RAW_DB_LABEL, NewRawDatabase())
+	do.ProvideNamed(i, RawDbLabel, NewRawDatabase())
 }
 
+// InvokeCoreDatabase 从依赖注入器解析 core 数据库，错误交由调用方处理。
 func InvokeCoreDatabase(i do.Injector) (*database.DB, error) {
-	return do.InvokeNamed[*database.DB](i, CORE_DB_LABEL)
+	return do.InvokeNamed[*database.DB](i, CoreDbLabel)
 }
 
+// MustInvokeCoreDatabase 从依赖注入器解析 core 数据库，失败时 panic。
 func MustInvokeCoreDatabase(i do.Injector) *database.DB {
-	return do.MustInvokeNamed[*database.DB](i, CORE_DB_LABEL)
+	return do.MustInvokeNamed[*database.DB](i, CoreDbLabel)
 }
 
+// InvokeRawDatabase 从依赖注入器解析 raw 数据库，错误交由调用方处理。
 func InvokeRawDatabase(i do.Injector) (*database.DB, error) {
-	return do.InvokeNamed[*database.DB](i, RAW_DB_LABEL)
+	return do.InvokeNamed[*database.DB](i, RawDbLabel)
 }
 
+// MustInvokeRawDatabase 从依赖注入器解析 raw 数据库，失败时 panic。
 func MustInvokeRawDatabase(i do.Injector) *database.DB {
-	return do.MustInvokeNamed[*database.DB](i, RAW_DB_LABEL)
+	return do.MustInvokeNamed[*database.DB](i, RawDbLabel)
 }
 
+// InvokeDatabase 按数据库名从依赖注入器解析对应数据库，错误交由调用方处理。
 func InvokeDatabase(i do.Injector, dbName string) (*database.DB, error) {
 	switch dbName {
-	case CORE_DB_PREFIX:
+	case base.CoreDbName:
 		return InvokeCoreDatabase(i)
-	case RAW_DB_PREFIX:
+	case base.RawDbName:
 		return InvokeRawDatabase(i)
 	default:
 		return nil, errors.Newf("unknown database: %s", dbName)
 	}
 }
 
+// MustInvokeDatabase 按数据库名从依赖注入器解析对应数据库，失败时 panic。
 func MustInvokeDatabase(i do.Injector, dbName string) *database.DB {
 	switch dbName {
-	case CORE_DB_PREFIX:
+	case base.CoreDbName:
 		return MustInvokeCoreDatabase(i)
-	case RAW_DB_PREFIX:
+	case base.RawDbName:
 		return MustInvokeRawDatabase(i)
 	default:
 		panic(errors.Newf("unknown database: %s", dbName))
 	}
 }
 
+// DescribeDatabaseConfig 返回各数据库的配置项描述。
 func DescribeDatabaseConfig() config.ConfigDescriptions {
-	return database.DescribeConfig(CORE_DB_PREFIX, RAW_DB_PREFIX)
+	return database.DescribeConfig(
+		base.CoreDbName,
+		base.RawDbName,
+		base.CoreTestDbName,
+		base.RawTestDbName,
+	)
 }

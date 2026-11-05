@@ -6,7 +6,7 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // TestWithPrefix_ValidKey 测试合法键的 WithPrefix 函数

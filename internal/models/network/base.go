@@ -6,17 +6,15 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+)
+
+var (
+	_ driver.Valuer = (*LayerStack)(nil)
 )
 
 const (
-	// PACKET_TTL_HOURS 定义原始数据包的生存时间（小时）
-	PACKET_TTL_HOURS = 24
-
-	// FUSED_TTL_HOURS 定义融合数据的生存时间（小时）
-	FUSED_TTL_HOURS = 24 * 7
-
 	// LayerLevelDecodeFailure 表示解码失败协议层（OSI第0层）
 	LayerLevelDecodeFailure LayerLevel = 0
 
@@ -86,8 +84,16 @@ func (l *LayerStack) Scan(value any) error {
 	var bytes []byte
 	switch raw := value.(type) {
 	case []byte:
+		if len(raw) == 0 {
+			*l = nil
+			return nil
+		}
 		bytes = raw
 	case string:
+		if raw == "" {
+			*l = nil
+			return nil
+		}
 		bytes = []byte(raw)
 	default:
 		return errors.Newf("Layer_stack scan failed, except []byte, got %T", value)
@@ -98,81 +104,65 @@ func (l *LayerStack) Scan(value any) error {
 // FrameInfo 表示数据包的帧信息
 // 包含时间戳和对应的网络层堆栈信息
 type FrameInfo struct {
-	Timestamp  time.Time  `json:"timestamp"`   // 数据包捕获时间戳
-	LayerStack LayerStack `json:"layer_stack"` // 网络层堆栈信息
-}
-
-// FrameStack 表示帧信息的堆栈结构
-// 用于存储多个时间点的帧信息，通常用于融合数据
-type FrameStack []*FrameInfo
-
-// Value 实现数据库序列化接口
-// 将FrameStack序列化为JSON字符串存储到数据库
-func (f FrameStack) Value() (driver.Value, error) {
-	if f == nil {
-		return "[]", nil
-	}
-	if bytes, err := json.Marshal(f); err != nil {
-		return nil, err
-	} else {
-		return string(bytes), nil
-	}
-}
-
-// Scan 实现数据库反序列化接口
-// 从数据库读取JSON字符串并反序列化为FrameStack
-func (f *FrameStack) Scan(value any) error {
-	if value == nil {
-		*f = nil
-		return nil
-	}
-	var bytes []byte
-	switch raw := value.(type) {
-	case []byte:
-		bytes = raw
-	case string:
-		bytes = []byte(raw)
-	default:
-		return errors.Newf("Frame_stack scan failed, except []byte, got %T", value)
-	}
-	return json.Unmarshal(bytes, f)
+	Timestamp  time.Time  `json:"timestamp"`  // 数据包捕获时间戳
+	LayerStack LayerStack `json:"layerStack"` // 网络层堆栈信息
 }
 
 // BaseMeta 表示基础元数据信息
 // 所有网络数据模型的基础字段，用于数据分区和查询优化
 type BaseMeta struct {
 	// WARN：gorm 的 clickhouse driver 有着严重的 bug
-	// 在进行FindInBatches时， 若返回的数据数量查过 batchSize，会根据主键排序
+	// 在进行FindInBatches时， 若返回的数据数量超过 batchSize，会根据主键排序
 	// 若此时表没有主键， 会导致报错 primary key required，因此 clickhouse 表必须设置一个伪主键，且不能是联合主键
-	Namespace string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3));primaryKey" json:"namespace"`
-	Capture   string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"capture"`
-	Version   string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"version"`
-	SessionID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"session_id"`
+	Namespace string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3));primaryKey" json:"namespace"` // 命名空间名称
+	Capture   string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"capture"`              // 抓包实例标识
+	Version   string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"version"`              // 数据版本
+	SessionID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"sessionID"`                              // 会话唯一标识
 }
 
-// TimestampMeta 表示时间戳元数据
-// 包含数据包的时间戳信息，使用高精度时间格式存储
+// RowMeta 行唯一标识元数据
+// 为流量数据行提供全局唯一 ID，供行详情接口按 namespace + id 定位单行
+type RowMeta struct {
+	ID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"id"` // 全局唯一 ID
+}
+
+// TimestampMeta 表示时间元数据
+// 包含采集时间与入库时间，使用高精度时间格式存储
 type TimestampMeta struct {
-	Timestamp time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"timestamp"`
+	Timestamp time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"timestamp"` // 采集时间：数据包被捕获的时刻
+	CreatedAt time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"createdAt"` // 入库时间：数据写入数据库的时刻
+}
+
+// TraceMeta 表示链路追踪元数据，携带用于关联同一请求各环节的追踪 ID
+type TraceMeta struct {
+	// TraceID 链路追踪 ID，用于关联同一请求各环节的追踪记录
+	TraceID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"traceID"`
+}
+
+// DirectionMeta 表示数据包方向元数据
+// Cli2Srv 标记该数据包是否为客户端到服务端方向（true表示客户端到服务端，false表示服务端到客户端）
+type DirectionMeta struct {
+	Cli2Srv bool `gorm:"column:cli_2_srv;type:Bool" json:"cli2Srv"` // 是否为客户端到服务端方向
 }
 
 // CaptureMeta 表示捕获元数据
 // 包含数据包捕获时的状态信息
 type CaptureMeta struct {
-	Truncated     bool   `gorm:"type:Bool" json:"truncated"`
-	CaptureLength uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"capture_length"`
+	Truncated     bool   `gorm:"type:Bool" json:"truncated"`                      // 数据包是否被截断
+	CaptureLength uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"captureLength"` // 实际捕获长度（字节）
 }
 
 // PacketMeta 表示数据包元数据
 // 包含原始数据包的网络层堆栈信息
 type PacketMeta struct {
-	LayerStack LayerStack `gorm:"type:String CODEC(ZSTD(3))" json:"layer_stack"`
+	LayerStack LayerStack `gorm:"type:String CODEC(ZSTD(3))" json:"layerStack"` // 网络层堆栈信息
 }
 
-// FusedMeta 表示融合元数据
-// 包含融合数据包的帧堆栈信息，用于存储多个相关数据包的信息
-type FusedMeta struct {
-	FrameStack FrameStack `gorm:"type:String CODEC(ZSTD(3))" json:"frame_work"`
+// TagsMeta 表示风险标签元数据，存储去重排序后的标签数组
+type TagsMeta struct {
+	// Tags 风险标签组合，存储去重排序后的标签数组
+	// ClickHouse 中使用 Array(String) 类型存储
+	Tags []string `gorm:"type:Array(String)" json:"tags"`
 }
 
 // AsPacket 表示数据包的结构
@@ -182,12 +172,4 @@ type AsPacket struct {
 	TimestampMeta
 	CaptureMeta
 	PacketMeta
-}
-
-// AsFused 表示融合后的数据包结构
-// 用于存储经过融合处理的数据包，包含多个相关数据包的信息
-type AsFused struct {
-	BaseMeta
-	TimestampMeta
-	FusedMeta
 }

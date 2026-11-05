@@ -1,19 +1,20 @@
+// Package database 提供数据库连接创建与管理：依据配置选择驱动（postgres / clickhouse）
+// 并构建 GORM 连接，同时提供配置解析与日志记录等能力。
 package database
 
 import (
-	"github.com/glebarez/sqlite"
 	"gorm.io/driver/clickhouse"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // DB 是 gorm.DB 的别名，用于简化类型引用
 type DB = gorm.DB
 
 // NewDatabase 根据配置和日志创建一个新的数据库连接。
-// 该函数支持多种数据库驱动：postgres、sqlite 和 clickhouse。
+// 该函数支持多种数据库驱动：postgres 和 clickhouse。
 // 对于 clickhouse 驱动，会自动调整一些配置参数以适应其特性。
 //
 // 参数:
@@ -27,8 +28,8 @@ type DB = gorm.DB
 // 示例:
 //
 //	cfg := &database.Config{
-//	    Driver: "sqlite",
-//	    DSN:    "test.db",
+//	    Driver: "postgres",
+//	    DSN:    "host=localhost user=postgres dbname=test",
 //	}
 //	db, err := database.NewDatabase(cfg, logger)
 //	if err != nil {
@@ -49,9 +50,6 @@ func NewDatabase(cfg *Config, logger *logging.Logger) (*DB, error) {
 	case "postgres":
 		// PostgreSQL 数据库连接
 		dialector = postgres.Open(cfg.DSN)
-	case "sqlite":
-		// SQLite 数据库连接
-		dialector = sqlite.Open(cfg.DSN)
 	case "clickhouse":
 		// ClickHouse 数据库连接
 		dialector = clickhouse.Open(cfg.DSN)

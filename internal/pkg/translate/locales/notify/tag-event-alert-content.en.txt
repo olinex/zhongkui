@@ -1,0 +1,24 @@
+────────────────────────────────────────
+            ✦ Tag Event Alert ✦
+────────────────────────────────────────
+
+Event rule  : {{.RuleName}}
+Namespace   : {{.Namespace}}
+Detected at : {{if .DetectedAtFmt}}{{.DetectedAtFmt}}{{else}}{{.DetectedAt}}{{end}}
+
+Hit details ({{if .Hits}}{{len .Hits}}{{else}}0{{end}}):
+{{- range .Hits}}
+
+  ▸ Condition: {{.ConditionName}}
+      Dimension/Item : {{ TenumValue "tagEventDimension" .Dimension }} / {{.Item}}
+      Count          : {{.Count}} (threshold {{.Threshold}})
+      {{- if .Model}}
+      Target model   : {{ TenumValue "tagRuleModel" .Model }}
+      {{- end}}
+      {{- if .Window}}
+      Time window    : {{.Window}}
+      {{- end}}
+      {{- if .RecordCount}}
+      Records        : {{.RecordCount}}
+      {{- end}}
+{{- end}}

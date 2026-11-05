@@ -1,17 +1,19 @@
+// Package logging 提供日志系统的配置定义、解析与基于 zap 的记录器构建能力。
 package logging
 
 import (
 	"fmt"
 	"strings"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"zhongkui.com/zhongkui/internal/pkg/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
 )
 
 // PREFIX 是日志配置在配置文件中的前缀
-const PREFIX = "zap"
+const Prefix = "zap"
 
 // Config 定义了日志系统的配置结构
 // 该结构体通过 mapstructure 标签支持从配置文件自动解析
@@ -21,45 +23,45 @@ type Config struct {
 	// 有效值: debug, info, warn, error, dpanic, panic, fatal
 	// 默认值: info
 	// 参考: https://github.com/uber-go/zap/blob/master/level.go
-	Level string `mapstructure:"level" default:"info" comment:"log level: debug, info, warn, error, dpanic, panic, fatal (ref: https://github.com/uber-go/zap/blob/master/level.go)"`
+	Level string `mapstructure:"level" default:"info" comment:"日志级别：debug, info, warn, error, dpanic, panic, fatal (ref: https://github.com/uber-go/zap/blob/master/level.go)"`
 
 	// Development 启用开发模式，使用 NewDevelopmentEncoderConfig
 	// 在开发模式下，使用控制台编码器并为警告和错误日志添加堆栈跟踪
 	// 默认值: false
 	// 参考: https://pkg.go.dev/go.uber.org/zap#NewDevelopmentEncoderConfig
-	Development bool `mapstructure:"development" default:"false" comment:"enable development mode, uses NewDevelopmentEncoderConfig which uses a console encoder and adds stacktrace for warning and error logs (ref: https://pkg.go.dev/go.uber.org/zap#NewDevelopmentEncoderConfig)"`
+	Development bool `mapstructure:"development" default:"false" comment:"启用开发模式，使用控制台编码器并为警告和错误日志添加堆栈跟踪 (ref: https://pkg.go.dev/go.uber.org/zap#NewDevelopmentEncoderConfig)"`
 
 	// DisableCaller 禁用日志输出中的调用者信息
 	// 当设置为 false 时，会在日志输出中添加文件名和行号
 	// 默认值: false
 	// 参考: https://pkg.go.dev/go.uber.org/zap#Config-DisableCaller
-	DisableCaller bool `mapstructure:"disableCaller" default:"false" comment:"disable caller info in log output, when false, adds file name and line number to the output (ref: https://pkg.go.dev/go.uber.org/zap#Config-DisableCaller)"`
+	DisableCaller bool `mapstructure:"disableCaller" default:"false" comment:"禁用日志输出中的调用者信息，为 false 时输出文件名和行号 (ref: https://pkg.go.dev/go.uber.org/zap#Config-DisableCaller)"`
 
 	// DisableStacktrace 禁用 ErrorLevel 和 DPanicLevel 日志的堆栈跟踪
 	// 当设置为 false 时，会为错误日志添加堆栈跟踪
 	// 默认值: false
 	// 参考: https://pkg.go.dev/go.uber.org/zap#Config-DisableStacktrace
-	DisableStacktrace bool `mapstructure:"disableStacktrace" default:"false" comment:"disable stacktrace for ErrorLevel and DPanicLevel logs, when false, adds stacktrace for errors (ref: https://pkg.go.dev/go.uber.org/zap#Config-DisableStacktrace)"`
+	DisableStacktrace bool `mapstructure:"disableStacktrace" default:"false" comment:"禁用 ErrorLevel 和 DPanicLevel 日志的堆栈跟踪，为 false 时为错误日志添加堆栈 (ref: https://pkg.go.dev/go.uber.org/zap#Config-DisableStacktrace)"`
 
 	// Encoding 指定日志编码格式
 	// 有效值: json 或 console
 	// json 格式适合生产环境，console 格式适合开发环境
 	// 默认值: json
 	// 参考: https://pkg.go.dev/go.uber.org/zap#Config-Encoding
-	Encoding string `mapstructure:"encoding" default:"json" comment:"log encoding format: json or console (ref: https://pkg.go.dev/go.uber.org/zap#Config-Encoding)"`
+	Encoding string `mapstructure:"encoding" default:"json" comment:"日志编码格式：json 或 console (ref: https://pkg.go.dev/go.uber.org/zap#Config-Encoding)"`
 
 	// OutputPaths 指定日志输出的目标路径列表
 	// 支持 stdout, stderr 和文件路径
 	// 可以同时指定多个输出路径，例如 ["stdout", "/var/log/app.log"]
 	// 默认值: ["stdout"]
 	// 参考: https://pkg.go.dev/go.uber.org/zap#Config-OutputPaths
-	OutputPaths []string `mapstructure:"outputPaths" default:"[\"stdout\"]" comment:"list of URLs to write logging output to, supports stdout, stderr and file paths (ref: https://pkg.go.dev/go.uber.org/zap#Config-OutputPaths)"`
+	OutputPaths []string `mapstructure:"outputPaths" default:"[\"stdout\"]" comment:"日志输出目标列表，支持 stdout、stderr 和文件路径 (ref: https://pkg.go.dev/go.uber.org/zap#Config-OutputPaths)"`
 
 	// ErrorOutputPaths 指定内部日志错误输出的目标路径列表
 	// 用于记录日志系统自身的错误，如配置错误、写入失败等
 	// 默认值: ["stderr"]
 	// 参考: https://pkg.go.dev/go.uber.org/zap#Config-ErrorOutputPaths
-	ErrorOutputPaths []string `mapstructure:"errorOutputPaths" default:"[\"stderr\"]" comment:"list of URLs to write internal logger errors to (ref: https://pkg.go.dev/go.uber.org/zap#Config-ErrorOutputPaths)"`
+	ErrorOutputPaths []string `mapstructure:"errorOutputPaths" default:"[\"stderr\"]" comment:"内部日志错误输出目标列表 (ref: https://pkg.go.dev/go.uber.org/zap#Config-ErrorOutputPaths)"`
 }
 
 // ToZapConfig 将 Config 结构体转换为 zap 配置
@@ -168,7 +170,7 @@ func ParseLevel(level string) zapcore.Level {
 //	// 只生成特定配置的描述
 //	descriptions := DescribeConfig("level", "encoding")
 func DescribeConfig(names ...string) config.ConfigDescriptions {
-	return config.DescribeConfig[Config](fmt.Sprintf(`%s.{%s}`, PREFIX, strings.Join(names, ",")))
+	return config.DescribeConfig[Config](fmt.Sprintf(`%s.{%s}`, Prefix, strings.Join(names, ",")))
 }
 
 // ExtractConfig 从 Viper 配置中提取日志配置
@@ -200,6 +202,6 @@ func DescribeConfig(names ...string) config.ConfigDescriptions {
 //	if err != nil {
 //	    log.Fatal("Failed to extract config:", err)
 //	}
-func ExtractConfig(v *viper.Viper, name string) (*Config, error) {
-	return config.ExtractConfig[Config](v, fmt.Sprintf(`%s.%s`, PREFIX, name))
+func ExtractConfig(viper *viper.Viper, validate *validator.Validate, name string) (*Config, error) {
+	return config.ExtractConfig[Config](viper, validate, fmt.Sprintf(`%s.%s`, Prefix, name))
 }

@@ -5,10 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 func TestLayerLevel(t *testing.T) {
@@ -101,53 +100,17 @@ func TestLayerStack(t *testing.T) {
 			err := stack.Scan("{invalid json")
 			So(err, ShouldNotBeNil)
 		})
-	})
-}
 
-func TestFrameStack(t *testing.T) {
-	Convey("Test FrameStack database serialization", t, func() {
-		Convey("Value method should serialize to JSON", func() {
-			now := time.Now()
-			stack := FrameStack{
-				{
-					Timestamp: now,
-					LayerStack: LayerStack{
-						{
-							Level:   LayerLevelTransport,
-							Proto:   layers.LayerTypeTCP,
-							Headers: map[string]any{"port": 80},
-						},
-					},
-				},
-			}
-
-			value, err := stack.Value()
+		Convey("Scan method should handle empty string", func() {
+			var stack LayerStack
+			err := stack.Scan("")
 			So(err, ShouldBeNil)
-
-			// 验证序列化结果
-			jsonStr, ok := value.(string)
-			So(ok, ShouldBeTrue)
-
-			var decoded FrameStack
-			err = json.Unmarshal([]byte(jsonStr), &decoded)
-			So(err, ShouldBeNil)
-			So(len(decoded), ShouldEqual, 1)
-			So(decoded[0].Timestamp.Unix(), ShouldEqual, now.Unix())
+			So(stack, ShouldBeNil)
 		})
 
-		Convey("Scan method should deserialize correctly", func() {
-			jsonData := `[{"timestamp":"2024-01-01T12:00:00Z","layer_stack":[{"level":4,"proto":1,"headers":{"port":443}}]}]`
-			var stack FrameStack
-
-			err := stack.Scan(jsonData)
-			So(err, ShouldBeNil)
-			So(len(stack), ShouldEqual, 1)
-			So(stack[0].LayerStack[0].Level, ShouldEqual, LayerLevelTransport)
-		})
-
-		Convey("Scan method should handle nil value", func() {
-			var stack FrameStack
-			err := stack.Scan(nil)
+		Convey("Scan method should handle empty bytes", func() {
+			var stack LayerStack
+			err := stack.Scan([]byte{})
 			So(err, ShouldBeNil)
 			So(stack, ShouldBeNil)
 		})
@@ -217,30 +180,6 @@ func TestPacketMeta(t *testing.T) {
 	})
 }
 
-func TestFusedMeta(t *testing.T) {
-	Convey("Test FusedMeta structure", t, func() {
-		Convey("Should store frame stack", func() {
-			meta := FusedMeta{
-				FrameStack: FrameStack{
-					{
-						Timestamp: time.Now(),
-						LayerStack: LayerStack{
-							{
-								Level:   LayerLevelApplication,
-								Proto:   gopacket.LayerTypePayload,
-								Headers: map[string]any{"type": "http"},
-							},
-						},
-					},
-				},
-			}
-
-			So(len(meta.FrameStack), ShouldEqual, 1)
-			So(meta.FrameStack[0].LayerStack[0].Level, ShouldEqual, LayerLevelApplication)
-		})
-	})
-}
-
 func TestAsPacket(t *testing.T) {
 	Convey("Test AsPacket structure", t, func() {
 		Convey("Should compose all metadata correctly", func() {
@@ -275,44 +214,6 @@ func TestAsPacket(t *testing.T) {
 			So(packet.Truncated, ShouldBeFalse)
 			So(packet.CaptureLength, ShouldEqual, 1514)
 			So(len(packet.LayerStack), ShouldEqual, 1)
-		})
-	})
-}
-
-func TestAsFused(t *testing.T) {
-	Convey("Test AsFused structure", t, func() {
-		Convey("Should compose fused data correctly", func() {
-			sessionID, _ := serializer.HexUUIDv4FromString("12345678-1234-1234-1234-123456789012")
-			now := time.Now()
-
-			fused := AsFused{
-				BaseMeta: BaseMeta{
-					Namespace: "test",
-					Capture:   "eth0",
-					Version:   "v1",
-					SessionID: sessionID,
-				},
-				TimestampMeta: TimestampMeta{Timestamp: now},
-				FusedMeta: FusedMeta{
-					FrameStack: FrameStack{
-						{
-							Timestamp: now.Add(-time.Second),
-							LayerStack: LayerStack{
-								{
-									Level:   LayerLevelTransport,
-									Proto:   layers.LayerTypeTCP,
-									Headers: map[string]any{"syn": true},
-								},
-							},
-						},
-					},
-				},
-			}
-
-			So(fused.Namespace, ShouldEqual, "test")
-			So(fused.Timestamp.Unix(), ShouldEqual, now.Unix())
-			So(len(fused.FrameStack), ShouldEqual, 1)
-			So(fused.FrameStack[0].Timestamp.Unix(), ShouldEqual, now.Add(-time.Second).Unix())
 		})
 	})
 }

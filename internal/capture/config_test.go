@@ -6,8 +6,12 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/spf13/viper"
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
+
+// testValidate 测试用的验证器实例，绑定 binding 标签名以便验证配置结构体的校验规则
+var testValidate = validator.Validate
 
 // TestWatchConfig_TolerateIntervalTimeout 测试WatchConfig的TolerateIntervalTimeout方法
 func TestWatchConfig_TolerateIntervalTimeout(t *testing.T) {
@@ -113,7 +117,6 @@ func TestConfig_DefaultValues(t *testing.T) {
 			So(config.EncoderLevel, ShouldEqual, 0)
 			So(config.IntervalTimeout, ShouldEqual, 0)
 			So(config.PacketBufferSize, ShouldEqual, 0)
-			So(config.ExpireAge, ShouldEqual, 0)
 			So(config.MaxRetries, ShouldEqual, 0)
 		})
 	})
@@ -142,10 +145,9 @@ func TestExtractConfig(t *testing.T) {
 			v.Set("capture.upload.encoderLevel", 4)
 			v.Set("capture.upload.intervalTimeout", "2m")
 			v.Set("capture.upload.packetBufferSize", 500000)
-			v.Set("capture.upload.expireAge", "30m")
 			v.Set("capture.upload.maxRetries", 4)
 
-			config, err := ExtractConfig(v)
+			config, err := ExtractConfig(v, testValidate)
 
 			So(err, ShouldBeNil)
 			So(config, ShouldNotBeNil)
@@ -170,14 +172,13 @@ func TestExtractConfig(t *testing.T) {
 			So(config.Upload.EncoderLevel, ShouldEqual, 4)
 			So(config.Upload.IntervalTimeout, ShouldEqual, 2*time.Minute)
 			So(config.Upload.PacketBufferSize, ShouldEqual, int32(500000))
-			So(config.Upload.ExpireAge, ShouldEqual, 30*time.Minute)
 			So(config.Upload.MaxRetries, ShouldEqual, uint(4))
 		})
 
 		Convey("当Viper为空时", func() {
 			v := viper.New()
 
-			config, err := ExtractConfig(v)
+			config, err := ExtractConfig(v, testValidate)
 
 			// 当Viper中没有capture前缀的配置时，ExtractConfig会返回错误
 			So(err, ShouldNotBeNil)
@@ -191,7 +192,7 @@ func TestExtractConfig(t *testing.T) {
 			v.Set("capture.resource.name", "test")
 			v.Set("capture.watch.intervalTimeout", "invalid-duration")
 
-			config, err := ExtractConfig(v)
+			config, err := ExtractConfig(v, testValidate)
 
 			// 无效的时间格式会导致解析错误
 			So(err, ShouldNotBeNil)
@@ -262,7 +263,6 @@ func TestConfig_Integration(t *testing.T) {
 					EncoderLevel:     3,
 					IntervalTimeout:  90 * time.Second,
 					PacketBufferSize: 2000000,
-					ExpireAge:        2 * time.Hour,
 					MaxRetries:       5,
 				},
 			}
@@ -343,14 +343,12 @@ func TestConfig_EdgeCases(t *testing.T) {
 				{"capture.watch.intervalTimeout", "1h30m"},
 				{"capture.watch.intervalTimeout", "500ms"},
 				{"capture.watch.intervalTimeout", "0s"},
-				{"capture.upload.expireAge", "24h"},
-				{"capture.upload.expireAge", "1.5h"}, // 小数小时
 			}
 
 			for _, tc := range testCases {
 				v.Set(tc.key, tc.value)
 
-				config, err := ExtractConfig(v)
+				config, err := ExtractConfig(v, testValidate)
 				So(err, ShouldBeNil)
 				So(config, ShouldNotBeNil)
 
@@ -361,7 +359,7 @@ func TestConfig_EdgeCases(t *testing.T) {
 
 		Convey("配置前缀测试", func() {
 			Convey("PREFIX常量值", func() {
-				So(PREFIX, ShouldEqual, "capture")
+				So(Prefix, ShouldEqual, "capture")
 			})
 
 			Convey("配置键名格式", func() {
@@ -378,13 +376,12 @@ func TestConfig_EdgeCases(t *testing.T) {
 					"capture.upload.encoderLevel",
 					"capture.upload.intervalTimeout",
 					"capture.upload.packetBufferSize",
-					"capture.upload.expireAge",
 					"capture.upload.maxRetries",
 				}
 
 				// 这些键名应该能够被Viper正确解析
 				for _, key := range expectedKeys {
-					So(key, ShouldContainSubstring, PREFIX+".")
+					So(key, ShouldContainSubstring, Prefix+".")
 				}
 			})
 		})

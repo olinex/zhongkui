@@ -3,10 +3,11 @@ package network
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/gopacket/gopacket/layers"
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // TestTCPOption_Basic 测试TCPOption类型的基本功能
@@ -120,7 +121,7 @@ func TestTCPOptions_Basic(t *testing.T) {
 			err := options.Scan(jsonStr)
 			So(err, ShouldBeNil)
 			So(len(options), ShouldEqual, 1)
-			So(options[0].Type, ShouldEqual, layers.TCPOptionKind(2)) // MSS
+			So(options[0].Type, ShouldEqual, layers.TCPOptionKind(2)) // MSS 选项
 			So(options[0].Length, ShouldEqual, 4)
 			So(options[0].Data, ShouldResemble, []byte{0x05, 0xB4})
 		})
@@ -153,6 +154,28 @@ func TestTCPOptions_Basic(t *testing.T) {
 			So(decoded[0].Type, ShouldEqual, layers.TCPOptionKindTimestamps)
 			So(decoded[0].Length, ShouldEqual, 10)
 			So(decoded[0].Data, ShouldResemble, []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08})
+		})
+
+		Convey("Should handle nil slice with Value method", func() {
+			var options TCPOptions // nil 切片
+			value, err := options.Value()
+			So(err, ShouldBeNil)
+			// nil 切片对应 SQL NULL，应返回 nil driver.Value
+			So(value, ShouldBeNil)
+		})
+
+		Convey("Should handle empty string in Scan method", func() {
+			var options TCPOptions
+			err := options.Scan("")
+			So(err, ShouldBeNil)
+			So(options, ShouldBeNil)
+		})
+
+		Convey("Should handle empty bytes in Scan method", func() {
+			var options TCPOptions
+			err := options.Scan([]byte{})
+			So(err, ShouldBeNil)
+			So(options, ShouldBeNil)
 		})
 	})
 }
@@ -359,7 +382,7 @@ func TestNewTCPHeaders(t *testing.T) {
 }
 
 // TestPacketIPv4TCP_StreamID 测试PacketIPv4TCP的StreamID生成功能
-// 验证流ID的一致性和正确性
+// 验证流ID的一致性、正确性以及TCPStreamID数据库字段的赋值
 func TestPacketIPv4TCP_StreamID(t *testing.T) {
 	Convey("Test PacketIPv4TCP StreamID generation", t, func() {
 		Convey("Should generate consistent StreamID regardless of packet direction", func() {
@@ -394,13 +417,97 @@ func TestPacketIPv4TCP_StreamID(t *testing.T) {
 			streamID2 := packet2.StreamID()
 
 			So(streamID1, ShouldEqual, streamID2)
-			So(len(streamID1), ShouldEqual, 16) // 64-bit hash hex
+			So(len(streamID1), ShouldEqual, 16) // 64 位哈希的十六进制表示
+
+			// 验证TCPStreamID数据库字段可以直接设置为StreamID计算结果
+			packet1.TCPStreamID = packet1.StreamID()
+			packet2.TCPStreamID = packet2.StreamID()
+			So(packet1.TCPStreamID, ShouldEqual, streamID1)
+			So(packet2.TCPStreamID, ShouldEqual, streamID2)
+		})
+	})
+}
+
+// TestPacketIPv4TCP_CaptureTimestamp 测试 PacketIPv4TCP.CaptureTimestamp 方法
+// 验证 CaptureTimestamp 正确返回 TimestampMeta 中的时间戳
+func TestPacketIPv4TCP_CaptureTimestamp(t *testing.T) {
+	Convey("Test PacketIPv4TCP CaptureTimestamp", t, func() {
+		Convey("Should return Timestamp from TimestampMeta", func() {
+			now := time.Now()
+			pkt := &PacketIPv4TCP{
+				PacketIPv4: PacketIPv4{
+					PacketEthernet: PacketEthernet{
+						AsPacket: AsPacket{
+							TimestampMeta: TimestampMeta{Timestamp: now},
+						},
+					},
+				},
+			}
+			So(pkt.CaptureTimestamp().Equal(now), ShouldBeTrue)
+		})
+	})
+}
+
+// TestPacketIPv6TCP_CaptureTimestamp 测试 PacketIPv6TCP.CaptureTimestamp 方法
+func TestPacketIPv6TCP_CaptureTimestamp(t *testing.T) {
+	Convey("Test PacketIPv6TCP CaptureTimestamp", t, func() {
+		Convey("Should return Timestamp from TimestampMeta", func() {
+			now := time.Now()
+			pkt := &PacketIPv6TCP{
+				PacketIPv6: PacketIPv6{
+					PacketEthernet: PacketEthernet{
+						AsPacket: AsPacket{
+							TimestampMeta: TimestampMeta{Timestamp: now},
+						},
+					},
+				},
+			}
+			So(pkt.CaptureTimestamp().Equal(now), ShouldBeTrue)
+		})
+	})
+}
+
+// TestAppTailer 测试 AppTailer 结构体
+// 验证 AppTailer 结构体字段的正确性
+func TestAppTailer(t *testing.T) {
+	Convey("Test AppTailer structure", t, func() {
+		Convey("Should initialize with all zero values", func() {
+			tailer := AppTailer{}
+			So(tailer.ClientConsumed, ShouldEqual, uint64(0))
+			So(tailer.ServerConsumed, ShouldEqual, uint64(0))
+			So(tailer.ClientStartPayloadOffset, ShouldEqual, uint64(0))
+			So(tailer.ClientEndPayloadOffset, ShouldEqual, uint64(0))
+			So(tailer.ServerStartPayloadOffset, ShouldEqual, uint64(0))
+			So(tailer.ServerEndPayloadOffset, ShouldEqual, uint64(0))
+			So(tailer.ClientStartTimestamp.IsZero(), ShouldBeTrue)
+			So(tailer.ClientEndTimestamp.IsZero(), ShouldBeTrue)
+			So(tailer.ServerStartTimestamp.IsZero(), ShouldBeTrue)
+			So(tailer.ServerEndTimestamp.IsZero(), ShouldBeTrue)
+		})
+
+		Convey("Should set all fields correctly", func() {
+			now := time.Now()
+			tailer := AppTailer{
+				ClientConsumed:           100,
+				ClientStartPayloadOffset: 0,
+				ClientEndPayloadOffset:   100,
+				ClientStartTimestamp:     now,
+				ClientEndTimestamp:       now.Add(time.Second),
+				ServerConsumed:           200,
+				ServerStartPayloadOffset: 0,
+				ServerEndPayloadOffset:   200,
+				ServerStartTimestamp:     now,
+				ServerEndTimestamp:       now.Add(time.Second),
+			}
+			So(tailer.ClientConsumed, ShouldEqual, uint64(100))
+			So(tailer.ServerConsumed, ShouldEqual, uint64(200))
+			So(tailer.ClientStartTimestamp.Equal(now), ShouldBeTrue)
 		})
 	})
 }
 
 // TestPacketIPv6TCP_StreamID 测试PacketIPv6TCP的StreamID生成功能
-// 验证IPv6流ID的一致性和正确性
+// 验证IPv6流ID的一致性、正确性以及TCPStreamID数据库字段的赋值
 func TestPacketIPv6TCP_StreamID(t *testing.T) {
 	Convey("Test PacketIPv6TCP StreamID generation", t, func() {
 		Convey("Should generate consistent StreamID for IPv6 regardless of packet direction", func() {
@@ -439,7 +546,13 @@ func TestPacketIPv6TCP_StreamID(t *testing.T) {
 			streamID2 := packet2.StreamID()
 
 			So(streamID1, ShouldEqual, streamID2)
-			So(len(streamID1), ShouldEqual, 16) // 64-bit hash hex
+			So(len(streamID1), ShouldEqual, 16) // 64 位哈希的十六进制表示
+
+			// 验证TCPStreamID数据库字段可以直接设置为StreamID计算结果
+			packet1.TCPStreamID = packet1.StreamID()
+			packet2.TCPStreamID = packet2.StreamID()
+			So(packet1.TCPStreamID, ShouldEqual, streamID1)
+			So(packet2.TCPStreamID, ShouldEqual, streamID2)
 		})
 	})
 }

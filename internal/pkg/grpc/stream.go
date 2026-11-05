@@ -50,7 +50,7 @@ func (ss *WrapperServerStream) SetTrailer(md metadata.MD) {
 // 核心功能：在底层上下文中注入用户ID信息
 // 这样在流处理过程中可以通过 ExtractUserID 函数获取用户身份
 func (ss *WrapperServerStream) Context() context.Context {
-	return context.WithValue(ss.inner.Context(), ACCESS_KEY_USER_ID, ss.userID)
+	return context.WithValue(ss.inner.Context(), AccessKeyUserId, ss.userID)
 }
 
 // SendMsg 发送消息到客户端

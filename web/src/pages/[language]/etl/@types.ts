@@ -1,11 +1,5 @@
 export type TaskState =
-  | "pending"
-  | "active"
-  | "aggregating"
-  | "scheduled"
-  | "retry"
-  | "archived"
-  | "completed";
+  "pending" | "active" | "aggregating" | "scheduled" | "retry" | "archived" | "completed";
 
 export interface ProcessingTask {
   id: string;
@@ -25,16 +19,22 @@ export interface InspectorServerListItem {
   started: string;
   status: string;
   processingTasks: ProcessingTask[];
-  show: boolean;
 }
 
 export interface InspectorSchedulerListItem {
-  id: string;
-  spec: string;
-  next: string;
-  prev: string | null;
   typeName: string;
-  payload: string;
+  cronSpec: string;
+  interval: string;
+  queue: string;
+  timeout: string;
+  maxRetry: number;
+  enabled: boolean;
+  payload: Record<string, unknown>;
+  backlogEnabled: boolean;
+  backlogWindow: string;
+  backlogLimit: number;
+  retention: string;
+  lookback: string;
 }
 
 export interface InspectorQueueItem {
@@ -104,8 +104,8 @@ export interface InspectorTaskListItem {
   nextProcessAt: string | null;
   completedAt: string | null;
   deadline: string | null;
-  timeout: number;
-  retention: number;
+  timeout: string;
+  retention: string;
   group: string;
   isOrphaned: boolean;
 }
@@ -116,9 +116,10 @@ export type InspectorSchedulerListOut = InspectorSchedulerListItem[];
 
 export type InspectorQueueListOut = Record<string, InspectorQueueItem>;
 
-export type InspectorDailyStatListOut = Record<
-  string,
-  InspectorDailyStatItem[]
->;
+export type InspectorDailyStatListOut = Record<string, InspectorDailyStatItem[]>;
 
-export type InspectorTaskListOut = InspectorTaskListItem[];
+// 任务列表出参：items 为当前页任务，total 为当前队列 / 状态 / 任务类型筛选下的总数
+export interface InspectorTaskListOut {
+  items: InspectorTaskListItem[];
+  total: number;
+}

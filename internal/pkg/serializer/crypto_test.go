@@ -9,7 +9,7 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 	"gorm.io/gorm/schema"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
 )
 
 func TestMain(m *testing.M) {
@@ -27,6 +27,7 @@ func TestMain(m *testing.M) {
 // CryptoTestModel 用于 GORM schema 解析，获取带 secure 标签的 Field
 // 注意：Scan 要求字段为指针类型
 type CryptoTestModel struct {
+	// Secret 带 secure 标签的加密字段，用于验证 GORM 序列化器解析出的字段标签。
 	Secret *Crypto `gorm:"serializer:crypto" secure:"mode=\"aes-gcm\",offset=0,length=32"`
 }
 
@@ -88,7 +89,7 @@ func TestCrypto_getTagMode(t *testing.T) {
 
 		Convey("key length too short from tag", func() {
 			type BadModel struct {
-				// length=16 = MIN_KEY_LENGTH, should fail
+				// length=16 = MinKeyLength，应失败
 				Secret *Crypto `gorm:"serializer:crypto" secure:"mode=\"aes-gcm\",offset=0,length=16"`
 			}
 			s, err := schema.Parse(&BadModel{}, &sync.Map{}, schema.NamingStrategy{})
@@ -98,7 +99,7 @@ func TestCrypto_getTagMode(t *testing.T) {
 
 			_, err = cs.getTagMode(field)
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "key length must be greater than")
+			So(err.Error(), ShouldContainSubstring, "key length should greater than")
 		})
 
 		Convey("empty tag", func() {
@@ -192,12 +193,12 @@ func TestCrypto_Scan(t *testing.T) {
 			So(model.Secret, ShouldBeNil)
 		})
 
-		Convey("non-[]byte dbValue returns error", func() {
+		Convey("invalid dbValue type returns error", func() {
 			model := &CryptoTestModel{Secret: &Crypto{}}
 			dst := reflect.ValueOf(model).Elem()
-			err := cs.Scan(ctx, field, dst, "not a byte slice")
+			err := cs.Scan(ctx, field, dst, 12345) // int 类型触发 unknown type 错误
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "expected []byte")
+			So(err.Error(), ShouldContainSubstring, "expected []byte or string")
 		})
 
 		Convey("dst is not a pointer returns error", func() {
@@ -338,7 +339,7 @@ func TestCrypto_Value(t *testing.T) {
 
 			cipherBytes, ok := result.([]byte)
 			So(ok, ShouldBeTrue)
-			// ciphertext should be larger than plaintext (nonce + tag overhead)
+			// 密文应比明文长（nonce + tag 开销）
 			So(len(cipherBytes), ShouldBeGreaterThan, len(largeData))
 		})
 	})
@@ -424,7 +425,7 @@ func TestCrypto_CryptoTag_Defaults(t *testing.T) {
 		})
 
 		Convey("custom length in tag (AES-192)", func() {
-			// AES-192 = 24 bytes key, AES-256 = 32 bytes
+			// AES-192 = 24 字节密钥，AES-256 = 32 字节
 			type CustomModel struct {
 				Secret *Crypto `gorm:"serializer:crypto" secure:"mode=\"aes-gcm\",offset=0,length=24"`
 			}

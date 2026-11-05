@@ -12,13 +12,14 @@ import (
 	"github.com/gopacket/gopacket/pcap"
 	"golang.org/x/net/bpf"
 	"golang.org/x/sys/unix"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 )
 
 const (
 	afpacketPlatformWireName = "afpacket"
-	InterfaceBufferMB        = 64
+	// InterfaceBufferMB 单张网卡 AF_PACKET 接收环缓冲区大小（MB），用于计算接收块数量
+	InterfaceBufferMB = 64
 )
 
 func convertToRawBpfInstructions(pcapInsts []pcap.BPFInstruction) []bpf.RawInstruction {
@@ -39,6 +40,8 @@ type afpacketWire struct {
 	live    *afpacket.TPacket
 }
 
+// NewAfpacketWire 基于 AF_PACKET（TPACKET_V2）创建抓包实现，按配置设置 snaplen、
+// 轮询超时、混杂模式与接收环缓冲区，并开启 PACKET_IGNORE_OUTGOING。
 func NewAfpacketWire(config *reporter_v1.Config) (Wire, error) {
 	snaplen := int(config.SnapLen)
 	// TPACKET_V2 要求 frameSize 必须 TPACKET_ALIGN(sizeof(tpacket2_hdr) + snaplen)
@@ -87,14 +90,17 @@ func NewAfpacketWire(config *reporter_v1.Config) (Wire, error) {
 	}, nil
 }
 
+// Name 返回抓包实现名。
 func (a *afpacketWire) Name() string {
 	return afpacketPlatformWireName
 }
 
+// LinkType 返回链路层类型，AF_PACKET 统一按以太网处理。
 func (a *afpacketWire) LinkType() layers.LinkType {
 	return layers.LinkTypeEthernet
 }
 
+// SetBPFFilter 编译并下发 BPF 过滤表达式。
 func (a *afpacketWire) SetBPFFilter(expr string) error {
 	bpf, err := pcap.CompileBPFFilter(a.LinkType(), int(a.snaplen), expr)
 	if err != nil {
@@ -107,6 +113,7 @@ func (a *afpacketWire) SetBPFFilter(expr string) error {
 	return nil
 }
 
+// ZeroCopyReadPacketData 零拷贝读取一个数据包，返回原始数据、捕获信息与错误。
 func (a *afpacketWire) ZeroCopyReadPacketData() *RawPacket {
 	data, ci, err := a.live.ZeroCopyReadPacketData()
 	return &RawPacket{
@@ -116,6 +123,7 @@ func (a *afpacketWire) ZeroCopyReadPacketData() *RawPacket {
 	}
 }
 
+// Close 关闭底层 AF_PACKET 抓包句柄。
 func (a *afpacketWire) Close() {
 	a.live.Close()
 }

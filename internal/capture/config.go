@@ -3,17 +3,18 @@ package capture
 import (
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/klauspost/compress/zstd"
 	"github.com/spf13/viper"
-	"zhongkui.com/zhongkui/internal/pkg/config"
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 const (
 	// PREFIX 配置前缀，用于在配置文件中标识抓包相关的配置项
 	// 例如：capture.watch.intervalTimeout
-	PREFIX = "capture"
+	Prefix = "capture"
 )
 
 // WatchConfig 监控配置，用于配置与远程服务器的监控连接参数
@@ -93,10 +94,6 @@ type UploadConfig struct {
 	// 默认值：1000000，根据可用内存和网络流量进行调整
 	PacketCount uint `mapstructure:"packetCount" default:"1000000"`
 
-	// ExpireAge S3对象过期时间，定义了上传到S3的文件在多长时间后自动删除
-	// 默认值：1h，根据数据保留策略进行调整
-	ExpireAge time.Duration `mapstructure:"expireAge" default:"1h"`
-
 	// MaxRetries 最大重试次数，当上传失败时的重试次数
 	// 达到最大重试次数后，数据包可能被丢弃或延迟上传
 	MaxRetries uint `mapstructure:"maxRetries" default:"5"`
@@ -123,7 +120,7 @@ type Config struct {
 // 该方法生成配置的结构化描述，包括字段名、类型、默认值和说明
 // 返回值：config.ConfigDescriptions 配置描述集合
 func DescribeConfig() config.ConfigDescriptions {
-	return config.DescribeConfig[Config](PREFIX)
+	return config.DescribeConfig[Config](Prefix)
 }
 
 // ExtractConfig 从Viper实例中提取抓包配置
@@ -142,6 +139,6 @@ func DescribeConfig() config.ConfigDescriptions {
 //	v.SetConfigFile("config.yaml")
 //	v.ReadInConfig()
 //	cfg, err := ExtractConfig(v)
-func ExtractConfig(v *viper.Viper) (*Config, error) {
-	return config.ExtractConfig[Config](v, PREFIX)
+func ExtractConfig(v *viper.Viper, validate *validator.Validate) (*Config, error) {
+	return config.ExtractConfig[Config](v, validate, Prefix)
 }

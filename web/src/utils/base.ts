@@ -1,5 +1,10 @@
 const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
+// INVALID_PLACEHOLDER 无效 / 不适用取值的统一占位符（em dash）。
+// 字段在当前上下文无意义时（如非向量档位的「向量维度」、未填写的可选值）用它与正常取值区分；
+// 全站统一为 em dash「—」，避免各地混用 0 / 空串 / 其它符号。约定见 AGENTS.md「无效值占位符」。
+export const INVALID_PLACEHOLDER = "—";
+
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -15,7 +20,7 @@ export function arrayToCsv(data: string[][]): string {
           }
           return field;
         })
-        .join(",")
+        .join(","),
     )
     .join("\r\n"); // 使用 CRLF 换行符（CSV 标准）
 }

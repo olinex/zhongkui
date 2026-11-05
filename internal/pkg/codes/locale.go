@@ -7,13 +7,11 @@ import "strings"
 //
 // RFC 1766 定义了语言标识标签的格式，由语言代码（ISO 639）和国家/地区代码（ISO 3166-1）组成，
 // 用于标识特定国家/地区的语言变体，例如 "zh_CN" 表示中国大陆使用的中文，"en_US" 表示美国英语。
-//
-// 字段说明：
-//   - Language：ISO 639-2 语言条目，包含语言的 Alpha-2、Alpha-3 代码及名称
-//   - Country：ISO 3166-1 国家/地区条目，包含国家/地区的 Alpha-2、Alpha-3 代码及名称
 type RFC1766Entry struct {
+	// Language 语言条目（ISO 639-2）。
 	Language *ISO6392Entry
-	Country  *ISO31661Entry
+	// Country 国家/地区条目（ISO 3166-1）。
+	Country *ISO31661Entry
 }
 
 // RFC1766Codes 提供基于 RFC 1766 标准的区域设置代码查询与转换能力。
@@ -28,8 +26,10 @@ type RFC1766Entry struct {
 //
 // 该结构通过 GetRFC1766Codes() 获取实例，不应直接构造。
 type RFC1766Codes struct {
+	// language ISO 639-2 语言代码查询器。
 	language *ISO6392Codes
-	country  *ISO31661Codes
+	// country ISO 3166-1 国家/地区代码查询器。
+	country *ISO31661Codes
 }
 
 // GetRFC1766Codes 创建并返回 RFC 1766 区域设置代码查询器实例。
@@ -84,13 +84,11 @@ func (c *RFC1766Codes) ConvertFromName(name string) *RFC1766Entry {
 // 由语言代码（ISO 639）和文字脚本代码（ISO 15924）组成，
 // 用于标识使用特定文字书写系统的语言，例如 "zh_Hans" 表示简体中文，
 // "ja_Jpan" 表示使用日文书写系统（汉字+平假名+片假名）的日语。
-//
-// 字段说明：
-//   - Language：ISO 639-2 语言条目，包含语言的 Alpha-2、Alpha-3 代码及名称
-//   - Script：ISO 15924 文字脚本条目，包含脚本的 Alpha-4 代码、名称及数字代码
 type RFC4646Entry struct {
+	// Language 语言条目（ISO 639-2）。
 	Language *ISO6392Entry
-	Script   *ISO15924Entry
+	// Script 文字脚本条目（ISO 15924）。
+	Script *ISO15924Entry
 }
 
 // RFC4646Codes 提供基于 RFC 4646 标准的语言脚本代码查询与转换能力。
@@ -105,8 +103,10 @@ type RFC4646Entry struct {
 //
 // 该结构通过 GetRFC4646Codes() 获取实例，不应直接构造。
 type RFC4646Codes struct {
+	// language ISO 639-2 语言代码查询器。
 	language *ISO6392Codes
-	script   *ISO15924Codes
+	// script ISO 15924 文字脚本代码查询器。
+	script *ISO15924Codes
 }
 
 // GetRFC4646Codes 创建并返回 RFC 4646 语言脚本代码查询器实例。

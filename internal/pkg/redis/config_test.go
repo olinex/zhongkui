@@ -7,21 +7,25 @@ import (
 	"github.com/creasty/defaults"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/spf13/viper"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
+
+// testValidate 测试用的验证器实例，绑定 binding 标签名以便验证配置结构体的校验规则
+var testValidate = validator.Validate
 
 // TestConfigConstants 测试配置常量
 func TestConfigConstants(t *testing.T) {
 	Convey("测试配置常量", t, func() {
 		Convey("PREFIX应该是'redis'", func() {
-			So(PREFIX, ShouldEqual, "redis")
+			So(Prefix, ShouldEqual, "redis")
 		})
 
 		Convey("NORMAL_TYPE应该是'normal'", func() {
-			So(NORMAL_TYPE, ShouldEqual, "normal")
+			So(NormalType, ShouldEqual, "normal")
 		})
 
 		Convey("SENTINEL_TYPE应该是'sentinel'", func() {
-			So(SENTINEL_TYPE, ShouldEqual, "sentinel")
+			So(SentinelType, ShouldEqual, "sentinel")
 		})
 	})
 }
@@ -73,7 +77,7 @@ func TestToOptionsNormalConfig(t *testing.T) {
 		err := defaults.Set(cfg)
 		So(err, ShouldBeNil)
 
-		cfg.Type = NORMAL_TYPE
+		cfg.Type = NormalType
 		cfg.Network = "tcp"
 		cfg.Addr = "127.0.0.1:6380"
 		cfg.Username = "testuser"
@@ -124,7 +128,7 @@ func TestToSentinelOptionsSentinelConfig(t *testing.T) {
 		err := defaults.Set(cfg)
 		So(err, ShouldBeNil)
 
-		cfg.Type = SENTINEL_TYPE
+		cfg.Type = SentinelType
 		cfg.MasterName = "mymaster"
 		cfg.SentinelAddrs = []string{"sentinel1:26379", "sentinel2:26379"}
 		cfg.SentinelUsername = "sentineluser"
@@ -188,7 +192,7 @@ func TestExtractConfigFromViper(t *testing.T) {
 		v.Set("redis.test.password", "extracted-pass")
 
 		Convey("应该成功提取配置", func() {
-			cfg, err := ExtractConfig(v, "test")
+			cfg, err := ExtractConfig(v, testValidate, "test")
 			So(err, ShouldBeNil)
 			So(cfg, ShouldNotBeNil)
 
@@ -213,7 +217,7 @@ func TestExtractConfigSentinelFromViper(t *testing.T) {
 		v.Set("redis.sentinel_test.routeRandomly", false)
 
 		Convey("应该成功提取Sentinel配置", func() {
-			cfg, err := ExtractConfig(v, "sentinel_test")
+			cfg, err := ExtractConfig(v, testValidate, "sentinel_test")
 			So(err, ShouldBeNil)
 			So(cfg, ShouldNotBeNil)
 
@@ -232,7 +236,7 @@ func TestExtractConfigInvalidPrefix(t *testing.T) {
 		v := viper.New()
 
 		Convey("应该对不存在的配置返回错误", func() {
-			cfg, err := ExtractConfig(v, "nonexistent")
+			cfg, err := ExtractConfig(v, testValidate, "nonexistent")
 			So(err, ShouldNotBeNil)
 			So(cfg, ShouldBeNil)
 			So(err.Error(), ShouldContainSubstring, "Cannot get")
@@ -283,7 +287,7 @@ func TestConfigValidation(t *testing.T) {
 		v.Set("redis.invalid.type", "invalid_type")
 
 		Convey("应该拒绝无效类型", func() {
-			cfg, err := ExtractConfig(v, "invalid")
+			cfg, err := ExtractConfig(v, testValidate, "invalid")
 			So(err, ShouldNotBeNil)
 			So(cfg, ShouldBeNil)
 		})

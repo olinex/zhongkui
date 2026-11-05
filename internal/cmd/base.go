@@ -1,13 +1,13 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/pterm/pterm"
 	"github.com/sergi/go-diff/diffmatchpatch"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 func getDiffError(target, input string) error {
@@ -56,18 +56,20 @@ func getDiffError(target, input string) error {
 }
 
 func staticInputDoubleCheck(input string) error {
-	first, err := pterm.DefaultInteractiveTextInput.Show(
-		fmt.Sprintf("please enter `%s` to confirm", input),
-	)
+	first, err := pterm.DefaultInteractiveTextInput.Show(translate.T(
+		"cli.confirm.enter",
+		map[string]any{"Input": input},
+	))
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	if err = getDiffError(input, first); err != nil {
 		return errors.WithStack(err)
 	}
-	second, err := pterm.DefaultInteractiveTextInput.Show(
-		fmt.Sprintf("please enter `%s` again to confirm", input),
-	)
+	second, err := pterm.DefaultInteractiveTextInput.Show(translate.T(
+		"cli.confirm.reenter",
+		map[string]any{"Input": input},
+	))
 	if err != nil {
 		return errors.WithStack(err)
 	}

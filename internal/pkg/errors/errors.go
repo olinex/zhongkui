@@ -1,13 +1,12 @@
+// Package errors 提供带堆栈跟踪的增强错误处理；是否记录堆栈由环境配置决定。
 package errors
 
-// Package errors 提供了增强的错误处理功能，支持堆栈跟踪。
-// 该包根据环境变量配置来决定是否启用堆栈跟踪功能。
 import (
 	e "errors"
 	"fmt"
 
 	"github.com/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 )
 
 type stackError interface {
@@ -41,26 +40,43 @@ func Newf(format string, args ...any) error {
 	return fmt.Errorf(format, args...)
 }
 
-// WithStack 返回错误的根本原因，并为第三方库或标准库的错误添加堆栈信息。
-// 如果错误已经是 StackError 类型，则直接返回原错误。
+// WithStack 为第三方库或标准库的错误添加堆栈信息；关闭堆栈时原样返回。
+// 已带堆栈的错误不会被重复包装，nil 错误返回 nil。
 // 这个函数通常用于包装来自外部库的错误，以添加上下文调用栈。
 //
 // 示例:
 //
 //	result, err := someExternalLib.DoSomething()
 //	if err != nil {
-//	    return errors.WithStack(err)
+//	    return WithStack(err)
 //	}
 func WithStack(err error) error {
-	if base.Env.ErrorStack && err != nil {
-		switch err.(type) {
-		case stackError:
-			return err
-		default:
-			return errors.WithStack(err)
-		}
+	if err == nil {
+		return nil
 	}
-	return err
+	if !base.Env.ErrorStack {
+		return err
+	}
+	if _, ok := err.(stackError); ok {
+		return err
+	}
+	return errors.WithStack(err)
+}
+
+// Wrapf 为已有错误添加上下文并保留错误链；err 为 nil 时返回 nil。
+// 关闭堆栈时仍保留可 errors.Is/As 的错误链，只是不附加调用栈。
+//
+// 示例:
+//
+//	return errors.Wrapf(err, "load config %q", path)
+func Wrapf(err error, format string, args ...any) error {
+	if err == nil {
+		return nil
+	}
+	if base.Env.ErrorStack {
+		return errors.Wrapf(err, format, args...)
+	}
+	return fmt.Errorf("%s: %w", fmt.Sprintf(format, args...), err)
 }
 
 // Is 报告目标错误是否与给定的错误匹配。
@@ -76,6 +92,20 @@ func Is(err error, target error) bool {
 	return errors.Is(err, target)
 }
 
+// As 在错误链中查找与 target 匹配的错误并赋值。
+// 与 Is 同理，支持错误链的递归检查，用于按错误类型（而非哨兵值）分流业务错误码。
+//
+// 示例:
+//
+//	var mismatch *ai.EmbeddingDimensionMismatchError
+//	if errors.As(err, &mismatch) {
+//	    // 处理维度不兼容错误
+//	}
+func As(err error, target any) bool {
+	return e.As(err, target)
+}
+
+// Join 把多个错误合并为一个错误，nil 错误会被忽略（全部为 nil 时返回 nil）。
 func Join(errs ...error) error {
 	return e.Join(errs...)
 }

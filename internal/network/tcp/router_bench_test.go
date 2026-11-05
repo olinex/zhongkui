@@ -8,11 +8,11 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
-	n "zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/test"
+	n "zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/pkg/errgroupx"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/test"
 )
 
 func withStreamID(id string) func(*mockTCPPacket) {
@@ -27,6 +27,7 @@ func withAckNum(ack uint32) func(*mockTCPPacket) {
 	}
 }
 
+// BenchmarkRouterSingleFlow 对单条 TCP 流的包路由处理进行基准测试。
 func BenchmarkRouterSingleFlow(b *testing.B) {
 	logger := &logging.Logger{SugaredLogger: zap.NewNop().Sugar()}
 
@@ -48,6 +49,7 @@ func BenchmarkRouterSingleFlow(b *testing.B) {
 		withSrcAddr(clientAddr), withDstAddr(serverAddr),
 		withSrcPort(clientPort), withDstPort(serverPort),
 		withSeqNum(1000),
+		withPayload(nil),
 	)
 	syn.meta = meta
 	syn.ackNum = 0
@@ -57,6 +59,7 @@ func BenchmarkRouterSingleFlow(b *testing.B) {
 		withSrcAddr(serverAddr), withDstAddr(clientAddr),
 		withSrcPort(serverPort), withDstPort(clientPort),
 		withSeqNum(2000),
+		withPayload(nil),
 	)
 	synAck.meta = meta
 	synAck.ackNum = 1001
@@ -66,6 +69,7 @@ func BenchmarkRouterSingleFlow(b *testing.B) {
 		withSrcAddr(clientAddr), withDstAddr(serverAddr),
 		withSrcPort(clientPort), withDstPort(serverPort),
 		withSeqNum(1001),
+		withPayload(nil),
 	)
 	ack.meta = meta
 	ack.ackNum = 2001
@@ -107,6 +111,7 @@ func BenchmarkRouterSingleFlow(b *testing.B) {
 		withSrcAddr(clientAddr), withDstAddr(serverAddr),
 		withSrcPort(clientPort), withDstPort(serverPort),
 		withSeqNum(finSeq),
+		withPayload(nil),
 	)
 	fin.meta = meta
 	fin.ackNum = 2001
@@ -116,6 +121,7 @@ func BenchmarkRouterSingleFlow(b *testing.B) {
 		withSrcAddr(serverAddr), withDstAddr(clientAddr),
 		withSrcPort(serverPort), withDstPort(clientPort),
 		withSeqNum(2001),
+		withPayload(nil),
 	)
 	lastAck.meta = meta
 	lastAck.ackNum = finSeq + 1
@@ -128,7 +134,7 @@ func BenchmarkRouterSingleFlow(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		ctx, cancel := context.WithCancel(context.Background())
-		wg, ctx := errgroup.WithContext(ctx)
+		wg, ctx := errgroupx.WithContext(ctx)
 
 		router := NewRouter[*mockTCPPacket](100, 100, time.Second)
 		dstChan := make(chan any, 100)
@@ -147,6 +153,7 @@ func BenchmarkRouterSingleFlow(b *testing.B) {
 	test.Tracer.Report()
 }
 
+// BenchmarkRouterConcurrentFlows 对并发多条 TCP 流的包路由处理进行基准测试。
 func BenchmarkRouterConcurrentFlows(b *testing.B) {
 	logger := &logging.Logger{SugaredLogger: zap.NewNop().Sugar()}
 
@@ -181,6 +188,7 @@ func BenchmarkRouterConcurrentFlows(b *testing.B) {
 			withSrcPort(clientPort), withDstPort(serverPort),
 			withSeqNum(baseSeq),
 			withStreamID(flowStreamID),
+			withPayload(nil),
 		)
 		syn.meta = meta
 		syn.ackNum = 0
@@ -192,6 +200,7 @@ func BenchmarkRouterConcurrentFlows(b *testing.B) {
 			withSrcPort(serverPort), withDstPort(clientPort),
 			withSeqNum(baseSeq+1000),
 			withStreamID(flowStreamID),
+			withPayload(nil),
 		)
 		synAck.meta = meta
 		synAck.ackNum = baseSeq + 1
@@ -203,6 +212,7 @@ func BenchmarkRouterConcurrentFlows(b *testing.B) {
 			withSrcPort(clientPort), withDstPort(serverPort),
 			withSeqNum(baseSeq+1),
 			withStreamID(flowStreamID),
+			withPayload(nil),
 		)
 		ack.meta = meta
 		ack.ackNum = baseSeq + 1001
@@ -226,6 +236,7 @@ func BenchmarkRouterConcurrentFlows(b *testing.B) {
 			withSrcPort(clientPort), withDstPort(serverPort),
 			withSeqNum(baseSeq+3),
 			withStreamID(flowStreamID),
+			withPayload(nil),
 		)
 		fin.meta = meta
 		fin.ackNum = baseSeq + 1001
@@ -239,7 +250,7 @@ func BenchmarkRouterConcurrentFlows(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		ctx, cancel := context.WithCancel(context.Background())
-		wg, ctx := errgroup.WithContext(ctx)
+		wg, ctx := errgroupx.WithContext(ctx)
 
 		router := NewRouter[*mockTCPPacket](100, 100, time.Second)
 		dstChan := make(chan any, 100)

@@ -1,3 +1,59 @@
+// Package capture 提供抓包客户端：管理与远程 Reporter 服务的通信、监听配置变更、
+// 执行数据包捕获并上传到 S3，同时向服务端反馈抓包状态。
+//
+// 本文解释采集侧的设计取舍：为什么同时支持两条抓包路径、数据如何从网卡落到对象存储、
+// 客户端又怎样与平台保持配置一致。
+//
+// ## 两条抓包路径
+//
+// 采集只依赖一个抽象：wire.Wire 接口（见 wire/base.go），它约定 Name / LinkType / SetBPFFilter /
+// ZeroCopyReadPacketData / Close 五个方法。所有平台实现都由 wire.NewWire 选择：
+//
+//   - Linux：优先使用 XDP（`AF_XDP`）。newPlatformWire 按 Native → Generic 的顺序降级，
+//     以求零拷贝的高吞吐；两者都不可用时回退到 afpacket。
+//   - macOS（Darwin）：使用 libpcap。
+//   - 其他平台：无原生实现，统一回退到 libpcap。
+//
+// 之所以分层，是因为 XDP 能绕过内核网络栈，在高流量下显著降低丢包与 CPU 开销，
+// 但它强依赖特定内核与网卡；libpcap 兼容性最好但吞吐有限。抽象接口让上层抓包逻辑与平台无关，
+// 环境不满足时自动降级，保证采集在任何受支持平台上都能跑起来。
+//
+// ## 职责划分
+//
+//   - client.go：CaptureClient 是采集侧的总协调者。Run 用 errgroupx 并发跑三条长期任务——
+//     watch（配置变更流）、feedback（状态反馈流）、upload（上传循环），并可选打印统计。
+//     它还负责创建 wire、按 S3 排除规则拼接 BPF 表达式（buildBpfExpr）以及失败重试（runWithRetry）。
+//   - capture.go：capturer 把一次抓包拆成 dump 与 upload 两个阶段，同样用 errgroupx 串联。
+//   - dump.go：dumpOne 用 pcapgo 写出数据包，并经 combine 的 Zstd+AES-GCM 流式管道边压缩边加密，
+//     按包数/字节数分片，产出 .zkcn 文件；dump 循环持续向 upload 阶段发送分片通知。
+//   - upload.go：uploadOne 把分片经 s3.FPutObject 上传，启用 Content-MD5 使对象 ETag 即数据 MD5，
+//     成功后再删除本地文件。
+//   - object.go：BuildObjectKey / ParseObjectKey 定义对象键格式
+//     `pcap/{namespace}/{name}/{version}/{unixmilli}_{sessionID}.zkcn`。
+//   - snapshot.go：captureSnapshot 用读写锁持有当前采集配置快照（心跳、更新、启停、深拷贝）。
+//   - stats.go：CaptureStats 以原子计数记录包数、字节数、分片数与起始时间。
+//   - config.go：采集配置前缀为 capture，含 watch / feedback / upload 子配置与 dumpDir、
+//     encoderLevel、packetBufferSize 等默认值；DescribeConfig 供 `describe config` 渲染。
+//
+// ## 为什么先落盘再上传
+//
+// 抓包是高速数据流，若把每个包同步上传，会给网络与对象存储带来巨量小请求。因此采集先把
+// 数据包流式压缩加密成较大的 .zkcn 分片落到本地 dumpDir，再把分片批量上传：
+//
+//   - 加密：抓包内容可能含敏感载荷，落盘前即用 AES-GCM 加密，磁盘上不出现明文。
+//   - 压缩：Zstd 大幅降低存储与传输体积。
+//   - 分片：控制单文件大小与内存占用，并由 pendingFiles 跟踪未完成分片，便于收尾与清理。
+//
+// ## 与平台的上报链路
+//
+// CaptureClient 经 gRPC 与 Reporter 服务通信（`reporter_v1.ReporterServiceClient`）：
+//
+//   - Watch：服务端推送配置变更流并周期性发送心跳。心跳超时表示链路异常，客户端会触发退出；
+//     全局版本号不一致同样视为致命错误，使两侧配置强制对齐。
+//   - Feedback：客户端把采集状态、分片已上传（Uploaded）与加密密钥（SecretKey）回传，
+//     平台据此感知采集进度。
+//
+// 这套机制让采集端无需自持平台配置：配置由平台下发、变更实时生效，采集结果与状态实时回传。
 package capture
 
 import (
@@ -6,17 +62,20 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff/v5"
-	"golang.org/x/sync/errgroup"
-	"zhongkui.com/zhongkui/internal/capture/totel"
-	"zhongkui.com/zhongkui/internal/capture/wire"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
-	"zhongkui.com/zhongkui/internal/pkg/s3"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"github.com/pterm/pterm"
+	"zhongkuisec.com/zhongkui/internal/capture/totel"
+	"zhongkuisec.com/zhongkui/internal/capture/wire"
+	"zhongkuisec.com/zhongkui/internal/pkg/errgroupx"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 // CaptureClient 抓包客户端，负责管理与远程服务器的通信、监控配置变化、执行数据包捕获和上传
@@ -51,6 +110,19 @@ type CaptureClient struct {
 	// 负责将压缩后的数据包文件上传到对象存储，并设置过期时间
 	// 支持多区域、多桶配置，确保数据持久性和可用性
 	s3 *s3.S3Client
+
+	// pendingFiles 待清理的临时 zkcn 文件集合，用于在 Shutdown 时统一清理
+	// key 为文件的绝对路径，value 为空结构体
+	// 包含正在导入（dump）和等待上传（upload queue）的临时文件
+	// 使用 sync.Map 保证并发安全，无需额外加锁
+	pendingFiles sync.Map
+
+	// stats 抓包统计收集器，用于在开启 --stats-print 时累计全局抓包指标
+	// 当 stats 为 nil 时，不进行统计收集和打印
+	stats *CaptureStats
+
+	// statsInterval 统计信息打印间隔，仅在 stats 不为 nil 时生效
+	statsInterval time.Duration
 }
 
 // NewCaptureClient 创建新的抓包客户端实例，初始化所有必要组件和通道
@@ -90,6 +162,18 @@ func NewCaptureClient(logger *logging.Logger, client reporter_v1.ReporterService
 		s3:     s3,
 		cfg:    cfg,
 	}
+}
+
+// EnableStats 开启抓包统计收集与定时打印功能
+// 调用后会在 Run 中启动一个后台 goroutine，每隔 interval 时间打印累计统计指标到 stdout
+// 统计内容包括：累计数据包数、累计字节数、segment 数、每秒包数（pps）、每秒兆比特数（mbps）
+//
+// 参数：
+//
+//	interval - 统计信息打印间隔，例如 5*time.Second 表示每 5 秒打印一次
+func (cc *CaptureClient) EnableStats(interval time.Duration) {
+	cc.stats = NewCaptureStats()
+	cc.statsInterval = interval
 }
 
 // runWithRetry 使用指数退避算法执行函数，支持重试机制，提高系统可靠性
@@ -313,7 +397,7 @@ func (cc *CaptureClient) watch(ctx context.Context, mutex *captureMutex) (err er
 			if interval > allowInterval {
 				// 触发panic，表示严重状态不一致
 				// 需要人工干预或系统重启
-				panic(fmt.Sprintf(
+				panic(errors.Newf(
 					"heartbeat interval %s must less than or equal to allow heartbeat interval %s",
 					interval,
 					allowInterval,
@@ -333,7 +417,7 @@ func (cc *CaptureClient) watch(ctx context.Context, mutex *captureMutex) (err er
 			if snapshot.globalVersion >= resp.GlobalVersion {
 				// 触发panic，表示严重状态不一致
 				// 需要人工干预或系统重启
-				panic(fmt.Sprintf(
+				panic(errors.Newf(
 					"local global version %d must less than remote global version %d",
 					mutex.globalVersion,
 					resp.GlobalVersion,
@@ -364,7 +448,7 @@ func (cc *CaptureClient) watch(ctx context.Context, mutex *captureMutex) (err er
 				if snapshot.configVersion != content.Event.PrvSnapshot.ConfigVersion {
 					// 触发panic，表示版本不连续
 					// 可能错过了某些配置更新
-					panic(fmt.Sprintf(
+					panic(errors.Newf(
 						"config version not match, expect %d, got %d",
 						snapshot.configVersion,
 						content.Event.PrvSnapshot.ConfigVersion,
@@ -448,13 +532,16 @@ func (cc *CaptureClient) uploadPacketHandler(
 	linkType := ws.LinkType()
 	cc.logger.Ctx(ctx).Infof("link type %s", linkType)
 	tmpCapturer := capturer{
-		resource:   &cc.cfg.Resource,
-		uploadCfg:  &cc.cfg.Upload,
-		captureCfg: snapshot.config,
-		logger:     cc.logger,
-		s3:         cc.s3,
-		sessionID:  sessionID,
-		linkType:   linkType,
+		resource:    &cc.cfg.Resource,
+		uploadCfg:   &cc.cfg.Upload,
+		captureCfg:  snapshot.config,
+		logger:      cc.logger,
+		s3:          cc.s3,
+		sessionID:   sessionID,
+		linkType:    linkType,
+		trackFile:   cc.trackFile,
+		untrackFile: cc.untrackFile,
+		stats:       cc.stats,
 	}
 	err = tmpCapturer.capture(ctx, ws, uploadChan)
 	if err != nil {
@@ -543,7 +630,9 @@ func (cc *CaptureClient) feedback(ctx context.Context, sessionID serializer.HexU
 		var uploaded bool
 		select {
 		case <-ctx.Done():
-			stream.CloseAndRecv()
+			if _, closeErr := stream.CloseAndRecv(); closeErr != nil {
+				cc.logger.Ctx(ctx).Warnf("failed to close feedback stream: %v", closeErr)
+			}
 			return ctx.Err()
 		case timestamp := <-ticker.C:
 			n = notice{ts: timestamp}
@@ -568,7 +657,9 @@ func (cc *CaptureClient) feedback(ctx context.Context, sessionID serializer.HexU
 		})
 		if err != nil {
 			cc.logger.Ctx(ctx).Warnf("feedback stream error: %v", err)
-			stream.CloseAndRecv()
+			if _, closeErr := stream.CloseAndRecv(); closeErr != nil {
+				cc.logger.Ctx(ctx).Warnf("failed to close feedback stream after send error: %v", closeErr)
+			}
 			return errors.WithStack(err)
 		}
 	}
@@ -635,6 +726,8 @@ func parseEndpoint(endpoint string) (host, port string) {
 	return endpoint, ""
 }
 
+// Run 启动抓包客户端的全部子任务：配置监听（watch）、状态反馈（feedback）、数据包上传
+// （upload）与可选的统计打印，任一子任务返回错误或上下文取消时整体退出。
 func (cc *CaptureClient) Run(ctx context.Context, sessionID serializer.HexUUID) (err error) {
 	resource := cc.cfg.Resource.String()
 	ctx, span := totel.StartRunSpan(ctx, resource)
@@ -645,21 +738,69 @@ func (cc *CaptureClient) Run(ctx context.Context, sessionID serializer.HexUUID) 
 	// 支持快照机制，避免在状态读取时发生数据竞争
 	mutex := newCaptureMutex()
 	uploadChan := make(chan notice, 100)
-	wg, ctx := errgroup.WithContext(ctx)
-	wg.Go(func() error {
+	wg, ctx := errgroupx.WithContext(ctx)
+	wg.GoNamed("watch", func() error {
 		return cc.runWithRetry(ctx, cc.cfg.Watch.MaxRetries, func(ctx context.Context) error {
 			return cc.watch(ctx, mutex)
 		})
 	})
-	wg.Go(func() error {
+	wg.GoNamed("feedback", func() error {
 		return cc.runWithRetry(ctx, cc.cfg.Feedback.MaxRetries, func(ctx context.Context) error {
 			return cc.feedback(ctx, sessionID, mutex, uploadChan)
 		})
 	})
-	wg.Go(func() error {
+	wg.GoNamed("upload", func() error {
 		return cc.runWithRetry(ctx, cc.cfg.Upload.MaxRetries, func(ctx context.Context) error {
 			return cc.upload(ctx, sessionID, mutex, uploadChan)
 		})
 	})
+
+	// 统计打印 goroutine：定时将累计抓包指标输出到 stdout
+	// 仅在 EnableStats 被调用后启动
+	if cc.stats != nil {
+		wg.Go(func() error {
+			ticker := time.NewTicker(cc.statsInterval)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					// 退出前打印最终统计快照
+					pterm.Debug.Println(translate.T("cli.capture.stats", map[string]any{"Stats": cc.stats.Snapshot()}))
+					return nil
+				case <-ticker.C:
+					pterm.Debug.Println(translate.T("cli.capture.stats", map[string]any{"Stats": cc.stats.Snapshot()}))
+				}
+			}
+		})
+	}
+
 	return wg.Wait()
+}
+
+// trackFile 将文件路径加入待清理集合，在文件创建后调用
+// 该方法线程安全，可在多个 goroutine 中并发调用
+func (cc *CaptureClient) trackFile(path string) {
+	cc.pendingFiles.Store(path, struct{}{})
+}
+
+// untrackFile 将文件路径从待清理集合中移除，在文件成功上传并删除后调用
+// 该方法线程安全，可在多个 goroutine 中并发调用
+func (cc *CaptureClient) untrackFile(path string) {
+	cc.pendingFiles.Delete(path)
+}
+
+// Shutdown 实现 do.ShutdownerWithError 接口，在 DI 容器关闭时被调用
+// 清理所有尚未上传或正在导入的临时 zkcn 文件，防止文件溢出
+func (cc *CaptureClient) Shutdown() error {
+	cc.pendingFiles.Range(func(key, _ any) bool {
+		path := key.(string)
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			cc.logger.Errorf("shutdown cleanup remove file %s error: %v", path, err)
+		} else {
+			cc.logger.Infof("shutdown cleanup remove file %s success", path)
+		}
+		cc.pendingFiles.Delete(path)
+		return true
+	})
+	return nil
 }

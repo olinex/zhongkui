@@ -11,13 +11,13 @@ import (
 	"fmt"
 
 	"go.etcd.io/etcd/client/v3/concurrency"
-	"golang.org/x/sync/errgroup"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/errgroupx"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // electionPrefix 是领导者选举在 etcd 中的键前缀，
-// 通过 WithPrefix 函数拼接全局前缀，最终格式为 "<GLOBAL_PREFIX>/leader-election/"。
+// 通过 WithPrefix 函数拼接全局前缀，最终格式为 "<GlobalPrefix>/leader-election/"。
 // 所有参与同一选举的竞争者都将在该前缀下创建各自的选举键。
 var (
 	electionPrefix = WithPrefix("leader-election/")
@@ -40,10 +40,14 @@ var (
 //     该方法应阻塞运行直到上下文取消或业务逻辑完成
 //   - Shutdown: 优雅关闭领导者的业务逻辑，在 Election.Shutdown 时被调用
 type ElectionHandler interface {
+	// Name 返回选举名称，同一名称的候选者竞争同一个领导者位置。
 	Name() string
+	// CandidateID 返回当前候选者的唯一标识，用于判断是否由自己成为领导者。
 	CandidateID() string
+	// Start 在成为领导者时被调用，执行领导者业务逻辑，应阻塞运行至上下文取消或业务完成。
 	Start(ctx context.Context) error
-	Shutdown(ctx context.Context)
+	// Shutdown 优雅关闭领导者的业务逻辑。
+	Shutdown(ctx context.Context) error
 }
 
 // Election 封装了基于 etcd 的分布式领导者选举逻辑。
@@ -57,16 +61,14 @@ type ElectionHandler interface {
 //     a) Campaign goroutine：阻塞式参与竞选，直到成为领导者
 //     b) Observe goroutine：监听选举结果，当确认自己成为领导者后启动业务逻辑
 //  4. 当实例挂掉时，Session 的 TTL 到期后自动释放，其他实例可重新竞选
-//
-// 字段说明:
-//   - ctx: 上下文对象，用于控制选举的生命周期，取消该上下文将停止选举
-//   - client: etcd 客户端实例，用于与 etcd 集群通信
-//   - logger: 日志记录器，用于记录选举过程中的关键事件
-//   - handler: 选举事件处理器，定义了成为领导者后的业务逻辑
 type Election struct {
-	ctx     context.Context
-	client  *EtcdClient
-	logger  *logging.Logger
+	// ctx 选举生命周期上下文，取消即停止选举。
+	ctx context.Context
+	// client etcd 客户端实例，用于竞选与会话通信。
+	client *EtcdClient
+	// logger 日志记录器，记录选举关键事件。
+	logger *logging.Logger
+	// handler 选举事件处理器，定义成为领导者后的业务逻辑。
 	handler ElectionHandler
 }
 
@@ -121,7 +123,7 @@ func NewElection(
 // 返回值:
 //   - error: 选举过程中的错误，可能包括 Session 创建失败、Campaign 失败、
 //     选举通道异常关闭或 handler.Start 返回的错误
-func (e *Election) Start() error {
+func (e *Election) Start(ctx context.Context) error {
 	name := e.handler.Name()
 	// Session会在后台自动保持心跳。如果此实例挂掉，Session过期，锁自动释放。
 	session, err := concurrency.NewSession(
@@ -138,18 +140,18 @@ func (e *Election) Start() error {
 	electResultChan := elector.Observe(e.ctx)
 	// 参与选举，非阻塞式
 	candidateID := e.handler.CandidateID()
-	wg, innerCtx := errgroup.WithContext(e.ctx)
-	wg.Go(func() error {
+	wg, innerCtx := errgroupx.WithContext(e.ctx)
+	wg.GoNamed("campaign", func() error {
 		// Campaign方法会阻塞，直到当前session成为领导者
 		return elector.Campaign(innerCtx, candidateID)
 	})
 	// 监听选举结果（关键：用于知道何时成为领导者）
-	wg.Go(func() error {
+	wg.GoNamed("exec", func() error {
 		for {
 			select {
 			// 外部上下文结束
 			case <-innerCtx.Done():
-				e.logger.With("context", e.ctx).Info("stop observe leader election")
+				e.logger.Ctx(e.ctx).Info("stop observe leader election")
 				return nil
 			// 完成了一次选举过程
 			case rsp, open := <-electResultChan:
@@ -165,7 +167,7 @@ func (e *Election) Start() error {
 					panic("get more than one leader from election")
 				}
 				leaderID := string(rsp.Kvs[0].Value)
-				e.logger.With("context", e.ctx).Infof(
+				e.logger.Ctx(e.ctx).Infof(
 					`New leader %s %s has been elected, current candidate id is %s`,
 					name,
 					leaderID,
@@ -173,11 +175,11 @@ func (e *Election) Start() error {
 				)
 				// 本次选举的领导者不是当前进程，继续参与选举
 				if string(rsp.Kvs[0].Value) != candidateID {
-					e.logger.With("context", e.ctx).Infof(`Current candidate %s is not leader, continue campaign`, candidateID)
+					e.logger.Ctx(e.ctx).Infof(`Current candidate %s is not leader, continue campaign`, candidateID)
 					continue
 				}
 				// 本次选举成为了领导者，有权运行定时调度
-				e.logger.With("context", e.ctx).Infof(`Handler %s is running...`, name)
+				e.logger.Ctx(e.ctx).Infof(`Handler %s is running...`, name)
 				return e.handler.Start(e.ctx)
 			}
 		}
@@ -195,5 +197,7 @@ func (e *Election) Start() error {
 //   - 应用接收到终止信号（如 SIGTERM）
 //   - 需要主动放弃领导者角色时
 func (e *Election) Shutdown() {
-	e.handler.Shutdown(e.ctx)
+	if err := e.handler.Shutdown(e.ctx); err != nil {
+		e.logger.Ctx(e.ctx).Warnf("etcd election: shutdown handler %s failed: %v", e.handler.Name(), err)
+	}
 }

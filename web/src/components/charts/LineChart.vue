@@ -1,5 +1,7 @@
 <template>
-  <v-chart :style="{ height, width }" :option="option" />
+  <!-- height / width 为公开 prop（默认 400px / 100%），由调用方按图表场景传入，
+       属运行时计算值，故保留 :style 绑定 -->
+  <v-chart :style="{ height, width }" :option="mergedOption" />
 </template>
 
 <script setup lang="ts" name="line-chart">
@@ -11,24 +13,13 @@ import {
   LegendComponent,
   GridComponent,
 } from "echarts/components";
-import VChart, { THEME_KEY } from "vue-echarts";
+import VChart from "vue-echarts";
 import { CanvasRenderer } from "echarts/renderers";
-import type { LineChartOption } from "../@types/charts";
 import type { PropType } from "vue";
-import { useTheme } from "vuetify/lib/composables/theme.mjs";
+import { useChartTheme, withChartTheme } from "@/utils/chartTheme";
+import type { LineChartOption } from "../@types/charts";
 
-const theme = useTheme();
-
-use([
-  LineChart,
-  CanvasRenderer,
-  TitleComponent,
-  TooltipComponent,
-  LegendComponent,
-  GridComponent,
-]);
-
-provide(THEME_KEY, theme.current.value.dark ? "dark" : "primary");
+use([LineChart, CanvasRenderer, TitleComponent, TooltipComponent, LegendComponent, GridComponent]);
 
 const props = defineProps({
   option: {
@@ -41,6 +32,11 @@ const props = defineProps({
   },
   width: {
     type: [Number, String],
+    default: "100%",
   },
 });
+
+const chartTheme = useChartTheme();
+// 合并主题默认项，使图表随明/暗主题切换即时更新。
+const mergedOption = computed(() => withChartTheme(props.option, chartTheme.value));
 </script>

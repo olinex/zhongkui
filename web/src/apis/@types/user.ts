@@ -1,13 +1,26 @@
 import type { BaseModelOut } from "@/types";
-import { string } from "yup";
 
 export interface PasswordLoginIn {
   username: string;
   password: string;
 }
 
+export interface UserTokenOut {
+  token: string;
+}
+
 export interface PasswordResetIn {
   oldPassword: string;
+  newPassword: string;
+}
+
+export interface PasswordForgotIn {
+  username: string;
+  email: string;
+}
+
+export interface PasswordResetByTokenIn {
+  token: string;
   newPassword: string;
 }
 
@@ -29,4 +42,17 @@ export interface accessKeyOut extends BaseModelOut {
   description: string;
   expiredAt: string;
   lastAccessAt: string;
+}
+
+export interface FrontendConfigOut {
+  syncEnabled: boolean;
+  hash: string;
+  version: number;
+  config: string;
+}
+
+export interface FrontendConfigSyncIn {
+  prevHash: string;
+  prevVersion: number;
+  config: string;
 }

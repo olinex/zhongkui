@@ -7,60 +7,63 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
-	"zhongkui.com/zhongkui/internal/pkg/pipeline"
-	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/pipeline"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 var describeSchedulerCmd = &cobra.Command{
 	Use:   "scheduler",
-	Short: "Print scheduled task configurations from etcd",
-	Long: `Print the etcd-stored configuration of scheduled tasks. 
-Use --name to specify one or more task types. If no --name is provided, all tasks are listed.
-
-Examples:
-  zhongkui describe scheduler
-  zhongkui describe scheduler --name network:periodic:ipv4reassemble
-  zhongkui describe scheduler --name network:periodic:ipv4reassemble --name network:periodic:ipv6reassemble`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Short: "cmd.describe.scheduler.short",
+	Long:  "cmd.describe.scheduler.long",
+	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(i)
 		names := v.GetStringSlice("name")
 		client := provider.MustInvokeEtcdClient(i)
-		prefix := etcd.WithPrefix("scheduler/cfg/")
 
 		if len(names) == 0 {
-			rsp, err := client.Get(ctx, prefix, clientv3.WithPrefix())
+			rsp, err := client.Get(ctx, pipeline.SchedulerCfgEtcdPrefix, clientv3.WithPrefix())
 			if err != nil {
-				return errors.WithStack(err)
+				pterm.Error.Println(err.Error())
+				return
 			}
 			if len(rsp.Kvs) == 0 {
-				pterm.Warning.Println("no scheduled task configs found in etcd")
-				return nil
+				pterm.Warning.Println(translate.T("cli.scheduler.none-found", nil))
+				return
 			}
-			return renderSchedulerTable(prefix, rsp)
+			renderSchedulerTable(pipeline.SchedulerCfgEtcdPrefix, rsp)
 		}
 		for _, name := range names {
-			rsp, err := client.Get(ctx, prefix+name)
+			rsp, err := client.Get(ctx, pipeline.SchedulerCfgEtcdPrefix+name)
 			if err != nil {
-				return errors.WithStack(err)
+				pterm.Error.Println(err.Error())
+				return
 			}
 			if len(rsp.Kvs) == 0 {
-				pterm.Warning.Printf("scheduled task config not found: %s\n", name)
+				pterm.Warning.Println(translate.T("cli.scheduler.not-found", map[string]any{"Name": name}))
 				continue
 			}
-			if err := renderSchedulerTable(prefix, rsp); err != nil {
-				return err
+			if err := renderSchedulerTable(pipeline.SchedulerCfgEtcdPrefix, rsp); err != nil {
+				pterm.Error.Println(err.Error())
+				return
 			}
 		}
-		return nil
 	},
 }
 
 func renderSchedulerTable(prefix string, rsp *clientv3.GetResponse) error {
 	data := pterm.TableData{
-		{"name", "cronSpec", "queue", "timeout", "maxRetry", "enabled"},
+		{
+			translate.T("cli.scheduler.col-name", nil),
+			translate.T("cli.scheduler.col-cronspec", nil),
+			translate.T("cli.scheduler.col-interval", nil),
+			translate.T("cli.scheduler.col-queue", nil),
+			translate.T("cli.scheduler.col-timeout", nil),
+			translate.T("cli.scheduler.col-maxretry", nil),
+			translate.T("cli.scheduler.col-enabled", nil),
+		},
 	}
 	for _, kv := range rsp.Kvs {
 		var cfg pipeline.SchedulerTaskConfig
@@ -71,6 +74,7 @@ func renderSchedulerTable(prefix string, rsp *clientv3.GetResponse) error {
 		data = append(data, []string{
 			name,
 			cfg.CronSpec,
+			cfg.Interval.String(),
 			cfg.Queue,
 			cfg.Timeout.String(),
 			pterm.Sprintf("%d", cfg.MaxRetry),
@@ -81,5 +85,5 @@ func renderSchedulerTable(prefix string, rsp *clientv3.GetResponse) error {
 }
 
 func init() {
-	describeSchedulerCmd.Flags().StringArrayP("name", "n", nil, "task type name(s) to print (can be specified multiple times)")
+	describeSchedulerCmd.Flags().StringArrayP("name", "n", nil, "flag.describe.scheduler.name")
 }

@@ -1,61 +1,35 @@
+// Package network 提供网络协议数据包的持久化模型与构建器，覆盖以太网 / ARP / IPv4 /
+// IPv6 / TCP / UDP 及 HTTP 传输等各层协议头与元数据，供抓包导入、组包与流量审计域复用。
 package network
 
 import (
 	"compress/gzip"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
-	"net/url"
+	"os"
 	"strconv"
-	"time"
 
 	"github.com/gopacket/gopacket/layers"
 	"gorm.io/datatypes"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/s3"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/combine"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 )
-
-const (
-	CRYPTO_KEY_OFFSET = 41827
-	CRYPTO_KEY_LENGTH = 32
-)
-
-// sortedFrameStack 返回按时间戳排序的帧栈，合并客户端和服务端的帧信息。
-func sortedFrameStack(reqFrameStack, rspFrameStack FrameStack) FrameStack {
-	fs := make(FrameStack, 0, len(reqFrameStack)+len(rspFrameStack))
-	clientIndex, serverIndex := 0, 0
-	for {
-		if clientIndex >= len(reqFrameStack) {
-			fs = append(fs, rspFrameStack[serverIndex:]...)
-			break
-		}
-		if serverIndex >= len(rspFrameStack) {
-			fs = append(fs, reqFrameStack[clientIndex:]...)
-			break
-		}
-		clientFrameInfo := reqFrameStack[clientIndex]
-		serverFrameInfo := rspFrameStack[serverIndex]
-		if clientFrameInfo.Timestamp.Before(serverFrameInfo.Timestamp) {
-			fs = append(fs, clientFrameInfo)
-			clientIndex++
-		} else {
-			fs = append(fs, serverFrameInfo)
-			serverIndex++
-		}
-	}
-	return fs
-}
 
 func objectKey(name string, req bool) string {
 	if req {
-		return fmt.Sprintf(`body/request/%s`, name)
+		return fmt.Sprintf(`%s%s.%s`, s3.BodyRequestPrefix, name, combine.FileExt)
 	}
-	return fmt.Sprintf(`body/response/%s`, name)
+	return fmt.Sprintf(`%s%s.%s`, s3.BodyResponsePrefix, name, combine.FileExt)
 }
 
 // parseInt32 解析字符串为 int32，解析失败返回 0
@@ -130,17 +104,23 @@ func decompressResponseBody(resp *http.Response) (io.ReadCloser, error) {
 // 包含HTTP通信的基础网络连接信息，用于标识通信的端点和协议版本
 type HttpBase struct {
 	// ClientIP 客户端IP地址，发起HTTP请求的源地址
-	ClientIP serializer.IPAddr `gorm:"type:FixedString(16)" json:"client_ip"`
+	ClientIP serializer.IPAddr `gorm:"type:IPv6" json:"clientIp"`
 	// ClientPort 客户端端口号，发起HTTP请求的源端口
-	ClientPort layers.TCPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"client_port"`
+	ClientPort layers.TCPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"clientPort"`
+	// ClientISN 客户端ISN，TCP协议中的初始序列号，用于标识客户端的连接
+	ClientISN uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"clientIsn"`
 	// ServerIP 服务器IP地址，HTTP服务的目标地址
-	ServerIP serializer.IPAddr `gorm:"type:FixedString(16)" json:"server_ip"`
+	ServerIP serializer.IPAddr `gorm:"type:IPv6" json:"serverIp"`
 	// ServerPort 服务器端口号，HTTP服务的目标端口
-	ServerPort layers.TCPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"server_port"`
+	ServerPort layers.TCPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"serverPort"`
+	// ServerISN 服务器ISN，TCP协议中的初始序列号，用于标识服务器的连接
+	ServerISN uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"serverIsn"`
 	// IPVersion IP协议版本，标识使用的IP协议（IPv4或IPv6）
-	IPVersion layers.IPProtocol `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ip_version"`
+	IPVersion layers.IPProtocol `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipVersion"`
 	// HttpVersion HTTP协议版本，如HTTP/1.0、HTTP/1.1、HTTP/2.0等
-	HttpVersion string `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"http_version"`
+	HttpVersion string `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"httpVersion"`
+	// StreamIndex 流索引，用于标识当前HTTP请求或响应的流
+	StreamIndex uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"streamIndex"`
 }
 
 // HttpURI 表示HTTP URI信息
@@ -154,22 +134,44 @@ type HttpURI struct {
 	Host string `gorm:"type:String CODEC(ZSTD(3))" json:"host"`
 	// Path 请求路径，URL中主机名之后的部分
 	Path string `gorm:"type:String CODEC(ZSTD(3))" json:"path"`
+	// FileExt 文件扩展名，当请求URL的资源类型为文件时（如 .js、.txt）提取文件后缀（不含点号，统一小写），否则为空字符串
+	FileExt string `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"fileExt"`
 	// Queries 查询参数，URL中问号（?）后面的参数部分，以JSON格式存储
 	Queries datatypes.JSON `gorm:"type:String CODEC(ZSTD(3))" json:"queries"`
 	// Fragment 片段标识符，URL中井号（#）后面的部分
 	Fragment string `gorm:"type:String CODEC(ZSTD(3))" json:"fragment"`
 }
 
-func NewHttpURI(uri *url.URL) (*HttpURI, error) {
+// NewHttpURI 构建HTTP URI信息
+// 注意：使用 origin-form（如 GET /path HTTP/1.1）直接访问时，请求行中不含 scheme 和 host，
+// 需要借助请求头中的 Host 字段补齐，否则生成的 URL 与 Path 完全相同
+// （例如通过回环网络访问 127.0.0.1/localhost 的请求）
+func NewHttpURI(req *http.Request) (*HttpURI, error) {
+	// 复制 URL，避免修改请求对象本身
+	uri := req.URL
+	host := uri.Host
+	// 补齐 origin-form 请求缺失的 host 和 scheme
+	if host == "" {
+		host = req.Host
+	}
+	scheme := uri.Scheme
+	if scheme == "" {
+		if req.TLS != nil {
+			scheme = "https"
+		} else {
+			scheme = "http"
+		}
+	}
 	query, err := json.Marshal(uri.Query())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &HttpURI{
-		URL:      uri.String(),
-		Scheme:   uri.Scheme,
-		Host:     uri.Host,
+		URL:      fmt.Sprintf(`%s://%s%s`, scheme, host, uri.Path),
+		Scheme:   scheme,
+		Host:     host,
 		Path:     uri.Path,
+		FileExt:  utils.FileExtension(uri.Path),
 		Queries:  datatypes.JSON(query),
 		Fragment: uri.Fragment,
 	}, nil
@@ -221,192 +223,192 @@ type HttpRequestHeaders struct {
 
 	// ReqHdrAuthorization 认证信息，包含用于向服务器验证用户代理身份的凭据，如 Bearer token、Basic 认证等
 	// 使用 Crypto 加密存储，防止涉敏信息泄露后被逆向破解
-	ReqHdrAuthorization *serializer.Crypto `gorm:"column:req_hdr_authorization;type:String CODEC(ZSTD(3));serializer:crypto" json:"req_hdr_authorization" secure:"mode=\"aes-gcm\",offset=5123,length=32"`
+	ReqHdrAuthorization *serializer.Crypto `gorm:"column:req_hdr_authorization;type:String CODEC(ZSTD(3));serializer:crypto" json:"reqHdrAuthorization" secure:"mode=\"aes-gcm\",offset=5123,length=32"`
 	// ReqHdrProxyAuthorization 代理认证信息，包含用于向代理服务器验证用户代理的凭据
 	// 使用 Crypto 加密存储，防止涉敏信息泄露后被逆向破解
-	ReqHdrProxyAuthorization *serializer.Crypto `gorm:"column:req_hdr_proxy_authorization;type:String CODEC(ZSTD(3));serializer:crypto" json:"req_hdr_proxy_authorization" secure:"mode=\"aes-gcm\",offset=18456,length=32"`
+	ReqHdrProxyAuthorization *serializer.Crypto `gorm:"column:req_hdr_proxy_authorization;type:String CODEC(ZSTD(3));serializer:crypto" json:"reqHdrProxyAuthorization" secure:"mode=\"aes-gcm\",offset=18456,length=32"`
 
 	// ======================== 缓存 (Caching) ========================
 
 	// ReqHdrCacheControl 缓存控制指令，指定请求/响应链中所有缓存机制必须遵守的指令，如 no-cache、max-age 等
-	ReqHdrCacheControl string `gorm:"column:req_hdr_cache_control;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_cache_control"`
+	ReqHdrCacheControl string `gorm:"column:req_hdr_cache_control;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrCacheControl"`
 
 	// ======================== 条件请求 (Conditionals) ========================
 
 	// ReqHdrIfMatch 条件匹配，仅当存储的资源与给定的 ETag 之一匹配时才执行请求
-	ReqHdrIfMatch string `gorm:"column:req_hdr_if_match;type:String CODEC(ZSTD(3))" json:"req_hdr_if_match"`
+	ReqHdrIfMatch string `gorm:"column:req_hdr_if_match;type:String CODEC(ZSTD(3))" json:"reqHdrIfMatch"`
 	// ReqHdrIfNoneMatch 条件不匹配，仅当存储的资源与给定的所有 ETag 都不匹配时才执行请求，常用于缓存更新
-	ReqHdrIfNoneMatch string `gorm:"column:req_hdr_if_none_match;type:String CODEC(ZSTD(3))" json:"req_hdr_if_none_match"`
+	ReqHdrIfNoneMatch string `gorm:"column:req_hdr_if_none_match;type:String CODEC(ZSTD(3))" json:"reqHdrIfNoneMatch"`
 	// ReqHdrIfModifiedSince 条件修改时间，仅当资源在给定日期后被修改时才传输资源，用于缓存验证
-	ReqHdrIfModifiedSince string `gorm:"column:req_hdr_if_modified_since;type:String CODEC(ZSTD(3))" json:"req_hdr_if_modified_since"`
+	ReqHdrIfModifiedSince string `gorm:"column:req_hdr_if_modified_since;type:String CODEC(ZSTD(3))" json:"reqHdrIfModifiedSince"`
 	// ReqHdrIfUnmodifiedSince 条件未修改时间，仅当资源在给定日期后未被修改时才传输资源，用于乐观并发控制
-	ReqHdrIfUnmodifiedSince string `gorm:"column:req_hdr_if_unmodified_since;type:String CODEC(ZSTD(3))" json:"req_hdr_if_unmodified_since"`
+	ReqHdrIfUnmodifiedSince string `gorm:"column:req_hdr_if_unmodified_since;type:String CODEC(ZSTD(3))" json:"reqHdrIfUnmodifiedSince"`
 	// ReqHdrIfRange 条件范围请求，仅在给定的 ETag 或日期与远程资源匹配时请求指定范围，防止下载不兼容版本
-	ReqHdrIfRange string `gorm:"column:req_hdr_if_range;type:String CODEC(ZSTD(3))" json:"req_hdr_if_range"`
+	ReqHdrIfRange string `gorm:"column:req_hdr_if_range;type:String CODEC(ZSTD(3))" json:"reqHdrIfRange"`
 
 	// ======================== 连接管理 (Connection Management) ========================
 
 	// ReqHdrConnection 连接控制，控制当前事务完成后网络连接是否保持打开状态，如 keep-alive、close
-	ReqHdrConnection string `gorm:"column:req_hdr_connection;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_connection"`
+	ReqHdrConnection string `gorm:"column:req_hdr_connection;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrConnection"`
 	// ReqHdrKeepAlive 持久连接控制，控制持久连接应保持打开状态的时间及最大请求数
-	ReqHdrKeepAlive string `gorm:"column:req_hdr_keep_alive;type:String CODEC(ZSTD(3))" json:"req_hdr_keep_alive"`
+	ReqHdrKeepAlive string `gorm:"column:req_hdr_keep_alive;type:String CODEC(ZSTD(3))" json:"reqHdrKeepAlive"`
 
 	// ======================== 内容协商 (Content Negotiation) ========================
 
 	// ReqHdrAccept 可接受的响应内容类型（MIME 类型），如 application/json、text/html 等
-	ReqHdrAccept string `gorm:"column:req_hdr_accept;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_accept"`
+	ReqHdrAccept string `gorm:"column:req_hdr_accept;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrAccept"`
 	// ReqHdrAcceptEncoding 可接受的内容编码算法，通常是压缩算法，如 gzip、deflate、br 等
-	ReqHdrAcceptEncoding string `gorm:"column:req_hdr_accept_encoding;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_accept_encoding"`
+	ReqHdrAcceptEncoding string `gorm:"column:req_hdr_accept_encoding;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrAcceptEncoding"`
 	// ReqHdrAcceptLanguage 可接受的自然语言，如 zh-CN、en-US 等，仅作为提示
-	ReqHdrAcceptLanguage string `gorm:"column:req_hdr_accept_language;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_accept_language"`
+	ReqHdrAcceptLanguage string `gorm:"column:req_hdr_accept_language;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrAcceptLanguage"`
 
 	// ======================== 控制 (Control) ========================
 
 	// ReqHdrExpect 期望条件，表示服务器正确处理请求需要满足的期望，如 100-continue
-	ReqHdrExpect string `gorm:"column:req_hdr_expect;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_expect"`
+	ReqHdrExpect string `gorm:"column:req_hdr_expect;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrExpect"`
 	// ReqHdrMaxForwards 最大转发跳数，使用 TRACE 方法时指示请求在被返回前可以经过的最大代理数
-	ReqHdrMaxForwards int32 `gorm:"column:req_hdr_max_forwards;type:Int32 CODEC(ZSTD(3))" json:"req_hdr_max_forwards"`
+	ReqHdrMaxForwards int32 `gorm:"column:req_hdr_max_forwards;type:Int32 CODEC(ZSTD(3))" json:"reqHdrMaxForwards"`
 
 	// ======================== Cookie ========================
 
 	// ReqHdrCookie 客户端发送的 HTTP Cookie，包含先前由服务器通过 Set-Cookie 标头设置并存储的 cookie
 	// 使用 Crypto 加密存储，Cookie 常包含会话令牌等涉敏信息
-	ReqHdrCookie *serializer.Crypto `gorm:"column:req_hdr_cookie;type:String CODEC(ZSTD(3));serializer:crypto" json:"req_hdr_cookie" secure:"mode=\"aes-gcm\",offset=27901,length=32"`
+	ReqHdrCookie *serializer.Crypto `gorm:"column:req_hdr_cookie;type:String CODEC(ZSTD(3));serializer:crypto" json:"reqHdrCookie" secure:"mode=\"aes-gcm\",offset=27901,length=32"`
 
 	// ======================== CORS ========================
 
 	// ReqHdrOrigin 请求源，指示获取请求是从什么源（协议+主机+端口）发起的
-	ReqHdrOrigin string `gorm:"column:req_hdr_origin;type:String CODEC(ZSTD(3))" json:"req_hdr_origin"`
+	ReqHdrOrigin string `gorm:"column:req_hdr_origin;type:String CODEC(ZSTD(3))" json:"reqHdrOrigin"`
 	// ReqHdrAccessControlRequestHeaders CORS 预检请求头，告知服务器正式请求会使用哪些 HTTP 标头
-	ReqHdrAccessControlRequestHeaders string `gorm:"column:req_hdr_access_control_request_headers;type:String CODEC(ZSTD(3))" json:"req_hdr_access_control_request_headers"`
+	ReqHdrAccessControlRequestHeaders string `gorm:"column:req_hdr_access_control_request_headers;type:String CODEC(ZSTD(3))" json:"reqHdrAccessControlRequestHeaders"`
 	// ReqHdrAccessControlRequestMethod CORS 预检方法，告知服务器正式请求会使用哪种 HTTP 方法
-	ReqHdrAccessControlRequestMethod string `gorm:"column:req_hdr_access_control_request_method;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_access_control_request_method"`
+	ReqHdrAccessControlRequestMethod string `gorm:"column:req_hdr_access_control_request_method;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrAccessControlRequestMethod"`
 
 	// ======================== 消息主体 (Message Body Information) ========================
 
 	// ReqHdrContentType 请求内容类型（MIME 类型），标识请求主体的媒体格式
-	ReqHdrContentType string `gorm:"column:req_hdr_content_type;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_content_type"`
+	ReqHdrContentType string `gorm:"column:req_hdr_content_type;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrContentType"`
 	// ReqHdrContentLength 请求内容长度，请求主体的大小（以十进制字节数表示）
-	ReqHdrContentLength int64 `gorm:"column:req_hdr_content_length;type:Int64 CODEC(ZSTD(3))" json:"req_hdr_content_length"`
+	ReqHdrContentLength int64 `gorm:"column:req_hdr_content_length;type:Int64 CODEC(ZSTD(3))" json:"reqHdrContentLength"`
 	// ReqHdrContentEncoding 请求内容编码，用于指定请求主体的压缩算法
-	ReqHdrContentEncoding string `gorm:"column:req_hdr_content_encoding;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_content_encoding"`
+	ReqHdrContentEncoding string `gorm:"column:req_hdr_content_encoding;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrContentEncoding"`
 	// ReqHdrContentLanguage 请求内容语言，描述面向受众的人类语言
-	ReqHdrContentLanguage string `gorm:"column:req_hdr_content_language;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_content_language"`
+	ReqHdrContentLanguage string `gorm:"column:req_hdr_content_language;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrContentLanguage"`
 
 	// ======================== 代理 (Proxies) ========================
 
 	// ReqHdrForwarded 转发信息，包含来自代理服务器面向客户端一侧的信息，当请求经过代理时原始信息可能被更改或丢失
-	ReqHdrForwarded string `gorm:"column:req_hdr_forwarded;type:String CODEC(ZSTD(3))" json:"req_hdr_forwarded"`
+	ReqHdrForwarded string `gorm:"column:req_hdr_forwarded;type:String CODEC(ZSTD(3))" json:"reqHdrForwarded"`
 	// ReqHdrVia 代理链信息，由代理（正向和反向代理）添加，记录请求经过的中间节点
-	ReqHdrVia string `gorm:"column:req_hdr_via;type:String CODEC(ZSTD(3))" json:"req_hdr_via"`
+	ReqHdrVia string `gorm:"column:req_hdr_via;type:String CODEC(ZSTD(3))" json:"reqHdrVia"`
 
 	// ======================== 范围请求 (Range Requests) ========================
 
 	// ReqHdrRange 范围请求，指示服务器应返回文档的哪一部分，用于断点续传和大文件分片下载
-	ReqHdrRange string `gorm:"column:req_hdr_range;type:String CODEC(ZSTD(3))" json:"req_hdr_range"`
+	ReqHdrRange string `gorm:"column:req_hdr_range;type:String CODEC(ZSTD(3))" json:"reqHdrRange"`
 
 	// ======================== 请求上下文 (Request Context) ========================
 
 	// ReqHdrFrom 发送者邮箱，包含发送请求的用户代理的实际掌控者的电子邮箱地址
-	ReqHdrFrom string `gorm:"column:req_hdr_from;type:String CODEC(ZSTD(3))" json:"req_hdr_from"`
+	ReqHdrFrom string `gorm:"column:req_hdr_from;type:String CODEC(ZSTD(3))" json:"reqHdrFrom"`
 	// ReqHdrHost 目标主机，指定服务器的域名（用于虚拟主机）和服务器侦听的 TCP 端口号（可选）
-	ReqHdrHost string `gorm:"column:req_hdr_host;type:String CODEC(ZSTD(3))" json:"req_hdr_host"`
+	ReqHdrHost string `gorm:"column:req_hdr_host;type:String CODEC(ZSTD(3))" json:"reqHdrHost"`
 	// ReqHdrReferer 引用来源，前一个网页的地址，表示从该网页链接到当前请求的页面
-	ReqHdrReferer string `gorm:"column:req_hdr_referer;type:String CODEC(ZSTD(3))" json:"req_hdr_referer"`
+	ReqHdrReferer string `gorm:"column:req_hdr_referer;type:String CODEC(ZSTD(3))" json:"reqHdrReferer"`
 	// ReqHdrReferrerPolicy 引用策略，规定了在发出的请求中应包含哪些引用信息
-	ReqHdrReferrerPolicy string `gorm:"column:req_hdr_referrer_policy;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_referrer_policy"`
+	ReqHdrReferrerPolicy string `gorm:"column:req_hdr_referrer_policy;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrReferrerPolicy"`
 	// ReqHdrUserAgent 用户代理字符串，标识发起请求的应用程序类型、操作系统、软件供应商或软件版本
-	ReqHdrUserAgent string `gorm:"column:req_hdr_user_agent;type:String CODEC(ZSTD(3))" json:"req_hdr_user_agent"`
+	ReqHdrUserAgent string `gorm:"column:req_hdr_user_agent;type:String CODEC(ZSTD(3))" json:"reqHdrUserAgent"`
 
 	// ======================== 传输编码 (Transfer Coding) ========================
 
 	// ReqHdrTE 传输编码接受，指定用户代理愿意接受的传输编码（trailers 及传输编码类型）
-	ReqHdrTE string `gorm:"column:req_hdr_te;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_te"`
+	ReqHdrTE string `gorm:"column:req_hdr_te;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrTe"`
 	// ReqHdrTransferEncoding 传输编码，指定用于将资源安全传输给用户的编码形式，如 chunked
-	ReqHdrTransferEncoding string `gorm:"column:req_hdr_transfer_encoding;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_transfer_encoding"`
+	ReqHdrTransferEncoding string `gorm:"column:req_hdr_transfer_encoding;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrTransferEncoding"`
 	// ReqHdrTrailer 尾部字段声明，允许发送方在分块消息的末尾包含额外的元数据字段
-	ReqHdrTrailer string `gorm:"column:req_hdr_trailer;type:String CODEC(ZSTD(3))" json:"req_hdr_trailer"`
+	ReqHdrTrailer string `gorm:"column:req_hdr_trailer;type:String CODEC(ZSTD(3))" json:"reqHdrTrailer"`
 
 	// ======================== WebSocket ========================
 
 	// ReqHdrSecWebSocketKey WebSocket 握手密钥，包含一个密钥用于验证客户端确实意图打开 WebSocket 连接
 	// 使用 Crypto 加密存储，WebSocket 握手密钥涉及连接安全
-	ReqHdrSecWebSocketKey *serializer.Crypto `gorm:"column:req_hdr_sec_websocket_key;type:String CODEC(ZSTD(3));serializer:crypto" json:"req_hdr_sec_websocket_key" secure:"mode=\"aes-gcm\",offset=36234,length=32"`
+	ReqHdrSecWebSocketKey *serializer.Crypto `gorm:"column:req_hdr_sec_websocket_key;type:String CODEC(ZSTD(3));serializer:crypto" json:"reqHdrSecWebsocketKey" secure:"mode=\"aes-gcm\",offset=36234,length=32"`
 	// ReqHdrSecWebSocketVersion WebSocket 协议版本，指示客户端使用的 WebSocket 协议版本号
-	ReqHdrSecWebSocketVersion string `gorm:"column:req_hdr_sec_websocket_version;type:String CODEC(ZSTD(3))" json:"req_hdr_sec_websocket_version"`
+	ReqHdrSecWebSocketVersion string `gorm:"column:req_hdr_sec_websocket_version;type:String CODEC(ZSTD(3))" json:"reqHdrSecWebsocketVersion"`
 	// ReqHdrSecWebSocketProtocol WebSocket 子协议，指示客户端支持的子协议列表，按优先顺序排列
-	ReqHdrSecWebSocketProtocol string `gorm:"column:req_hdr_sec_websocket_protocol;type:String CODEC(ZSTD(3))" json:"req_hdr_sec_websocket_protocol"`
+	ReqHdrSecWebSocketProtocol string `gorm:"column:req_hdr_sec_websocket_protocol;type:String CODEC(ZSTD(3))" json:"reqHdrSecWebsocketProtocol"`
 	// ReqHdrSecWebSocketExtensions WebSocket 扩展，指示客户端支持的 WebSocket 扩展列表，按优先顺序排列
-	ReqHdrSecWebSocketExtensions string `gorm:"column:req_hdr_sec_websocket_extensions;type:String CODEC(ZSTD(3))" json:"req_hdr_sec_websocket_extensions"`
+	ReqHdrSecWebSocketExtensions string `gorm:"column:req_hdr_sec_websocket_extensions;type:String CODEC(ZSTD(3))" json:"reqHdrSecWebsocketExtensions"`
 
 	// ======================== Fetch 元数据 (Fetch Metadata) ========================
 
 	// ReqHdrSecFetchSite Fetch 元数据——源关系，指示请求发起者的源与目标源之间的关系 (cross-site/same-origin/same-site/none)
-	ReqHdrSecFetchSite string `gorm:"column:req_hdr_sec_fetch_site;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_sec_fetch_site"`
+	ReqHdrSecFetchSite string `gorm:"column:req_hdr_sec_fetch_site;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrSecFetchSite"`
 	// ReqHdrSecFetchMode Fetch 元数据——请求模式，向服务器指示请求的模式 (cors/navigate/no-cors/same-origin/websocket)
-	ReqHdrSecFetchMode string `gorm:"column:req_hdr_sec_fetch_mode;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_sec_fetch_mode"`
+	ReqHdrSecFetchMode string `gorm:"column:req_hdr_sec_fetch_mode;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrSecFetchMode"`
 	// ReqHdrSecFetchUser Fetch 元数据——用户激活，指示导航请求是否由用户激活触发
-	ReqHdrSecFetchUser string `gorm:"column:req_hdr_sec_fetch_user;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_sec_fetch_user"`
+	ReqHdrSecFetchUser string `gorm:"column:req_hdr_sec_fetch_user;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrSecFetchUser"`
 	// ReqHdrSecFetchDest Fetch 元数据——请求目标，指示请求到服务器的目的地类型 (document/image/script/style 等)
-	ReqHdrSecFetchDest string `gorm:"column:req_hdr_sec_fetch_dest;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_sec_fetch_dest"`
+	ReqHdrSecFetchDest string `gorm:"column:req_hdr_sec_fetch_dest;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrSecFetchDest"`
 	// ReqHdrSecPurpose 请求目的，指示请求的服务端目的，如 prefetch 表示资源被提前获取用于未来导航
-	ReqHdrSecPurpose string `gorm:"column:req_hdr_sec_purpose;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_sec_purpose"`
+	ReqHdrSecPurpose string `gorm:"column:req_hdr_sec_purpose;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrSecPurpose"`
 	// ReqHdrServiceWorkerNavigationPreload Service Worker 导航预加载，在 SW 启动期间提前请求中发送的标头
-	ReqHdrServiceWorkerNavigationPreload string `gorm:"column:req_hdr_service_worker_navigation_preload;type:String CODEC(ZSTD(3))" json:"req_hdr_service_worker_navigation_preload"`
+	ReqHdrServiceWorkerNavigationPreload string `gorm:"column:req_hdr_service_worker_navigation_preload;type:String CODEC(ZSTD(3))" json:"reqHdrServiceWorkerNavigationPreload"`
 
 	// ======================== 客户端提示 (Client Hints) ========================
 
 	// ReqHdrSecCHUA 用户代理的品牌（brand）和版本信息
-	ReqHdrSecCHUA string `gorm:"column:req_hdr_sec_ch_ua;type:String CODEC(ZSTD(3))" json:"req_hdr_sec_ch_ua"`
+	ReqHdrSecCHUA string `gorm:"column:req_hdr_sec_ch_ua;type:String CODEC(ZSTD(3))" json:"reqHdrSecChUa"`
 	// ReqHdrSecCHUAArch 用户代理底层平台的 CPU 架构，如 x86、arm
-	ReqHdrSecCHUAArch string `gorm:"column:req_hdr_sec_ch_ua_arch;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_sec_ch_ua_arch"`
+	ReqHdrSecCHUAArch string `gorm:"column:req_hdr_sec_ch_ua_arch;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrSecChUaArch"`
 	// ReqHdrSecCHUABitness 用户代理底层 CPU 架构位数，如 64、32
-	ReqHdrSecCHUABitness string `gorm:"column:req_hdr_sec_ch_ua_bitness;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_sec_ch_ua_bitness"`
+	ReqHdrSecCHUABitness string `gorm:"column:req_hdr_sec_ch_ua_bitness;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrSecChUaBitness"`
 	// ReqHdrSecCHUAFullVersion 用户代理的完整语义版本字符串
-	ReqHdrSecCHUAFullVersion string `gorm:"column:req_hdr_sec_ch_ua_full_version;type:String CODEC(ZSTD(3))" json:"req_hdr_sec_ch_ua_full_version"`
+	ReqHdrSecCHUAFullVersion string `gorm:"column:req_hdr_sec_ch_ua_full_version;type:String CODEC(ZSTD(3))" json:"reqHdrSecChUaFullVersion"`
 	// ReqHdrSecCHUAFullVersionList 用户代理品牌列表中每个品牌的完整版本
-	ReqHdrSecCHUAFullVersionList string `gorm:"column:req_hdr_sec_ch_ua_full_version_list;type:String CODEC(ZSTD(3))" json:"req_hdr_sec_ch_ua_full_version_list"`
+	ReqHdrSecCHUAFullVersionList string `gorm:"column:req_hdr_sec_ch_ua_full_version_list;type:String CODEC(ZSTD(3))" json:"reqHdrSecChUaFullVersionList"`
 	// ReqHdrSecCHUAMobile 用户代理是否在移动设备上运行
-	ReqHdrSecCHUAMobile string `gorm:"column:req_hdr_sec_ch_ua_mobile;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_sec_ch_ua_mobile"`
+	ReqHdrSecCHUAMobile string `gorm:"column:req_hdr_sec_ch_ua_mobile;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrSecChUaMobile"`
 	// ReqHdrSecCHUAModel 用户代理的设备型号
-	ReqHdrSecCHUAModel string `gorm:"column:req_hdr_sec_ch_ua_model;type:String CODEC(ZSTD(3))" json:"req_hdr_sec_ch_ua_model"`
+	ReqHdrSecCHUAModel string `gorm:"column:req_hdr_sec_ch_ua_model;type:String CODEC(ZSTD(3))" json:"reqHdrSecChUaModel"`
 	// ReqHdrSecCHUAPlatform 用户代理的底层操作系统/平台，如 Windows、macOS、Android
-	ReqHdrSecCHUAPlatform string `gorm:"column:req_hdr_sec_ch_ua_platform;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_sec_ch_ua_platform"`
+	ReqHdrSecCHUAPlatform string `gorm:"column:req_hdr_sec_ch_ua_platform;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrSecChUaPlatform"`
 	// ReqHdrSecCHUAPlatformVersion 用户代理底层操作系统的版本号
-	ReqHdrSecCHUAPlatformVersion string `gorm:"column:req_hdr_sec_ch_ua_platform_version;type:String CODEC(ZSTD(3))" json:"req_hdr_sec_ch_ua_platform_version"`
+	ReqHdrSecCHUAPlatformVersion string `gorm:"column:req_hdr_sec_ch_ua_platform_version;type:String CODEC(ZSTD(3))" json:"reqHdrSecChUaPlatformVersion"`
 	// ReqHdrSecCHUAWoW64 用户代理二进制文件是否在 64 位 Windows 上以 32 位模式运行
-	ReqHdrSecCHUAWoW64 string `gorm:"column:req_hdr_sec_ch_ua_wow64;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_sec_ch_ua_wow64"`
+	ReqHdrSecCHUAWoW64 string `gorm:"column:req_hdr_sec_ch_ua_wow64;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrSecChUaWow64"`
 	// ReqHdrSecCHPrefersColorScheme 用户的深色/浅色模式偏好 (dark/light)
-	ReqHdrSecCHPrefersColorScheme string `gorm:"column:req_hdr_sec_ch_prefers_color_scheme;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_sec_ch_prefers_color_scheme"`
+	ReqHdrSecCHPrefersColorScheme string `gorm:"column:req_hdr_sec_ch_prefers_color_scheme;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrSecChPrefersColorScheme"`
 	// ReqHdrSecCHPrefersReducedMotion 用户减少动画和布局变化的偏好
-	ReqHdrSecCHPrefersReducedMotion string `gorm:"column:req_hdr_sec_ch_prefers_reduced_motion;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_sec_ch_prefers_reduced_motion"`
+	ReqHdrSecCHPrefersReducedMotion string `gorm:"column:req_hdr_sec_ch_prefers_reduced_motion;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrSecChPrefersReducedMotion"`
 	// ReqHdrSecCHPrefersReducedTransparency 用户降低透明度的偏好
-	ReqHdrSecCHPrefersReducedTransparency string `gorm:"column:req_hdr_sec_ch_prefers_reduced_transparency;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_sec_ch_prefers_reduced_transparency"`
+	ReqHdrSecCHPrefersReducedTransparency string `gorm:"column:req_hdr_sec_ch_prefers_reduced_transparency;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrSecChPrefersReducedTransparency"`
 
 	// ======================== 摘要 (Digest) ========================
 
 	// ReqHdrWantContentDigest 期望内容摘要，表达希望使用 Content-Digest 标头接收内容摘要
-	ReqHdrWantContentDigest string `gorm:"column:req_hdr_want_content_digest;type:String CODEC(ZSTD(3))" json:"req_hdr_want_content_digest"`
+	ReqHdrWantContentDigest string `gorm:"column:req_hdr_want_content_digest;type:String CODEC(ZSTD(3))" json:"reqHdrWantContentDigest"`
 	// ReqHdrWantReprDigest 期望表示摘要，表达希望使用 Repr-Digest 标头接收表示形式的校验摘要
-	ReqHdrWantReprDigest string `gorm:"column:req_hdr_want_repr_digest;type:String CODEC(ZSTD(3))" json:"req_hdr_want_repr_digest"`
+	ReqHdrWantReprDigest string `gorm:"column:req_hdr_want_repr_digest;type:String CODEC(ZSTD(3))" json:"reqHdrWantReprDigest"`
 
 	// ======================== 安全 (Security) ========================
 
 	// ReqHdrUpgradeInsecureRequests 升级不安全请求，向服务器发送信号表达客户端偏好加密和身份验证的响应
-	ReqHdrUpgradeInsecureRequests string `gorm:"column:req_hdr_upgrade_insecure_requests;type:LowCardinality(String) CODEC(ZSTD(3))" json:"req_hdr_upgrade_insecure_requests"`
+	ReqHdrUpgradeInsecureRequests string `gorm:"column:req_hdr_upgrade_insecure_requests;type:LowCardinality(String) CODEC(ZSTD(3))" json:"reqHdrUpgradeInsecureRequests"`
 
 	// ======================== 其他 (Other) ========================
 
 	// ReqHdrDate 消息创建日期和时间
-	ReqHdrDate string `gorm:"column:req_hdr_date;type:String CODEC(ZSTD(3))" json:"req_hdr_date"`
+	ReqHdrDate string `gorm:"column:req_hdr_date;type:String CODEC(ZSTD(3))" json:"reqHdrDate"`
 	// ReqHdrLink 链接关系，提供在 HTTP 标头中序列化一个或多个链接的方法，语义上等同于 HTML <link> 元素
-	ReqHdrLink string `gorm:"column:req_hdr_link;type:String CODEC(ZSTD(3))" json:"req_hdr_link"`
+	ReqHdrLink string `gorm:"column:req_hdr_link;type:String CODEC(ZSTD(3))" json:"reqHdrLink"`
 	// ReqHdrUpgrade 协议升级，可用于将已建立的连接升级为不同的协议（如 HTTP/1.1 → HTTP/2 或 WebSocket）
-	ReqHdrUpgrade string `gorm:"column:req_hdr_upgrade;type:String CODEC(ZSTD(3))" json:"req_hdr_upgrade"`
+	ReqHdrUpgrade string `gorm:"column:req_hdr_upgrade;type:String CODEC(ZSTD(3))" json:"reqHdrUpgrade"`
 	// ReqHdrPriority 资源优先级，提示特定资源请求在连接上的优先级
-	ReqHdrPriority string `gorm:"column:req_hdr_priority;type:String CODEC(ZSTD(3))" json:"req_hdr_priority"`
+	ReqHdrPriority string `gorm:"column:req_hdr_priority;type:String CODEC(ZSTD(3))" json:"reqHdrPriority"`
 	// ReqHdrAltUsed 使用的替代服务，用于标识当前正在使用的替代服务
-	ReqHdrAltUsed string `gorm:"column:req_hdr_alt_used;type:String CODEC(ZSTD(3))" json:"req_hdr_alt_used"`
+	ReqHdrAltUsed string `gorm:"column:req_hdr_alt_used;type:String CODEC(ZSTD(3))" json:"reqHdrAltUsed"`
 }
 
 // newCrypto 将字符串包装为 Crypto 用于加密存储，空值交由 Serializer 层自动判断处理
@@ -414,6 +416,7 @@ func newCrypto(s string) *serializer.Crypto {
 	return serializer.NewCrypto([]byte(s))
 }
 
+// NewHttpRequestHeaders 从 HTTP 请求构建请求头宽表模型，涉敏头（凭据、Cookie、WebSocket 握手密钥）以 Crypto 加密存储。
 func NewHttpRequestHeaders(req *http.Request) *HttpRequestHeaders {
 	return &HttpRequestHeaders{
 		// 认证（加密存储）
@@ -539,216 +542,217 @@ type HttpResponseHeaders struct {
 
 	// RspHdrWWWAuthenticate 认证质询，定义应该用于访问资源的身份验证方法和参数
 	// 使用 Crypto 加密存储，防止涉敏信息泄露后被逆向破解
-	RspHdrWWWAuthenticate *serializer.Crypto `gorm:"column:rsp_hdr_www_authenticate;type:String CODEC(ZSTD(3));serializer:crypto" json:"rsp_hdr_www_authenticate" secure:"mode=\"aes-gcm\",offset=44789,length=32"`
+	RspHdrWWWAuthenticate *serializer.Crypto `gorm:"column:rsp_hdr_www_authenticate;type:String CODEC(ZSTD(3));serializer:crypto" json:"rspHdrWwwAuthenticate" secure:"mode=\"aes-gcm\",offset=44789,length=32"`
 	// RspHdrProxyAuthenticate 代理认证质询，定义应用于访问代理服务器后面资源的身份验证方法
 	// 使用 Crypto 加密存储，防止涉敏信息泄露后被逆向破解
-	RspHdrProxyAuthenticate *serializer.Crypto `gorm:"column:rsp_hdr_proxy_authenticate;type:String CODEC(ZSTD(3));serializer:crypto" json:"rsp_hdr_proxy_authenticate" secure:"mode=\"aes-gcm\",offset=53123,length=32"`
+	RspHdrProxyAuthenticate *serializer.Crypto `gorm:"column:rsp_hdr_proxy_authenticate;type:String CODEC(ZSTD(3));serializer:crypto" json:"rspHdrProxyAuthenticate" secure:"mode=\"aes-gcm\",offset=53123,length=32"`
 
 	// ======================== 缓存 (Caching) ========================
 
 	// RspHdrAge 缓存年龄，对象在代理缓存中存储的时间（以秒为单位）
-	RspHdrAge int64 `gorm:"column:rsp_hdr_age;type:Int64 CODEC(ZSTD(3))" json:"rsp_hdr_age"`
+	RspHdrAge int64 `gorm:"column:rsp_hdr_age;type:Int64 CODEC(ZSTD(3))" json:"rspHdrAge"`
 	// RspHdrCacheControl 缓存控制指令，指定请求/响应链中所有缓存机制必须遵守的指令
-	RspHdrCacheControl string `gorm:"column:rsp_hdr_cache_control;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rsp_hdr_cache_control"`
+	RspHdrCacheControl string `gorm:"column:rsp_hdr_cache_control;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rspHdrCacheControl"`
 	// RspHdrClearSiteData 清除站点数据，清除与请求网站相关联的浏览器数据（Cookie、Storage、Cache 等）
-	RspHdrClearSiteData string `gorm:"column:rsp_hdr_clear_site_data;type:String CODEC(ZSTD(3))" json:"rsp_hdr_clear_site_data"`
+	RspHdrClearSiteData string `gorm:"column:rsp_hdr_clear_site_data;type:String CODEC(ZSTD(3))" json:"rspHdrClearSiteData"`
 	// RspHdrExpires 过期时间，响应被视为过时的日期/时间，在此之后缓存副本将被视为过期
-	RspHdrExpires string `gorm:"column:rsp_hdr_expires;type:String CODEC(ZSTD(3))" json:"rsp_hdr_expires"`
+	RspHdrExpires string `gorm:"column:rsp_hdr_expires;type:String CODEC(ZSTD(3))" json:"rspHdrExpires"`
 	// RspHdrNoVarySearch 无变化搜索，定义 URL 查询参数如何影响缓存匹配的规则集
-	RspHdrNoVarySearch string `gorm:"column:rsp_hdr_no_vary_search;type:String CODEC(ZSTD(3))" json:"rsp_hdr_no_vary_search"`
+	RspHdrNoVarySearch string `gorm:"column:rsp_hdr_no_vary_search;type:String CODEC(ZSTD(3))" json:"rspHdrNoVarySearch"`
 
 	// ======================== 条件请求 (Conditionals) ========================
 
 	// RspHdrLastModified 最后修改时间，资源的最后修改日期，用于比较同一资源的多个版本
-	RspHdrLastModified string `gorm:"column:rsp_hdr_last_modified;type:String CODEC(ZSTD(3))" json:"rsp_hdr_last_modified"`
+	RspHdrLastModified string `gorm:"column:rsp_hdr_last_modified;type:String CODEC(ZSTD(3))" json:"rspHdrLastModified"`
 	// RspHdrETag 实体标签，标识资源版本的唯一字符串，比 Last-Modified 更精确
-	RspHdrETag string `gorm:"column:rsp_hdr_etag;type:String CODEC(ZSTD(3))" json:"rsp_hdr_etag"`
+	RspHdrETag string `gorm:"column:rsp_hdr_etag;type:String CODEC(ZSTD(3))" json:"rspHdrEtag"`
 	// RspHdrVary 响应变化依据，确定如何匹配请求头来决定是否可使用缓存响应，还是从源服务器请求新响应
-	RspHdrVary string `gorm:"column:rsp_hdr_vary;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rsp_hdr_vary"`
+	RspHdrVary string `gorm:"column:rsp_hdr_vary;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rspHdrVary"`
 
 	// ======================== 连接管理 (Connection Management) ========================
 
 	// RspHdrConnection 连接控制，控制当前事务完成后网络连接是否保持打开状态
-	RspHdrConnection string `gorm:"column:rsp_hdr_connection;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rsp_hdr_connection"`
+	RspHdrConnection string `gorm:"column:rsp_hdr_connection;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rspHdrConnection"`
 	// RspHdrKeepAlive 持久连接控制，设置持久连接的超时时间和最大请求数
-	RspHdrKeepAlive string `gorm:"column:rsp_hdr_keep_alive;type:String CODEC(ZSTD(3))" json:"rsp_hdr_keep_alive"`
+	RspHdrKeepAlive string `gorm:"column:rsp_hdr_keep_alive;type:String CODEC(ZSTD(3))" json:"rspHdrKeepAlive"`
 
 	// ======================== 内容协商 (Content Negotiation) ========================
 
 	// RspHdrAcceptPatch 可接受的 PATCH 媒体类型，在 PATCH 响应中通告服务器能够理解的媒体类型
-	RspHdrAcceptPatch string `gorm:"column:rsp_hdr_accept_patch;type:String CODEC(ZSTD(3))" json:"rsp_hdr_accept_patch"`
+	RspHdrAcceptPatch string `gorm:"column:rsp_hdr_accept_patch;type:String CODEC(ZSTD(3))" json:"rspHdrAcceptPatch"`
 	// RspHdrAcceptPost 可接受的 POST 媒体类型，在 POST 响应中通告服务器能够理解的媒体类型
-	RspHdrAcceptPost string `gorm:"column:rsp_hdr_accept_post;type:String CODEC(ZSTD(3))" json:"rsp_hdr_accept_post"`
+	RspHdrAcceptPost string `gorm:"column:rsp_hdr_accept_post;type:String CODEC(ZSTD(3))" json:"rspHdrAcceptPost"`
 
 	// ======================== Cookie ========================
 
 	// RspHdrSetCookie 设置 Cookie，将 cookie 从服务器发送到用户代理，以便后续请求中回传
 	// 使用 Crypto 加密存储，Set-Cookie 常包含会话令牌等涉敏信息
-	RspHdrSetCookie *serializer.Crypto `gorm:"column:rsp_hdr_set_cookie;type:String CODEC(ZSTD(3));serializer:crypto" json:"rsp_hdr_set_cookie" secure:"mode=\"aes-gcm\",offset=61234,length=32"`
+	RspHdrSetCookie *serializer.Crypto `gorm:"column:rsp_hdr_set_cookie;type:String CODEC(ZSTD(3));serializer:crypto" json:"rspHdrSetCookie" secure:"mode=\"aes-gcm\",offset=61234,length=32"`
 
 	// ======================== CORS ========================
 
 	// RspHdrAccessControlAllowCredentials CORS 允许凭据，指示当凭据标志为 true 时是否可以暴露请求的响应
-	RspHdrAccessControlAllowCredentials string `gorm:"column:rsp_hdr_access_control_allow_credentials;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rsp_hdr_access_control_allow_credentials"`
+	RspHdrAccessControlAllowCredentials string `gorm:"column:rsp_hdr_access_control_allow_credentials;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rspHdrAccessControlAllowCredentials"`
 	// RspHdrAccessControlAllowHeaders CORS 允许标头，指示实际请求中可以使用哪些 HTTP 标头
-	RspHdrAccessControlAllowHeaders string `gorm:"column:rsp_hdr_access_control_allow_headers;type:String CODEC(ZSTD(3))" json:"rsp_hdr_access_control_allow_headers"`
+	RspHdrAccessControlAllowHeaders string `gorm:"column:rsp_hdr_access_control_allow_headers;type:String CODEC(ZSTD(3))" json:"rspHdrAccessControlAllowHeaders"`
 	// RspHdrAccessControlAllowMethods CORS 允许方法，指定访问资源允许的 HTTP 方法
-	RspHdrAccessControlAllowMethods string `gorm:"column:rsp_hdr_access_control_allow_methods;type:String CODEC(ZSTD(3))" json:"rsp_hdr_access_control_allow_methods"`
+	RspHdrAccessControlAllowMethods string `gorm:"column:rsp_hdr_access_control_allow_methods;type:String CODEC(ZSTD(3))" json:"rspHdrAccessControlAllowMethods"`
 	// RspHdrAccessControlAllowOrigin CORS 允许源，指示响应是否可以被共享，值为 * 或具体的源
-	RspHdrAccessControlAllowOrigin string `gorm:"column:rsp_hdr_access_control_allow_origin;type:String CODEC(ZSTD(3))" json:"rsp_hdr_access_control_allow_origin"`
+	RspHdrAccessControlAllowOrigin string `gorm:"column:rsp_hdr_access_control_allow_origin;type:String CODEC(ZSTD(3))" json:"rspHdrAccessControlAllowOrigin"`
 	// RspHdrAccessControlExposeHeaders CORS 暴露标头，通过列出标头名称指示哪些标头可以作为响应的一部分暴露给脚本
-	RspHdrAccessControlExposeHeaders string `gorm:"column:rsp_hdr_access_control_expose_headers;type:String CODEC(ZSTD(3))" json:"rsp_hdr_access_control_expose_headers"`
+	RspHdrAccessControlExposeHeaders string `gorm:"column:rsp_hdr_access_control_expose_headers;type:String CODEC(ZSTD(3))" json:"rspHdrAccessControlExposeHeaders"`
 	// RspHdrAccessControlMaxAge CORS 最大缓存时间，指示预检请求的结果能被缓存多久（秒）
-	RspHdrAccessControlMaxAge int64 `gorm:"column:rsp_hdr_access_control_max_age;type:Int64 CODEC(ZSTD(3))" json:"rsp_hdr_access_control_max_age"`
+	RspHdrAccessControlMaxAge int64 `gorm:"column:rsp_hdr_access_control_max_age;type:Int64 CODEC(ZSTD(3))" json:"rspHdrAccessControlMaxAge"`
 	// RspHdrTimingAllowOrigin 时间允许源，指定允许访问 Resource Timing API 属性值的源
-	RspHdrTimingAllowOrigin string `gorm:"column:rsp_hdr_timing_allow_origin;type:String CODEC(ZSTD(3))" json:"rsp_hdr_timing_allow_origin"`
+	RspHdrTimingAllowOrigin string `gorm:"column:rsp_hdr_timing_allow_origin;type:String CODEC(ZSTD(3))" json:"rspHdrTimingAllowOrigin"`
 
 	// ======================== 下载 (Downloads) ========================
 
 	// RspHdrContentDisposition 内容处置，指示传输的资源应内联显示还是作为下载处理，可指定文件名
-	RspHdrContentDisposition string `gorm:"column:rsp_hdr_content_disposition;type:String CODEC(ZSTD(3))" json:"rsp_hdr_content_disposition"`
+	RspHdrContentDisposition string `gorm:"column:rsp_hdr_content_disposition;type:String CODEC(ZSTD(3))" json:"rspHdrContentDisposition"`
 
 	// ======================== 摘要 (Digest) ========================
 
 	// RspHdrContentDigest 内容摘要，提供 HTTP 消息中构建的字节流的校验摘要（考虑 Content-Encoding 和 Content-Range）
-	RspHdrContentDigest string `gorm:"column:rsp_hdr_content_digest;type:String CODEC(ZSTD(3))" json:"rsp_hdr_content_digest"`
+	RspHdrContentDigest string `gorm:"column:rsp_hdr_content_digest;type:String CODEC(ZSTD(3))" json:"rspHdrContentDigest"`
 	// RspHdrReprDigest 表示摘要，在传输前提供指定形式目标资源的校验摘要（不考虑 Content-Encoding 和 Content-Range）
-	RspHdrReprDigest string `gorm:"column:rsp_hdr_repr_digest;type:String CODEC(ZSTD(3))" json:"rsp_hdr_repr_digest"`
+	RspHdrReprDigest string `gorm:"column:rsp_hdr_repr_digest;type:String CODEC(ZSTD(3))" json:"rspHdrReprDigest"`
 
 	// ======================== 消息主体 (Message Body Information) ========================
 
 	// RspHdrContentType 响应内容类型（MIME 类型），指示响应主体的媒体格式
-	RspHdrContentType string `gorm:"column:rsp_hdr_content_type;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rsp_hdr_content_type"`
+	RspHdrContentType string `gorm:"column:rsp_hdr_content_type;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rspHdrContentType"`
 	// RspHdrContentLength 响应内容长度，响应主体的大小（以十进制字节数表示）
-	RspHdrContentLength int64 `gorm:"column:rsp_hdr_content_length;type:Int64 CODEC(ZSTD(3))" json:"rsp_hdr_content_length"`
+	RspHdrContentLength int64 `gorm:"column:rsp_hdr_content_length;type:Int64 CODEC(ZSTD(3))" json:"rspHdrContentLength"`
 	// RspHdrContentEncoding 响应内容编码，用于指定响应主体的压缩算法，如 gzip、br
-	RspHdrContentEncoding string `gorm:"column:rsp_hdr_content_encoding;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rsp_hdr_content_encoding"`
+	RspHdrContentEncoding string `gorm:"column:rsp_hdr_content_encoding;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rspHdrContentEncoding"`
 	// RspHdrContentLanguage 响应内容语言，描述面向受众的人类语言
-	RspHdrContentLanguage string `gorm:"column:rsp_hdr_content_language;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rsp_hdr_content_language"`
+	RspHdrContentLanguage string `gorm:"column:rsp_hdr_content_language;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rspHdrContentLanguage"`
 	// RspHdrContentLocation 内容位置，指示返回数据的备用位置（直接访问 URL）
-	RspHdrContentLocation string `gorm:"column:rsp_hdr_content_location;type:String CODEC(ZSTD(3))" json:"rsp_hdr_content_location"`
+	RspHdrContentLocation string `gorm:"column:rsp_hdr_content_location;type:String CODEC(ZSTD(3))" json:"rspHdrContentLocation"`
 
 	// ======================== 代理 (Proxies) ========================
 
 	// RspHdrForwarded 转发信息，包含来自代理服务器面向客户端一侧的信息（原始 IP、协议等）
-	RspHdrForwarded string `gorm:"column:rsp_hdr_forwarded;type:String CODEC(ZSTD(3))" json:"rsp_hdr_forwarded"`
+	RspHdrForwarded string `gorm:"column:rsp_hdr_forwarded;type:String CODEC(ZSTD(3))" json:"rspHdrForwarded"`
 	// RspHdrVia 代理链信息，由代理（正向和反向代理）添加，记录响应经过的中间节点
-	RspHdrVia string `gorm:"column:rsp_hdr_via;type:String CODEC(ZSTD(3))" json:"rsp_hdr_via"`
+	RspHdrVia string `gorm:"column:rsp_hdr_via;type:String CODEC(ZSTD(3))" json:"rspHdrVia"`
 
 	// ======================== 范围请求 (Range Requests) ========================
 
 	// RspHdrAcceptRanges 接受范围请求，指示服务器是否支持范围请求及使用的单位（如 bytes、none）
-	RspHdrAcceptRanges string `gorm:"column:rsp_hdr_accept_ranges;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rsp_hdr_accept_ranges"`
+	RspHdrAcceptRanges string `gorm:"column:rsp_hdr_accept_ranges;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rspHdrAcceptRanges"`
 	// RspHdrContentRange 内容范围，指示部分消息在完整主体中的位置（起始-结束/总大小）
-	RspHdrContentRange string `gorm:"column:rsp_hdr_content_range;type:String CODEC(ZSTD(3))" json:"rsp_hdr_content_range"`
+	RspHdrContentRange string `gorm:"column:rsp_hdr_content_range;type:String CODEC(ZSTD(3))" json:"rspHdrContentRange"`
 
 	// ======================== 重定向 (Redirects) ========================
 
 	// RspHdrLocation 重定向位置，指示要将页面重定向到的目标 URL（配合 3xx 状态码使用）
-	RspHdrLocation string `gorm:"column:rsp_hdr_location;type:String CODEC(ZSTD(3))" json:"rsp_hdr_location"`
+	RspHdrLocation string `gorm:"column:rsp_hdr_location;type:String CODEC(ZSTD(3))" json:"rspHdrLocation"`
 	// RspHdrRefresh 刷新/重定向，指示浏览器重新加载页面或重定向到另一页面，可指定延迟秒数
-	RspHdrRefresh string `gorm:"column:rsp_hdr_refresh;type:String CODEC(ZSTD(3))" json:"rsp_hdr_refresh"`
+	RspHdrRefresh string `gorm:"column:rsp_hdr_refresh;type:String CODEC(ZSTD(3))" json:"rspHdrRefresh"`
 
 	// ======================== 响应上下文 (Response Context) ========================
 
 	// RspHdrAllow 允许的方法，列出目标资源所支持的 HTTP 方法集合
-	RspHdrAllow string `gorm:"column:rsp_hdr_allow;type:String CODEC(ZSTD(3))" json:"rsp_hdr_allow"`
+	RspHdrAllow string `gorm:"column:rsp_hdr_allow;type:String CODEC(ZSTD(3))" json:"rspHdrAllow"`
 	// RspHdrServer 服务器标识，包含处理请求的源服务器所用到的软件相关信息
-	RspHdrServer string `gorm:"column:rsp_hdr_server;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rsp_hdr_server"`
+	RspHdrServer string `gorm:"column:rsp_hdr_server;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rspHdrServer"`
 
 	// ======================== 安全 (Security) ========================
 
 	// RspHdrCrossOriginEmbedderPolicy 跨源嵌入器策略（COEP），为给定文档声明嵌入器策略
-	RspHdrCrossOriginEmbedderPolicy string `gorm:"column:rsp_hdr_cross_origin_embedder_policy;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rsp_hdr_cross_origin_embedder_policy"`
+	RspHdrCrossOriginEmbedderPolicy string `gorm:"column:rsp_hdr_cross_origin_embedder_policy;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rspHdrCrossOriginEmbedderPolicy"`
 	// RspHdrCrossOriginOpenerPolicy 跨源打开器策略（COOP），防止其他域打开/控制窗口
-	RspHdrCrossOriginOpenerPolicy string `gorm:"column:rsp_hdr_cross_origin_opener_policy;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rsp_hdr_cross_origin_opener_policy"`
+	RspHdrCrossOriginOpenerPolicy string `gorm:"column:rsp_hdr_cross_origin_opener_policy;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rspHdrCrossOriginOpenerPolicy"`
 	// RspHdrCrossOriginResourcePolicy 跨源资源策略（CORP），防止从其他域读取应用此标头的资源的响应
-	RspHdrCrossOriginResourcePolicy string `gorm:"column:rsp_hdr_cross_origin_resource_policy;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rsp_hdr_cross_origin_resource_policy"`
+	RspHdrCrossOriginResourcePolicy string `gorm:"column:rsp_hdr_cross_origin_resource_policy;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rspHdrCrossOriginResourcePolicy"`
 	// RspHdrContentSecurityPolicy 内容安全策略（CSP），控制用户代理可以为给定页面加载哪些资源
-	RspHdrContentSecurityPolicy string `gorm:"column:rsp_hdr_content_security_policy;type:String CODEC(ZSTD(3))" json:"rsp_hdr_content_security_policy"`
+	RspHdrContentSecurityPolicy string `gorm:"column:rsp_hdr_content_security_policy;type:String CODEC(ZSTD(3))" json:"rspHdrContentSecurityPolicy"`
 	// RspHdrContentSecurityPolicyReportOnly CSP 仅报告模式，允许通过监控（不强制执行）策略效果进行实验
-	RspHdrContentSecurityPolicyReportOnly string `gorm:"column:rsp_hdr_content_security_policy_report_only;type:String CODEC(ZSTD(3))" json:"rsp_hdr_content_security_policy_report_only"`
+	RspHdrContentSecurityPolicyReportOnly string `gorm:"column:rsp_hdr_content_security_policy_report_only;type:String CODEC(ZSTD(3))" json:"rspHdrContentSecurityPolicyReportOnly"`
 	// RspHdrExpectCT 证书透明度期望，允许网站报告和执行证书透明度要求
-	RspHdrExpectCT string `gorm:"column:rsp_hdr_expect_ct;type:String CODEC(ZSTD(3))" json:"rsp_hdr_expect_ct"`
+	RspHdrExpectCT string `gorm:"column:rsp_hdr_expect_ct;type:String CODEC(ZSTD(3))" json:"rspHdrExpectCt"`
 	// RspHdrPermissionsPolicy 权限策略，允许和拒绝在网站自身框架和嵌入 iframe 中使用浏览器特性
-	RspHdrPermissionsPolicy string `gorm:"column:rsp_hdr_permissions_policy;type:String CODEC(ZSTD(3))" json:"rsp_hdr_permissions_policy"`
+	RspHdrPermissionsPolicy string `gorm:"column:rsp_hdr_permissions_policy;type:String CODEC(ZSTD(3))" json:"rspHdrPermissionsPolicy"`
 	// RspHdrStrictTransportSecurity 严格传输安全（HSTS），强制使用 HTTPS 而不是 HTTP 进行通信
-	RspHdrStrictTransportSecurity string `gorm:"column:rsp_hdr_strict_transport_security;type:String CODEC(ZSTD(3))" json:"rsp_hdr_strict_transport_security"`
+	RspHdrStrictTransportSecurity string `gorm:"column:rsp_hdr_strict_transport_security;type:String CODEC(ZSTD(3))" json:"rspHdrStrictTransportSecurity"`
 	// RspHdrXContentTypeOptions 内容类型选项，禁用 MIME 嗅探并强制浏览器使用 Content-Type 中声明的类型
-	RspHdrXContentTypeOptions string `gorm:"column:rsp_hdr_x_content_type_options;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rsp_hdr_x_content_type_options"`
+	RspHdrXContentTypeOptions string `gorm:"column:rsp_hdr_x_content_type_options;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rspHdrXContentTypeOptions"`
 	// RspHdrXFrameOptions 框架选项（XFO），指示是否允许浏览器在 frame/iframe/embed/object 中渲染页面
-	RspHdrXFrameOptions string `gorm:"column:rsp_hdr_x_frame_options;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rsp_hdr_x_frame_options"`
+	RspHdrXFrameOptions string `gorm:"column:rsp_hdr_x_frame_options;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rspHdrXFrameOptions"`
 	// RspHdrXPermittedCrossDomainPolicies 允许的跨域策略，覆盖跨域策略文件以防止不希望的请求
-	RspHdrXPermittedCrossDomainPolicies string `gorm:"column:rsp_hdr_x_permitted_cross_domain_policies;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rsp_hdr_x_permitted_cross_domain_policies"`
+	RspHdrXPermittedCrossDomainPolicies string `gorm:"column:rsp_hdr_x_permitted_cross_domain_policies;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rspHdrXPermittedCrossDomainPolicies"`
 	// RspHdrXPoweredBy 技术引擎标识，可能由托管环境或框架设置，包含有关技术栈的信息
-	RspHdrXPoweredBy string `gorm:"column:rsp_hdr_x_powered_by;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rsp_hdr_x_powered_by"`
+	RspHdrXPoweredBy string `gorm:"column:rsp_hdr_x_powered_by;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rspHdrXPoweredBy"`
 	// RspHdrXXSSProtection XSS 保护，启用浏览器的跨站脚本攻击（XSS）过滤机制
-	RspHdrXXSSProtection string `gorm:"column:rsp_hdr_x_xss_protection;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rsp_hdr_x_xss_protection"`
+	RspHdrXXSSProtection string `gorm:"column:rsp_hdr_x_xss_protection;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rspHdrXXssProtection"`
 
 	// ======================== 服务器发送事件 (Server-Sent Events) ========================
 
 	// RspHdrReportingEndpoints 报告端点，指定浏览器应使用 Reporting API 发送警告和错误报告的服务器端点
-	RspHdrReportingEndpoints string `gorm:"column:rsp_hdr_reporting_endpoints;type:String CODEC(ZSTD(3))" json:"rsp_hdr_reporting_endpoints"`
+	RspHdrReportingEndpoints string `gorm:"column:rsp_hdr_reporting_endpoints;type:String CODEC(ZSTD(3))" json:"rspHdrReportingEndpoints"`
 	// RspHdrReportTo 报告目标，指定浏览器应使用 Reporting API 发送报告的服务器端点（旧版）
-	RspHdrReportTo string `gorm:"column:rsp_hdr_report_to;type:String CODEC(ZSTD(3))" json:"rsp_hdr_report_to"`
+	RspHdrReportTo string `gorm:"column:rsp_hdr_report_to;type:String CODEC(ZSTD(3))" json:"rspHdrReportTo"`
 
 	// ======================== 传输编码 (Transfer Coding) ========================
 
 	// RspHdrTransferEncoding 传输编码，指定用于将资源安全传输给用户的编码形式，如 chunked
-	RspHdrTransferEncoding string `gorm:"column:rsp_hdr_transfer_encoding;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rsp_hdr_transfer_encoding"`
+	RspHdrTransferEncoding string `gorm:"column:rsp_hdr_transfer_encoding;type:LowCardinality(String) CODEC(ZSTD(3))" json:"rspHdrTransferEncoding"`
 	// RspHdrTrailer 尾部字段声明，允许发送方在分块消息的末尾包含额外的元数据字段
-	RspHdrTrailer string `gorm:"column:rsp_hdr_trailer;type:String CODEC(ZSTD(3))" json:"rsp_hdr_trailer"`
+	RspHdrTrailer string `gorm:"column:rsp_hdr_trailer;type:String CODEC(ZSTD(3))" json:"rspHdrTrailer"`
 
 	// ======================== WebSocket ========================
 
 	// RspHdrSecWebSocketAccept WebSocket 握手接受，指示服务器愿意升级到 WebSocket 连接
 	// 使用 Crypto 加密存储，WebSocket 握手响应涉及连接安全
-	RspHdrSecWebSocketAccept *serializer.Crypto `gorm:"column:rsp_hdr_sec_websocket_accept;type:String CODEC(ZSTD(3));serializer:crypto" json:"rsp_hdr_sec_websocket_accept" secure:"mode=\"aes-gcm\",offset=70278,length=32"`
+	RspHdrSecWebSocketAccept *serializer.Crypto `gorm:"column:rsp_hdr_sec_websocket_accept;type:String CODEC(ZSTD(3));serializer:crypto" json:"rspHdrSecWebsocketAccept" secure:"mode=\"aes-gcm\",offset=12807,length=32"`
 	// RspHdrSecWebSocketProtocol WebSocket 子协议，指示服务器从客户端的偏好中选择的子协议
-	RspHdrSecWebSocketProtocol string `gorm:"column:rsp_hdr_sec_websocket_protocol;type:String CODEC(ZSTD(3))" json:"rsp_hdr_sec_websocket_protocol"`
+	RspHdrSecWebSocketProtocol string `gorm:"column:rsp_hdr_sec_websocket_protocol;type:String CODEC(ZSTD(3))" json:"rspHdrSecWebsocketProtocol"`
 	// RspHdrSecWebSocketExtensions WebSocket 扩展，指示服务器从客户端的偏好中选择的扩展
-	RspHdrSecWebSocketExtensions string `gorm:"column:rsp_hdr_sec_websocket_extensions;type:String CODEC(ZSTD(3))" json:"rsp_hdr_sec_websocket_extensions"`
+	RspHdrSecWebSocketExtensions string `gorm:"column:rsp_hdr_sec_websocket_extensions;type:String CODEC(ZSTD(3))" json:"rspHdrSecWebsocketExtensions"`
 
 	// ======================== 客户端提示 (Client Hints) ========================
 
 	// RspHdrAcceptCH 接受客户端提示，服务器宣告支持哪些客户端提示标头
-	RspHdrAcceptCH string `gorm:"column:rsp_hdr_accept_ch;type:String CODEC(ZSTD(3))" json:"rsp_hdr_accept_ch"`
+	RspHdrAcceptCH string `gorm:"column:rsp_hdr_accept_ch;type:String CODEC(ZSTD(3))" json:"rspHdrAcceptCh"`
 	// RspHdrCriticalCH 关键客户端提示，服务器指定哪些接受的客户端提示为关键提示
-	RspHdrCriticalCH string `gorm:"column:rsp_hdr_critical_ch;type:String CODEC(ZSTD(3))" json:"rsp_hdr_critical_ch"`
+	RspHdrCriticalCH string `gorm:"column:rsp_hdr_critical_ch;type:String CODEC(ZSTD(3))" json:"rspHdrCriticalCh"`
 
 	// ======================== 归因报告 (Attribution Reporting) ========================
 
 	// RspHdrAttributionReportingEligible 归因报告资格，指示当前响应有资格注册归因来源或触发器
-	RspHdrAttributionReportingEligible string `gorm:"column:rsp_hdr_attribution_reporting_eligible;type:String CODEC(ZSTD(3))" json:"rsp_hdr_attribution_reporting_eligible"`
+	RspHdrAttributionReportingEligible string `gorm:"column:rsp_hdr_attribution_reporting_eligible;type:String CODEC(ZSTD(3))" json:"rspHdrAttributionReportingEligible"`
 	// RspHdrAttributionReportingRegisterSource 归因报告注册来源，用于注册归因来源
-	RspHdrAttributionReportingRegisterSource string `gorm:"column:rsp_hdr_attribution_reporting_register_source;type:String CODEC(ZSTD(3))" json:"rsp_hdr_attribution_reporting_register_source"`
+	RspHdrAttributionReportingRegisterSource string `gorm:"column:rsp_hdr_attribution_reporting_register_source;type:String CODEC(ZSTD(3))" json:"rspHdrAttributionReportingRegisterSource"`
 	// RspHdrAttributionReportingRegisterTrigger 归因报告注册触发器，用于注册归因触发器
-	RspHdrAttributionReportingRegisterTrigger string `gorm:"column:rsp_hdr_attribution_reporting_register_trigger;type:String CODEC(ZSTD(3))" json:"rsp_hdr_attribution_reporting_register_trigger"`
+	RspHdrAttributionReportingRegisterTrigger string `gorm:"column:rsp_hdr_attribution_reporting_register_trigger;type:String CODEC(ZSTD(3))" json:"rspHdrAttributionReportingRegisterTrigger"`
 
 	// ======================== 其他 (Other) ========================
 
 	// RspHdrDate 消息创建日期和时间
-	RspHdrDate string `gorm:"column:rsp_hdr_date;type:String CODEC(ZSTD(3))" json:"rsp_hdr_date"`
+	RspHdrDate string `gorm:"column:rsp_hdr_date;type:String CODEC(ZSTD(3))" json:"rspHdrDate"`
 	// RspHdrLink 链接关系，提供在 HTTP 标头中序列化链接的方法，语义上等同于 HTML <link> 元素
-	RspHdrLink string `gorm:"column:rsp_hdr_link;type:String CODEC(ZSTD(3))" json:"rsp_hdr_link"`
+	RspHdrLink string `gorm:"column:rsp_hdr_link;type:String CODEC(ZSTD(3))" json:"rspHdrLink"`
 	// RspHdrRetryAfter 重试时间，指示用户代理在进行后续请求前应等待的时间（秒或日期）
-	RspHdrRetryAfter string `gorm:"column:rsp_hdr_retry_after;type:String CODEC(ZSTD(3))" json:"rsp_hdr_retry_after"`
+	RspHdrRetryAfter string `gorm:"column:rsp_hdr_retry_after;type:String CODEC(ZSTD(3))" json:"rspHdrRetryAfter"`
 	// RspHdrServerTiming 服务器时间，传达请求-响应周期中的一个或多个性能参数或描述
-	RspHdrServerTiming string `gorm:"column:rsp_hdr_server_timing;type:String CODEC(ZSTD(3))" json:"rsp_hdr_server_timing"`
+	RspHdrServerTiming string `gorm:"column:rsp_hdr_server_timing;type:String CODEC(ZSTD(3))" json:"rspHdrServerTiming"`
 	// RspHdrServiceWorker Service Worker 标识，包含在 SW 脚本资源的获取请求中
-	RspHdrServiceWorker string `gorm:"column:rsp_hdr_service_worker;type:String CODEC(ZSTD(3))" json:"rsp_hdr_service_worker"`
+	RspHdrServiceWorker string `gorm:"column:rsp_hdr_service_worker;type:String CODEC(ZSTD(3))" json:"rspHdrServiceWorker"`
 	// RspHdrServiceWorkerAllowed Service Worker 允许路径，移除 SW 注册的路径限制
-	RspHdrServiceWorkerAllowed string `gorm:"column:rsp_hdr_service_worker_allowed;type:String CODEC(ZSTD(3))" json:"rsp_hdr_service_worker_allowed"`
+	RspHdrServiceWorkerAllowed string `gorm:"column:rsp_hdr_service_worker_allowed;type:String CODEC(ZSTD(3))" json:"rspHdrServiceWorkerAllowed"`
 	// RspHdrSourceMap 源代码映射，链接到源代码映射文件以便调试器可逐步执行原始源代码
-	RspHdrSourceMap string `gorm:"column:rsp_hdr_source_map;type:String CODEC(ZSTD(3))" json:"rsp_hdr_source_map"`
+	RspHdrSourceMap string `gorm:"column:rsp_hdr_source_map;type:String CODEC(ZSTD(3))" json:"rspHdrSourceMap"`
 	// RspHdrUpgrade 协议升级，用于将已建立的连接升级为不同协议
-	RspHdrUpgrade string `gorm:"column:rsp_hdr_upgrade;type:String CODEC(ZSTD(3))" json:"rsp_hdr_upgrade"`
+	RspHdrUpgrade string `gorm:"column:rsp_hdr_upgrade;type:String CODEC(ZSTD(3))" json:"rspHdrUpgrade"`
 	// RspHdrAltSvc 替代服务，用于列出访问该服务的替代方式（不同协议/端口）
-	RspHdrAltSvc string `gorm:"column:rsp_hdr_alt_svc;type:String CODEC(ZSTD(3))" json:"rsp_hdr_alt_svc"`
+	RspHdrAltSvc string `gorm:"column:rsp_hdr_alt_svc;type:String CODEC(ZSTD(3))" json:"rspHdrAltSvc"`
 	// RspHdrPriority 资源优先级，服务器在响应中可用于重新调整请求的优先级
-	RspHdrPriority string `gorm:"column:rsp_hdr_priority;type:String CODEC(ZSTD(3))" json:"rsp_hdr_priority"`
+	RspHdrPriority string `gorm:"column:rsp_hdr_priority;type:String CODEC(ZSTD(3))" json:"rspHdrPriority"`
 }
 
+// NewHttpResponseHeaders 从 HTTP 响应构建响应头宽表模型，涉敏头（认证质询、Set-Cookie、WebSocket 握手接受）以 Crypto 加密存储。
 func NewHttpResponseHeaders(resp *http.Response) *HttpResponseHeaders {
 	return &HttpResponseHeaders{
 		// 认证（加密存储）
@@ -854,30 +858,92 @@ type HttpRequestBody struct {
 	// Method HTTP请求方法，如GET、POST、PUT、DELETE等
 	Method string `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"method"`
 	// ReqBody 请求主体内容，保存至 oss，若为空字符串，则表示内容为空，避免在 oss 内存储大量无效空文件
-	ReqBody string `gorm:"type:String CODEC(ZSTD(3))" json:"req_body"`
-	// ReqTime 请求时间，HTTP请求开始的时间戳
-	ReqTime time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"req_time"`
-	// ReqDuration 请求持续时间，从请求开始到请求完成的时间
-	ReqDuration time.Duration `gorm:"type:Int64 CODEC(ZSTD(3))" json:"req_duration"`
+	ReqBody string `gorm:"type:String CODEC(ZSTD(3))" json:"reqBody"`
+	// ReqBodyHash 请求主体内容的 HMAC-SHA256 摘要（hex 编码，带密钥防离线爆破），
+	// 经 hash 序列化器封装，空内容时为空内容的摘要
+	ReqBodyHash serializer.Hash `gorm:"type:String CODEC(ZSTD(3));serializer:hash" json:"reqBodyHash" secure:"mode=\"hmac-sha256\",offset=12808,length=32"`
+	// ReqBodyLength 请求主体内容的字节长度，空内容时为 0
+	ReqBodyLength int64 `gorm:"type:Int64 CODEC(ZSTD(3))" json:"reqBodyLength"`
 }
 
-func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Request, startTime, endTime time.Time, cryptoKey []byte) (*HttpRequestBody, error) {
+// bodyStoreResult 正文存储结果，包含 S3 对象键、内容摘要与内容长度
+type bodyStoreResult struct {
+	// Key S3 对象键，内容为空时为空字符串，不执行上传
+	Key string
+	// Hash 内容 HMAC-SHA256 摘要（hex 编码，带密钥防离线爆破），空内容时为空内容的摘要
+	Hash string
+	// Length 内容字节长度，空内容时为 0
+	Length int64
+}
+
+// storeBody 将请求/响应体内容上传至 S3，并返回对象键、内容摘要与内容长度。
+// 为避免全量缓冲正文导致内存占用不稳定，先将内容流式写入本地临时文件，
+// 写入过程中同步计算带密钥的 HMAC-SHA256 摘要（内存占用恒定，与正文大小无关）。
+// 摘要与对象键同源：对象键即「前缀 + 摘要 + 扩展名」，故摘要不可离线伪造，
+// 避免明文摘要经 req_body / rsp_body 列泄漏内容指纹。
+// 依据摘要确定最终对象键后，通过 Exists 判断是否已存在：
+//   - 已存在：跳过上传，直接复用（内容寻址去重，避免重复数据冗余存储与重复上传）
+//   - 不存在：从临时文件上传
+//
+// 内容为空时返回空对象键，不执行上传，但摘要与长度仍如实记录。
+func storeBody(ctx context.Context, client *s3.S3Client, reader io.Reader, req bool, cryptoKey, hashKey []byte) (*bodyStoreResult, error) {
+	// 流式写入临时文件并同步计算摘要，磁盘暂存替代内存全量缓冲
+	h := hmac.New(sha256.New, hashKey)
+	tmpFile, err := s3.NewStagingTempFile()
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	defer tmpFile.Close()
+	defer os.Remove(tmpFile.Name())
+	size, err := io.Copy(io.MultiWriter(tmpFile, h), reader)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	hash := hex.EncodeToString(h.Sum(nil))
+	// 内容为空时返回空对象键，避免在 oss 内存储无效空文件
+	if size == 0 {
+		return &bodyStoreResult{Hash: hash}, nil
+	}
+	key := objectKey(hash, req)
+	// 最终键已存在时直接复用，跳过上传
+	finalZkcn := s3.NewZkcn(client, key, cryptoKey, 0)
+	if exists, err := finalZkcn.Exists(ctx); err != nil {
+		return nil, errors.WithStack(err)
+	} else if !exists {
+		// 从临时文件读取并上传，避免重复内容重复上传
+		if _, err := tmpFile.Seek(0, io.SeekStart); err != nil {
+			return nil, errors.WithStack(err)
+		}
+		if _, err := finalZkcn.Store(ctx, tmpFile); err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+	return &bodyStoreResult{Key: key, Hash: hash, Length: size}, nil
+}
+
+// NewHttpRequestBody 构建HTTP请求正文信息
+// 将解压后的请求体上传至 S3，并以内容摘要作为对象键实现去重存储。
+// 摘要密钥由请求正文字段的 secure 标签就地派生，与落库序列化器同源。
+func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Request, cryptoKey []byte) (*HttpRequestBody, error) {
+	defer req.Body.Close()
 	body, err := decompressRequestBody(req)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	defer body.Close()
-	id := serializer.NewHexUUIDv4()
-	key := objectKey(id.String(), true)
-	zkcn := s3.NewZkcn(client, key, cryptoKey, 0)
-	if _, err := zkcn.Store(ctx, body); err != nil {
+	hashKey, err := crypto.HashKeyForField(&HttpRequestBody{}, "reqBodyHash", "json")
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	result, err := storeBody(ctx, client, body, true, cryptoKey, hashKey)
+	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &HttpRequestBody{
-		Method:      req.Method,
-		ReqBody:     key,
-		ReqTime:     startTime,
-		ReqDuration: endTime.Sub(startTime),
+		Method:        req.Method,
+		ReqBody:       result.Key,
+		ReqBodyHash:   serializer.NewHashDigest(result.Hash),
+		ReqBodyLength: result.Length,
 	}, nil
 }
 
@@ -885,30 +951,72 @@ func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Requ
 // 包含HTTP响应的主体内容和时间信息，头部字段已迁移至 HttpResponseHeaders
 type HttpResponseBody struct {
 	// RspBody 响应主体内容，保存至 oss，若为空字符串，则表示内容为空，避免在 oss 内存储大量无效空文件
-	RspBody string `gorm:"type:String CODEC(ZSTD(3))" json:"rsp_body"`
-	// RspTime 响应时间，HTTP响应开始的时间戳
-	RspTime time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"rsp_time"`
-	// RspDuration 响应持续时间，从响应开始到响应完成的时间
-	RspDuration time.Duration `gorm:"type:Int64 CODEC(ZSTD(3))" json:"rsp_duration"`
+	RspBody string `gorm:"type:String CODEC(ZSTD(3))" json:"rspBody"`
+	// RspBodyHash 响应主体内容的 HMAC-SHA256 摘要（hex 编码，带密钥防离线爆破），
+	// 经 hash 序列化器封装，空内容时为空内容的摘要
+	RspBodyHash serializer.Hash `gorm:"type:String CODEC(ZSTD(3));serializer:hash" json:"rspBodyHash" secure:"mode=\"hmac-sha256\",offset=12809,length=32"`
+	// RspBodyLength 响应主体内容的字节长度，空内容时为 0
+	RspBodyLength int64 `gorm:"type:Int64 CODEC(ZSTD(3))" json:"rspBodyLength"`
 }
 
-func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Response, startTime, endTime time.Time, cryptoKey []byte) (*HttpResponseBody, error) {
+// NewHttpResponseBody 构建HTTP响应正文信息
+// 将解压后的响应体上传至 S3，并以内容摘要作为对象键实现去重存储。
+// 摘要密钥由响应正文字段的 secure 标签就地派生，与落库序列化器同源。
+func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Response, cryptoKey []byte) (*HttpResponseBody, error) {
+	defer resp.Body.Close()
 	body, err := decompressResponseBody(resp)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	defer body.Close()
-	id := serializer.NewHexUUIDv4()
-	key := objectKey(id.String(), true)
-	zkcn := s3.NewZkcn(client, key, cryptoKey, 0)
-	if _, err := zkcn.Store(ctx, body); err != nil {
+	hashKey, err := crypto.HashKeyForField(&HttpResponseBody{}, "rspBodyHash", "json")
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	result, err := storeBody(ctx, client, body, false, cryptoKey, hashKey)
+	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &HttpResponseBody{
-		RspBody:     key,
-		RspTime:     startTime,
-		RspDuration: endTime.Sub(startTime),
+		RspBody:       result.Key,
+		RspBodyHash:   serializer.NewHashDigest(result.Hash),
+		RspBodyLength: result.Length,
 	}, nil
+}
+
+// TcpFingerprint 表示 HttpTransport 上的 TCP 指纹（客户端/服务端），
+// 来源于 pcap 导入阶段写入 tcp 包表的指纹，经组包器 StreamMeta 透传填充。
+type TcpFingerprint struct {
+	// ClientOS 客户端操作系统
+	ClientOS string `gorm:"column:fp_tcp_client_os;type:String CODEC(ZSTD(3))" json:"fpTcpClientOs"`
+	// ClientOSQuality 客户端操作系统识别置信度
+	ClientOSQuality float64 `gorm:"column:fp_tcp_client_os_quality;type:Float64 CODEC(ZSTD(3))" json:"fpTcpClientOsQuality"`
+	// ClientSig 客户端 TCP 签名
+	ClientSig string `gorm:"column:fp_tcp_client_sig;type:String CODEC(ZSTD(3))" json:"fpTcpClientSig"`
+	// ServerOS 服务端操作系统
+	ServerOS string `gorm:"column:fp_tcp_server_os;type:String CODEC(ZSTD(3))" json:"fpTcpServerOs"`
+	// ServerOSQuality 服务端操作系统识别置信度
+	ServerOSQuality float64 `gorm:"column:fp_tcp_server_os_quality;type:Float64 CODEC(ZSTD(3))" json:"fpTcpServerOsQuality"`
+	// ServerSig 服务端 TCP 签名
+	ServerSig string `gorm:"column:fp_tcp_server_sig;type:String CODEC(ZSTD(3))" json:"fpTcpServerSig"`
+	// MTU MTU 值
+	MTU uint16 `gorm:"column:fp_tcp_mtu;type:UInt16 CODEC(ZSTD(3))" json:"fpTcpMtu"`
+}
+
+// HttpFingerprint 表示 HttpTransport 上的 Http 指纹与设备类别猜测。
+type HttpFingerprint struct {
+	// Browser 浏览器
+	Browser string `gorm:"column:fp_http_browser;type:String CODEC(ZSTD(3))" json:"fpHttpBrowser"`
+	// BrowserQuality 浏览器识别置信度
+	BrowserQuality float64 `gorm:"column:fp_http_browser_quality;type:Float64 CODEC(ZSTD(3))" json:"fpHttpBrowserQuality"`
+	// Server 服务端软件
+	Server string `gorm:"column:fp_http_server;type:String CODEC(ZSTD(3))" json:"fpHttpServer"`
+	// ServerQuality 服务端软件识别置信度
+	ServerQuality float64 `gorm:"column:fp_http_server_quality;type:Float64 CODEC(ZSTD(3))" json:"fpHttpServerQuality"`
+	// Language HTTP 语言
+	Language string `gorm:"column:fp_http_language;type:String CODEC(ZSTD(3))" json:"fpHttpLanguage"`
+	// DeviceGuess 设备类别猜测
+	DeviceGuess string `gorm:"column:fp_device_guess;type:String CODEC(ZSTD(3))" json:"fpDeviceGuess"`
 }
 
 // HttpTransport 表示HTTP传输层信息
@@ -919,11 +1027,13 @@ func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Re
 //   - BaseMeta:             基础元数据，包含命名空间、捕获器、版本和会话ID
 //   - FusedMeta:            融合元数据，包含帧堆栈信息
 //   - HttpBase:             HTTP基础信息，包含客户端/服务器IP端口和协议版本
+//   - TcpFingerprint:       TCP指纹信息，包含客户端/服务端OS、签名与MTU特征
 //   - HttpURI:              HTTP URI信息，包含URL的各个组成部分
 //   - HttpRequestBody:      HTTP请求正文信息，包含请求方法、主体和时间信息
 //   - HttpRequestHeaders:   HTTP请求头信息，以宽表形式存储所有标准请求头字段
 //   - HttpResponse:         HTTP响应正文信息，包含响应主体和时间信息
 //   - HttpResponseHeaders:  HTTP响应头信息，以宽表形式存储所有标准响应头字段
+//   - HttpFingerprint:      Http指纹信息，包含浏览器、服务端与设备类别猜测
 //
 // 使用场景:
 //   - HTTP流量分析和监控
@@ -931,12 +1041,18 @@ func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Re
 //   - API调用追踪和调试
 //   - 安全审计和入侵检测
 type HttpTransport struct {
+	// RowMeta 行唯一标识元数据，提供全局唯一 ID
+	RowMeta
 	// BaseMeta 基础元数据，提供数据隔离和会话标识
 	BaseMeta
-	// FusedMeta 融合元数据，提供帧堆栈信息
-	FusedMeta
+	// TimestampMeta 时间元数据，包含创建时间和业务时间戳
+	TimestampMeta
+	// TraceMeta 跟踪元数据，用以串联起相关的数据
+	TraceMeta
 	// HttpBase HTTP基础连接信息
 	HttpBase
+	// TcpFingerprint TCP被动指纹信息
+	TcpFingerprint
 	// HttpURI HTTP请求URI信息
 	HttpURI
 	// HttpRequestBody HTTP请求正文信息
@@ -947,130 +1063,10 @@ type HttpTransport struct {
 	HttpResponseBody
 	// HttpResponseHeaders HTTP响应头信息
 	HttpResponseHeaders
-}
-
-// Build 构建完整的HTTP传输对象
-// 实现tcp.AppProtocolDetector接口的Build方法，用于将提取的HTTP数据构建为应用层可用的HTTP传输对象
-// 该方法将原始的HTTP请求/响应、网络层信息和时间信息整合到一个统一的HttpTransport结构中
-//
-// 参数:
-//   - ctx: 上下文对象，用于传递取消信号和超时控制
-//   - meta: 基础元数据，包含命名空间、捕获器名称、版本号等系统信息
-//   - clientAddr: 客户端IP地址
-//   - serverAddr: 服务端IP地址
-//   - clientPort: 客户端端口号
-//   - serverPort: 服务端端口号
-//   - clientFrameStack: 客户端帧栈信息，包含HTTP请求的捕获时间和网络层堆栈
-//   - serverFrameStack: 服务端帧栈信息，包含HTTP响应的捕获时间和网络层堆栈
-//   - clientPayload: 客户端负载，类型为*http.Request，从Extract方法提取的HTTP请求
-//   - serverPayload: 服务端负载，类型为*http.Response，从Extract方法提取的HTTP响应
-//
-// 返回值:
-//   - app: 构建的HTTP传输对象，类型为*n.HttpTransport
-//   - err: 构建过程中发生的错误，如数据转换失败、JSON序列化失败等
-//
-// 构建流程:
-//  1. 验证基础元数据不为nil
-//  2. 构建HTTP基础信息（网络层信息）：
-//     - 设置客户端和服务端的IP地址、端口号
-//     - 根据客户端IP地址判断IP版本（IPv4或IPv6）
-//  3. 如果有HTTP请求数据，构建HTTP请求信息：
-//     - 验证类型转换，确保clientPayload为*http.Request
-//     - 序列化HTTP头部为JSON格式
-//     - 读取HTTP请求体内容
-//     - 序列化URL查询参数为JSON格式
-//     - 计算请求持续时间和时间戳
-//     - 提取关键HTTP头部字段（User-Agent、Referer、Cookie等）
-//     - 构建URI信息（URL、协议、主机、路径、查询参数、片段）
-//     - 设置HTTP协议版本
-//  4. 如果有HTTP响应数据，构建HTTP响应信息：
-//     - 验证类型转换，确保serverPayload为*http.Response
-//     - 序列化HTTP响应头部为JSON格式
-//     - 读取HTTP响应体内容
-//     - 计算响应持续时间和时间戳
-//     - 提取关键HTTP响应头部字段（Server、Set-Cookie、Location等）
-//  5. 合并客户端和服务端的帧栈信息，按时间戳排序
-//  6. 返回完整的HttpTransport对象，包含所有HTTP传输信息
-func NewHttpTransport(
-	ctx context.Context,
-	s3Client *s3.S3Client,
-	meta *BaseMeta,
-	clientAddr, serverAddr net.IP,
-	clientPort, serverPort layers.TCPPort,
-	clientFrameStack, serverFrameStack FrameStack,
-	request *http.Request, response *http.Response,
-	kd *key.KeyDerivation,
-) (transport *HttpTransport, err error) {
-	if meta == nil {
-		return nil, errors.New("meta is nil")
-	}
-	var hBase HttpBase
-	hBase.ClientIP = serializer.IPAddr(clientAddr)
-	hBase.ClientPort = clientPort
-	hBase.ServerIP = serializer.IPAddr(serverAddr)
-	hBase.ServerPort = serverPort
-	if clientAddr.To4() != nil {
-		hBase.IPVersion = layers.IPProtocolIPv4
-	} else {
-		hBase.IPVersion = layers.IPProtocolIPv6
-	}
-	cryptoKey, err := kd.DeriveChildKey(CRYPTO_KEY_OFFSET, CRYPTO_KEY_LENGTH)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	var uri *HttpURI
-	var requestBody *HttpRequestBody
-	var requestHeaders *HttpRequestHeaders
-	if request != nil && len(clientFrameStack) != 0 {
-		uri, err = NewHttpURI(request.URL)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		startTime := clientFrameStack[0].Timestamp
-		endTime := clientFrameStack[len(clientFrameStack)-1].Timestamp
-		requestBody, err = NewHttpRequestBody(ctx, s3Client, request, startTime, endTime, cryptoKey)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		requestHeaders = NewHttpRequestHeaders(request)
-		hBase.HttpVersion = request.Proto
-	}
-	var responseBody *HttpResponseBody
-	var responseHeaders *HttpResponseHeaders
-	if response != nil && len(serverFrameStack) != 0 {
-		startTime := serverFrameStack[0].Timestamp
-		endTime := serverFrameStack[len(serverFrameStack)-1].Timestamp
-		responseBody, err = NewHttpResponseBody(ctx, s3Client, response, startTime, endTime, cryptoKey)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		responseHeaders = NewHttpResponseHeaders(response)
-	}
-	if uri == nil {
-		uri = &HttpURI{}
-	}
-	if requestBody == nil {
-		requestBody = &HttpRequestBody{}
-	}
-	if requestHeaders == nil {
-		requestHeaders = &HttpRequestHeaders{}
-	}
-	if responseBody == nil {
-		responseBody = &HttpResponseBody{}
-	}
-	if responseHeaders == nil {
-		responseHeaders = &HttpResponseHeaders{}
-	}
-	return &HttpTransport{
-		BaseMeta: *meta,
-		FusedMeta: FusedMeta{
-			FrameStack: sortedFrameStack(clientFrameStack, serverFrameStack),
-		},
-		HttpBase:            hBase,
-		HttpURI:             *uri,
-		HttpRequestBody:     *requestBody,
-		HttpRequestHeaders:  *requestHeaders,
-		HttpResponseBody:    *responseBody,
-		HttpResponseHeaders: *responseHeaders,
-	}, nil
+	// HttpFingerprint Http指纹信息
+	HttpFingerprint
+	// AppTailer 应用层尾部信息
+	AppTailer
+	// TagsMeta 风险标签元数据
+	TagsMeta
 }

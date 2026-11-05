@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
 )
 
 // TestGroup_Struct 测试 Group 结构体的基本属性。

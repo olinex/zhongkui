@@ -1,14 +1,14 @@
 package core
 
 import (
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // RbacPolicy 表示基于角色的访问控制策略
 // 该结构体遵循Casbin RBAC模型，支持策略(policy)和组(group)两种类型
-// 数据库表名默认为"rbac_policies"，通过uniqueIndex:rbac_policy_unique_index确保唯一性
+// 数据库表名默认为"rbac_policies"，通过uniqueIndex:uq_rbac_policies_ptype_v0_v1_v2确保唯一性
 type RbacPolicy struct {
 	database.BaseModel
 
@@ -35,6 +35,14 @@ type RbacPolicy struct {
 	// 当Ptype='p'时：表示效果(effect)，只能是'allow'或'deny'
 	// 当Ptype='g'时：留空
 	V3 string `gorm:"type:VARCHAR(64)"`
+
+	// V4 策略的第五个参数
+	// 为 gorm-adapter 的 CasbinRule 结构预留（INSERT 会携带 v4 列），当前模型不使用，留空
+	V4 string `gorm:"type:VARCHAR(64)"`
+
+	// V5 策略的第六个参数
+	// 为 gorm-adapter 的 CasbinRule 结构预留（INSERT 会携带 v5 列），当前模型不使用，留空
+	V5 string `gorm:"type:VARCHAR(64)"`
 }
 
 // NewGroupPolicy 创建新的组策略实例
@@ -50,7 +58,7 @@ type RbacPolicy struct {
 //   - *RbacPolicy: 新创建的组策略实例
 func NewGroupPolicy(group, target, action, effect string) *RbacPolicy {
 	return &RbacPolicy{
-		Ptype: base.POLICY_LABEL,
+		Ptype: base.PolicyLabel,
 		V0:    group,
 		V1:    target,
 		V2:    action,
@@ -70,7 +78,7 @@ func NewGroupPolicy(group, target, action, effect string) *RbacPolicy {
 //   - *RbacPolicy: 新创建的用户策略实例
 func NewUserPolicy(unionID serializer.HexUUID, group, namespace string) *RbacPolicy {
 	return &RbacPolicy{
-		Ptype: base.GROUP_LABEL,
+		Ptype: base.GroupLabel,
 		V0:    unionID.String(),
 		V1:    group,
 		V2:    namespace,
@@ -79,7 +87,7 @@ func NewUserPolicy(unionID serializer.HexUUID, group, namespace string) *RbacPol
 
 // RbacPolicyTemplate 表示RBAC策略模板
 // 用于预定义可用的目标对象和操作组合，确保策略的一致性
-// 数据库表名默认为"rbac_policy_templates"，通过uniqueIndex:unique_target_action确保唯一性
+// 数据库表名默认为"rbac_policy_templates"，通过uniqueIndex:uq_rbac_policy_templates_target_action确保唯一性
 type RbacPolicyTemplate struct {
 	database.BaseModel
 
@@ -106,5 +114,3 @@ func NewRbacPolicyTemplate(target, action string) *RbacPolicyTemplate {
 		Action: action,
 	}
 }
-
-

@@ -1,0 +1,17 @@
+# 代码责任人
+# 语法与 GitHub/Gitee CODEOWNERS 一致；账号以 Gitee 用户名为准。
+
+*                       @olinex
+
+/docs/                  @olinex
+/docs/generated/        @olinex
+/docs/curated/          @olinex
+/internal/docs/         @olinex
+/internal/ai/           @olinex
+/internal/manager/      @olinex
+/internal/tagengine/    @olinex
+/internal/capture/      @olinex
+/.github/               @olinex
+/.gitee/                @olinex
+/LICENSE                @olinex
+/NOTICE                 @olinex

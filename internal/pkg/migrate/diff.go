@@ -8,39 +8,63 @@ import (
 	"strings"
 
 	"github.com/pterm/pterm"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
+// ColumnInfo 描述数据库中的列信息。
 type ColumnInfo struct {
-	Name     string
+	// Name 列名。
+	Name string
+	// DataType 列的数据类型。
 	DataType string
+	// Nullable 列是否可空。
 	Nullable string
-	Default  string
+	// Default 列的默认值表达式。
+	Default string
 }
 
+// TableInfo 描述数据库中的表及其列集合。
 type TableInfo struct {
-	Name    string
+	// Name 表名。
+	Name string
+	// Columns 表的列集合。
 	Columns []ColumnInfo
 }
 
+// DiffResult 汇总两套数据库结构的比对结果。
 type DiffResult struct {
-	NewTables      []TableInfo
-	DroppedTables  []TableInfo
+	// NewTables 目标多出的表。
+	NewTables []TableInfo
+	// DroppedTables 目标缺少的表。
+	DroppedTables []TableInfo
+	// ModifiedTables 列发生变化（增删或改类型）的表。
 	ModifiedTables []TableDiff
-	Identical      bool
+	// Identical 两套结构是否完全一致。
+	Identical bool
 }
 
+// ColumnDiff 描述单列的变更。
 type ColumnDiff struct {
+	// ColumnName 列名。
 	ColumnName string
-	OldType    string
-	NewType    string
-	Status     string
+	// OldType 变更前的类型。
+	OldType string
+	// NewType 变更后的类型。
+	NewType string
+	// Status 变更状态标识。
+	Status string
 }
 
+// TableDiff 描述单表的列级变更。
 type TableDiff struct {
-	TableName       string
-	NewColumns      []ColumnInfo
-	DroppedColumns  []ColumnInfo
+	// TableName 表名。
+	TableName string
+	// NewColumns 新增的列。
+	NewColumns []ColumnInfo
+	// DroppedColumns 删除的列。
+	DroppedColumns []ColumnInfo
+	// ModifiedColumns 类型变化的列。
 	ModifiedColumns []ColumnDiff
 }
 
@@ -51,6 +75,7 @@ type tableReader struct {
 	filterTable      func(string) bool
 }
 
+// Diff 比对当前数据库与迁移后目标数据库的结构，输出差异表格。
 func Diff(ctx context.Context, currentCfg, tempCfg *Config) error {
 	var (
 		tempDB *TempDB
@@ -98,34 +123,39 @@ func Diff(ctx context.Context, currentCfg, tempCfg *Config) error {
 
 	result := compareTableSets(currentTables, targetTables)
 	if result.Identical {
-		pterm.Success.Println("Database schema is up to date, no changes pending")
+		pterm.Success.Println(translate.T("cli.migrate.diff-identical", nil))
 		return nil
 	}
 
 	data := pterm.TableData{
-		{"Change", "Table", "Column", "Detail"},
+		{
+			translate.T("cli.migrate.col-change", nil),
+			translate.T("cli.migrate.col-table", nil),
+			translate.T("cli.migrate.col-column", nil),
+			translate.T("cli.migrate.col-detail", nil),
+		},
 	}
 
 	for _, t := range result.NewTables {
 		for _, col := range t.Columns {
-			data = append(data, []string{"New Table", t.Name, col.Name, fmt.Sprintf("%s %s", col.DataType, col.Nullable)})
+			data = append(data, []string{translate.T("cli.migrate.diff-new-table", nil), t.Name, col.Name, fmt.Sprintf("%s %s", col.DataType, col.Nullable)})
 		}
 	}
 	for _, t := range result.DroppedTables {
 		for _, col := range t.Columns {
-			data = append(data, []string{"Dropped Table", t.Name, col.Name, col.DataType})
+			data = append(data, []string{translate.T("cli.migrate.diff-dropped-table", nil), t.Name, col.Name, col.DataType})
 		}
 	}
 	for _, t := range result.ModifiedTables {
 		for _, col := range t.NewColumns {
-			data = append(data, []string{"New Column", t.TableName, col.Name, fmt.Sprintf("%s %s", col.DataType, col.Nullable)})
+			data = append(data, []string{translate.T("cli.migrate.diff-new-column", nil), t.TableName, col.Name, fmt.Sprintf("%s %s", col.DataType, col.Nullable)})
 		}
 		for _, col := range t.DroppedColumns {
-			data = append(data, []string{"Dropped Column", t.TableName, col.Name, col.DataType})
+			data = append(data, []string{translate.T("cli.migrate.diff-dropped-column", nil), t.TableName, col.Name, col.DataType})
 		}
 		for _, col := range t.ModifiedColumns {
 			detail := fmt.Sprintf("%s → %s", col.OldType, col.NewType)
-			data = append(data, []string{"Modified", t.TableName, col.ColumnName, detail})
+			data = append(data, []string{translate.T("cli.migrate.diff-modified", nil), t.TableName, col.ColumnName, detail})
 		}
 	}
 
@@ -144,7 +174,12 @@ FROM information_schema.tables
 WHERE table_schema = 'public'
 AND table_type = 'BASE TABLE'
 ORDER BY table_name`,
-			listColumnsQuery: `SELECT column_name, data_type, is_nullable,
+			// information_schema 把扩展类型（如 pgvector 的 vector）统一报告为
+			// USER-DEFINED，其真实类型名在 udt_name 中；回退到 udt_name 才能与模型
+			// 声明的 vector(n) 正确比对，否则必然误报类型不匹配。
+			listColumnsQuery: `SELECT column_name,
+       CASE WHEN data_type = 'USER-DEFINED' THEN udt_name ELSE data_type END,
+       is_nullable,
        COALESCE(column_default, '')
 FROM information_schema.columns
 WHERE table_schema = 'public' AND table_name = $1
@@ -152,7 +187,7 @@ ORDER BY ordinal_position`,
 			scanColumn: func(rows *sql.Rows) (ColumnInfo, error) {
 				var col ColumnInfo
 				err := rows.Scan(&col.Name, &col.DataType, &col.Nullable, &col.Default)
-				return col, err
+				return col, errors.WithStack(err)
 			},
 		})
 	case "clickhouse":
@@ -168,7 +203,7 @@ ORDER BY position`,
 			scanColumn: func(rows *sql.Rows) (ColumnInfo, error) {
 				var col ColumnInfo
 				err := rows.Scan(&col.Name, &col.DataType, &col.Nullable)
-				return col, err
+				return col, errors.WithStack(err)
 			},
 			filterTable: func(name string) bool {
 				if strings.HasPrefix(name, ".inner") {
@@ -188,7 +223,7 @@ ORDER BY position`,
 func readTables(ctx context.Context, db *sql.DB, r tableReader) (map[string]TableInfo, error) {
 	rows, err := db.QueryContext(ctx, r.listTablesQuery)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	defer rows.Close()
 
@@ -196,7 +231,7 @@ func readTables(ctx context.Context, db *sql.DB, r tableReader) (map[string]Tabl
 	for rows.Next() {
 		var name string
 		if err := rows.Scan(&name); err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		if r.filterTable != nil && !r.filterTable(name) {
 			continue
@@ -208,7 +243,7 @@ func readTables(ctx context.Context, db *sql.DB, r tableReader) (map[string]Tabl
 	for _, name := range tableNames {
 		colRows, err := db.QueryContext(ctx, r.listColumnsQuery, name)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		var cols []ColumnInfo
@@ -216,7 +251,7 @@ func readTables(ctx context.Context, db *sql.DB, r tableReader) (map[string]Tabl
 			col, err := r.scanColumn(colRows)
 			if err != nil {
 				colRows.Close()
-				return nil, err
+				return nil, errors.WithStack(err)
 			}
 			cols = append(cols, col)
 		}

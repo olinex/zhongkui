@@ -20,11 +20,13 @@ export enum HttpHeader {
   CONTENT_LANGUAGE = "Content-Language",
   AUTHORIZATION = "Authorization",
   CONTENT_TYPE = "Content-Type",
+  NAMESPACE = "X-Namespace",
 }
 
 export enum BackendDataType {
   ACTIONS = "actions",
   UUID = "datatypes.BinUUID",
+  HEX = "hex",
   STRING = "string",
   INT = "int",
   UINT = "uint",
@@ -46,6 +48,7 @@ export enum BackendDataType {
   DATE = "serializer.DateOnly",
   TIME = "serializer.TimeOnly",
   DURATION = "time.Duration",
+  ENUM = "enum",
 }
 
 export enum SearchAction {
@@ -69,6 +72,8 @@ export enum SearchAction {
   LESS_EQUAL = "lte",
   GREATER = "gt",
   GREATER_EQUAL = "gte",
+  // FTS 全文检索：后端按 tsvector @@ plainto_tsquery 匹配（多词为 AND 语义）
+  FTS = "fts",
 }
 
 export enum SupportLanguage {

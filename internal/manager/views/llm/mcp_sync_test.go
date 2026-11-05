@@ -1,0 +1,142 @@
+package llm
+
+import (
+	"zhongkuisec.com/zhongkui/internal/ai/llminfra"
+	// 标准库
+	"testing"
+
+	// 第三方
+	"github.com/glebarez/sqlite"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+
+	// 项目内部
+	mcptool "zhongkuisec.com/zhongkui/internal/ai/tools/mcp"
+	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
+)
+
+// newSyncTestDB 构造工具同步对账测试用的 sqlite 内存库并迁移 mcp_servers / llm_tools 两表。
+func newSyncTestDB(t *testing.T) *gorm.DB {
+	t.Helper()
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Discard})
+	if err != nil {
+		t.Fatalf("gorm.Open(sqlite) error = %v", err)
+	}
+	if err := db.AutoMigrate(&aimodel.McpServer{}, &aimodel.LlmTool{}); err != nil {
+		t.Fatalf("AutoMigrate error = %v", err)
+	}
+	return db
+}
+
+// seedSyncServer 插入一台 MCP 服务器并返回其记录。
+func seedSyncServer(t *testing.T, db *gorm.DB, name string) *aimodel.McpServer {
+	t.Helper()
+	server := &aimodel.McpServer{Name: name, Transport: string(mcptool.TransportStreamableHTTP), URL: "http://" + name + ".test/mcp", TimeoutSeconds: 5, Enabled: true}
+	if err := db.Create(server).Error; err != nil {
+		t.Fatalf("seed server %q error = %v", name, err)
+	}
+	return server
+}
+
+// seedSyncTool 插入一行 llm_tools 并返回其记录。
+func seedSyncTool(t *testing.T, db *gorm.DB, name string, source aimodel.ToolSource, serverID *uint, remoteName, description string, enabled bool) *aimodel.LlmTool {
+	t.Helper()
+	row := &aimodel.LlmTool{Name: name, Source: source, McpServerID: serverID, RemoteName: remoteName, Description: description, Enabled: enabled}
+	if err := db.Create(row).Error; err != nil {
+		t.Fatalf("seed tool %q error = %v", name, err)
+	}
+	return row
+}
+
+// TestReconcileMCPTools_PreservesEnabledRefreshesAndCleans 覆盖 spec「重复同步保留启用状态并
+// 清理失效工具」场景：远端既有工具 A 保留 enabled 并刷新 description，新增工具 B 以 enabled=false
+// 落库，远端已移除的工具 C 其行被删除，返回的计数为 (created=1, updated=1, removed=1)。
+func TestReconcileMCPTools_PreservesEnabledRefreshesAndCleans(t *testing.T) {
+	db := newSyncTestDB(t)
+	server := seedSyncServer(t, db, "srv-a")
+	seedSyncTool(t, db, "tool-a", aimodel.ToolSourceMCP, &server.ID, "tool-a", "old description", true)
+	seedSyncTool(t, db, "tool-c", aimodel.ToolSourceMCP, &server.ID, "tool-c", "stale description", true)
+
+	out, err := reconcileMCPTools(db, server, []llminfra.MCPRemoteTool{
+		{Name: "tool-a", Description: "new description"},
+		{Name: "tool-b", Description: "brand new"},
+	})
+	if err != nil {
+		t.Fatalf("reconcileMCPTools error = %v", err)
+	}
+	if out.Created != 1 || out.Updated != 1 || out.Removed != 1 {
+		t.Errorf("counts = (created=%d, updated=%d, removed=%d), want (1, 1, 1)", out.Created, out.Updated, out.Removed)
+	}
+
+	var a aimodel.LlmTool
+	if err := db.Where("name = ?", "tool-a").First(&a).Error; err != nil {
+		t.Fatalf("tool-a lookup error = %v", err)
+	}
+	if !a.Enabled {
+		t.Error("tool-a enabled = false, want true (an existing tool keeps its enabled flag)")
+	}
+	if a.Description != "new description" {
+		t.Errorf("tool-a description = %q, want the refreshed one", a.Description)
+	}
+
+	var b aimodel.LlmTool
+	if err := db.Where("name = ?", "tool-b").First(&b).Error; err != nil {
+		t.Fatalf("tool-b lookup error = %v", err)
+	}
+	if b.Enabled {
+		t.Error("tool-b enabled = true, want false (a newly discovered tool is disabled)")
+	}
+	if b.Source != aimodel.ToolSourceMCP || b.McpServerID == nil || *b.McpServerID != server.ID || b.RemoteName != "tool-b" {
+		t.Errorf("tool-b row = %+v, want source=mcp with the owning server and remote_name", b)
+	}
+
+	var count int64
+	if err := db.Model(&aimodel.LlmTool{}).Where("name = ?", "tool-c").Count(&count).Error; err != nil {
+		t.Fatalf("tool-c count error = %v", err)
+	}
+	if count != 0 {
+		t.Errorf("tool-c rows = %d, want 0 (a tool the remote no longer provides is removed)", count)
+	}
+}
+
+// TestReconcileMCPTools_RejectsBuiltinNameCollision 覆盖内置工具不可被 MCP 同步占用：新工具名与
+// 既有（内置）工具重名时返回英文错误并回滚，库内行数不变。
+func TestReconcileMCPTools_RejectsBuiltinNameCollision(t *testing.T) {
+	db := newSyncTestDB(t)
+	server := seedSyncServer(t, db, "srv-a")
+	seedSyncTool(t, db, "shared", aimodel.ToolSourceBuiltin, nil, "", "", true)
+
+	if _, err := reconcileMCPTools(db, server, []llminfra.MCPRemoteTool{{Name: "shared"}}); err == nil {
+		t.Fatal("reconcileMCPTools error = nil, want an English collision error")
+	}
+	var count int64
+	if err := db.Model(&aimodel.LlmTool{}).Count(&count).Error; err != nil {
+		t.Fatalf("count error = %v", err)
+	}
+	if count != 1 {
+		t.Errorf("llm_tools rows = %d, want 1 (the transaction must roll back)", count)
+	}
+}
+
+// TestReconcileMCPTools_RejectsConsistencyViolation 覆盖一致性约束校验：库内存在 source='mcp' 但
+// mcp_server_id 为空（或反之）的脏行时对账返回英文错误。
+func TestReconcileMCPTools_RejectsConsistencyViolation(t *testing.T) {
+	db := newSyncTestDB(t)
+	server := seedSyncServer(t, db, "srv-a")
+	// 绕过创建期约束直接落一行违反不变量的脏数据（source=mcp 但无 mcp_server_id）。
+	if err := db.Create(&aimodel.LlmTool{Name: "dirty", Source: aimodel.ToolSourceMCP, RemoteName: "dirty"}).Error; err != nil {
+		t.Fatalf("seed dirty row error = %v", err)
+	}
+	if _, err := reconcileMCPTools(db, server, []llminfra.MCPRemoteTool{{Name: "clean"}}); err == nil {
+		t.Fatal("reconcileMCPTools error = nil, want an English consistency error")
+	}
+}
+
+// TestReconcileMCPTools_RejectsEmptyRemoteName 覆盖远端工具名为空时报英文错误并回滚。
+func TestReconcileMCPTools_RejectsEmptyRemoteName(t *testing.T) {
+	db := newSyncTestDB(t)
+	server := seedSyncServer(t, db, "srv-a")
+	if _, err := reconcileMCPTools(db, server, []llminfra.MCPRemoteTool{{Name: "   "}}); err == nil {
+		t.Fatal("reconcileMCPTools error = nil, want an English error for an empty remote name")
+	}
+}

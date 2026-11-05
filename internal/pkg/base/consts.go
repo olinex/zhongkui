@@ -1,9 +1,13 @@
+// Package base 提供应用的基础定义：环境配置（Env）、全局常量、语言类型及其解析与序列化、
+// 主机名工具，以及语言与策略动作的枚举注册。
 package base
 
+// 通用常量：资源前缀、RBAC 模型与标签、内置分组/命名空间、权限点前缀与语义动作、HTTP 头部名。
 const (
-	GLOBAL_PREFIX = "zki"
-	// rbac model
-	RBAC_MODEL = `
+	// GlobalPrefix 全局资源名称统一前缀。
+	GlobalPrefix = "zki"
+	// rbac 模型定义（casbin 模型文本）。
+	RbacModel = `
 [request_definition]
 r = sub, obj, act, nsp
 
@@ -21,47 +25,105 @@ m = (p.obj == "*" || r.obj == p.obj) && \
     (p.act == "*" || r.act == p.act) && \
 	(g(r.sub, p.sub, "*") || g(r.sub, p.sub, r.nsp))
 `
-	// rbac label
-	WIDE_MATCH_LABEL = "*"
-	POLICY_LABEL     = "p"
-	GROUP_LABEL      = "g"
-	EFFECT_ALLOW     = "allow"
-	EFFECT_DENY      = "deny"
+	// rbac 标签
+	WideMatchLabel = "*"
+	PolicyLabel    = "p"
+	GroupLabel     = "g"
+	EffectAllow    = "allow"
+	EffectDeny     = "deny"
 
-	// buildin group
-	SUPERUSER_GROUP = "superuser"
-	ADMIN_GROUP     = "admin"
-	DEFAULT_GROUP   = "default"
+	// 内置分组
+	SuperuserGroup = "superuser"
+	AdminGroup     = "admin"
+	DefaultGroup   = "default"
 
-	// buildin namespace
-	DEFAULT_NAMESPACE = "default"
+	// 内置命名空间
+	DefaultNamespace = "default"
+	// SystemNamespace 内置系统命名空间：承载由代码声明的公开共享数据（如原生接口目录），
+	// 对所有命名空间的检索可见；不在命名空间列表/选择器中暴露，且禁止删除。
+	SystemNamespace = "system"
 
-	// http headers
-	HDR_HOST                             = "Host"
-	HDR_ACCEPT                           = "Accept"
-	HDR_ACCEPT_ENCODING                  = "Accept-Encoding"
-	HDR_ACCEPT_LANGUAGE                  = "Accept-Language"
-	HDR_TRANSFER_ENCODING                = "Transfer-Encoding"
-	HDR_CONNECTION                       = "Connection"
-	HDR_COOKIE                           = "Cookie"
-	HDR_AUTHORIZATION                    = "Authorization"
-	HDR_CONTENT_TYPE                     = "Content-Type"
-	HDR_CONTENT_LENGTH                   = "Content-Length"
-	HDR_SERVER                           = "Server"
-	HDR_SET_COOKIE                       = "Set-Cookie"
-	HDR_LOCATION                         = "Location"
-	HDR_CACHE_CONTROL                    = "Cache-Control"
-	HDR_CONTENT_ENCODING                 = "Content-Encoding"
-	HDR_ACCESS_CONTROL_ALLOW_CREDENTIALS = "Access-Control-Allow-Credentials"
-	HDR_ACCESS_CONTROL_ALLOW_HEADERS     = "Access-Control-Allow-Headers"
-	HDR_ACCESS_CONTROL_ALLOW_METHODS     = "Access-Control-Allow-Methods"
-	HDR_ACCESS_CONTROL_ALLOW_ORIGIN      = "Access-Control-Allow-Origin"
-	HDR_ACCESS_CONTROL_REQUEST_METHOD    = "Access-Control-Request-Method"
-	HDR_CONTENT_SECURITY_POLICY          = "Content-Security-Policy"
-	HDR_PERMISSIONS_POLICY               = "Permissions-Policy"
-	HDR_REFERRER_POLICY                  = "Referrer-Policy"
-	HDR_STRICT_TRANSPORT_SECURITY        = "Strict-Transport-Security"
-	HDR_X_CONTENT_TYPE_OPTIONS           = "X-Content-Type-Options"
-	HDR_X_FRAME_OPTIONS                  = "X-Frame-Options"
-	HDR_X_XSS_PROTECTION                 = "X-XSS-Protection"
+	// 全局权限点（permission point）格式规范：
+	//   object = {prefix}:{subtype}:{model}:{field}
+	//   action = 语义动作（大写），如 READ / WRITE
+	// 说明：
+	//   - prefix 区分权限点大类（如 plaintext 明文查看）
+	//   - subtype 区分同一大类下的资源形态（crypto 加密字段 / s3 对象）
+	//   - model 为模型注册名（RegisterPlaintextModel 时指定，如 ipv4-tcp、http-transport）
+	//   - field 为模型字段的 json 名
+	// 示例：plaintext:crypto:http-transport:req_hdr_authorization（READ）
+	//       plaintext:s3:http-transport:req_body（READ）
+
+	// 权限点前缀：api 为接口层（object = api:{FullPath}，action = HTTP 方法），
+	// plaintext 为明文查看数据层（object = plaintext:{subtype}:{model}:{field}，action = 语义动作）
+	APIPrefix       = "api"
+	PlaintextPrefix = "plaintext"
+	PlaintextCrypto = "crypto"
+	PlaintextS3     = "s3"
+
+	// 全局语义动作词汇表（后续权限点可复用）
+	ActionRead  = "READ"
+	ActionWrite = "WRITE"
+
+	// HTTP 请求头名
+	HdrHost                          = "Host"
+	HdrOrigin                        = "Origin"
+	HdrAccept                        = "Accept"
+	HdrAcceptEncoding                = "Accept-Encoding"
+	HdrAcceptLanguage                = "Accept-Language"
+	HdrTransferEncoding              = "Transfer-Encoding"
+	HdrConnection                    = "Connection"
+	HdrCookie                        = "Cookie"
+	HdrAuthorization                 = "Authorization"
+	HdrContentType                   = "Content-Type"
+	HdrContentLength                 = "Content-Length"
+	HdrServer                        = "Server"
+	HdrSetCookie                     = "Set-Cookie"
+	HdrLocation                      = "Location"
+	HdrCacheControl                  = "Cache-Control"
+	HdrContentEncoding               = "Content-Encoding"
+	HdrAccessControlAllowCredentials = "Access-Control-Allow-Credentials"
+	HdrAccessControlAllowHeaders     = "Access-Control-Allow-Headers"
+	HdrAccessControlAllowMethods     = "Access-Control-Allow-Methods"
+	HdrAccessControlAllowOrigin      = "Access-Control-Allow-Origin"
+	HdrAccessControlRequestMethod    = "Access-Control-Request-Method"
+	HdrContentSecurityPolicy         = "Content-Security-Policy"
+	HdrPermissionsPolicy             = "Permissions-Policy"
+	HdrReferrerPolicy                = "Referrer-Policy"
+	HdrStrictTransportSecurity       = "Strict-Transport-Security"
+	HdrXContentTypeOptions           = "X-Content-Type-Options"
+	HdrXFrameOptions                 = "X-Frame-Options"
+	HdrXXssProtection                = "X-XSS-Protection"
 )
+
+// 数据库名（database 配置节点名 / migration 归属统一标识）：核心库、原始库及其测试库。
+// 作为单一事实来源，供 migrations 与 provider 共同引用，避免重复字面量引发不一致。
+const (
+	CoreDbName     = "core"
+	CoreTestDbName = "core_test"
+	RawDbName      = "raw"
+	RawTestDbName  = "raw_test"
+)
+
+// logger 配置前缀，作为单一事实来源供 provider 引用。
+const (
+	DefaultLoggerName  = "default"
+	ApiLoggerName      = "api"
+	DatabaseLoggerName = "database"
+	CaptureLoggerName  = "capture"
+	EtcdLoggerName     = "etcd"
+	GrpcLoggerName     = "grpc"
+	PipelineLoggerName = "pipeline"
+)
+
+// redis 配置前缀，作为单一事实来源供 provider 引用。
+const (
+	CacheRedisName    = "cache"
+	PipelineRedisName = "pipeline"
+)
+
+// 上报服务 gRPC 配置前缀，作为单一事实来源供 provider 引用。
+const ReporterGrpcName = "reporter"
+
+// 注入器上下文键名，用于在任务上下文或注入器中定位 do.Scope。
+const ContextScopeName = "ctx_scope"

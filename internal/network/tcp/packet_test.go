@@ -1,28 +1,28 @@
 package tcp
 
 import (
-	"encoding/json"
 	"net"
 	"testing"
 	"time"
 
 	"github.com/gopacket/gopacket/layers"
 	. "github.com/smartystreets/goconvey/convey"
-	n "zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	n "zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 type mockTCPPacket struct {
-	meta      *n.BaseMeta
-	streamID  string
-	frameInfo *n.FrameInfo
-	srcAddr   net.IP
-	dstAddr   net.IP
-	srcPort   layers.TCPPort
-	dstPort   layers.TCPPort
-	seqNum    uint32
-	ackNum    uint32
-	flags     struct {
+	meta       *n.BaseMeta
+	streamID   string
+	frameInfo  *n.FrameInfo
+	ingestedAt time.Time
+	srcAddr    net.IP
+	dstAddr    net.IP
+	srcPort    layers.TCPPort
+	dstPort    layers.TCPPort
+	seqNum     uint32
+	ackNum     uint32
+	flags      struct {
 		syn    bool
 		synAck bool
 		ack    bool
@@ -32,121 +32,98 @@ type mockTCPPacket struct {
 	payload []byte
 }
 
+// Meta 返回模拟数据包的基础元数据。
 func (m *mockTCPPacket) Meta() *n.BaseMeta {
 	return m.meta
 }
 
+// StreamID 返回所属 TCP 流标识。
 func (m *mockTCPPacket) StreamID() string {
 	return m.streamID
 }
 
+// CaptureTimestamp 返回帧捕获时间戳。
+func (m *mockTCPPacket) CaptureTimestamp() time.Time {
+	return m.frameInfo.Timestamp
+}
+
+// IngestedAt 返回入库时间。
+func (m *mockTCPPacket) IngestedAt() time.Time {
+	return m.ingestedAt
+}
+
+// FrameInfo 返回帧信息。
 func (m *mockTCPPacket) FrameInfo() *n.FrameInfo {
 	return m.frameInfo
 }
 
+// NetworkFrame 根据帧信息与元数据构造网络帧。
+func (m *mockTCPPacket) NetworkFrame() n.NetworkFrame {
+	return n.NewNetworkFrame(m.frameInfo.LayerStack, *m.meta, m.frameInfo.Timestamp)
+}
+
+// SrcAddr 返回源 IP 地址。
 func (m *mockTCPPacket) SrcAddr() net.IP {
 	return m.srcAddr
 }
 
+// DstAddr 返回目的 IP 地址。
 func (m *mockTCPPacket) DstAddr() net.IP {
 	return m.dstAddr
 }
 
+// SrcPort 返回源端口。
 func (m *mockTCPPacket) SrcPort() layers.TCPPort {
 	return m.srcPort
 }
 
+// DstPort 返回目的端口。
 func (m *mockTCPPacket) DstPort() layers.TCPPort {
 	return m.dstPort
 }
 
+// SeqNum 返回 TCP 序列号。
 func (m *mockTCPPacket) SeqNum() uint32 {
 	return m.seqNum
 }
 
+// AckNum 返回 TCP 确认号。
 func (m *mockTCPPacket) AckNum() uint32 {
 	return m.ackNum
 }
 
+// IsSyn 返回是否带 SYN 标志。
 func (m *mockTCPPacket) IsSyn() bool {
 	return m.flags.syn
 }
 
+// IsSynAck 返回是否带 SYN-ACK 标志。
 func (m *mockTCPPacket) IsSynAck() bool {
 	return m.flags.synAck
 }
 
+// IsAck 返回是否带 ACK 标志。
 func (m *mockTCPPacket) IsAck() bool {
 	return m.flags.ack
 }
 
+// IsFin 返回是否带 FIN 标志。
 func (m *mockTCPPacket) IsFin() bool {
 	return m.flags.fin
 }
 
+// IsRst 返回是否带 RST 标志。
 func (m *mockTCPPacket) IsRst() bool {
 	return m.flags.rst
 }
 
+// GetPayload 返回 TCP 负载数据。
 func (m *mockTCPPacket) GetPayload() []byte {
 	return m.payload
 }
 
-// mockAux 是 mockTCPPacket 的 JSON 序列化辅助结构体。
-type mockAux struct {
-	StreamID string         `json:"stream_id"`
-	SrcAddr  net.IP         `json:"src_addr"`
-	DstAddr  net.IP         `json:"dst_addr"`
-	SrcPort  layers.TCPPort `json:"src_port"`
-	DstPort  layers.TCPPort `json:"dst_port"`
-	SeqNum   uint32         `json:"seq_num"`
-	AckNum   uint32         `json:"ack_num"`
-	Syn      bool           `json:"syn"`
-	SynAck   bool           `json:"syn_ack"`
-	Ack      bool           `json:"ack"`
-	Fin      bool           `json:"fin"`
-	Rst      bool           `json:"rst"`
-	Payload  []byte         `json:"payload"`
-}
-
-// MarshalJSON 实现 mockTCPPacket 的 JSON 序列化，支持 outOrderPackets 测试。
-func (m *mockTCPPacket) MarshalJSON() ([]byte, error) {
-	return json.Marshal(mockAux{
-		StreamID: m.streamID,
-		SrcAddr:  m.srcAddr,
-		DstAddr:  m.dstAddr,
-		SrcPort:  m.srcPort,
-		DstPort:  m.dstPort,
-		SeqNum:   m.seqNum,
-		AckNum:   m.ackNum,
-		Syn:      m.flags.syn,
-		SynAck:   m.flags.synAck,
-		Ack:      m.flags.ack,
-		Fin:      m.flags.fin,
-		Rst:      m.flags.rst,
-		Payload:  m.payload,
-	})
-}
-
-// UnmarshalJSON 实现 mockTCPPacket 的 JSON 反序列化。
-func (m *mockTCPPacket) UnmarshalJSON(data []byte) error {
-	var aux mockAux
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return err
-	}
-	m.streamID = aux.StreamID
-	m.srcAddr = aux.SrcAddr
-	m.dstAddr = aux.DstAddr
-	m.srcPort = aux.SrcPort
-	m.dstPort = aux.DstPort
-	m.seqNum = aux.SeqNum
-	m.ackNum = aux.AckNum
-	m.flags.syn = aux.Syn
-	m.flags.synAck = aux.SynAck
-	m.flags.ack = aux.Ack
-	m.flags.fin = aux.Fin
-	m.flags.rst = aux.Rst
-	m.payload = aux.Payload
+// TcpFingerprint 返回模拟数据包的被动 TCP 指纹，默认无指纹返回 nil
+func (m *mockTCPPacket) TcpFingerprint() *n.PacketTCPFingerprint {
 	return nil
 }
 
@@ -169,13 +146,14 @@ func newMockTCPPacket() *mockTCPPacket {
 				},
 			},
 		},
-		srcAddr: net.ParseIP("192.168.1.100"),
-		dstAddr: net.ParseIP("10.0.0.1"),
-		srcPort: 8080,
-		dstPort: 443,
-		seqNum:  1234567890,
-		ackNum:  0,
-		payload: []byte("test payload data"),
+		ingestedAt: time.Now(),
+		srcAddr:    net.ParseIP("192.168.1.100"),
+		dstAddr:    net.ParseIP("10.0.0.1"),
+		srcPort:    8080,
+		dstPort:    443,
+		seqNum:     1234567890,
+		ackNum:     0,
+		payload:    []byte("test payload data"),
 	}
 }
 
@@ -253,6 +231,7 @@ func withPayload(payload []byte) func(*mockTCPPacket) {
 	}
 }
 
+// TestTCPPacketInterface 验证 mockTCPPacket 的默认值、构造选项与各访问器行为。
 func TestTCPPacketInterface(t *testing.T) {
 	Convey("Test TCPPacket interface", t, func() {
 		Convey("Should create mock TCP packet with default values", func() {
@@ -374,6 +353,7 @@ func TestTCPPacketInterface(t *testing.T) {
 	})
 }
 
+// TestTCPPacketInterfaceCompliance 验证 mockTCPPacket 满足 TCPPacket 接口及各方法返回类型。
 func TestTCPPacketInterfaceCompliance(t *testing.T) {
 	Convey("Test TCPPacket interface compliance", t, func() {
 		Convey("Should satisfy TCPPacket interface", func() {
@@ -437,6 +417,7 @@ func TestTCPPacketInterfaceCompliance(t *testing.T) {
 	})
 }
 
+// TestTCPPacketSeqFunction 验证 tcpPacketSeq 对各类地址、端口与序列号的格式化结果。
 func TestTCPPacketSeqFunction(t *testing.T) {
 	Convey("Test tcpPacketSeq function", t, func() {
 		Convey("Should format TCP packet sequence information correctly", func() {
@@ -510,8 +491,8 @@ func TestTCPPacketSeqFunction(t *testing.T) {
 
 		Convey("Should handle well-known ports", func() {
 			packet := newMockTCPPacketWithOptions(
-				withSrcPort(80),  // HTTP
-				withDstPort(443), // HTTPS
+				withSrcPort(80),  // HTTP 端口
+				withDstPort(443), // HTTPS 端口
 			)
 
 			result := tcpPacketSeq(packet)

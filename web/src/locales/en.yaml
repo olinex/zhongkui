@@ -1,124 +1,1845 @@
 navbar:
   admin:
-    self: Admin
+    self: System Admin
     user: User
     group: Group
     namespace: Namespace
     capturer: Capturer
+    systemStatus: System Status
+    llmConfig: LLM Config
   etl:
     self: ETL
+    server: Server
     queue: Queue
+    task: Task
+    scheduler: Scheduler
+  ai:
+    self: AI
+    knowledge: Knowledge Base
+    memory: Memory
+    skill: Skills
+    periodicReport: Periodic Reports
+  notification:
+    self: Notifications
+    channel: Notification Channels
+    target: Notification Targets
+    group: Notification Groups
+    template: Templates
+    record: Send Records
+  traffic:
+    self: Traffic
+    ipv4Tcp: IPv4 TCP
+    ipv6Tcp: IPv6 TCP
+    httpTransport: HTTP Transport
+  tagEvent:
+    self: Tag Events
+    tagRule: Tag Rule
+    tagEventRule: Tag Event Rule
+    record: Tag Event Record
+  datasource:
+    self: Datasource
+  # Sidebar badge tooltips: the space left of the drawer (~6-7 CJK chars) caps their length,
+  # so they only state *what* the badge means and never carry the backend reason
+  # (long copy wraps or gets flipped to the other side)
+  namespaceScoped: Namespace
+  featureUnavailable: Unavailable
+  pin: Pin sidebar
+  unpin: Unpin sidebar
 model:
-  name:
-    user: User
-    group: Group
-    namespace: Namespace
-    capturer: Capturer
-    accessKey: Access Key
-field:
-  label:
-    __actions: Actions
+  __base:
+    field:
+      __actions: Actions
+      date: Date
+      time: Time
+      startTime: Start Time
+      endTime: End Time
+      field: Field
+      action: Action
+      search: Search
+      value: Value
+      encrypted: Encrypted
+      # Generic time range filter labels (shared fields, not model-specific)
+      timestampRange: Capture Time Range
+      createdAtRange: Ingestion Time Range
+    content:
+      condition: condition(s)
+      doubleCheck: Please enter `{random}` to double check
+    value:
+      blank: blank
+      "null": "null"
+      undefined: "undefined"
+      yes: Yes
+      no: No
+      "true": Yes
+      "false": No
+  notificationChannel:
+    name: Notification Channel
+    field:
+      id: ID
+      name: Name
+      type: Type
+      enabled: Enabled
+      config: Config
+      description: Description
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+  service:
+    name: Service
+    field:
+      serviceName: Service Name
+      instanceID: Instance ID
+      host: Host
+      version: Version
+      pid: PID
+      startedAt: Started At
+      running: Running
+      live: Liveness
+      ready: Readiness
+      started: Started
+  notificationTarget:
+    name: Notification Target
+    field:
+      id: ID
+      name: Name
+      channelID: Channel
+      channelName: Channel Name
+      channelType: Channel Type
+      channelEnabled: Channel Status
+      type: Type
+      enabled: Enabled
+      config: Config
+      language: Language
+      description: Description
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+  notificationGroup:
+    name: Notification Group
+    field:
+      id: ID
+      name: Name
+      isDefault: Default Group
+      description: Description
+      targetCount: Target Count
+      targets: Bound Targets
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+  notificationTemplate:
+    name: Notification Template
+    field:
+      id: ID
+      namespaceName: Namespace
+      event: Event
+      channelType: Channel Type
+      language: Language
+      title: Title
+      content: Content
+      source: Source
+      description: Description
+      params: Template Params
+  notificationRecord:
+    name: Send Record
+    field:
+      id: ID
+      eventType: Event Type
+      eventID: Event ID
+      groupID: Notification Group ID
+      targetID: Target ID
+      targetName: Target Name
+      channelID: Channel ID
+      channelName: Channel Name
+      channelType: Channel Type
+      status: Status
+      error: Error Message
+      messageID: Message ID
+      payload: Message Content
+      notifiedAt: Sent At
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+  user:
+    name: User
+    field:
+      id: ID
+      unionID: Union ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      deletedAt: Deleted At
+      deletedAtTime: Deleted At Time
+      deletedAtDate: Deleted At Date
+      active: Is Active
+      username: Username
+      password: Password
+      passwordAgain: Confirm Password
+      nickleName: Nickle Name
+      email: Email
+      oldPassword: Old Password
+      newPassword: New Password
+      newPasswordAgain: New Password Again
+      token: Reset Token
+      randomPassword: Random Generate
+      specifyPassword: Specify Password
+      passwordResetNotice: Please securely inform the target user of the new password
+      frontendConfigSyncEnabled: Enable Frontend Config Sync
+  policy:
+    name: Policy
+    field:
+      namespace: Namespace
+      name: Name
+      target: Target
+      effect: Effect
+      action: Action
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated Date
+  group:
+    name: Group
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      name: Name
+      description: Description
+  namespace:
+    name: Namespace
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      name: Name
+      description: Description
+  capturer:
+    name: Capturer
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      name: Name
+      namespace: Namespace
+      version: Version
+      device: Device
+      bpfExpr: BPF Expression
+      snapLen: Snap Length
+      timeout: Timeout
+      promisc: Promiscuous Mode
+      enabled: Enabled
+      sessionID: Session ID
+      status: Status
+      configVersion: Config Version
+      globalVersion: Global Version
+      lastSeen: Last Seen
+    option:
+      status:
+        running: Running
+        stopped: Stopped
+  accessKey:
+    name: Access Key
+    field:
+      createdAt: Created At
+      updatedAt: Updated At
+      expiredAt: Expired At
+      lastAccessAt: Last Access At
+      enabled: Enabled
+      description: Description
+  aiDocument:
+    name: Knowledge Document
+    field:
+      id: ID
+      title: Title
+      namespaceName: Namespace
+      content: Content
+      chunkCount: Chunks
+      format: Format
+      status: Status
+      sizeBytes: Source Size
+      useCount: Hit Count
+      lastUsedAt: Last Hit At
+      hash: Hash
+      originalName: Original Filename
+      parseError: Parse Error
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+  aiSession:
+    name: AI Session
+    field:
+      title: Title
+      slot: Slot
+      status: Status
+      agentKind: Agent Kind
+      summary: Context Summary
+      createdAt: Created At
+      updatedAt: Updated At
+      query: Query
+  agentMemory:
+    name: Memory
+    field:
+      id: ID
+      keyword: Keyword
+      agentKind: Agent Kind
+      kind: Memory Kind
+      title: Title
+      content: Body
+      status: Status
+      useCount: Hit Count
+      lastUsedAt: Last Hit
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      namespaceName: Namespace
+      sessionID: Source Session
+  agentSkill:
+    name: Skill
+    field:
+      id: ID
+      name: Name
+      source: Source
+      keyword: Keyword
+      description: Description
+      content: Content
+      enabled: Enabled
+      periodicCapable: Periodic-capable
+      inputFields: Input Fields
+      noInputFields: No input fields
+      fixedFields: Fixed Fields
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+  periodicReportPlan:
+    name: Periodic Report Plan
+    field:
+      id: ID
+      name: Name
+      description: Description
+      skillID: Skill ID
+      skill: Skill
+      skillName: Skill
+      keyword: Keyword
+      cronSpec: Cron Expression
+      inputValues: Input Values
+      retentionDays: Retention Days
+      nextRunAt: Next Run
+      expiresAt: Expires At
+      sessionID: Session ID
+      enabled: Enabled
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+  periodicReportRun:
+    name: Periodic Report Run
+    field:
+      status: Status
+      title: Title
+      triggerAt: Triggered At
+      createdAt: Created At
+      sizeBytes: Size
+      error: Error
+  llmModel:
+    name: LLM Model
+    field:
+      id: ID
+      name: Name
+      kind: Model Kind
+      apiMode: API Mode
+      baseURL: Base URL
+      apiKey: API Key
+      model: Model
+      timeoutSeconds: Timeout (s)
+      temperature: Temperature
+      maxTokens: Max Tokens
+      contextTokens: Context Tokens
+      dimensions: Dimensions
+      enabled: Enabled
+      description: Description
+      extraBody: Extra Request Body
+      thinkingField: Thinking Field
+      thinkingOnValue: Thinking On Value
+      thinkingOffValue: Thinking Off Value
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+    apiMode:
+      chat: Chat Completions
+      responses: Responses
+    validation:
+      jsonObject: "{path} must be a valid JSON object"
+      jsonValue: "{path} must be a valid JSON value"
+  llmBinding:
+    name: Slot Binding
+    field:
+      slot: Slot
+      modelID: Model ID
+      modelName: Bound Model
+      kind: Model Kind
+      providerModel: Provider Model
+      enabled: Model Status
+      dimensions: Dimensions
+      bound: Bound
+      available: Available
+  agentParam:
+    name: Agent Params
+    field:
+      key: Param Key
+      group: Group
+      kind: Param Kind
+      default: Default
+      value: Current
+      overridden: Overridden
+      label: Param
+      comment: Description
+    type:
+      agent: Agent Behavior
+      retrieval: Retrieval
+      session: Session Context
+      chunking: Chunking
+      eval: Quality Evaluation
+      sanitize: Data Sanitization
+  mcpServer:
+    name: MCP Server
+    field:
+      id: ID
+      name: Name
+      transport: Transport
+      url: URL
+      headers: Headers
+      timeoutSeconds: Timeout (s)
+      enabled: Enabled
+      description: Description
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+  llmTool:
+    name: Tool
+    field:
+      id: ID
+      name: Name
+      source: Source
+      mcpServerName: Owning Server
+      remoteName: Remote Tool Name
+      enabled: Enabled
+      description: Description
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+  server:
+    name: Server
+    field:
+      started: Started At
+      status: Status
+      queueWeights: Queue Weights
+  queue:
+    name: Queue
+    field:
+      queue: Queue
+      days: Days
+      running: Running
+      memoryUsage: Memory Usage
+      latency: Latency
+      size: Size
+      retrievalTime: Retrieval Time
+      processed: Processed
+      failed: Failed
+      active: Active
+      pending: Pending
+      retry: Retry
+      scheduled: Scheduled
+      archived: Archived
+      aggregating: Aggregating
+      completed: Completed
+  scheduler:
+    name: Scheduler
+    field:
+      typeName: Type
+      cronSpec: Cron Expression
+      interval: Interval
+      queue: Queue
+      timeout: Timeout
+      maxRetry: Max Retry
+      retention: Completion Retention
+      lookback: Lookback Offset
+      enabled: Enabled
+      payload: Payload
+      backlogEnabled: Catch Up Backlog
+      backlogWindow: Backlog Window
+      backlogLimit: Backlog Limit
+  task:
+    name: Task
+    value:
+      allTypes: All Types
+    field:
+      id: ID
+      type: Type
+      queue: Queue
+      state: State
+      payload: Payload
+      result: Result
+      retried: Retry Count
+      lastErr: Last Error
+      lastFailedAt: Last Failed At
+      nextProcessAt: Next Process At
+      completedAt: Completed At
+      start: Start
+      deadline: Deadline
+      timeout: Timeout
+      retention: Retention
+      group: Group Name
+      isOrphaned: Orphaned Task
+  tagRule:
+    name: Tag Rule
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      name: Name
+      model: Target Model
+      description: Description
+      rego: Rego Rule
+      enabled: Enabled
+      version: Version
+      versionCount: Version Count
+
+  tagRuleSample:
+    name: Tag Rule Sample
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      name: Name
+      model: Target Model
+      description: Description
+      input: Input Document
+
+  tagEventRule:
+    name: Tag Event Rule
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      name: Name
+      description: Description
+      matchAll: Match All Conditions
+      enabled: Enabled
+      version: Version
+      versionCount: Version Count
+      conditions: Conditions
+      suppressWindow: Suppress Window (minutes)
+      notification: Notification Method
+    content:
+      notificationDefault: Use namespace default notification group
+      notificationGroup: Notification Group
+      notificationTarget: Notification Target
+  datasource:
+    name: Third-Party Datasource
+    schemaRequiredHint: Provide a complete column definition via the “Introspect Schema”
+      button or fill it in manually before saving
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created Time
+      createdAtDate: Created Date
+      updatedAt: Updated At
+      updatedAtTime: Updated Time
+      updatedAtDate: Updated Date
+      name: Name
+      type: Type
+      enabled: Enabled
+      config: Connection Config
+      description: Description
+
+    configField:
+      addr: Host Address
+      port: Port
+      password: Password
+      db: Logical DB
+      struct: Data Structure
+      user: Username
+      username: Username
+      dbName: Database
+      table: Table
+      path: Database File (.db)
+      fileHint: Upload the SQLite database file (.db/.sqlite/.sqlite3), stored encrypted in S3
+      uri: Connection URI
+      collection: Collection Name
+      endpoints: Endpoints
+      schema: Manual Schema
+      schemaHint: This column definition is required; leaving it empty no longer auto-introspects
+      schemaMongoHint: MongoDB has no fixed schema and cannot be introspected; you must
+        specify the column names and types manually
+      addColumn: Add Column
+      columnName: Column Name
+      columnType: Type
+    columnType:
+      any: Any
+      integer: Integer
+      float: Float
+      string: String
+      blob: Blob
+      bool: Boolean
+    action:
+      testConnection: Test Connection
+      introspectSchema: Introspect Schema
+      introspectColumns: Columns
+  tagEventRecord:
+    name: Tag Event Record
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created Time
+      createdAtDate: Created Date
+      updatedAt: Updated At
+      updatedAtTime: Updated Time
+      updatedAtDate: Updated Date
+      ruleID: Rule ID
+      ruleName: Rule Name
+      matchAll: Match All Conditions
+      status: Status
+      dedupKey: Dedup Key
+      detectedAt: Detected At
+      detectedAtTime: Detected Time
+      detectedAtDate: Detected Date
+    type: Status
+
+    content:
+      info: Event Info
+      hits: Hit Details
+      sends: Related Send Records
+  tagEventRecordHit:
+    name: Hit Detail
+    field:
+      conditionName: Condition Name
+      model: Target Model
+      dimension: Tag Dimension
+      item: Dimension Value
+      count: Hit Count
+      threshold: Condition Threshold
+      window: Time Window
+      ids: Record IDs
+  tagEventRecordSend:
+    name: Send Record
+    field:
+      targetName: Notification Target
+      channelName: Notification Channel
+      channelType: Channel Type
+      status: Status
+      messageID: Message ID
+      notifiedAt: Notified At
+  tagEventCondition:
+    name: Condition
+    field:
+      name: Condition Name
+      model: Target Model
+      dimension: Tag Dimension
+      item: Dimension Value
+      window: Time Window (minutes)
+      threshold: Threshold
+      expression: Tag Expression
+      enabled: Enabled
+      description: Description
+      count: Hit Count
+      detectedAt: Detected At
+  # Traffic audit consists of three independent data types, each with its own complete field set
+  ipv4Tcp:
+    name: IPv4 TCP
+    field:
+      # Base audit columns
+      namespace: Namespace
+      timestamp: Capture Time
+      createdAt: Ingestion Time
+      sessionID: Session ID
+      tcpStreamID: TCP Stream ID
+      capture: Capturer
+      version: Version
+      traceID: Trace ID
+      # IPv4 address & ports
+      ipv4Src: IPv4 Source Address
+      ipv4Dst: IPv4 Destination Address
+      srcPort: Source Port
+      dstPort: Destination Port
+      # TCP audit columns
+      seq: Sequence Number
+      ack: Acknowledgment Number
+      bitFin: FIN Flag
+      bitSyn: SYN Flag
+      bitRst: RST Flag
+      bitPsh: PSH Flag
+      bitAck: ACK Flag
+      bitUrg: URG Flag
+      window: Window Size
+      ipv4Ttl: IPv4 TTL
+      ipv4IpProtocol: IPv4 Protocol
+      ipv4Length: IPv4 Length
+      # TCP passive fingerprint (p0f style)
+      fpOs: OS Fingerprint
+      fpSig: TCP Fingerprint Signature
+      fpMtu: MTU
+      # ---- Full field set for column settings (hidden by default) ----
+      # Capture & link layer
+      truncated: Truncated
+      captureLength: Capture Length
+      layerStack: Protocol Stack
+      payload: Payload
+      ethDstMac: Destination MAC
+      ethSrcMac: Source MAC
+      ethType: Ethernet Type
+      ethLength: Ethernet Length
+      # IPv4
+      ipv4Version: IPv4 Version
+      ipv4Ihl: IPv4 Header Length
+      ipv4Tos: Type of Service
+      ipv4ID: Fragment ID
+      ipv4Flags: Fragment Flags
+      ipv4FragOffset: Fragment Offset
+      ipv4Checksum: Header Checksum
+      ipv4Options: IPv4 Options
+      ipv4Padding: IPv4 Padding
+      # TCP
+      dataOffset: Data Offset
+      bitEce: ECE Flag
+      bitCwr: CWR Flag
+      bitNs: NS Flag
+      checksum: Checksum
+      urgent: Urgent Pointer
+      options: TCP Options
+      fpOsQuality: OS Fingerprint Confidence
+  ipv6Tcp:
+    name: IPv6 TCP
+    field:
+      id: ID
+      # Base audit columns
+      namespace: Namespace
+      timestamp: Capture Time
+      createdAt: Ingestion Time
+      sessionID: Session ID
+      tcpStreamID: TCP Stream ID
+      capture: Capturer
+      version: Version
+      traceID: Trace ID
+      # IPv6 address & ports
+      ipv6Src: IPv6 Source Address
+      ipv6Dst: IPv6 Destination Address
+      srcPort: Source Port
+      dstPort: Destination Port
+      # TCP audit columns
+      seq: Sequence Number
+      ack: Acknowledgment Number
+      bitFin: FIN Flag
+      bitSyn: SYN Flag
+      bitRst: RST Flag
+      bitPsh: PSH Flag
+      bitAck: ACK Flag
+      bitUrg: URG Flag
+      window: Window Size
+      ipv6HopLimit: IPv6 Hop Limit
+      ipv6NextHeader: IPv6 Next Header
+      ipv6Length: IPv6 Length
+      # TCP passive fingerprint (p0f style)
+      fpOs: OS Fingerprint
+      fpSig: TCP Fingerprint Signature
+      fpMtu: MTU
+      # ---- Full field set for column settings (hidden by default) ----
+      # Capture & link layer
+      truncated: Truncated
+      captureLength: Capture Length
+      layerStack: Protocol Stack
+      payload: Payload
+      ethDstMac: Destination MAC
+      ethSrcMac: Source MAC
+      ethType: Ethernet Type
+      ethLength: Ethernet Length
+      # IPv6
+      ipv6Version: IPv6 Version
+      ipv6TrafficClass: Traffic Class
+      ipv6FlowLabel: Flow Label
+      ipv6HopByHop: Hop-by-Hop Extension Header
+      ipv6LastHeader: Last Header
+      # TCP
+      dataOffset: Data Offset
+      bitEce: ECE Flag
+      bitCwr: CWR Flag
+      bitNs: NS Flag
+      checksum: Checksum
+      urgent: Urgent Pointer
+      options: TCP Options
+      fpOsQuality: OS Fingerprint Confidence
+  httpTransport:
+    name: HTTP Transport
+    field:
+      id: ID
+      # Base audit columns
+      namespace: Namespace
+      timestamp: Capture Time
+      createdAt: Ingestion Time
+      sessionID: Session ID
+      tcpStreamID: TCP Stream ID
+      capture: Capturer
+      version: Version
+      traceID: Trace ID
+      # HTTP audit columns
+      method: Request Method
+      host: Host
+      path: Path
+      clientIp: Client IP
+      serverIp: Server IP
+      clientPort: Client Port
+      serverPort: Server Port
+      httpVersion: HTTP Version
+      reqBodyLength: Request Body Length
+      rspBodyLength: Response Body Length
+      # HTTP fingerprint
+      fpTcpClientOs: Client OS Fingerprint
+      fpTcpServerOs: Server OS Fingerprint
+      fpHttpBrowser: Browser Fingerprint
+      fpHttpServer: Server Fingerprint
+      fpDeviceGuess: Device Type
+      # ---- Full field set for column settings (hidden by default) ----
+      clientIsn: Client Initial Sequence Number
+      serverIsn: Server Initial Sequence Number
+      seq: Sequence Number
+      ack: Acknowledgment Number
+      bitFin: FIN Flag
+      bitSyn: SYN Flag
+      bitRst: RST Flag
+      bitPsh: PSH Flag
+      bitAck: ACK Flag
+      bitUrg: URG Flag
+      window: Window Size
+      fpOs: OS Fingerprint
+      fpSig: TCP Fingerprint Signature
+      fpMtu: MTU
+      streamIndex: Stream Index
+      ipVersion: IP Version
+      url: Request URL
+      scheme: Scheme
+      fileExt: File Extension
+      queries: Query Parameters
+      fragment: URL Fragment
+      reqBody: Request Body
+      rspBody: Response Body
+      reqBodyHash: Request Body Hash
+      rspBodyHash: Response Body Hash
+      clientConsumed: Client Consumed Bytes
+      clientStartPayloadOffset: Client Payload Start Offset
+      clientEndPayloadOffset: Client Payload End Offset
+      clientStartTimestamp: Client Start Time
+      clientEndTimestamp: Client End Time
+      serverConsumed: Server Consumed Bytes
+      serverStartPayloadOffset: Server Payload Start Offset
+      serverEndPayloadOffset: Server Payload End Offset
+      serverStartTimestamp: Server Start Time
+      serverEndTimestamp: Server End Time
+      fpTcpClientOsQuality: Client OS Fingerprint Confidence
+      fpTcpClientSig: Client Fingerprint Signature
+      fpTcpServerOsQuality: Server OS Fingerprint Confidence
+      fpTcpServerSig: Server Fingerprint Signature
+      fpTcpMtu: TCP MTU
+      fpHttpBrowserQuality: Browser Fingerprint Confidence
+      fpHttpServerQuality: Server Fingerprint Confidence
+      fpHttpLanguage: Language Preference
+      tags: Tags
+      # Request headers
+      reqHdrAuthorization: Request Header Authorization
+      reqHdrProxyAuthorization: Request Header Proxy-Authorization
+      reqHdrCacheControl: Request Header Cache-Control
+      reqHdrIfMatch: Request Header If-Match
+      reqHdrIfNoneMatch: Request Header If-None-Match
+      reqHdrIfModifiedSince: Request Header If-Modified-Since
+      reqHdrIfUnmodifiedSince: Request Header If-Unmodified-Since
+      reqHdrIfRange: Request Header If-Range
+      reqHdrConnection: Request Header Connection
+      reqHdrKeepAlive: Request Header Keep-Alive
+      reqHdrAccept: Request Header Accept
+      reqHdrAcceptEncoding: Request Header Accept-Encoding
+      reqHdrAcceptLanguage: Request Header Accept-Language
+      reqHdrExpect: Request Header Expect
+      reqHdrMaxForwards: Request Header Max-Forwards
+      reqHdrCookie: Request Header Cookie
+      reqHdrOrigin: Request Header Origin
+      reqHdrAccessControlRequestHeaders: Request Header Access-Control-Request-Headers
+      reqHdrAccessControlRequestMethod: Request Header Access-Control-Request-Method
+      reqHdrContentType: Request Header Content-Type
+      reqHdrContentLength: Request Header Content-Length
+      reqHdrContentEncoding: Request Header Content-Encoding
+      reqHdrContentLanguage: Request Header Content-Language
+      reqHdrForwarded: Request Header Forwarded
+      reqHdrVia: Request Header Via
+      reqHdrRange: Request Header Range
+      reqHdrFrom: Request Header From
+      reqHdrHost: Request Header Host
+      reqHdrReferer: Request Header Referer
+      reqHdrReferrerPolicy: Request Header Referrer-Policy
+      reqHdrUserAgent: Request Header User-Agent
+      reqHdrTe: Request Header TE
+      reqHdrTransferEncoding: Request Header Transfer-Encoding
+      reqHdrTrailer: Request Header Trailer
+      reqHdrSecWebsocketKey: Request Header Sec-Websocket-Key
+      reqHdrSecWebsocketVersion: Request Header Sec-Websocket-Version
+      reqHdrSecWebsocketProtocol: Request Header Sec-Websocket-Protocol
+      reqHdrSecWebsocketExtensions: Request Header Sec-Websocket-Extensions
+      reqHdrSecFetchSite: Request Header Sec-Fetch-Site
+      reqHdrSecFetchMode: Request Header Sec-Fetch-Mode
+      reqHdrSecFetchUser: Request Header Sec-Fetch-User
+      reqHdrSecFetchDest: Request Header Sec-Fetch-Dest
+      reqHdrSecPurpose: Request Header Sec-Purpose
+      reqHdrServiceWorkerNavigationPreload: Request Header Service-Worker-Navigation-Preload
+      reqHdrSecChUa: Request Header Sec-CH-UA
+      reqHdrSecChUaArch: Request Header Sec-CH-UA-Arch
+      reqHdrSecChUaBitness: Request Header Sec-CH-UA-Bitness
+      reqHdrSecChUaFullVersion: Request Header Sec-CH-UA-Full-Version
+      reqHdrSecChUaFullVersionList: Request Header Sec-CH-UA-Full-Version-List
+      reqHdrSecChUaMobile: Request Header Sec-CH-UA-Mobile
+      reqHdrSecChUaModel: Request Header Sec-CH-UA-Model
+      reqHdrSecChUaPlatform: Request Header Sec-CH-UA-Platform
+      reqHdrSecChUaPlatformVersion: Request Header Sec-CH-UA-Platform-Version
+      reqHdrSecChUaWow64: Request Header Sec-CH-UA-Wow64
+      reqHdrSecChPrefersColorScheme: Request Header Sec-CH-Prefers-Color-Scheme
+      reqHdrSecChPrefersReducedMotion: Request Header Sec-CH-Prefers-Reduced-Motion
+      reqHdrSecChPrefersReducedTransparency: Request Header Sec-CH-Prefers-Reduced-Transparency
+      reqHdrWantContentDigest: Request Header Want-Content-Digest
+      reqHdrWantReprDigest: Request Header Want-Repr-Digest
+      reqHdrUpgradeInsecureRequests: Request Header Upgrade-Insecure-Requests
+      reqHdrDate: Request Header Date
+      reqHdrLink: Request Header Link
+      reqHdrUpgrade: Request Header Upgrade
+      reqHdrPriority: Request Header Priority
+      reqHdrAltUsed: Request Header Alt-Used
+      # Response headers
+      rspHdrWwwAuthenticate: Response Header WWW-Authenticate
+      rspHdrProxyAuthenticate: Response Header Proxy-Authenticate
+      rspHdrAge: Response Header Age
+      rspHdrCacheControl: Response Header Cache-Control
+      rspHdrClearSiteData: Response Header Clear-Site-Data
+      rspHdrExpires: Response Header Expires
+      rspHdrNoVarySearch: Response Header No-Vary-Search
+      rspHdrLastModified: Response Header Last-Modified
+      rspHdrEtag: Response Header ETag
+      rspHdrVary: Response Header Vary
+      rspHdrConnection: Response Header Connection
+      rspHdrKeepAlive: Response Header Keep-Alive
+      rspHdrAcceptPatch: Response Header Accept-Patch
+      rspHdrAcceptPost: Response Header Accept-Post
+      rspHdrSetCookie: Response Header Set-Cookie
+      rspHdrAccessControlAllowCredentials: Response Header Access-Control-Allow-Credentials
+      rspHdrAccessControlAllowHeaders: Response Header Access-Control-Allow-Headers
+      rspHdrAccessControlAllowMethods: Response Header Access-Control-Allow-Methods
+      rspHdrAccessControlAllowOrigin: Response Header Access-Control-Allow-Origin
+      rspHdrAccessControlExposeHeaders: Response Header Access-Control-Expose-Headers
+      rspHdrAccessControlMaxAge: Response Header Access-Control-Max-Age
+      rspHdrTimingAllowOrigin: Response Header Timing-Allow-Origin
+      rspHdrContentDisposition: Response Header Content-Disposition
+      rspHdrContentDigest: Response Header Content-Digest
+      rspHdrReprDigest: Response Header Repr-Digest
+      rspHdrContentType: Response Header Content-Type
+      rspHdrContentLength: Response Header Content-Length
+      rspHdrContentEncoding: Response Header Content-Encoding
+      rspHdrContentLanguage: Response Header Content-Language
+      rspHdrContentLocation: Response Header Content-Location
+      rspHdrForwarded: Response Header Forwarded
+      rspHdrVia: Response Header Via
+      rspHdrAcceptRanges: Response Header Accept-Ranges
+      rspHdrContentRange: Response Header Content-Range
+      rspHdrLocation: Response Header Location
+      rspHdrRefresh: Response Header Refresh
+      rspHdrAllow: Response Header Allow
+      rspHdrServer: Response Header Server
+      rspHdrCrossOriginEmbedderPolicy: Response Header Cross-Origin-Embedder-Policy
+      rspHdrCrossOriginOpenerPolicy: Response Header Cross-Origin-Opener-Policy
+      rspHdrCrossOriginResourcePolicy: Response Header Cross-Origin-Resource-Policy
+      rspHdrContentSecurityPolicy: Response Header Content-Security-Policy
+      rspHdrContentSecurityPolicyReportOnly: Response Header Content-Security-Policy-Report-Only
+      rspHdrExpectCt: Response Header Expect-Ct
+      rspHdrPermissionsPolicy: Response Header Permissions-Policy
+      rspHdrStrictTransportSecurity: Response Header Strict-Transport-Security
+      rspHdrXContentTypeOptions: Response Header X-Content-Type-Options
+      rspHdrXFrameOptions: Response Header X-Frame-Options
+      rspHdrXPermittedCrossDomainPolicies: Response Header X-Permitted-Cross-Domain-Policies
+      rspHdrXPoweredBy: Response Header X-Powered-By
+      rspHdrXXssProtection: Response Header X-Xss-Protection
+      rspHdrReportingEndpoints: Response Header Reporting-Endpoints
+      rspHdrReportTo: Response Header Report-To
+      rspHdrTransferEncoding: Response Header Transfer-Encoding
+      rspHdrTrailer: Response Header Trailer
+      rspHdrSecWebsocketAccept: Response Header Sec-Websocket-Accept
+      rspHdrSecWebsocketProtocol: Response Header Sec-Websocket-Protocol
+      rspHdrSecWebsocketExtensions: Response Header Sec-Websocket-Extensions
+      rspHdrAcceptCh: Response Header Accept-CH
+      rspHdrCriticalCh: Response Header Critical-CH
+      rspHdrAttributionReportingEligible: Response Header Attribution-Reporting-Eligible
+      rspHdrAttributionReportingRegisterSource: Response Header Attribution-Reporting-Register-Source
+      rspHdrAttributionReportingRegisterTrigger: Response Header Attribution-Reporting-Register-Trigger
+      rspHdrDate: Response Header Date
+      rspHdrLink: Response Header Link
+      rspHdrRetryAfter: Response Header Retry-After
+      rspHdrServerTiming: Response Header Server-Timing
+      rspHdrServiceWorker: Response Header Service-Worker
+      rspHdrServiceWorkerAllowed: Response Header Service-Worker-Allowed
+      rspHdrSourceMap: Response Header SourceMap
+      rspHdrUpgrade: Response Header Upgrade
+      rspHdrAltSvc: Response Header Alt-Svc
+      rspHdrPriority: Response Header Priority
+  networkStack:
+    name: Network Stack
+    field:
+      namespace: Namespace
+      timestamp: Capture Time
+      createdAt: Ingestion Time
+      sessionID: Session ID
+      traceID: Trace ID
+      capture: Capturer
+      version: Version
+      cli2Srv: Client to Server
+      topProto: Top Protocol
+      proto: Protocol
+      seq: Packet Index
+      level: Layer Level
+      headers: Protocol Headers
+      payloadStartOffset: Payload Start Offset
+      payloadEndOffset: Payload End Offset
+    level:
+      link: Data Link
+      network: Network
+      transport: Transport
+      application: Application
+      unknown: Unknown
+    packet:
+      request: Request Packet
+      response: Response Packet
+      other: Other
+    direction:
+      clientToServer: Client → Server
+      serverToClient: Server → Client
+    summary:
+      packets: Total Packets
+      requests: Request Packets
+      responses: Response Packets
+      loaded: Loaded
+      loadMore: Load More
+      empty: No network stack data for this transport
+      noTraceID: This record has no traceID to associate a network stack
+      error: Failed to load network stack
+    # Human-readable protocol headers: per-field name/value/description (header.field.<key> and header.desc.<key> keys match JSON field names)
+    header:
+      title: Protocol Header Details
+      rawJson: View Raw JSON
+      loopbackNote: Loopback traffic, no real link-layer header information
+      col:
+        field: Field
+        value: Value
+        desc: Description
+      field:
+        ethDstMac: Dest MAC
+        ethSrcMac: Source MAC
+        ethType: Ethernet Type
+        ethLength: Frame Length
+        ipv4Version: IP Version
+        ipv4Ihl: Header Length
+        ipv4Tos: Type of Service
+        ipv4Length: Total Length
+        ipv4ID: Identification
+        ipv4Flags: Flags
+        ipv4FragOffset: Fragment Offset
+        ipv4Ttl: Time to Live
+        ipv4IpProtocol: Upper Protocol
+        ipv4Checksum: Header Checksum
+        ipv4Src: Source IP
+        ipv4Dst: Dest IP
+        ipv4Options: IP Options
+        ipv4Padding: Padding
+        ipv6Version: IP Version
+        ipv6TrafficClass: Traffic Class
+        ipv6FlowLabel: Flow Label
+        ipv6Length: Payload Length
+        ipv6NextHeader: Next Header
+        ipv6HopLimit: Hop Limit
+        ipv6Src: Source IP
+        ipv6Dst: Dest IP
+        ipv6HopByHop: Hop-by-Hop Options
+        ipv6LastHeader: Last Header
+        srcPort: Source Port
+        dstPort: Dest Port
+        seq: Sequence Number
+        ack: Acknowledgment Number
+        dataOffset: Header Length
+        bitFin: FIN Flag
+        bitSyn: SYN Flag
+        bitRst: RST Flag
+        bitPsh: PSH Flag
+        bitAck: ACK Flag
+        bitUrg: URG Flag
+        bitEce: ECE Flag
+        bitCwr: CWR Flag
+        bitNs: NS Flag
+        window: Window Size
+        checksum: Checksum
+        urgent: Urgent Pointer
+        options: TCP Options
+        length: Data Length
+      desc:
+        ethDstMac: Destination MAC address of the data frame
+        ethSrcMac: Source MAC address of the data frame
+        ethType: Ethernet type identifying the upper-layer protocol (IPv4, IPv6, ARP, etc.)
+        ethLength: Ethernet frame length in bytes
+        ipv4Version: IP protocol version, always 4 for IPv4
+        ipv4Ihl: IPv4 header length in 32-bit words
+        ipv4Tos: Type of service for QoS prioritization
+        ipv4Length: Total IP datagram length (header + data) in bytes
+        ipv4ID: Identification used for fragment reassembly
+        ipv4Flags: "Fragment flags: DF (don't fragment), MF (more fragments)"
+        ipv4FragOffset: Fragment offset in 8-byte units
+        ipv4Ttl: Time to live, decremented by one per hop; packet is dropped at 0
+        ipv4IpProtocol: Upper-layer protocol number (TCP=6, UDP=17, ICMP=1, etc.)
+        ipv4Checksum: Header checksum for error detection
+        ipv4Src: Source IP address of the packet
+        ipv4Dst: Destination IP address of the packet
+        ipv4Options: IP options (rarely used, usually empty)
+        ipv4Padding: Padding bytes to align the header length
+        ipv6Version: IP protocol version, always 6 for IPv6
+        ipv6TrafficClass: Traffic class for QoS differentiation
+        ipv6FlowLabel: Flow label identifying packets of the same flow
+        ipv6Length: Payload length excluding the IPv6 header, in bytes
+        ipv6NextHeader: Next header type (extension header or transport protocol)
+        ipv6HopLimit: Hop limit, equivalent to IPv4 TTL
+        ipv6Src: Source IPv6 address of the packet
+        ipv6Dst: Destination IPv6 address of the packet
+        ipv6HopByHop: Hop-by-hop options extension header, processed by every router
+        ipv6LastHeader: Last header type (usually TCP/UDP)
+        srcPort: Source port identifying the sending application
+        dstPort: Destination port identifying the receiving application
+        seq: TCP sequence number of the first byte in the stream
+        ack: TCP acknowledgment number of the next expected byte
+        dataOffset: TCP header length in 32-bit words
+        bitFin: "FIN flag: sender has finished sending data"
+        bitSyn: "SYN flag: synchronizes sequence numbers to establish a connection"
+        bitRst: "RST flag: abnormally resets the connection"
+        bitPsh: "PSH flag: receiver should deliver data immediately"
+        bitAck: "ACK flag: the acknowledgment number is valid"
+        bitUrg: "URG flag: the urgent pointer is valid"
+        bitEce: "ECE flag: explicit congestion notification echo"
+        bitCwr: "CWR flag: congestion window reduced"
+        bitNs: "NS flag: nonce sum protection for random sequence numbers"
+        window: Receive window size for flow control
+        checksum: Checksum for error detection
+        urgent: Urgent pointer offset, used with the URG flag
+        options: TCP option list (MSS, window scale, timestamps, etc.)
+        length: Total UDP datagram length (header + data) in bytes
+      value:
+        yes: "Yes"
+        no: "No"
+        none: none
+      flag:
+        evil: Reserved
+        df: Don't Fragment (DF)
+        mf: More Fragments (MF)
+chart:
+  title:
+    queueSize: Queue Size
+    taskProcess: Task Processing
+  axis:
+    size: Size
+    count: Count
     date: Date
-    time: Time
-    id: ID
-    unionID: Union ID
-    name: Name
-    description: Description
-    createdAt: Created At
-    createdAtTime: Created At Time
-    createdAtDate: Created At Date
-    updatedAt: Updated At
-    updatedAtTime: Updated At Time
-    updatedAtDate: Updated At Date
-    deletedAt: Deleted At
-    deletedAtTime: Deleted At Time
-    deletedAtDate: Deleted At Date
-    active: Is Active
-    field: Field
-    action: Action
-    search: Search
-    username: Username
-    password: Password
-    nickleName: Nickle Name
-    email: Email
-    oldPassword: Old Password
-    newPassword: New Password
-    newPasswordAgain: New Password Again
-    namespace: Namespace
-    target: Target
-    effect: Effect
-    version: Version
-    device: Device
-    bpfExpr: BPF Expression
-    snapLen: Snap Length
-    timeout: Timeout
-    promisc: Promiscuous Mode
-    enabled: Enabled
-    expiredAt: Expired At
-    lastAccessAt: Last Access At
-  content:
-    condition: condition(s)
-    doubleCheck: Please enter `{random}` to double check
-  value:
-    null: "null"
-    undefined: "undefined"
+    queue: Queue
+  field:
+    active: Active
+    pending: Pending
+    retring: Retrying
+    scheduled: Scheduled
+    archived: Archived
+    processed: Processed
+    failed: Failed
+  serie:
+    queueSize: Queue Size
+enum:
+  periodicReportRunStatus:
+    running: Running
+    success: Success
+    failed: Failed
 action:
   signIn: Sign In
   signOut: Sign Out
-  signUp: Sign Up 
   language: Language
-  pwdForget: Password Forget
+  aiAssistant: AI Assistant
+  toggleTheme: Toggle theme
+  accountMenu: Account menu
+  pwdForget: Forgot Password
+  forgotSend: Send Reset Email
+  forgotBackToSignIn: Back to Sign In
+  resetSubmit: Reset Password
   profile: Profile
+  expand: Expand
+  collapse: Collapse
+  scrollToBottom: Jump to Bottom
+  jumpToContainerTop: Jump to container top
+  jumpToContainerBottom: Jump to container bottom
+  resizeWidth: Drag to resize width
+  resizeHeight: Drag to resize height
   reset: Reset
   create: Create
   update: Update
   delete: Delete
   edit: Edit
+  pinTop: Pin to Top
   close: Close
   confirm: Confirm
   activate: Activate
   deactivate: Deactivate
+  batchActivate: Batch Activate
+  batchDeactivate: Batch Deactivate
+  batchDelete: Batch Delete
+  batchDisable: Batch Disable
+  batchEnable: Batch Enable
+  clearSelection: Clear Selection
+  resetPassword: Reset Password
+  pause: Pause
+  unpause: Resume
   add: Add
   remove: Remove
-  join: join
+  join: Join
   leave: Leave
+  copy: Copy
+  archive: Archive
+  cancel: Cancel
+  run: Run
+  runNow: Run Now
+  history: History
   previousDate: Previous Date
   currentDate: Current Date
   nextDate: Next Date
+  previousRecord: Previous record
+  nextRecord: Next record
   currentTime: Current Time
   copySecret: Copy Secret
+  validate: Validate
+  dryRun: Dry Run
+  version: Version
+  rollback: Rollback
+  generateSkeleton: Generate Skeleton
+  reuseFields: Reuse Existing Rule Fields
+  selectSample: Select sample
+  regoFieldHint: Type "/" to open the field list, "//" to insert a literal "/"
+  regoSqlMustStartSelect: sqlite.query only supports read-only queries; the SQL must start with SELECT
+  regoSqlUnclosedString: Unterminated single-quoted string in SQL
+  regoSqlUnmatchedParen: Unbalanced parentheses in SQL
+  regoSqlUnknownTable: "Unregistered datasource table: {table} (connect it under third-party datasources first)"
+  tagExprFieldHint: Type "/" to open the tag list, "//" to insert a literal "/"
+  addCondition: Add Condition
+  removeCondition: Remove Condition
+  beautifyJson: Beautify JSON
+  markdownSource: Markdown
+  markdownPreview: Preview
+  validatePassed: Validation Passed
+  validateFailed: Validation Failed
+  viewPlaintext: View Plaintext
+  viewRecords: View Raw Records
+  viewDetail: View Details
+  viewStack: View Network Stack
+  viewInput: View input
+  fullscreen: Fullscreen edit
+  exitFullscreen: Exit fullscreen
+  fullscreenView: View fullscreen
+  exportPdf: Export PDF
+  exportImage: Export image
+  exportHtml: Export HTML
+  print: Print
+  favoriteSample: Save as Sample
+  resetFrontendConfig: Reset Frontend Config
+  download: Download
+  back: Back
+  backPrevious: Back to Previous Level
+  backHome: Back to Home
+  signInAnyway: Sign In Anyway
+  refresh: Refresh
+  refreshInterval: Auto refresh interval
+  enableAutoRefresh: Start auto refresh
+  disableAutoRefresh: Stop auto refresh
+  reindex: Reindex
+  reparse: Reparse
+  chunks: Chunk Details
+  query: Query
+  columns: Columns
+  selectAll: Select All
+  setDefault: Set Default
+  systemDefault: System Default
+  detail: Detail
+  testSend: Test Send
+  restoreDefault: Restore Default
+  renderTest: Render Test
+  templateValidate: Validate Syntax
+  templateDryRun: Dry Run
+  bind: Bind
+  unbind: Unbind
+  save: Save
+  test: Test Connection
+  sync: Sync Tools
+guide:
+  title: Third-party Data Query
+  subtitle: Third-party datasources registered in this namespace, plus runnable query samples
+  datasource: Datasource Cheatsheet
+  columns: columns
+  datasourceEmpty: No datasource registered in this namespace yet
+  insertSelect: Insert SELECT
+  clickInsertColumn: Click to insert table.column
+  samples: Scenarios
+  sampleEmpty: No runnable samples yet
+  clickInsertSample: Click to insert a runnable sample into the editor
+  sample:
+    exists: Existence check
+    existsDesc: Use COUNT(*)>0 to test whether third-party data matches
+    value: Fetch a single value
+    valueDesc: Read a field of the SQL result row via rows[0].column
+    aggregate: Aggregation
+    aggregateDesc: Aggregate third-party data with COUNT(DISTINCT) / SUM / AVG
 title:
   zk: Zhong Kui
   home: Home Page
   signIn: User Sign In
+  alreadySignedIn: Already Signed In
+  pwdForget: Forgot Password
   err404: Error - 404
   err401: Error - 401
+  featureUnavailable: Feature Unavailable
   userProfile: User Profile
   profileInfo: Profile Info
+  frontendConfigSync: Frontend Config Sync
   accessKey: Access Key
+  aiKnowledge: Knowledge Base
+  aiMemory: Memory
+  aiSkill: Skill Management
+  aiPeriodicReport: Periodic Report Plans
+  aiDocumentDetail: Knowledge Document Detail
   passwordReset: Password Reset
   userAdmin: Admin - User
   groupAdmin: Admin - Group
   namespaceAdmin: Admin - Namespace
   capturerAdmin: Admin - Capturer
+  systemStatus: Admin - System Status
+  llmConfigAdmin: Admin - LLM Config
+  notification:
+    channel: Notification Channels
+    target: Notification Targets
+    group: Notification Groups
+    template: Notification Templates
+    record: Send Records
+  datasource:
+    self: Third-party Datasource
+  tagRuleTagEvent: Tag Events - Tag RulesRule
+  tagEvent:
+    record: Tag Event Record
+    recordDetail: Tag Event Record Detail
+    hitRecords: Hit Raw Records
+  tagEventRuleTagEvent: Tag Event - Tag Event Rule
   queueEtl: ETL - Queue
+  serverEtl: ETL - Server
+  schedulerEtl: ETL - Scheduler
+  taskEtl: ETL - Task
+  traffic: Traffic Audit - List
+  trafficDetail: Traffic Audit - Detail
+  dryRunTags: Tag Results
+  dryRunRules: Rule Details
+  dryRunRuleTags: Matched {count} tags
+  dryRunRuleFailed: Rule execution failed
+  dryRunSummary: Rule Summary
+  dryRunEvents: Detected Events
+  dryRunEventHits: Matched {count} conditions
+home:
+  subtitle: Network Security Audit Platform
+  periodicReportBoard:
+    self: Periodic Report Board
+    settings: Manage Follows
+    empty: No followed periodic reports yet. Pick a plan to start following.
+    selectPlans: Choose Plans to Follow
+    loadMore: Load More
+    viewDetail: View Details
+    noPlans: No periodic report plans available to follow in this namespace
+  quickStart:
+    self: Quick Start
+    addGroup: New Group
+    newGroup: New Group
+    groupName: Group Name
+    renameGroup: Rename Group
+    deleteGroup: Delete Group
+    deleteGroupConfirm: Delete group "{group}"?
+    removeLink: Remove Link
+    addLink: Add Link
+    searchNav: Search navigation
+    emptyGroup: Drag or add a navigation link
+    dropHere: Drop here
+    defaultGroup: Default
+page:
+  featureUnavailable:
+    title: "{feature} is not activated yet"
+    hint: This feature is currently unavailable. Complete the setup on its activation page first.
+    activate: Go to {page} to activate
+    contactAdmin: This feature must be activated by an administrator. Please contact your administrator.
+  aiAssistant:
+    generate: Generate
+    enqueueQuery: Add to Queue
+    awaitingResponse: Awaiting response…
+    generating: Generating…
+    queuedQueryLocked: Clear the input first to edit a queued question
+    stop: Stop
+    newSession: New Session
+    untitledSession: New Session
+    renameSession: Rename Session
+    deleteSession: Delete Session
+    citations: Citations
+    citationOpen: Open source in a new tab
+    citationsExpand: "Show {count} more"
+    emptyQuery: Please enter a request
+    optimizePrompt: Optimize prompt
+    optimizePromptFailed: Prompt optimization failed
+    undoOptimizePrompt: Undo optimization
+    skillsLoading: Loading skills…
+    skillsEmpty: No skills available. Create and enable one in Skill Management first.
+    composerPlaceholder: Type / to pick a skill; type / again to close the skill list and keep a literal slash
+    error: Generation failed
+    runFailed: This answer did not finish normally (the run errored or timed out); the above is what had been generated before the interruption.
+    runCancelled: This answer was cancelled; the above is what had been generated before the cancellation.
+    noResponse: Request timed out or network error. Please try again.
+    me: Me
+    assistant: Assistant
+    hintSelectSession: Create or select a session to start
+    hintNoSession: No sessions yet — click “New Session” at the top right to start
+    hintFirstQuery: Send your first question to start; the session topic is generated automatically
+    questionRail: Question navigation
+    confirmDeleteSession: Delete this session and all its messages?
+    slotHint: It also becomes the session default slot when creating a session
+    disabled: AI feature is disabled
+    stageFailed: Stage Failed
+    compact: Compact Context into Memory
+    compactSummary: Context Summary
+    compactExtracted: Extracted Memories
+    compactWarnings: Extraction Warnings
+    contextUsage: "{percent}%"
+    contextUsageTitle: "Context usage {used} / {limit} Tokens"
+    compressToHere: Compact to here
+    compressStart: Compacting context…
+    compressDone: "Before {before} · folded {count}"
+    compressCompare: "Before {before} → after {after} ({percent}%)"
+    compressTokensUnknown: n/a
+    compressSucceeded: Context compaction done
+    compressFailed: Context compaction failed
+    approvalTitle: Tool Call Approval
+    approvalWaiting: Awaiting approval
+    approvalHint: Approve or reject each call; the run continues automatically once all are decided
+    approvalPrev: Previous
+    approvalNext: Next
+    approvalParams: Arguments
+    approvalResult: Call result
+    approvalError: Call error
+    approve: Approve
+    reject: Reject
+    approved: Approved
+    rejected: Rejected
+    reviewValve: Review valve
+    reviewValveHint:
+      each: Approve every client tool call before it runs
+      auto: Auto-approve calls safe to run automatically, others still need approval
+      none: Only calls requiring mandatory review need approval, the rest run directly
+    autoApproved: Auto-approved
+    approvalBackendNote: This call runs on the server — you only need to approve or reject
+    apiInvokeInvalidArgs: The call arguments could not be parsed, so the read-only endpoint was not invoked
+    thinking: Thinking
+    thinkingHint: When enabled, the model's reasoning process is requested and shown with the answer
+    reasoningDefaultOnHint: This model enables thinking by default, so reasoning is output even without a thinking switch; fill in the model's Thinking Field and its on/off values under Advanced in "LLM Model" to control it manually.
+    reasoningStreaming: Thinking…
+    reasoningDone: Reasoning complete
+    parallelCalls: Parallel calls ×{count}
+    copyMessage: Copy
+    retryMessage: Retry
+    branchMessage: Branch
+    branchTitle: "{title} (branch)"
+    branchCreated: Branch session created
+    usageTokens: "{count} tokens"
+    usagePromptTokens: "Input {count} tokens"
+    usageCompletionTokens: "Output {count} tokens"
+    usageElapsed: "{seconds}s"
+    rollbackMessage: Roll back
+    deleteMessage: Delete
+    confirmRollbackMessage: Restart from this turn? This message and everything after it will be deleted.
+    confirmDeleteMessage: Delete this message and everything after it?
+    questionnaireTitle: AI Question
+    questionnaireOther: Other
+    questionnaireCustomPlaceholder: Type your answer
+    questionnaireSubmit: Submit
+    questionnaireCancel: Cancel
+    questionnairePrev: Previous
+    questionnaireNext: Next
+    questionnaireUnanswered: Unanswered questions are submitted as unanswered
+    questionnaireUnavailable: This question is no longer active, so your answer cannot be submitted. Please ask a new question.
+    questionnaireReanswer: Reanswer
+    questionnaireReanswerBusy: Still generating this turn. You can reanswer once it finishes.
+    confirmReanswerQuestionnaire: Reopen this question? Everything after it will be cleared so you can answer it again.
+    approvalRerun: Reopen approval
+    approvalRerunBusy: Still generating this turn. You can reopen the approval once it finishes.
+    confirmRerunApproval: Reopen this approval? Everything after it will be cleared so you can approve or reject it again.
+    questionnaireNoAnswer: Not answered
+    questionnairePendingHint: AI is waiting for your answer above. Please answer first.
+    questionnaireJump: View Question
+    blockNav: Quick block navigation
+    blockPrev: Previous block
+    blockNext: Next block
+    lockedHint: "Session {label} ({used}/{max} turns). Roll back a message to keep asking."
+    lockedReject: This session has reached the turn limit. Roll back an earlier message to keep asking.
+    stateGuardReject: The session is not ready for this action. Please try again later.
+    nextStepsTitle: Recommended next steps
+    nextStepsHint: Click to send, or fill the input
+    nextStepsRecommended: Recommended
+    nextStepsFill: Fill the input
+    nextStepsDraftNotEmpty: The input already has content. Clear it to send directly.
+  aiKnowledge:
+    dryRun: Dry Run
+    query: Query
+    advancedParams: Advanced Parameters
+    advancedParamsHint: "Backend defaults are used when unset ({topKLabel}: {topK} · {candidatesLabel}: {candidates} · {fusionLabel}: {fusion})"
+    topK: Rerank Top-K
+    candidates: Candidates
+    fusion: Fusion
+    weightVector: Vector Weight
+    weightKeyword: Keyword Weight
+    run: Run
+    running: Running…
+    stop: Stop
+    process: Progress
+    stageNoOutput: No output for this stage yet
+    stageFailed: Stage Failed
+    retrievedChunks: Retrieved Chunks
+    retrievedChunksSubtitle: Document chunks matched by retrieval, with their similarity
+    answer: Generated Answer
+    metrics: Metrics
+    contextPrecision: Context Precision
+    faithfulness: Faithfulness
+    answerRelevance: Answer Relevance
+    contextUtilization: Context Utilization
+    relevantOfTotal: "Relevant {relevant}/{total}"
+    judgments: Chunk Judgments
+    judgmentsSubtitle: Per-chunk relevance verdict against the question
+    claims: Claim Faithfulness
+    claimsSubtitle: Whether each answer claim is supported by retrieved content
+    reverseQuestions: Reverse Questions
+    reverseQuestionsSubtitle: Questions the retrieved chunks should be able to answer
+    suggestions: Improvement Suggestions
+    suggestionsEmpty: No obvious issue found in this run; no suggestions for now
+    suggestionsSubtitle: Actionable improvements derived from the retrieval hits and metrics
+    warnings: Warnings
+    evalError: Evaluation Unavailable
+    metaModel: Model
+    metaElapsed: Elapsed
+    metaPromptTokens: Prompt Tokens
+    metaCompletionTokens: Completion Tokens
+    metaTotalTokens: Total Tokens
+    metaRetrieveElapsed: Retrieve Elapsed
+    metaTotal: Total Elapsed
+    close: Close
+    chunks: Chunk Details
+    chunkSummary: Index Summary
+    chunkIndexed: Indexed
+    chunkNotIndexed: Not indexed
+    chunkStale: Index behind content
+    chunkList: Chunks
+    chunkNotIndexedHint: This document is not indexed yet, so there are no chunks; run reindex first
+    chunkCharsValue: "{count} chars"
+    chunkLinesValue: "{count} lines"
+    chunkStatCount: Chunk count
+    chunkStatContentChars: Content chars
+    chunkStatCharsTotal: Total chunk chars
+    chunkStatCharsAvg: Average chunk chars
+    chunkStatCharsMin: Smallest chunk chars
+    chunkStatCharsMax: Largest chunk chars
+    chunkStatHeadingPaths: Heading paths
+    chunkStatAtomic: Atomic chunks
+    chunkSize: Chunk size
+    chunkOverlap: Chunk overlap
+    chunkEmbeddingModel: Embedding model
+    chunkEmbeddingDimensions: Embedding dimensions
+    chunkHash: Content hash
+    chunkIndexedAt: Indexed at
+    importDocument: Import Document
+    importTitlePlaceholder: Leave blank to use the filename (without extension)
+    importFile: Source file
+    importFileHint: Supports Markdown / TXT / PDF / DOCX, up to 64 MB per file
+    importedContentReadOnly: The content is parsed from the imported source and is read-only; only the title can be changed
+    parseError: Parse Error
+    scopeCurrent: Current namespace
+    scopeSystem: System knowledge base
+    scopeSystemHint: System knowledge is code-declared shared knowledge, read-only for viewing
+    documentUnreadable: This knowledge document does not exist or is out of readable scope
+  aiSkill:
+    scopeHint: Builtin skills are code-declared global capabilities and can only be enabled or disabled; custom skills are isolated by namespace
+    builtinReadonly: Builtin skills are maintained by code and cannot be edited or deleted
+    create: Create Skill
+    edit: Edit Skill
+    importMarkdown: Import Markdown
+    importHint: Supports .md / .markdown / .txt files; the content fills the body, and a blank name is prefilled with the filename (without extension)
+    importFailed: Failed to read file {name}. Please retry or paste the content directly
+    namePlaceholder: Identifies the skill in the list, e.g. log troubleshooting
+    descriptionPlaceholder: One sentence about what the skill does; can be left blank
+    contentPlaceholder: Paste the skill body; Markdown steps and notes are supported
+    addInputField: Add Input Field
+    inputFieldsHint: Input fields render the periodic plan form; nowTime is injected by the system at runtime
+    inputFieldName: Field Name
+    inputFieldType: Type
+    inputFieldRequired: Required
+    inputFieldDescription: Description
+    fixedFieldsHint: Fixed fields must be a JSON object; periodic skills must include timeOffset and timeWindow (Go durations such as -24h or 24h)
+    invalidFixedFields: Fixed fields must be a valid JSON object
+    inputFieldNameRequired: Input field names cannot be empty
+    nowTimeRequired: A periodic skill must contain an input field named nowTime with type date
+    nowTimeLocked: nowTime is injected by the system at runtime and cannot be removed or renamed
+  periodicReportPlan:
+    scopeHint: Only custom periodic skills whose fixed fields define a valid time window and whose input fields include nowTime can be used for periodic report plans; fixed fields follow the skill defaults unless overridden
+    nowTimeInjected: nowTime is injected by the system at runtime
+    inputFieldsTitle: Input Fields
+    fixedFieldsTitle: Fixed Fields
+    fixedFieldsHint: Edit the whole JSON object, including nested objects and arrays; fixed fields follow the skill defaults unless changed, and only changed fields are submitted
+    fixedFieldsInvalid: Fixed fields must be a valid JSON object
+    noInputValues: No input values
+    create: New Periodic Report Plan
+    edit: Edit Periodic Report Plan
+    history: Run History
+    viewReport: View Report
+    viewSession: View Session
+    sessionReadonlyHint: The session is frozen after the run finishes; this view is for review and audit only and cannot be edited or continued
+    sessionEmpty: This run has no session records to show
+    sessionUserLabel: User Prompt
+    sessionAssistantLabel: Assistant Answer
+    sessionToolCalls: Tool Calls
+    sessionArguments: Arguments
+    sessionResult: Result
+    sessionQuestionnaire: User Questions
+    sessionNextSteps: Suggested Next Steps
+    sessionToolRunning: Running
+    sessionToolDone: Done
+    sessionToolFailed: Failed
+    sessionApproved: Approved
+    sessionDeclined: Declined
+    sessionPendingDecision: Pending
+    noRuns: No runs for this plan yet
+    runsTitle: Run History
+    cronPlaceholder: "0 9 * * *"
+    expiresHint: Leave empty for no expiry
+    longTerm: No expiry
+    pendingSchedule: Pending
+    retentionHint: Periodic reports are retained for 1 to 3650 days; default is 90
+    runNow: Run Now
+    runNowConfirm: Run periodic report plan "{name}" now??
+    deleteRun: Delete Run
+    deleteRunConfirm: Delete this run record? Its generated report content will also be removed and cannot be recovered.
+  llmModelAdmin:
+    baseURLHint: OpenAI-compatible base URL of the provider (e.g. https://dashscope.aliyuncs.com/compatible-mode/v1)
+    apiKeyKeepHint: The key is never echoed in plaintext; leave blank to keep the existing key
+    scopeHint: The model registry is global configuration and is not isolated per namespace
+    dimensionsHint: The vector dimensions are probed by the backend when an embedding slot is bound; to change the index dimensions, contact the operations team to run the server-side command
+    extraBodyHint: 'A JSON object merged into every request for this model (e.g. {''{"top_k": 20}''}); leave blank to add nothing'
+    thinkingHint: "Takes effect only when the field name and both on/off values are provided; leave blank to disable it for this model"
+    apiModeHint: "Chat models only; Responses uses the Agentic message protocol with the same tool-call and resume semantics"
+    advancedTitle: Advanced Settings
+    advancedHint: "Extra request fields and the thinking switch are both optional; chat models only"
+  llmBindingAdmin:
+    hint: "Each of the four slots binds one model: chat slots require a chat model and the embedding slot requires an embedding model; slot availability comes from the runtime snapshot"
+    indexDimensions: "Knowledge index dimensions: {dimensions}"
+    indexDimensionsUnavailable: "Knowledge index dimensions unknown (the index column is not ready; run the database migration first)"
+    selectModel: Select Model
+    unbound: Unbound
+  agentParamAdmin:
+    hint: Factory values are seeded by the database migration and validated at startup; changes take effect immediately, and submitting blank writes a parameter back to its factory value
+    dirtyCount: "{count} pending"
+    groupCount: "{count}"
+    groupSubtitle:
+      agent: System prompt, message section titles and retrieved snippet truncation
+      retrieval: Recall count, fusion weights and LLM reranking
+      session: Message-count and byte caps on injected conversation history
+      chunking: Markdown-aware slice size and overlap
+      eval: Judge prompts and parameters for each RAG evaluation stage
+      sanitize: Entry-count and byte caps applied before business data reaches the model
+    defaultValue: "Default: {value}"
+  mcpServerAdmin:
+    scopeHint: The MCP server registry is global configuration and is not scoped by namespace
+    urlHint: MCP endpoint address (http / https)
+    # The braces of the JSON example must be wrapped in vue-i18n's literal syntax {'...'};
+    # bare braces are read as an interpolation placeholder and fail the build (code 2)
+    headersHint: 'Headers are entered as JSON object text (e.g. {''{"Authorization":"Bearer xxx"}''}); every value must be a string. Stored encrypted'
+    headersKeepHint: Headers are never echoed in plaintext; leave blank to keep the current credentials
+  llmToolAdmin:
+    scopeHint: The tool registry is global configuration and is not scoped by namespace; builtin tools are maintained by the system and cannot be deleted
+    builtinReadonly: Builtin tools are maintained by the system and cannot be deleted
+profile:
+  pageSubtitle: Manage your account details, access keys and password security
+  infoSubtitle: Update your nickname and email, then click "Update" to save
+  accessKeySubtitle: Access keys enable programmatic API access; keep them safe after creation
+  passwordSubtitle: Change your sign-in password. Prefer a strong password and rotate it regularly
+  emptyAccessKeys: No access keys yet
+  configSyncSubtitle: Keep browser page configuration (theme, language, sidebar, etc.) in sync across hosts
+  configSyncHint: When enabled, page configuration changes are uploaded immediately; on sync failure the last synced configuration is restored
 summary:
-  pageNotFound: Page Does Not Exists!
+  pageNotFound: Page Does Not Exist!
   notSignInYet: Please must sign in first.
   goingToSignIn: Going to sign in page...
+  alreadySignedIn: You are already signed in.
+  alreadySignedInHint: No need to sign in again. Please choose what to do next.
   dataLoading: Data is loading...
   endOfData: No more data
+  noEventDetected: No events detected
+  noTagMatched: No tags matched
+  noServerYet: There is no running {name} yet!
   unknownError: Something went wrong...
 notice:
-  wellcome: Wellcome!
+  wellcome: Welcome!
+  forgotEmailSent: "If the account and email match, a reset email has been sent to your inbox."
+  resetTokenMissing: "The reset link is invalid or missing a valid token, please request a new password reset"
   goodBye: Good Bye!
   profileUpdated: Profile updated successfully!
   passwordReset: Password reset successfully!
+  frontendConfigSyncFailed: Frontend config sync failed, the last synced configuration has been restored
+  missingParam: Missing a required parameter, cannot load the detail
+  tagExpr:
+    empty: Expression is empty
+    unexpectedChar: 'Unexpected character "{char}"'
+    unexpectedToken: 'Unexpected token "{token}"'
+    unexpectedEnd: Unexpected end of expression
+    missingClose: Missing closing ")"
+    expectedOperand: 'Expected a label or "(", but found "{token}"'
   copied: Copied!
   copyFailed: Copy Failed!
+  copyImageFallback: The image clipboard is unavailable (HTTPS and clipboard permission required); copied the diagram source instead
+  exportImageSuccess: Image exported
+  exportHtmlSuccess: HTML exported
+  exportFailed: Export failed, please try again later
+  printReady: 'Print view opened; choose "Save as PDF" in the print dialog'
+  printBlocked: The print view was blocked by the browser; allow this site to open new windows and try again
+  deleteConfirm: "Confirm deleting {category} {key}?"
+  archiveConfirm: "Confirm archiving {category} {key}?"
+  cancelConfirm: "Confirm canceling {category} {key}?"
+  runConfirm: "Confirm running {category} {key}?"
+  rollbackConfirm: "Confirm rolling back {category} {key} to version {version}?"
+  reindexConfirm: "Confirm reindexing {category} {key}?"
+  reparseConfirm: "Confirm reparsing {category} {key}?"
+  noVersion: This rule has no historical versions yet
+  dryRunConfirm: "Confirm dry running {category} {key}?"
+  enableConfirm: "Confirm enabling {category} {key}?"
+  disableConfirm: "Confirm disabling {category} {key}?"
+  regoInvalid: "Rego validation failed, cannot submit!"
+  expressionInvalid: "Expression validation failed, cannot submit!"
+  plaintextLoadFailed: Failed to load plaintext
+  plaintextEmpty: No plaintext content in this field
+  plaintextBinary: Binary content, hex preview below
+  plaintextTruncated: Content is too long, preview truncated
+  selectedCount: "Selected {count} item(s)"
+  batchConfirm: "Perform the operation on the selected {count} item(s)"
+  batchResult: "{succeeded} succeeded, {failed} failed"
+  schedulerScheduleConflict: Choose either a cron expression or an interval, not both
+  schedulerScheduleEmpty: Provide either an interval or a cron expression
+  payloadInvalid: Payload is not valid JSON
+  notification:
+    testSendSuccess: Test message sent successfully
+    setDefaultSuccess: Set as default group
+    setDefaultConfirm: "Confirm to set {category} {key} as the default notification group?"
+    noTargets: This group has no bound targets yet
+    restoreDefaultConfirm: "Confirm to restore templates of event {event} ({language}) to built-in defaults?"
+    restoreDefaultSuccess: Restored to built-in default templates
+  datasource:
+    testSuccess: Connection successful
+    testFailed: Connection failed
+    introspectSuccess: Schema introspected successfully
+    introspectFailed: Schema introspection failed
+    introspectNoFile: Please select a SQLite database file
+  llmModel:
+    testSuccess: Connectivity test passed
+    testFailed: Connectivity test failed
+  llmBinding:
+    bindSuccess: Slot bound successfully
+    unbindSuccess: Slot unbound successfully
+    unbindConfirm: "Unbind slot {key}? The slot becomes unavailable after unbinding"
+  agentParam:
+    saveSuccess: Params saved successfully
+    resetSuccess: Params restored to defaults
+    resetGroupConfirm: 'Restore all params in the "{key}" group to defaults?'
+  mcpServer:
+    testSuccess: "Connection test passed; the remote exposes {count} tool(s)"
+    testFailed: Connection test failed
+    syncSuccess: "Sync complete: {created} added, {updated} refreshed, {removed} removed"
+  aiDocument:
+    downloadSuccess: "Downloading {name}"
+    downloadFailed: Failed to download the source file
+    notDownloadable: This document has no downloadable source file
+inputType:
+  string: String
+  number: Number
+  boolean: Boolean
+  object: Object
+  array: Array
 unit:
+  day: d
   second: s
   count: cnt
+  tokenNone: No unit
+  tokenK: Thousand (K)
+  tokenM: Million (M)
 option:
   search:
     eq: Equal
@@ -126,7 +1847,7 @@ option:
     pfx: Prefix With
     npfx: Not Prefix With
     ipfx: Prefix With (ignore case)
-    inpfix: Not Prefix With (ignore case)
+    inpfx: Not Prefix With (ignore case)
     sfx: Suffix With
     nsfx: Not Suffix With
     isfx: Suffix With (ignore case)
@@ -141,45 +1862,132 @@ option:
     lte: Less Than Or Equal
     gt: Greater Than
     gte: Greater Than Or Equal
+    fts: Full Text Search
+  language:
+    "*": All Languages
+    en: English
+    zh-Hans: Simplified Chinese
+  channel:
+    "*": All Channels
+# Cron expression field: builder panel and validation messages
+# (components/forms/CronField.vue and utils/cron.ts)
+cron:
+  builder: Schedule Builder
+  title: Schedule
+  frequency: Frequency
+  frequencyOption:
+    minute: Every minute
+    hourly: Hourly
+    daily: Daily
+    weekly: Weekly
+    monthly: Monthly
+    yearly: Yearly
+  field:
+    minute: Minute
+    hour: Hour
+    dayOfMonth: Day of month
+    month: Month
+    dayOfWeek: Day of week
+  weekday:
+    sun: Sunday
+    mon: Monday
+    tue: Tuesday
+    wed: Wednesday
+    thu: Thursday
+    fri: Friday
+    sat: Saturday
+  descriptorHint: "This mode only accepts macro descriptors such as {'@hourly'} / {'@daily'} / {'@weekly'} / {'@monthly'} / {'@yearly'}"
+  nextRuns: Next runs
+  noNextRuns: Unable to compute the next run
+  customHint: The current expression is custom; changing the options above overwrites it
+  weekdayRequired: Select at least one weekday
+  descriptorTitle: Common descriptors
+  guide: "minute 0-59 · hour 0-23 · day 1-31 · month 1-12 · weekday 0-6 (0 = Sunday); supports *, a-b, a,b, */n"
+  error:
+    empty: Expression is required
+    fieldCount: "Expected 5 fields (minute hour day month weekday) or descriptors such as {'@daily'}"
+    descriptorOnly: "Only macro descriptors such as {'@hourly'} / {'@daily'} / {'@weekly'} / {'@monthly'} / {'@yearly'} are allowed"
+    cronOnly: "Only 5-field cron expressions (minute hour day month weekday) are allowed; {'@daily'} and other descriptors are not"
+    syntax: "Invalid {field} field"
+    range: "The {field} field must be between {min} and {max}"
+    order: "The start of the {field} field must not exceed its end"
+    descriptor: "Unsupported schedule descriptor {token}"
+  describe:
+    everyMinute: Every minute
+    hourlyAt: "At minute {minute} of every hour"
+    dailyAt: "Daily at {time}"
+    weeklyAt: "Every {weekdays} at {time}"
+    monthlyAt: "On day {day} of every month at {time}"
+    yearlyAt: "Every year on {month}/{day} at {time}"
+    every: "Every {duration}"
+    custom: Custom schedule
+# Markdown syntax check strings (components/forms/MarkdownEditor.vue)
+markdown:
+  fullscreenTitle: Document preview
+  lint:
+    fenceUnclosed: Unclosed code fence
+    linkMissingParen: Link is missing a closing parenthesis
+    linkEmptyTarget: Link target is empty
+    headingMissingSpace: Missing space after heading #
+    listMissingSpace: Missing space after list marker
+    summary: "Line {line}: {message}"
+    summaryMore: "Line {line}: {message} ({count} issues)"
 validation:
   mixed:
-    default: '{path} is invalid'
-    required: '{path} is a required field'
-    defined: '{path} must be defined'
-    notNull: '{path} cannot be null'
-    oneOf: '{path} must be one of the following values: {values}'
-    notOneOf: '{path} must not be one of the following values: {values}'
+    default: "{path} is invalid"
+    required: "{path} is a required field"
+    defined: "{path} must be defined"
+    notNull: "{path} cannot be null"
+    notType: "{path} must be a {type} type"
+    oneOf: "{path} must be one of the following values: {values}"
+    notOneOf: "{path} must not be one of the following values: {values}"
   string:
-    length: '{path} must be exactly {length} characters'
-    min: '{path} must be at least {min} characters'
-    max: '{path} must be at most {max} characters'
+    length: "{path} must be exactly {length} characters"
+    min: "{path} must be at least {min} characters"
+    max: "{path} must be at most {max} characters"
     matches: '{path} must match the following: "{regex}"'
-    email: '{path} must be a valid email'
-    url: '{path} must be a valid URL'
-    uuid: '{path} must be a valid UUID'
-    datetime: '{path} must be a valid ISO date-time'
-    datetime_precision: '{path} must be a valid ISO date-time with a sub-second precision of exactly {precision} digits'
+    email: "{path} must be a valid email"
+    url: "{path} must be a valid URL"
+    uuid: "{path} must be a valid UUID"
+    datetime: "{path} must be a valid ISO date-time"
+    datetime_precision: "{path} must be a valid ISO date-time with a sub-second precision of exactly {precision} digits"
     datetime_offset: '{path} must be a valid ISO date-time with UTC "Z" timezone'
-    trim: '{path} must be a trimmed string'
-    lowercase: '{path} must be a lowercase string'
-    uppercase: '{path} must be a upper case string'
+    trim: "{path} must be a trimmed string"
+    lowercase: "{path} must be a lowercase string"
+    uppercase: "{path} must be a upper case string"
   number:
-    min: '{path} must be greater than or equal to {min}'
-    max: '{path} must be less than or equal to {max}'
-    lessThan: '{path} must be less than {less}'
-    moreThan: '{path} must be greater than {more}'
-    positive: '{path} must be a positive number'
-    negative: '{path} must be a negative number'
-    integer: '{path} must be an integer'
+    min: "{path} must be greater than or equal to {min}"
+    max: "{path} must be less than or equal to {max}"
+    lessThan: "{path} must be less than {less}"
+    moreThan: "{path} must be greater than {more}"
+    positive: "{path} must be a positive number"
+    negative: "{path} must be a negative number"
+    integer: "{path} must be an integer"
   date:
-    min: '{path} field must be later than {min}'
-    max: '{path} field must be at earlier than {max}'
+    min: "{path} field must be later than {min}"
+    max: "{path} field must be at earlier than {max}"
   boolean:
-    isValue: '{path} field must be {value}'
+    isValue: "{path} field must be {value}"
   object:
-    noUnknown: '{path} field has unspecified keys: {unknown}'
-    exact: '{path} object contains unknown properties: {properties}'
+    noUnknown: "{path} field has unspecified keys: {unknown}"
+    exact: "{path} object contains unknown properties: {properties}"
   array:
-    min: '{path} field must have at least {min} items'
-    max: '{path} field must have less than or equal to {max} items'
-    length: '{path} must have {length} items'
+    min: "{path} field must have at least {min} items"
+    max: "{path} field must have less than or equal to {max} items"
+    length: "{path} must have {length} items"
+# Notification channel/target config field labels. These keys are returned by the
+# backend /notification/channel/types endpoint and rendered via $t(f.label).
+notify:
+  channel:
+    email:
+      field:
+        host: SMTP Host
+        port: Port
+        username: Username
+        password: Password
+        from: From
+        to: Recipient Email
+    webhook:
+      field:
+        url: Webhook URL
+        headers: Headers

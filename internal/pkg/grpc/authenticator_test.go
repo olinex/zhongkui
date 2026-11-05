@@ -11,8 +11,8 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"zhongkui.com/zhongkui/internal/pkg/auth"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/signature"
+	"zhongkuisec.com/zhongkui/internal/pkg/auth"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/signature"
 )
 
 // mockAccessKey 是 auth.AccessKey 接口的模拟实现，用于单元测试
@@ -23,9 +23,16 @@ type mockAccessKey struct {
 	expiredAt *time.Time
 }
 
-func (m *mockAccessKey) UserID() string        { return m.userID }
-func (m *mockAccessKey) IsEnabled() bool       { return m.enabled }
-func (m *mockAccessKey) Secret() string        { return m.secret }
+// UserID 返回访问密钥归属的用户 ID。
+func (m *mockAccessKey) UserID() string { return m.userID }
+
+// IsEnabled 返回访问密钥是否启用。
+func (m *mockAccessKey) IsEnabled() bool { return m.enabled }
+
+// Secret 返回访问密钥的签名密钥。
+func (m *mockAccessKey) Secret() string { return m.secret }
+
+// ExpiredAt 返回访问密钥的过期时间。
 func (m *mockAccessKey) ExpiredAt() *time.Time { return m.expiredAt }
 
 // mockAccessKeyPool 是 auth.AccessKeyPool 接口的模拟实现，用于单元测试
@@ -37,6 +44,7 @@ type mockAccessKeyPool struct {
 	updateLastErr   error
 }
 
+// GetKey 返回预设的访问密钥或预设的查询错误。
 func (m *mockAccessKeyPool) GetKey(_ context.Context, _ string) (auth.AccessKey, error) {
 	if m.getKeyErr != nil {
 		return nil, m.getKeyErr
@@ -47,10 +55,12 @@ func (m *mockAccessKeyPool) GetKey(_ context.Context, _ string) (auth.AccessKey,
 	return m.key, nil
 }
 
+// IsDuplicated 返回预设的随机串重复判定与错误。
 func (m *mockAccessKeyPool) IsDuplicated(_ context.Context, _ string, _ time.Time, _ string) (bool, error) {
 	return m.isDuplicated, m.isDuplicatedErr
 }
 
+// UpdateLastAccess 返回预设的最后访问时间更新错误。
 func (m *mockAccessKeyPool) UpdateLastAccess(_ context.Context, _ string) error {
 	return m.updateLastErr
 }
@@ -65,6 +75,7 @@ func buildToken(accessKeyID, secret, method string, timestamp int64, nonce strin
 	return fmt.Sprintf("%s:%s:%s:%s:%s", accessKeyID, timestampStr, nonce, base64Method, signature)
 }
 
+// TestNewAccessKeyAuthenticator 验证认证器实例可被正确创建并持有密钥池。
 func TestNewAccessKeyAuthenticator(t *testing.T) {
 	Convey("TestNewAccessKeyAuthenticator", t, func() {
 		Convey("应该成功创建认证器实例", func() {
@@ -76,6 +87,7 @@ func TestNewAccessKeyAuthenticator(t *testing.T) {
 	})
 }
 
+// TestAccessKeyAuthenticator_Handle_Success 验证有效令牌可成功认证并返回用户 ID。
 func TestAccessKeyAuthenticator_Handle_Success(t *testing.T) {
 	Convey("TestAccessKeyAuthenticator_Handle_Success", t, func() {
 		now := time.Now().UTC()
@@ -121,6 +133,7 @@ func TestAccessKeyAuthenticator_Handle_Success(t *testing.T) {
 	})
 }
 
+// TestAccessKeyAuthenticator_Handle_InvalidTokenFormat 验证令牌格式非法时返回未认证错误。
 func TestAccessKeyAuthenticator_Handle_InvalidTokenFormat(t *testing.T) {
 	Convey("TestAccessKeyAuthenticator_Handle_InvalidTokenFormat", t, func() {
 		pool := &mockAccessKeyPool{}
@@ -146,6 +159,7 @@ func TestAccessKeyAuthenticator_Handle_InvalidTokenFormat(t *testing.T) {
 	})
 }
 
+// TestAccessKeyAuthenticator_Handle_InvalidBase64Method 验证方法名 Base64 解码失败时返回未认证错误。
 func TestAccessKeyAuthenticator_Handle_InvalidBase64Method(t *testing.T) {
 	Convey("TestAccessKeyAuthenticator_Handle_InvalidBase64Method", t, func() {
 		pool := &mockAccessKeyPool{}
@@ -160,6 +174,7 @@ func TestAccessKeyAuthenticator_Handle_InvalidBase64Method(t *testing.T) {
 	})
 }
 
+// TestAccessKeyAuthenticator_Handle_MethodMismatch 验证令牌方法名与实际调用不一致时返回未认证错误。
 func TestAccessKeyAuthenticator_Handle_MethodMismatch(t *testing.T) {
 	Convey("TestAccessKeyAuthenticator_Handle_MethodMismatch", t, func() {
 		key := &mockAccessKey{
@@ -181,6 +196,7 @@ func TestAccessKeyAuthenticator_Handle_MethodMismatch(t *testing.T) {
 	})
 }
 
+// TestAccessKeyAuthenticator_Handle_InvalidTimestamp 验证时间戳非整数时返回未认证错误。
 func TestAccessKeyAuthenticator_Handle_InvalidTimestamp(t *testing.T) {
 	Convey("TestAccessKeyAuthenticator_Handle_InvalidTimestamp", t, func() {
 		key := &mockAccessKey{
@@ -202,6 +218,7 @@ func TestAccessKeyAuthenticator_Handle_InvalidTimestamp(t *testing.T) {
 	})
 }
 
+// TestAccessKeyAuthenticator_Handle_NonceDuplicated 验证随机串被复用时返回未认证错误。
 func TestAccessKeyAuthenticator_Handle_NonceDuplicated(t *testing.T) {
 	Convey("TestAccessKeyAuthenticator_Handle_NonceDuplicated", t, func() {
 		pool := &mockAccessKeyPool{
@@ -224,6 +241,7 @@ func TestAccessKeyAuthenticator_Handle_NonceDuplicated(t *testing.T) {
 	})
 }
 
+// TestAccessKeyAuthenticator_Handle_IsDuplicatedError 验证随机串重复检查内部错误时返回内部错误。
 func TestAccessKeyAuthenticator_Handle_IsDuplicatedError(t *testing.T) {
 	Convey("TestAccessKeyAuthenticator_Handle_IsDuplicatedError", t, func() {
 		pool := &mockAccessKeyPool{
@@ -241,6 +259,7 @@ func TestAccessKeyAuthenticator_Handle_IsDuplicatedError(t *testing.T) {
 	})
 }
 
+// TestAccessKeyAuthenticator_Handle_GetKeyError 验证查询密钥内部错误时返回内部错误。
 func TestAccessKeyAuthenticator_Handle_GetKeyError(t *testing.T) {
 	Convey("TestAccessKeyAuthenticator_Handle_GetKeyError", t, func() {
 		pool := &mockAccessKeyPool{
@@ -258,6 +277,7 @@ func TestAccessKeyAuthenticator_Handle_GetKeyError(t *testing.T) {
 	})
 }
 
+// TestAccessKeyAuthenticator_Handle_KeyNotFound 验证密钥不存在时返回未认证错误。
 func TestAccessKeyAuthenticator_Handle_KeyNotFound(t *testing.T) {
 	Convey("TestAccessKeyAuthenticator_Handle_KeyNotFound", t, func() {
 		pool := &mockAccessKeyPool{key: nil}
@@ -273,6 +293,7 @@ func TestAccessKeyAuthenticator_Handle_KeyNotFound(t *testing.T) {
 	})
 }
 
+// TestAccessKeyAuthenticator_Handle_KeyDisabled 验证密钥被禁用时返回权限不足错误。
 func TestAccessKeyAuthenticator_Handle_KeyDisabled(t *testing.T) {
 	Convey("TestAccessKeyAuthenticator_Handle_KeyDisabled", t, func() {
 		key := &mockAccessKey{
@@ -293,6 +314,7 @@ func TestAccessKeyAuthenticator_Handle_KeyDisabled(t *testing.T) {
 	})
 }
 
+// TestAccessKeyAuthenticator_Handle_KeyExpired 验证密钥过期时返回权限不足错误、未过期时认证成功。
 func TestAccessKeyAuthenticator_Handle_KeyExpired(t *testing.T) {
 	Convey("TestAccessKeyAuthenticator_Handle_KeyExpired", t, func() {
 		now := time.Now().UTC()
@@ -332,6 +354,7 @@ func TestAccessKeyAuthenticator_Handle_KeyExpired(t *testing.T) {
 	})
 }
 
+// TestAccessKeyAuthenticator_Handle_InvalidSignature 验证签名错误或遭篡改时返回未认证错误。
 func TestAccessKeyAuthenticator_Handle_InvalidSignature(t *testing.T) {
 	Convey("TestAccessKeyAuthenticator_Handle_InvalidSignature", t, func() {
 		key := &mockAccessKey{
@@ -363,6 +386,7 @@ func TestAccessKeyAuthenticator_Handle_InvalidSignature(t *testing.T) {
 	})
 }
 
+// TestAccessKeyAuthenticator_Handle_UpdateLastAccessError 验证更新最后访问时间失败时返回内部错误。
 func TestAccessKeyAuthenticator_Handle_UpdateLastAccessError(t *testing.T) {
 	Convey("TestAccessKeyAuthenticator_Handle_UpdateLastAccessError", t, func() {
 		now := time.Now().UTC()
@@ -387,6 +411,7 @@ func TestAccessKeyAuthenticator_Handle_UpdateLastAccessError(t *testing.T) {
 	})
 }
 
+// TestAccessKeyAuthenticator_Handle_EdgeCases 验证特殊方法名、零时间戳、空随机串与空密钥 ID 等边界场景。
 func TestAccessKeyAuthenticator_Handle_EdgeCases(t *testing.T) {
 	Convey("TestAccessKeyAuthenticator_Handle_EdgeCases", t, func() {
 		key := &mockAccessKey{

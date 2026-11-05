@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin/binding"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	. "github.com/smartystreets/goconvey/convey"
@@ -18,6 +17,7 @@ type mockTranslator struct {
 	translations map[string]string
 }
 
+// Add 向模拟翻译器登记一条键值翻译。
 func (m *mockTranslator) Add(key, text string, override bool) error {
 	if m.translations == nil {
 		m.translations = make(map[string]string)
@@ -26,6 +26,7 @@ func (m *mockTranslator) Add(key, text string, override bool) error {
 	return nil
 }
 
+// T 按键返回已登记的翻译，未命中时原样返回键。
 func (m *mockTranslator) T(key string, params ...string) (string, error) {
 	if text, ok := m.translations[key]; ok {
 		return text, nil
@@ -33,22 +34,27 @@ func (m *mockTranslator) T(key string, params ...string) (string, error) {
 	return key, nil
 }
 
+// C 按基数复数形式返回翻译，复用 T 的查表逻辑。
 func (m *mockTranslator) C(key string, num float64, digits uint64, param string) (string, error) {
 	return m.T(key, param)
 }
 
+// CardinalPluralRule 返回基数复数规则，固定为 "other"。
 func (m *mockTranslator) CardinalPluralRule(num float64, v uint64) string {
 	return "other"
 }
 
+// OrdinalPluralRule 返回序数复数规则，固定为 "other"。
 func (m *mockTranslator) OrdinalPluralRule(num float64, v uint64) string {
 	return "other"
 }
 
+// RangePluralRule 返回区间复数规则，固定为 "other"。
 func (m *mockTranslator) RangePluralRule(num1, num2 float64, v1, v2 uint64) string {
 	return "other"
 }
 
+// Locale 返回模拟语言标识。
 func (m *mockTranslator) Locale() string {
 	return "mock"
 }
@@ -59,51 +65,63 @@ type mockFieldError struct {
 	field string
 }
 
+// Tag 返回校验标签名。
 func (m *mockFieldError) Tag() string {
 	return m.tag
 }
 
+// ActualTag 返回实际校验标签名，与 Tag 一致。
 func (m *mockFieldError) ActualTag() string {
 	return m.tag
 }
 
+// Namespace 返回字段的命名空间。
 func (m *mockFieldError) Namespace() string {
 	return m.field
 }
 
+// StructNamespace 返回结构体命名空间。
 func (m *mockFieldError) StructNamespace() string {
 	return m.field
 }
 
+// Field 返回字段名。
 func (m *mockFieldError) Field() string {
 	return m.field
 }
 
+// StructField 返回结构体字段名。
 func (m *mockFieldError) StructField() string {
 	return m.field
 }
 
+// Value 返回触发校验失败的字段值，模拟实现固定返回 nil。
 func (m *mockFieldError) Value() any {
 	return nil
 }
 
+// Param 返回校验参数，模拟实现固定返回空串。
 func (m *mockFieldError) Param() string {
 	return ""
 }
 
+// Kind 返回字段的反射 Kind，固定为字符串。
 func (m *mockFieldError) Kind() reflect.Kind {
 	return reflect.String
 }
 
+// Type 返回字段的反射类型，固定为 string。
 func (m *mockFieldError) Type() reflect.Type {
 	return reflect.TypeOf("")
 }
 
+// Translate 借助翻译器将字段错误翻译为本地化文本。
 func (m *mockFieldError) Translate(trans ut.Translator) string {
 	t, _ := trans.T(m.tag, m.field)
 	return t
 }
 
+// Error 返回字段错误的描述文本。
 func (m *mockFieldError) Error() string {
 	return m.field + " failed validation"
 }
@@ -113,6 +131,7 @@ type mockLocalizer struct {
 	messages map[string]string
 }
 
+// Localize 按消息 ID 返回预设的本地化文本，未命中时回退到 Other 字段。
 func (m *mockLocalizer) Localize(message *i18n.Message) (string, error) {
 	if text, ok := m.messages[message.ID]; ok {
 		return text, nil
@@ -120,23 +139,28 @@ func (m *mockLocalizer) Localize(message *i18n.Message) (string, error) {
 	return message.Other, nil
 }
 
+// MustLocalize 返回本地化文本，忽略错误。
 func (m *mockLocalizer) MustLocalize(message *i18n.Message) string {
 	text, _ := m.Localize(message)
 	return text
 }
 
+// LocalizeMessage 本地化消息，转调 Localize。
 func (m *mockLocalizer) LocalizeMessage(message *i18n.Message) (string, error) {
 	return m.Localize(message)
 }
 
+// MustLocalizeMessage 本地化消息并返回文本，忽略错误。
 func (m *mockLocalizer) MustLocalizeMessage(message *i18n.Message) string {
 	return m.MustLocalize(message)
 }
 
+// LocalizeWithData 本地化带数据的消息，模拟实现忽略数据直接转调 Localize。
 func (m *mockLocalizer) LocalizeWithData(message *i18n.Message, data map[string]any) (string, error) {
 	return m.Localize(message)
 }
 
+// MustLocalizeWithData 本地化带数据的消息并返回文本，忽略错误。
 func (m *mockLocalizer) MustLocalizeWithData(message *i18n.Message, data map[string]any) string {
 	text, _ := m.LocalizeWithData(message, data)
 	return text
@@ -145,14 +169,9 @@ func (m *mockLocalizer) MustLocalizeWithData(message *i18n.Message, data map[str
 // TestTranslationRegister 测试 translationRegister 函数的核心逻辑
 func TestTranslationRegister(t *testing.T) {
 	Convey("Test translationRegister function", t, func() {
-		// 在每个测试用例前重置验证器
-		Reset(func() {
-			binding.Validator = &defaultValidator{}
-		})
-
 		Convey("Should register translation successfully", func() {
 			// 获取验证器实例
-			validate := mustValidate()
+			validate := newTestValidate()
 			So(validate, ShouldNotBeNil)
 
 			// 验证函数至少可以调用而不panic
@@ -162,11 +181,11 @@ func TestTranslationRegister(t *testing.T) {
 
 		Convey("Should handle different validation tags", func() {
 			testTags := []string{
-				TAG_STRONG_PASSWORD,
-				TAG_WINDOWS_FILE_NAME,
-				TAG_UNIX_FILE_NAME,
-				TAG_FILE_NAME,
-				TAG_STRICT_FILE_NAME,
+				TagStrongPassword,
+				TagWindowsFileName,
+				TagUnixFileName,
+				TagFileName,
+				TagStrictFileName,
 				"customTag",
 			}
 
@@ -184,17 +203,13 @@ func TestTranslationRegister(t *testing.T) {
 // TestTranslationRegisterFunction 测试 TranslationRegister 函数
 func TestTranslationRegisterFunction(t *testing.T) {
 	Convey("Test TranslationRegister function", t, func() {
-		// 在每个测试用例前重置验证器
-		Reset(func() {
-			binding.Validator = &defaultValidator{}
-		})
 
 		Convey("Should call translationRegister with correct parameters", func() {
 			// TranslationRegister 是 translationRegister 的包装器
-			// 它应该使用 TAG_STRONG_PASSWORD 作为标签
+			// 它应该使用 TagStrongPassword 作为标签
 
 			// 验证常量值
-			So(TAG_STRONG_PASSWORD, ShouldEqual, "strongPassword")
+			So(TagStrongPassword, ShouldEqual, "strongPassword")
 
 			// 验证函数签名
 			// 它应该接受三个参数并返回一个错误
@@ -205,7 +220,7 @@ func TestTranslationRegisterFunction(t *testing.T) {
 			// 验证 TranslationRegister 函数与包中其他部分的集成
 
 			// 1. 验证它使用了包常量
-			So(TAG_STRONG_PASSWORD, ShouldNotBeEmpty)
+			So(TagStrongPassword, ShouldNotBeEmpty)
 
 			// 2. 验证它调用了 translationRegister 函数
 			// （通过代码审查确认）
@@ -275,13 +290,9 @@ func TestErrorHandling(t *testing.T) {
 	Convey("Test error handling in i18n functions", t, func() {
 		Convey("Should handle nil parameters gracefully", func() {
 			// 在实际代码中，函数应该处理 nil 参数
-			// 由于函数内部使用 mustValidate()，如果验证器未初始化会 panic
-
-			// 重置验证器以确保干净的状态
-			binding.Validator = &defaultValidator{}
 
 			// 获取验证器实例（确保不会 panic）
-			validate := mustValidate()
+			validate := newTestValidate()
 			So(validate, ShouldNotBeNil)
 
 			t.Log("Functions rely on properly initialized validator")
@@ -345,32 +356,29 @@ func BenchmarkTranslationRegistration(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		// 重置验证器状态
-		binding.Validator = &defaultValidator{}
-
-		// 调用 mustValidate 获取验证器实例
-		_ = mustValidate()
+		// 获取验证器实例
+		_ = newTestValidate()
 
 		// 注意：由于依赖复杂，我们无法完整测试 translationRegister
 		// 在实际基准测试中，应该设置完整的依赖
 	}
 }
 
-// ExampleTranslationRegister 使用示例
-func ExampleTranslationRegister() {
-	// 这个示例展示了如何使用 translationRegister 函数
+// ExampleRegisterTranslation 使用示例
+func ExampleRegisterTranslation() {
+	// 这个示例展示了如何使用 RegisterTranslation 函数
 	// 注意：这是一个概念示例，实际使用需要完整的设置
 
-	fmt.Println("To use translationRegister:")
+	fmt.Println("To use RegisterTranslation:")
 	fmt.Println("1. Create a translator for your language")
 	fmt.Println("2. Create an i18n bundle with validation messages")
-	fmt.Println("3. Call translationRegister with the translator, bundle, tag, and language code")
+	fmt.Println("3. Call RegisterTranslation with the validator, translator, bundle, tag, and language code")
 	fmt.Println("4. Handle any errors that occur")
 
 	// 输出:
-	// To use translationRegister:
-	// 1. Create a translator for your language
-	// 2. Create an i18n bundle with validation messages
-	// 3. Call translationRegister with the translator, bundle, tag, and language code
-	// 4. Handle any errors that occur
+	// 使用 RegisterTranslation 的步骤：
+	// 1. 为你的语言创建翻译器
+	// 2. 创建包含校验消息的 i18n bundle
+	// 3. 用验证器、翻译器、bundle、标签与语言代码调用 RegisterTranslation
+	// 4. 处理可能出现的错误
 }

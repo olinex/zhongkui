@@ -69,9 +69,11 @@ export default defineConfig(({ mode }) => {
         },
       }),
     ],
-    define: { "process.env": {
-      ZHONGKUI_BASE_URL: loadEnv(mode, process.cwd()).VITE_ZHONGKUI_BASE_URL,
-    } },
+    define: {
+      "process.env": {
+        ZHONGKUI_BASE_URL: loadEnv(mode, process.cwd()).VITE_ZHONGKUI_BASE_URL,
+      },
+    },
     resolve: {
       alias: {
         "@": fileURLToPath(new URL("./src", import.meta.url)),
@@ -86,7 +88,19 @@ export default defineConfig(({ mode }) => {
         sass: {
           api: "modern-compiler",
         },
+        scss: {
+          api: "modern-compiler",
+        },
       },
+    },
+    // vite-plugin-vuetify's autoImport generates `vuetify/components/*` imports
+    // on-the-fly during .vue transform, so Vite's dep optimizer cannot discover
+    // them at startup. Without excluding vuetify, the first page load triggers
+    // "new dependencies optimized -> reloading", aborting in-flight requests
+    // (ERR_ABORTED) and breaking the dynamic import of lazy routes.
+    // This mirrors the official `create vuetify` Vite template.
+    optimizeDeps: {
+      exclude: ["vuetify"],
     },
   };
 });

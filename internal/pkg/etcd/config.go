@@ -7,18 +7,19 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"os"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"zhongkui.com/zhongkui/internal/pkg/config"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // PREFIX 是 etcd 配置在 viper 中的顶级键前缀，所有 etcd 相关配置均以此前缀开始。
-const PREFIX = "etcd"
+const Prefix = "etcd"
 
 // TLSConfig 定义了 etcd 客户端的 TLS 安全连接配置。
 // 支持两种方式提供 CA 证书：直接内联 PEM 证书内容（Cert）或指定证书文件路径（CertFilePath）。
@@ -30,10 +31,10 @@ const PREFIX = "etcd"
 //   - Cert: 内联的 PEM 编码证书内容，与 CertFilePath 互斥
 //   - CertFilePath: PEM 编码证书文件路径，与 Cert 互斥
 type TLSConfig struct {
-	Enabled      bool   `mapstructure:"enabled" default:"false" comment:"enable TLS for etcd client connection (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"`
-	Domain       string `mapstructure:"domain" default:"-" comment:"TLS server name to verify (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"`
-	Cert         string `mapstructure:"cert" default:"-" comment:"PEM encoded certificate bytes (inline), cannot be used with CertFilePath (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"`
-	CertFilePath string `mapstructure:"certFilePath" default:"-" comment:"path to PEM encoded certificate file, cannot be used with Cert (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"`
+	Enabled      bool   `mapstructure:"enabled" default:"false" comment:"为 etcd 客户端连接启用 TLS (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"`
+	Domain       string `mapstructure:"domain" default:"-" comment:"TLS 服务器名称，用于证书验证 (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"`
+	Cert         string `mapstructure:"cert" default:"-" comment:"内联 PEM 编码证书内容，不能与 CertFilePath 同时使用 (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"`
+	CertFilePath string `mapstructure:"certFilePath" default:"-" comment:"PEM 编码证书文件路径，不能与 Cert 同时使用 (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"`
 }
 
 // ToStandardConfig 将 TLSConfig 转换为标准库的 *tls.Config 对象。
@@ -95,17 +96,17 @@ func (t *TLSConfig) ToStandardConfig() (config *tls.Config, err error) {
 //   - RejectOldCluster: 是否拒绝连接旧版本集群，默认 true
 //   - TLS: TLS 安全连接配置
 type Config struct {
-	Endpoints            []string      `mapstructure:"endpoints" default:"[\"localhost:2379\"]" comment:"list of etcd server addresses (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-Endpoints)"`
-	Username             string        `mapstructure:"username" default:"-" comment:"username for etcd authentication (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-Username)"`
-	Password             string        `mapstructure:"password" default:"-" comment:"password for etcd authentication (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-Password)"`
-	AutoSyncInterval     time.Duration `mapstructure:"autoSyncInterval" default:"0" comment:"interval to sync cluster members, 0 means disabled (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-AutoSyncInterval)"`
-	DialTimeout          time.Duration `mapstructure:"dialTimeout" default:"30s" comment:"dial timeout for etcd client (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-DialTimeout)"`
-	DialKeepAliveTime    time.Duration `mapstructure:"dialKeepAliveTime" default:"60s" comment:"frequency of keepalive pings (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-DialKeepAliveTime)"`
-	DialKeepAliveTimeout time.Duration `mapstructure:"dialKeepAliveTimeout" default:"30s" comment:"timeout for keepalive pings (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-DialKeepAliveTimeout)"`
-	MaxCallSendMsgSize   int           `mapstructure:"maxCallSendMsgSize" default:"2097152" comment:"maximum message size client can send to server in bytes (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-MaxCallSendMsgSize)"`
-	MaxCallRecvMsgSize   int           `mapstructure:"maxCallRecvMsgSize" default:"4294967296" comment:"maximum message size client can receive from server in bytes (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-MaxCallRecvMsgSize)"`
-	RejectOldCluster     bool          `mapstructure:"rejectOldCluster" default:"true" comment:"reject requests from clients with outdated cluster version (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-RejectOldCluster)"`
-	TLS                  TLSConfig     `mapstructure:"tls" comment:"TLS configuration for secure connection (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"`
+	Endpoints            []string      `mapstructure:"endpoints" default:"[\"localhost:2379\"]" comment:"etcd 服务器地址列表 (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-Endpoints)"`
+	Username             string        `mapstructure:"username" default:"-" comment:"etcd 认证用户名 (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-Username)"`
+	Password             string        `mapstructure:"password" default:"-" comment:"etcd 认证密码 (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-Password)"`
+	AutoSyncInterval     time.Duration `mapstructure:"autoSyncInterval" default:"0" comment:"集群成员同步间隔，0 表示禁用 (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-AutoSyncInterval)"`
+	DialTimeout          time.Duration `mapstructure:"dialTimeout" default:"30s" comment:"etcd 客户端拨号超时时间 (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-DialTimeout)"`
+	DialKeepAliveTime    time.Duration `mapstructure:"dialKeepAliveTime" default:"60s" comment:"保活 ping 的发送频率 (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-DialKeepAliveTime)"`
+	DialKeepAliveTimeout time.Duration `mapstructure:"dialKeepAliveTimeout" default:"30s" comment:"保活 ping 的超时时间 (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-DialKeepAliveTimeout)"`
+	MaxCallSendMsgSize   int           `mapstructure:"maxCallSendMsgSize" default:"2097152" comment:"客户端向服务器发送消息的最大字节数 (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-MaxCallSendMsgSize)"`
+	MaxCallRecvMsgSize   int           `mapstructure:"maxCallRecvMsgSize" default:"4294967296" comment:"客户端从服务器接收消息的最大字节数 (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-MaxCallRecvMsgSize)"`
+	RejectOldCluster     bool          `mapstructure:"rejectOldCluster" default:"true" comment:"拒绝来自集群版本过旧的客户端请求 (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-RejectOldCluster)"`
+	TLS                  TLSConfig     `mapstructure:"tls" comment:"TLS 安全连接配置 (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"`
 }
 
 // ToEtcdConfig 将 Config 转换为 etcd client/v3 的 clientv3.Config 对象。
@@ -150,10 +151,12 @@ func (c *Config) ToEtcdConfig(ctx context.Context, logger *logging.Logger) (cfg 
 	return
 }
 
+// DescribeConfig 返回 etcd 配置项的描述信息，用于生成配置文档。
 func DescribeConfig() config.ConfigDescriptions {
-	return config.DescribeConfig[Config](PREFIX)
+	return config.DescribeConfig[Config](Prefix)
 }
 
-func ExtractConfig(v *viper.Viper) (*Config, error) {
-	return config.ExtractConfig[Config](v, PREFIX)
+// ExtractConfig 从 viper 实例中提取并校验 etcd 配置。
+func ExtractConfig(viper *viper.Viper, validate *validator.Validate) (*Config, error) {
+	return config.ExtractConfig[Config](viper, validate, Prefix)
 }

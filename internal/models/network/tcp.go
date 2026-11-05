@@ -5,12 +5,42 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"net"
+	"time"
 
 	"github.com/gopacket/gopacket/layers"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/hash"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/hash"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
+
+var (
+	_ driver.Valuer = (*TCPOptions)(nil)
+)
+
+// computeStreamID 计算TCP流标识符
+// 对已排序的IP字节序列和端口号计算64-bit maphash 哈希，生成方向无关的唯一流标识符。
+// 同一TCP连接的双向数据包会产生相同的流ID。
+// 参数leftIP/rightIP: 已排序后的IP地址字节序列（IPv4为4字节，IPv6为16字节）
+// 参数leftPort/rightPort: 已排序后的端口号
+// 返回值: 16字符的十六进制64-bit哈希字符串
+func computeStreamID(leftIP, rightIP []byte, leftPort, rightPort uint16) string {
+	if leftPort > rightPort {
+		leftPort, rightPort = rightPort, leftPort
+	}
+	if bytes.Compare(leftIP, rightIP) > 0 {
+		leftIP, rightIP = rightIP, leftIP
+	}
+
+	h := hash.Acquire()
+	defer h.Release()
+
+	h.WriteUint16(leftPort)
+	h.WriteUint16(rightPort)
+	h.WriteBytes(leftIP)
+	h.WriteBytes(rightIP)
+
+	return h.SumHex()
+}
 
 // TCPOption 表示TCP协议选项
 // TCP选项用于在TCP连接建立和通信过程中传递额外信息
@@ -46,6 +76,9 @@ func NewTCPOptions(options []layers.TCPOption) TCPOptions {
 // 返回值driver.Value: 序列化后的数据库值
 // 返回值error: 序列化过程中的错误
 func (o TCPOptions) Value() (driver.Value, error) {
+	if o == nil {
+		return nil, nil
+	}
 	return json.Marshal(o)
 }
 
@@ -61,8 +94,16 @@ func (o *TCPOptions) Scan(value any) error {
 	var bytes []byte
 	switch raw := value.(type) {
 	case []byte:
+		if len(raw) == 0 {
+			*o = nil
+			return nil
+		}
 		bytes = raw
 	case string:
+		if raw == "" {
+			*o = nil
+			return nil
+		}
 		bytes = []byte(raw)
 	default:
 		return errors.Newf("Tcp_options scan failed, except []byte, got %T", value)
@@ -74,24 +115,42 @@ func (o *TCPOptions) Scan(value any) error {
 // 包含TCP协议头部的所有字段，用于存储和操作TCP数据包头部信息
 // 支持数据库存储和JSON序列化，使用GORM标签定义数据库字段属性
 type TCPHeaders struct {
-	TCPSrcPort    layers.TCPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"src_port"`
-	TCPDstPort    layers.TCPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"dst_port"`
-	TCPSeq        uint32         `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"seq"`
-	TCPAck        uint32         `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"ack"`
-	TCPDataOffset uint8          `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"data_offset"`
-	TCPBitFIN     bool           `gorm:"type:Bool" json:"bit_fin"`
-	TCPBitSYN     bool           `gorm:"type:Bool" json:"bit_syn"`
-	TCPBitRST     bool           `gorm:"type:Bool" json:"bit_rst"`
-	TCPBitPSH     bool           `gorm:"type:Bool" json:"bit_psh"`
-	TCPBitACK     bool           `gorm:"type:Bool" json:"bit_ack"`
-	TCPBitURG     bool           `gorm:"type:Bool" json:"bit_urg"`
-	TCPBitECE     bool           `gorm:"type:Bool" json:"bit_ece"`
-	TCPBitCWR     bool           `gorm:"type:Bool" json:"bit_cwr"`
-	TCPBitNS      bool           `gorm:"type:Bool" json:"bit_ns"`
-	TCPWindow     uint16         `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"window"`
-	TCPChecksum   uint16         `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"checksum"`
-	TCPUrgent     uint16         `gorm:"column:tcp_urgent;type:UInt16 CODEC(ZSTD(3))" json:"urgent"`
-	TCPOptions    TCPOptions     `gorm:"type:String CODEC(ZSTD(3))" json:"options"`
+	// 源端口
+	TCPSrcPort layers.TCPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"srcPort"`
+	// 目的端口
+	TCPDstPort layers.TCPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"dstPort"`
+	// 序列号
+	TCPSeq uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"seq"`
+	// 确认号
+	TCPAck uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"ack"`
+	// 数据偏移量（TCP 头部长度，单位 4 字节）
+	TCPDataOffset uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"dataOffset"`
+	// FIN 标志位（结束连接）
+	TCPBitFIN bool `gorm:"type:Bool" json:"bitFin"`
+	// SYN 标志位（同步序列号）
+	TCPBitSYN bool `gorm:"type:Bool" json:"bitSyn"`
+	// RST 标志位（重置连接）
+	TCPBitRST bool `gorm:"type:Bool" json:"bitRst"`
+	// PSH 标志位（推送数据）
+	TCPBitPSH bool `gorm:"type:Bool" json:"bitPsh"`
+	// ACK 标志位（确认号有效）
+	TCPBitACK bool `gorm:"type:Bool" json:"bitAck"`
+	// URG 标志位（紧急指针有效）
+	TCPBitURG bool `gorm:"type:Bool" json:"bitUrg"`
+	// ECE 标志位（ECN 回显）
+	TCPBitECE bool `gorm:"type:Bool" json:"bitEce"`
+	// CWR 标志位（拥塞窗口减小）
+	TCPBitCWR bool `gorm:"type:Bool" json:"bitCwr"`
+	// NS 标志位（ECN nonce 隐蔽保护）
+	TCPBitNS bool `gorm:"type:Bool" json:"bitNs"`
+	// 窗口大小
+	TCPWindow uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"window"`
+	// 校验和
+	TCPChecksum uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"checksum"`
+	// 紧急指针
+	TCPUrgent uint16 `gorm:"column:tcp_urgent;type:UInt16 CODEC(ZSTD(3))" json:"urgent"`
+	// TCP 选项列表
+	TCPOptions TCPOptions `gorm:"type:String CODEC(ZSTD(3))" json:"options"`
 }
 
 // SrcPort 返回源端口号
@@ -182,13 +241,52 @@ func NewTCPHeaders(tcp *layers.TCP) *TCPHeaders {
 	}
 }
 
+// PacketTCPFingerprint 表示单条 TCP 包记录上的被动指纹识别结果（p0f 风格）。
+// 描述该数据包发送端（源地址）的 OS / MTU 等特征，由 pcap 导入阶段计算并落库。
+type PacketTCPFingerprint struct {
+	// 识别出的操作系统
+	OS string `gorm:"column:fp_os;type:String CODEC(ZSTD(3))" json:"fpOs"`
+	// 操作系统识别置信度
+	OSQuality float64 `gorm:"column:fp_os_quality;type:Float64 CODEC(ZSTD(3))" json:"fpOsQuality"`
+	// p0f 指纹签名
+	Sig string `gorm:"column:fp_sig;type:String CODEC(ZSTD(3))" json:"fpSig"`
+	// 最大传输单元
+	MTU uint16 `gorm:"column:fp_mtu;type:UInt16 CODEC(ZSTD(3))" json:"fpMtu"`
+}
+
 // PacketIPv4TCP 表示IPv4 TCP数据包
 // 组合了PacketIPv4和TCPHeaders，表示完整的IPv4 TCP数据包信息
 // 包含以太网层、IPv4层和TCP层的所有头部信息
 type PacketIPv4TCP struct {
-	PacketIPv4 // 嵌入IPv4数据包基础结构
-	TCPHeaders // 嵌入TCP头部信息
+	PacketIPv4           // 嵌入IPv4数据包基础结构（含 RowMeta 行唯一标识）
+	TCPHeaders           // 嵌入TCP头部信息
+	PacketTCPFingerprint // 嵌入TCP被动指纹信息
+	// TCP 流标识符（双向一致）
+	TCPStreamID string `gorm:"column:tcp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"tcpStreamID"`
+	// 加密存储的 TCP 载荷
 	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=38278,length=32"`
+}
+
+// CaptureTimestamp 返回数据包的捕获时间戳
+// 时间戳用于记录数据包的捕获时间，用于后续的分析和处理
+func (p *PacketIPv4TCP) CaptureTimestamp() time.Time {
+	return p.Timestamp
+}
+
+// IngestedAt 返回数据包的入库时间戳
+// 入库时间标识数据包写入数据库的时间，用于分布式编排器推进消费水位
+func (p *PacketIPv4TCP) IngestedAt() time.Time {
+	return p.CreatedAt
+}
+
+// TcpFingerprint 返回数据包携带的被动 TCP 指纹。
+// 指纹由 pcap 导入阶段对 SYN / SYN-ACK 握手包识别并落库，
+// 组包阶段通过该方法透传给流重组器；无指纹时返回 nil。
+func (p *PacketIPv4TCP) TcpFingerprint() *PacketTCPFingerprint {
+	if p.OS == "" && p.Sig == "" {
+		return nil
+	}
+	return &p.PacketTCPFingerprint
 }
 
 // StreamID 返回TCP流ID
@@ -196,26 +294,9 @@ type PacketIPv4TCP struct {
 // 流ID用于识别属于同一TCP连接的所有数据包
 // 返回值: 16字符的十六进制64-bit哈希字符串
 func (p *PacketIPv4TCP) StreamID() string {
-	h := hash.Acquire()
-	defer h.Release()
-
 	leftPort, rightPort := uint16(p.TCPSrcPort), uint16(p.TCPDstPort)
-	leftIP := net.IP(p.IPv4Src).To4()
-	rightIP := net.IP(p.IPv4Dst).To4()
-
-	if leftPort > rightPort {
-		leftPort, rightPort = rightPort, leftPort
-	}
-	if bytes.Compare(leftIP, rightIP) > 0 {
-		leftIP, rightIP = rightIP, leftIP
-	}
-
-	h.WriteUint16(leftPort)
-	h.WriteUint16(rightPort)
-	h.WriteBytes(leftIP)
-	h.WriteBytes(rightIP)
-
-	return h.SumHex()
+	leftIP, rightIP := net.IP(p.IPv4Src).To4(), net.IP(p.IPv4Dst).To4()
+	return computeStreamID(leftIP, rightIP, leftPort, rightPort)
 }
 
 // Meta 返回基础元数据
@@ -235,49 +316,67 @@ func (p *PacketIPv4TCP) FrameInfo() *FrameInfo {
 	}
 }
 
-// FusedIPv4TCP 表示融合的IPv4 TCP数据
-// 组合了FusedIPv4和TCPHeaders，用于存储融合处理后的IPv4 TCP数据
-// 融合数据通常包含聚合统计信息，用于分析和监控
-type FusedIPv4TCP struct {
-	FusedIPv4  // 嵌入融合IPv4数据基础结构
-	TCPHeaders // 嵌入TCP头部信息
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=49915,length=32"`
+// NetworkFrame 返回数据包的网络层帧信息
+// 将数据包的网络层堆栈展平为NetworkStack记录列表，用于记录数据包的捕获上下文。
+// 每条记录的 Seq、TraceID、Direction 与载荷字节偏移（PayloadStart/EndOffset）
+// 由TCP流侧在数据包进入缓冲区时补充设置。
+func (p *PacketIPv4TCP) NetworkFrame() NetworkFrame {
+	return NewNetworkFrame(p.LayerStack, p.BaseMeta, p.Timestamp)
+}
+
+// GetPayload 返回TCP数据包的载荷数据
+// 从加密存储的 Payload 字段中获取解密后的原始载荷字节
+func (p *PacketIPv4TCP) GetPayload() []byte {
+	if p.Payload == nil {
+		return nil
+	}
+	return p.Payload.Value()
 }
 
 // PacketIPv6TCP 表示IPv6 TCP数据包
 // 组合了PacketIPv6和TCPHeaders，表示完整的IPv6 TCP数据包信息
 // 包含以太网层、IPv6层和TCP层的所有头部信息
 type PacketIPv6TCP struct {
-	PacketIPv6 // 嵌入IPv6数据包基础结构
-	TCPHeaders // 嵌入TCP头部信息
+	// PacketIPv6 嵌入IPv6数据包基础结构（含经 PacketEthernet 继承的 RowMeta 行唯一标识）
+	PacketIPv6
+	TCPHeaders           // 嵌入TCP头部信息
+	PacketTCPFingerprint // 嵌入TCP被动指纹信息
+	// TCP 流标识符（双向一致）
+	TCPStreamID string `gorm:"column:tcp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"tcpStreamID"`
+	// 加密存储的 TCP 载荷
 	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=50359,length=32"`
 }
 
+// CaptureTimestamp 返回数据包的捕获时间戳
+// 时间戳用于记录数据包的捕获时间，用于后续的分析和处理
+func (p *PacketIPv6TCP) CaptureTimestamp() time.Time {
+	return p.Timestamp
+}
+
+// IngestedAt 返回数据包的入库时间戳
+// 入库时间标识数据包写入数据库的时间，用于分布式编排器推进消费水位
+func (p *PacketIPv6TCP) IngestedAt() time.Time {
+	return p.CreatedAt
+}
+
+// TcpFingerprint 返回数据包携带的被动 TCP 指纹。
+// 指纹由 pcap 导入阶段对 SYN / SYN-ACK 握手包识别并落库，
+// 组包阶段通过该方法透传给流重组器；无指纹时返回 nil。
+func (p *PacketIPv6TCP) TcpFingerprint() *PacketTCPFingerprint {
+	if p.OS == "" && p.Sig == "" {
+		return nil
+	}
+	return &p.PacketTCPFingerprint
+}
+
 // StreamID 返回TCP流ID
-// 通过计算源IPv6地址、目的IPv6地址、源端口、目的端口的MD5哈希值生成唯一的流标识符
+// 通过计算源IPv6地址、目的IPv6地址、源端口、目的端口的哈希值生成唯一的流标识符
 // 流ID用于识别属于同一TCP连接的所有数据包，支持IPv6地址
 // 返回值: 16字符的十六进制64-bit哈希字符串
 func (p *PacketIPv6TCP) StreamID() string {
-	h := hash.Acquire()
-	defer h.Release()
-
 	leftPort, rightPort := uint16(p.TCPSrcPort), uint16(p.TCPDstPort)
-	leftIP := net.IP(p.IPv6Src).To16()
-	rightIP := net.IP(p.IPv6Dst).To16()
-
-	if leftPort > rightPort {
-		leftPort, rightPort = rightPort, leftPort
-	}
-	if bytes.Compare(leftIP, rightIP) > 0 {
-		leftIP, rightIP = rightIP, leftIP
-	}
-
-	h.WriteUint16(leftPort)
-	h.WriteUint16(rightPort)
-	h.WriteBytes(leftIP)
-	h.WriteBytes(rightIP)
-
-	return h.SumHex()
+	leftIP, rightIP := net.IP(p.IPv6Src).To16(), net.IP(p.IPv6Dst).To16()
+	return computeStreamID(leftIP, rightIP, leftPort, rightPort)
 }
 
 // Meta 返回基础元数据
@@ -297,23 +396,44 @@ func (p *PacketIPv6TCP) FrameInfo() *FrameInfo {
 	}
 }
 
-// FusedIPv6TCP 表示融合的IPv6 TCP数据
-// 组合了FusedIPv6和TCPHeaders，用于存储融合处理后的IPv6 TCP数据
-// 融合数据通常包含聚合统计信息，用于分析和监控
-type FusedIPv6TCP struct {
-	FusedIPv6  // 嵌入融合IPv6数据基础结构
-	TCPHeaders // 嵌入TCP头部信息
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=16648,length=32"`
+// NetworkFrame 返回数据包的网络层帧信息
+// 将数据包的网络层堆栈展平为NetworkStack记录列表，用于记录数据包的捕获上下文。
+// 每条记录的 Seq、TraceID、Direction 与载荷字节偏移（PayloadStart/EndOffset）
+// 由TCP流侧在数据包进入缓冲区时补充设置。
+func (p *PacketIPv6TCP) NetworkFrame() NetworkFrame {
+	return NewNetworkFrame(p.LayerStack, p.BaseMeta, p.Timestamp)
 }
 
-type FusedIPv4UDP struct {
-	FusedIPv4  // 嵌入融合IPv4数据基础结构
-	UDPHeaders // 嵌入UDP头部信息
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=51725,length=32"`
+// GetPayload 返回TCP数据包的载荷数据
+// 从加密存储的 Payload 字段中获取解密后的原始载荷字节
+func (p *PacketIPv6TCP) GetPayload() []byte {
+	if p.Payload == nil {
+		return nil
+	}
+	return p.Payload.Value()
 }
 
-type FusedIPv6UDP struct {
-	FusedIPv6  // 嵌入融合IPv6数据基础结构
-	UDPHeaders // 嵌入UDP头部信息
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=36791,length=32"`
+// AppTailer 表示应用层的尾部信息
+// 包含客户端和服务器端的已消耗字节数、数据偏移量、时间戳等信息
+type AppTailer struct {
+	// 客户端已消耗字节数
+	ClientConsumed uint64 `gorm:"type:UInt64 CODEC(ZSTD(3))" json:"clientConsumed"`
+	// 客户端起始载荷偏移
+	ClientStartPayloadOffset uint64 `gorm:"type:UInt64 CODEC(ZSTD(3))" json:"clientStartPayloadOffset"`
+	// 客户端结束载荷偏移
+	ClientEndPayloadOffset uint64 `gorm:"type:UInt64 CODEC(ZSTD(3))" json:"clientEndPayloadOffset"`
+	// 客户端起始时间戳
+	ClientStartTimestamp time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(ZSTD(3))" json:"clientStartTimestamp"`
+	// 客户端结束时间戳
+	ClientEndTimestamp time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(ZSTD(3))" json:"clientEndTimestamp"`
+	// 服务端已消耗字节数
+	ServerConsumed uint64 `gorm:"type:UInt64 CODEC(ZSTD(3))" json:"serverConsumed"`
+	// 服务端起始载荷偏移
+	ServerStartPayloadOffset uint64 `gorm:"type:UInt64 CODEC(ZSTD(3))" json:"serverStartPayloadOffset"`
+	// 服务端结束载荷偏移
+	ServerEndPayloadOffset uint64 `gorm:"type:UInt64 CODEC(ZSTD(3))" json:"serverEndPayloadOffset"`
+	// 服务端起始时间戳
+	ServerStartTimestamp time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(ZSTD(3))" json:"serverStartTimestamp"`
+	// 服务端结束时间戳
+	ServerEndTimestamp time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(ZSTD(3))" json:"serverEndTimestamp"`
 }

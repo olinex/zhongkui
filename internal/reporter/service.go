@@ -1,3 +1,4 @@
+// Package reporter 实现上报服务：通过 gRPC 流式接口提供资源状态监听（Watch）与客户端反馈处理（Feedback）。
 package reporter
 
 import (
@@ -12,16 +13,16 @@ import (
 	g "google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
-	"zhongkui.com/zhongkui/internal/pkg/grpc"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/pipeline"
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
-	"zhongkui.com/zhongkui/internal/provider"
-	"zhongkui.com/zhongkui/internal/reporter/totel"
-	"zhongkui.com/zhongkui/internal/tasks/pcap"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
+	"zhongkuisec.com/zhongkui/internal/pkg/grpc"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/pipeline"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkuisec.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/reporter/totel"
+	"zhongkuisec.com/zhongkui/internal/worker/handlers/pcap"
 )
 
 // ReporterService 实现了 reporter_v1.ReporterServiceServer 接口
@@ -36,12 +37,17 @@ import (
 //   - logger: 结构化的日志记录器
 type ReporterService struct {
 	reporter_v1.UnimplementedReporterServiceServer
-	grpc    *grpc.Server
-	client  *etcd.EtcdClient
+	// grpc gRPC 服务器实例。
+	grpc *grpc.Server
+	// client etcd 客户端，用于存储与监听资源配置。
+	client *etcd.EtcdClient
+	// pClient 管道客户端，用于提交异步处理任务。
 	pClient *pipeline.Client
-	logger  *logging.Logger
+	// logger 结构化日志记录器。
+	logger *logging.Logger
 }
 
+// NewReportService 从依赖注入器装配并注册上报服务。
 func NewReportService(i do.Injector) *ReporterService {
 	totel.InitMetrics()
 	etcd := provider.MustInvokeEtcdClient(i)
@@ -241,7 +247,7 @@ func (srv *ReporterService) Watch(req *reporter_v1.WatchRequest, stream g.Server
 					if event.IsCreate() {
 						// 资源创建事件
 						totel.RecordWatchEvent(ctx, "CREATE")
-						stream.Send(&reporter_v1.WatchResponse{
+						return stream.Send(&reporter_v1.WatchResponse{
 							Timestamp: time.Now().UnixMilli(),
 							Content: &reporter_v1.WatchResponse_Event{
 								Event: &reporter_v1.Event{
@@ -332,7 +338,12 @@ func (srv *ReporterService) Watch(req *reporter_v1.WatchRequest, stream g.Server
 //  5. 客户端发送完成后，返回空的响应
 func (srv *ReporterService) Feedback(stream g.ClientStreamingServer[reporter_v1.FeedbackRequest, emptypb.Empty]) (err error) {
 	// 确保函数退出时发送并关闭流，返回空的响应
-	defer stream.SendAndClose(&emptypb.Empty{})
+	defer func() {
+		// 关闭流失败（客户端已断开）时仍需向上返回，避免调用方误以为反馈已送达。
+		if closeErr := stream.SendAndClose(&emptypb.Empty{}); closeErr != nil && err == nil {
+			err = errors.WithStack(closeErr)
+		}
+	}()
 
 	// 获取请求上下文
 	ctx := stream.Context()
@@ -421,28 +432,40 @@ func (srv *ReporterService) Feedback(stream g.ClientStreamingServer[reporter_v1.
 	}
 }
 
+// Run 启动 gRPC 服务，等待上下文取消后优雅关闭或启动失败退出。
 func (srv *ReporterService) Run(ctx context.Context) (err error) {
 	ctx, span := totel.StartRunSpan(ctx)
 	defer totel.EndSpan(span, &err)
 
-	srv.logger.Ctx(ctx).Info("grpc server listening on")
-	err = srv.grpc.Serve()
-	if err != nil {
+	// 在 goroutine 中启动 gRPC 服务
+	errCh := make(chan error, 1)
+	go func() {
+		srv.logger.Ctx(ctx).Info("grpc server listening on")
+		if err := srv.grpc.Serve(); err != nil {
+			errCh <- errors.WithStack(err)
+		}
+	}()
+
+	// 等待 context 取消或错误
+	select {
+	case <-ctx.Done():
+		// 收到信号，开始优雅关闭
+		srv.logger.Ctx(ctx).Info("grpc received shutdown signal")
+
+		// 设置优雅停止超时定时器
+		// 5秒后如果仍未优雅停止，强制停止服务器
+		timer := time.AfterFunc(time.Second*5, func() {
+			srv.logger.Ctx(ctx).Warn("server graceful stop timeout")
+			srv.grpc.Stop() // 强制停止
+		})
+		defer timer.Stop()
+
+		// 尝试优雅停止，等待正在处理的请求完成
+		srv.grpc.GracefulStop()
+		return nil
+	case err := <-errCh:
+		// 服务启动失败
 		srv.logger.Fatal("failed to start grpc server", zap.Error(err))
 		return errors.WithStack(err)
 	}
-	// 记录优雅停止开始
-	srv.logger.Ctx(ctx).Info("grpc try graceful stop")
-
-	// 设置优雅停止超时定时器
-	// 5秒后如果仍未优雅停止，强制停止服务器
-	timer := time.AfterFunc(time.Second*5, func() {
-		srv.logger.Ctx(ctx).Warn("server graceful stop timeout")
-		srv.grpc.Stop() // 强制停止
-	})
-	defer timer.Stop() // 确保函数退出时停止定时器
-
-	// 尝试优雅停止，等待正在处理的请求完成
-	srv.grpc.GracefulStop()
-	return nil
 }

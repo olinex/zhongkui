@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // TestUser_Fields 测试 User 结构体字段
@@ -153,23 +153,23 @@ func TestUser_Create(t *testing.T) {
 
 		convey.Convey("Should assign correct group based on superuser flag", func() {
 			// 验证用户组分配逻辑
-			convey.Convey("Regular user should get DEFAULT_GROUP", func() {
-				convey.So(base.DEFAULT_GROUP, convey.ShouldNotBeEmpty)
+			convey.Convey("Regular user should get DefaultGroup", func() {
+				convey.So(base.DefaultGroup, convey.ShouldNotBeEmpty)
 			})
 
-			convey.Convey("Superuser should get SUPERUSER_GROUP", func() {
-				convey.So(base.SUPERUSER_GROUP, convey.ShouldNotBeEmpty)
+			convey.Convey("Superuser should get SuperuserGroup", func() {
+				convey.So(base.SuperuserGroup, convey.ShouldNotBeEmpty)
 			})
 		})
 
 		convey.Convey("Should assign correct namespace label based on superuser flag", func() {
 			// 验证命名空间标签分配逻辑
-			convey.Convey("Regular user should get DEFAULT_NAMESPACE", func() {
-				convey.So(base.DEFAULT_NAMESPACE, convey.ShouldNotBeEmpty)
+			convey.Convey("Regular user should get DefaultNamespace", func() {
+				convey.So(base.DefaultNamespace, convey.ShouldNotBeEmpty)
 			})
 
-			convey.Convey("Superuser should get WIDE_MATCH_LABEL", func() {
-				convey.So(base.WIDE_MATCH_LABEL, convey.ShouldNotBeEmpty)
+			convey.Convey("Superuser should get WideMatchLabel", func() {
+				convey.So(base.WideMatchLabel, convey.ShouldNotBeEmpty)
 			})
 		})
 	})
@@ -250,7 +250,7 @@ func TestUser_ActiveStatus(t *testing.T) {
 		})
 
 		convey.Convey("Should have database default value of true", func() {
-			convey.So(base.DEFAULT_NAMESPACE, convey.ShouldNotBeEmpty)
+			convey.So(base.DefaultNamespace, convey.ShouldNotBeEmpty)
 		})
 	})
 }

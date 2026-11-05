@@ -1,23 +1,22 @@
-// Package pipeline 提供基于 asynq 的任务队列和调度器功能。
-// 该包包含了任务队列客户端、服务器、调度器、配置管理和中间件等功能模块，
-// 用于构建分布式任务处理系统。
 package pipeline
 
 import (
 	"context"
+	"fmt"
 	"runtime/debug"
+	"strings"
 
 	"github.com/hibiken/asynq"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // RecoverWithStack 创建一个 panic 恢复中间件，用于捕获任务执行过程中的 panic 并记录调用栈。
 // 该中间件主要功能：
 // 1. 捕获任务执行过程中的 panic
 // 2. 记录 panic 信息、任务元数据（ID 和类型）以及完整的调用栈
-// 3. 记录任务执行过程中的错误信息
-// 4. 为所有错误添加堆栈跟踪信息（根据环境变量配置）
+// 3. 记录任务执行过程中的错误信息（含完整堆栈）
+// 4. 将包含堆栈的错误返回给 asynq，使其 LastErr 字段可查看到堆栈信息
 //
 // 参数：
 //
@@ -31,80 +30,107 @@ import (
 // 1. 生产环境：捕获未预期的 panic，防止任务队列服务器崩溃
 // 2. 开发环境：提供详细的调试信息，便于定位问题
 // 3. 监控告警：通过日志系统监控任务执行异常
+// 4. 错误回溯：通过 asynq inspector 接口的 LastErr 字段查看完整堆栈
 //
 // 注意事项：
 // 1. 该中间件应该在任务处理器链的最外层使用
-// 2. 在 server.go 中可以看到，该中间件仅在 DEBUG_ENV_VAR 为 true 时启用
+// 2. 始终启用，确保生产环境也能捕获错误和 panic
 // 3. panic 被捕获后，任务会正常结束，不会影响其他任务的执行
-// 4. 错误信息会通过 errors.WithStack 添加堆栈跟踪（根据 base.Env.ErrorStack 配置）
-//
-// 示例用法：
-//
-//	// 在任务服务器初始化时使用中间件
-//	mux := asynq.NewServeMux()
-//	if base.Env.Debug {
-//	    mux.Use(RecoverWithStack(logger))
-//	}
-//	mux.HandleFunc("email:send", emailHandler)
-//
-// 日志输出示例：
-// 1. Panic 日志：Task [id:abc123, type:email:send] panic with: runtime error: invalid memory address and stack: goroutine 1 [running]: ...
-// 2. Error 日志：Task [id:def456, type:image:process] raise error: failed to process image: file not found
+// 4. 返回给 asynq 的错误会包含完整堆栈，可通过 inspector 接口查看
 func RecoverWithStack(logger *logging.Logger) func(next asynq.Handler) asynq.Handler {
 	return func(next asynq.Handler) asynq.Handler {
-		// 返回一个新的 asynq.Handler，包装了 panic 恢复和错误记录逻辑
 		return asynq.HandlerFunc(func(ctx context.Context, task *asynq.Task) error {
-			// 获取任务结果写入器，用于获取任务 ID
 			writer := task.ResultWriter()
 
-			// 使用 defer 和 recover 机制捕获 panic
+			taskID := "unknown"
+			if writer != nil {
+				taskID = writer.TaskID()
+			}
+			taskType := task.Type()
+
+			// panic 恢复
 			defer func() {
-				// 捕获 panic，防止任务执行过程中的异常导致服务器崩溃
 				if r := recover(); r != nil {
-					// 记录 panic 信息，包括任务元数据和完整的调用栈
-					// 任务 ID 和类型有助于定位具体是哪个任务出现了问题
-					// debug.Stack() 提供完整的 goroutine 调用栈信息
-					taskID := "unknown"
-					if writer != nil {
-						taskID = writer.TaskID()
-					}
+					stack := string(debug.Stack())
 					logger.Ctx(ctx).Errorf(
 						"Task [id:%s, type:%s] panic with: %v and stack: %s",
-						taskID,        // 任务唯一标识符，如果 writer 为 nil 则使用 "unknown"
-						task.Type(),   // 任务类型（处理器模式）
-						r,             // panic 的值
-						debug.Stack(), // 完整的调用栈信息
+						taskID, taskType, r, stack,
 					)
-					// 注意：这里没有重新 panic，任务会正常结束
-					// 这是为了防止单个任务的异常影响整个任务队列系统
 				}
 			}()
 
-			// 执行原始任务处理器
-			// 这是实际业务逻辑执行的地方
 			err := next.ProcessTask(ctx, task)
 
-			// 如果任务执行过程中出现错误（非 panic），记录错误信息
-			// 与 panic 不同，这里的错误是任务处理器显式返回的错误
 			if err != nil {
-				// 记录任务执行错误，使用 %+v 格式输出完整的错误信息
-				// 包括可能的堆栈跟踪（如果 errors.WithStack 被调用）
-				taskID := "unknown"
-				if writer != nil {
-					taskID = writer.TaskID()
-				}
+				// 对重复错误信息去重聚合后记录完整堆栈
+				// GORM ClickHouse 驱动在扫描多行数据时会将同类错误用 "; " 拼接，
+				// 导致日志中大量重复输出，通过去重聚合可显著提高可读性
 				logger.Ctx(ctx).Errorf(
 					"Task [id:%s, type:%s] raise error: %+v",
-					taskID,      // 任务唯一标识符，如果 writer 为 nil 则使用 "unknown"
-					task.Type(), // 任务类型
-					err,         // 错误对象
+					taskID, taskType, DedupErrorMsg(err),
 				)
+				// 将包含堆栈的错误返回给 asynq，
+				// asynq 会通过 err.Error() 将其存入 LastErr 字段，
+				// 从而在 inspector 接口中可直接查看完整堆栈
+				return fmt.Errorf("%+v", errors.WithStack(err))
 			}
 
-			// 返回错误，使用 errors.WithStack 包装以添加堆栈跟踪
-			// 根据 base.Env.ErrorStack 配置决定是否真正添加堆栈
-			// 这样可以统一错误处理，便于调试和问题追踪
-			return errors.WithStack(err)
+			return nil
 		})
 	}
+}
+
+// DedupErrorMsg 对重复的错误信息进行去重聚合
+// GORM ClickHouse 驱动在扫描多行数据时会将同类错误用 "; " 拼接，
+// 例如 "expected []byte, got string; expected []byte, got string; ..."
+// 该函数将重复信息合并为 "msg (xN)" 格式，减少日志量并提高可读性
+//
+// 参数:
+//   - err: 原始错误对象
+//
+// 返回:
+//   - string: 去重聚合后的错误信息字符串
+//
+// 示例:
+//   - 输入: "expected []byte, got string; expected []byte, got string"
+//   - 输出: "expected []byte, got string (x2)"
+//   - 输入: "err_a; err_a; err_b; err_a"
+//   - 输出: "err_a (x3); err_b (x1)"
+func DedupErrorMsg(err error) string {
+	if err == nil {
+		return "<nil>"
+	}
+	msg := err.Error()
+	parts := strings.Split(msg, "; ")
+	if len(parts) <= 1 {
+		return msg
+	}
+
+	// 统计每种错误信息的出现次数，同时保持首次出现顺序
+	counts := make(map[string]int)
+	var order []string
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		if _, exists := counts[p]; !exists {
+			order = append(order, p)
+		}
+		counts[p]++
+	}
+
+	if len(counts) == 0 {
+		return msg
+	}
+
+	result := make([]string, 0, len(order))
+	for _, p := range order {
+		if counts[p] > 1 {
+			result = append(result, fmt.Sprintf("%s (x%d)", p, counts[p]))
+		} else {
+			result = append(result, p)
+		}
+	}
+	return strings.Join(result, "; ")
 }

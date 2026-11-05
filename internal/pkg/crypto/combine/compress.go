@@ -5,13 +5,13 @@ import (
 	"io"
 
 	"github.com/klauspost/compress/zstd"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // 压缩算法标识常量
 const (
-	MODE_COMPRESSION_ZSTD byte = 0x01
-	MODE_COMPRESSION_GZIP byte = 0x02
+	ModeCompressionZstd byte = 0x01
+	ModeCompressionGzip byte = 0x02
 )
 
 // ---------------------------------------------------------------------------
@@ -28,6 +28,7 @@ var (
 
 // ZstdCompressor 使用 Zstandard 算法进行流式压缩和解压。
 type ZstdCompressor struct {
+	// level Zstandard 压缩级别。
 	level zstd.EncoderLevel
 }
 
@@ -43,7 +44,7 @@ func NewZstdCompressorWithLevel(level zstd.EncoderLevel) (*ZstdCompressor, error
 }
 
 // ModeID 返回 Zstd 压缩算法的标识字节。
-func (c *ZstdCompressor) ModeID() byte { return MODE_COMPRESSION_ZSTD }
+func (c *ZstdCompressor) ModeID() byte { return ModeCompressionZstd }
 
 // WrapWriter 包装 io.Writer，返回一个写入即压缩的 WriteCloser。
 func (c *ZstdCompressor) WrapWriter(w io.Writer) (io.WriteCloser, error) {
@@ -69,6 +70,7 @@ func (c *ZstdCompressor) WrapReader(r io.Reader) (io.ReadCloser, error) {
 
 // GzipCompressor 使用 Gzip 算法进行流式压缩和解压。
 type GzipCompressor struct {
+	// level Gzip 压缩级别。
 	level int
 }
 
@@ -88,7 +90,7 @@ func NewGzipCompressorWithLevel(level int) (*GzipCompressor, error) {
 }
 
 // ModeID 返回 Gzip 压缩算法的标识字节。
-func (c *GzipCompressor) ModeID() byte { return MODE_COMPRESSION_GZIP }
+func (c *GzipCompressor) ModeID() byte { return ModeCompressionGzip }
 
 // WrapWriter 包装 io.Writer，返回一个写入即压缩的 WriteCloser。
 func (c *GzipCompressor) WrapWriter(w io.Writer) (io.WriteCloser, error) {

@@ -1,4 +1,4 @@
-// Utilities
-import { createPinia } from 'pinia';
+// 工具
+import { createPinia } from "pinia";
 
-export default createPinia()
+export default createPinia();

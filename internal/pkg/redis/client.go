@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/redis/go-redis/v9"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // Client 是 go-redis/v9 库中 redis.Client 的类型别名。
@@ -23,7 +23,9 @@ import (
 //	}
 type Client struct {
 	*redis.Client
-	lock   sync.Mutex
+	// lock 保护 closed 标志的互斥锁，保证关闭幂等。
+	lock sync.Mutex
+	// closed 是否已关闭，避免重复关闭底层连接。
 	closed bool
 }
 
@@ -58,14 +60,14 @@ type Client struct {
 //   - 返回的客户端在不再需要时应使用client.Close()正确关闭以释放资源
 func NewClient(cfg *Config) *Client {
 	switch cfg.Type {
-	case NORMAL_TYPE:
+	case NormalType:
 		// 为独立实例创建标准Redis客户端
 		return &Client{
 			Client: redis.NewClient(cfg.ToOptions()),
 			lock:   sync.Mutex{},
 			closed: false,
 		}
-	case SENTINEL_TYPE:
+	case SentinelType:
 		// 为Redis Sentinel集群创建具备故障转移感知的客户端
 		return &Client{
 			Client: redis.NewFailoverClient(cfg.ToSentinelOptions()),
@@ -78,6 +80,7 @@ func NewClient(cfg *Config) *Client {
 	}
 }
 
+// Shutdown 关闭底层 Redis 客户端连接，重复调用安全（已关闭时直接返回 nil）。
 func (c *Client) Shutdown() error {
 	c.lock.Lock()
 	defer c.lock.Unlock()

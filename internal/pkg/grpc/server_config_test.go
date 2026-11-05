@@ -6,10 +6,14 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/spf13/viper"
-	"zhongkui.com/zhongkui/internal/pkg/tls"
+	"zhongkuisec.com/zhongkui/internal/pkg/tls"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
-// TestTlsServerConfig_ToOption_NilConfig tests the behavior when the TlsServerConfig is nil.
+// testValidate 测试用的验证器实例
+var testValidate = validator.Validate
+
+// TestTlsServerConfig_ToOption_NilConfig 测试 TlsServerConfig 为 nil 时的行为。
 func TestTlsServerConfig_ToOption_NilConfig(t *testing.T) {
 	Convey("TestTlsServerConfig_ToOption_NilConfig", t, func() {
 		Convey("when TlsServerConfig is nil", func() {
@@ -21,7 +25,7 @@ func TestTlsServerConfig_ToOption_NilConfig(t *testing.T) {
 	})
 }
 
-// TestTlsServerConfig_ToOption_Disabled tests the behavior when TLS is disabled.
+// TestTlsServerConfig_ToOption_Disabled 测试 TLS 关闭时的行为。
 func TestTlsServerConfig_ToOption_Disabled(t *testing.T) {
 	Convey("TestTlsServerConfig_ToOption_Disabled", t, func() {
 		Convey("when TLS is disabled", func() {
@@ -33,7 +37,7 @@ func TestTlsServerConfig_ToOption_Disabled(t *testing.T) {
 	})
 }
 
-// TestTlsServerConfig_ToOption_ValidCertKey tests the behavior when valid certificate and key are provided as strings.
+// TestTlsServerConfig_ToOption_ValidCertKey 测试以字符串形式提供合法证书与密钥时的行为。
 func TestTlsServerConfig_ToOption_ValidCertKey(t *testing.T) {
 	Convey("TestTlsServerConfig_ToOption_ValidCertKey", t, func() {
 		Convey("when valid certificate and key are provided as strings", func() {
@@ -52,7 +56,7 @@ func TestTlsServerConfig_ToOption_ValidCertKey(t *testing.T) {
 	})
 }
 
-// TestTlsServerConfig_ToOption_InvalidCertKey tests the behavior when invalid certificate and key are provided as strings.
+// TestTlsServerConfig_ToOption_InvalidCertKey 测试以字符串形式提供非法证书与密钥时的行为。
 func TestTlsServerConfig_ToOption_InvalidCertKey(t *testing.T) {
 	Convey("TestTlsServerConfig_ToOption_InvalidCertKey", t, func() {
 		Convey("when invalid certificate and key are provided as strings", func() {
@@ -68,7 +72,7 @@ func TestTlsServerConfig_ToOption_InvalidCertKey(t *testing.T) {
 	})
 }
 
-// TestTlsServerConfig_ToOption_NoCertKey tests the behavior when no certificate or key is provided.
+// TestTlsServerConfig_ToOption_NoCertKey 测试未提供证书或密钥时的行为。
 func TestTlsServerConfig_ToOption_NoCertKey(t *testing.T) {
 	Convey("TestTlsServerConfig_ToOption_NoCertKey", t, func() {
 		Convey("when no certificate or key is provided", func() {
@@ -80,7 +84,7 @@ func TestTlsServerConfig_ToOption_NoCertKey(t *testing.T) {
 	})
 }
 
-// TestBaseConfig_DefaultValues tests that BaseConfig has correct default values.
+// TestBaseConfig_DefaultValues 测试 BaseConfig 的默认值是否正确。
 func TestBaseConfig_DefaultValues(t *testing.T) {
 	Convey("TestBaseConfig_DefaultValues", t, func() {
 		Convey("when BaseConfig is created with default values", func() {
@@ -100,21 +104,21 @@ func TestBaseConfig_DefaultValues(t *testing.T) {
 	})
 }
 
-// TestTlsServerConfig_ToOption_ValidCertFilePath tests TLS configuration with file paths.
+// TestTlsServerConfig_ToOption_ValidCertFilePath 测试以文件路径形式提供的 TLS 配置。
 func TestTlsServerConfig_ToOption_ValidCertFilePath(t *testing.T) {
 	Convey("TestTlsServerConfig_ToOption_ValidCertFilePath", t, func() {
 		Convey("when valid certificate and key file paths are provided", func() {
-			// Note: This test requires actual certificate files to exist
-			// For a real test, we would create temporary files with test certificates
-			// For now, we'll test that the config structure accepts file paths
+			// 注意：本测试要求实际证书文件存在；
+			// 真正测试时可用测试证书创建临时文件；
+			// 此处仅验证配置结构体可接受文件路径。
 			config := &TlsServerConfig{
 				Enabled:      true,
 				CertFilePath: "/path/to/cert.pem",
 				KeyFilePath:  "/path/to/key.pem",
 			}
 
-			// The ToOption method will fail because the files don't exist,
-			// but we can verify the config is set up correctly
+			// ToOption 方法会因文件不存在而失败，
+			// 但可验证配置已正确设置。
 			So(config.Enabled, ShouldBeTrue)
 			So(config.CertFilePath, ShouldEqual, "/path/to/cert.pem")
 			So(config.KeyFilePath, ShouldEqual, "/path/to/key.pem")
@@ -124,7 +128,7 @@ func TestTlsServerConfig_ToOption_ValidCertFilePath(t *testing.T) {
 	})
 }
 
-// TestTlsServerConfig_ToOption_MixedCertKey tests invalid mixed configuration.
+// TestTlsServerConfig_ToOption_MixedCertKey 测试非法的混合配置。
 func TestTlsServerConfig_ToOption_MixedCertKey(t *testing.T) {
 	Convey("TestTlsServerConfig_ToOption_MixedCertKey", t, func() {
 		Convey("when mixed inline and file path configuration is provided", func() {
@@ -135,17 +139,17 @@ func TestTlsServerConfig_ToOption_MixedCertKey(t *testing.T) {
 				Enabled:      true,
 				Cert:         cert,
 				Key:          key,
-				CertFilePath: "/path/to/cert.pem", // Mixed config - inline cert takes precedence
+				CertFilePath: "/path/to/cert.pem", // 混合配置——内联证书优先
 			}
 
 			option, err := config.ToOption()
-			So(option, ShouldNotBeNil) // Inline cert takes precedence, so option should be created
+			So(option, ShouldNotBeNil) // 内联证书优先，故应创建出 option
 			So(err, ShouldBeNil)
 		})
 	})
 }
 
-// TestAuthServerConfig_DefaultValues tests AuthServerConfig default values.
+// TestAuthServerConfig_DefaultValues 测试 AuthServerConfig 的默认值。
 func TestAuthServerConfig_DefaultValues(t *testing.T) {
 	Convey("TestAuthServerConfig_DefaultValues", t, func() {
 		Convey("when AuthServerConfig is created with default values", func() {
@@ -162,7 +166,7 @@ func TestAuthServerConfig_DefaultValues(t *testing.T) {
 	})
 }
 
-// TestAuthServerConfig_ToOptions_Disabled tests disabled authentication.
+// TestAuthServerConfig_ToOptions_Disabled 测试关闭鉴权的情况。
 func TestAuthServerConfig_ToOptions_Disabled(t *testing.T) {
 	Convey("TestAuthServerConfig_ToOptions_Disabled", t, func() {
 		Convey("when authentication is disabled", func() {
@@ -178,14 +182,14 @@ func TestAuthServerConfig_ToOptions_Disabled(t *testing.T) {
 	})
 }
 
-// TestAuthServerConfig_ToOptions_NilConfig tests nil configuration.
+// TestAuthServerConfig_ToOptions_NilConfig 测试 nil 配置。
 func TestAuthServerConfig_ToOptions_NilConfig(t *testing.T) {
 	Convey("TestAuthServerConfig_ToOptions_NilConfig", t, func() {
 		Convey("when AuthServerConfig is nil", func() {
 			var config *AuthServerConfig
 			unaryOpt, streamOpt, err := config.ToOptions(nil)
-			// Note: Current implementation creates interceptors even when config is nil
-			// This is because NewAuthRouter creates a router with nil config
+			// 注意：当前实现在配置为 nil 时仍会创建拦截器，
+			// 因为 NewAuthRouter 会以 nil 配置创建路由。
 			So(unaryOpt, ShouldNotBeNil)
 			So(streamOpt, ShouldNotBeNil)
 			So(err, ShouldBeNil)
@@ -193,7 +197,7 @@ func TestAuthServerConfig_ToOptions_NilConfig(t *testing.T) {
 	})
 }
 
-// TestKeepaliveServerConfig_DefaultValues tests KeepaliveServerConfig default values.
+// TestKeepaliveServerConfig_DefaultValues 测试 KeepaliveServerConfig 的默认值。
 func TestKeepaliveServerConfig_DefaultValues(t *testing.T) {
 	Convey("TestKeepaliveServerConfig_DefaultValues", t, func() {
 		Convey("when KeepaliveServerConfig is created with default values", func() {
@@ -204,7 +208,7 @@ func TestKeepaliveServerConfig_DefaultValues(t *testing.T) {
 			So(config.MaxConnectionAge, ShouldEqual, 0)
 			So(config.MaxConnectionAgeGrace, ShouldEqual, 0)
 			So(config.MaxConnectionIdle, ShouldEqual, 0)
-			So(config.PermitWithoutStream, ShouldBeFalse) // Zero value for bool is false
+			So(config.PermitWithoutStream, ShouldBeFalse) // bool 的零值为 false
 		})
 
 		Convey("when KeepaliveServerConfig is initialized with custom values", func() {
@@ -228,7 +232,7 @@ func TestKeepaliveServerConfig_DefaultValues(t *testing.T) {
 	})
 }
 
-// TestKeepaliveServerConfig_ToOptions tests conversion to gRPC options.
+// TestKeepaliveServerConfig_ToOptions 测试转换为 gRPC 选项。
 func TestKeepaliveServerConfig_ToOptions(t *testing.T) {
 	Convey("TestKeepaliveServerConfig_ToOptions", t, func() {
 		Convey("when converting keepalive configuration to options", func() {
@@ -249,19 +253,19 @@ func TestKeepaliveServerConfig_ToOptions(t *testing.T) {
 
 		Convey("when KeepaliveServerConfig is nil", func() {
 			var config *KeepaliveServerConfig
-			// Note: This would cause a panic, so we don't call ToOptions on nil
-			// We just verify that the config is nil
+			// 注意：对 nil 调用 ToOptions 会 panic，因此这里不对 nil 调用，
+			// 仅验证配置确为 nil。
 			So(config, ShouldBeNil)
 		})
 	})
 }
 
-// TestHealthServerConfig_DefaultValues tests HealthServerConfig default values.
+// TestHealthServerConfig_DefaultValues 测试 HealthServerConfig 的默认值。
 func TestHealthServerConfig_DefaultValues(t *testing.T) {
 	Convey("TestHealthServerConfig_DefaultValues", t, func() {
 		Convey("when HealthServerConfig is created with default values", func() {
 			config := HealthServerConfig{}
-			So(config.Enabled, ShouldBeFalse) // Zero value for bool is false
+			So(config.Enabled, ShouldBeFalse) // bool 的零值为 false
 			So(config.ServiceName, ShouldEqual, "")
 		})
 
@@ -276,7 +280,7 @@ func TestHealthServerConfig_DefaultValues(t *testing.T) {
 	})
 }
 
-// TestServerConfig_DefaultValues tests ServerConfig default values.
+// TestServerConfig_DefaultValues 测试 ServerConfig 的默认值。
 func TestServerConfig_DefaultValues(t *testing.T) {
 	Convey("TestServerConfig_DefaultValues", t, func() {
 		Convey("when ServerConfig is created with default values", func() {
@@ -285,8 +289,8 @@ func TestServerConfig_DefaultValues(t *testing.T) {
 			So(config.Port, ShouldEqual, 0)
 			So(config.TLS.Enabled, ShouldBeFalse)
 			So(config.Auth.AccessKeyEnabled, ShouldBeFalse)
-			So(config.Keepalive.PermitWithoutStream, ShouldBeFalse) // Zero value for bool is false
-			So(config.Health.Enabled, ShouldBeFalse)                // Zero value for bool is false
+			So(config.Keepalive.PermitWithoutStream, ShouldBeFalse) // bool 的零值为 false
+			So(config.Health.Enabled, ShouldBeFalse)                // bool 的零值为 false
 		})
 
 		Convey("when ServerConfig is initialized with custom values", func() {
@@ -326,7 +330,7 @@ func TestServerConfig_DefaultValues(t *testing.T) {
 	})
 }
 
-// TestServerConfig_ToOptions_NilConfig tests nil ServerConfig.
+// TestServerConfig_ToOptions_NilConfig 测试 nil ServerConfig。
 func TestServerConfig_ToOptions_NilConfig(t *testing.T) {
 	Convey("TestServerConfig_ToOptions_NilConfig", t, func() {
 		Convey("when ServerConfig is nil", func() {
@@ -339,14 +343,14 @@ func TestServerConfig_ToOptions_NilConfig(t *testing.T) {
 	})
 }
 
-// TestServerConfig_ToOptions_ValidConfig tests valid ServerConfig conversion.
+// TestServerConfig_ToOptions_ValidConfig 测试合法的 ServerConfig 转换。
 func TestServerConfig_ToOptions_ValidConfig(t *testing.T) {
 	Convey("TestServerConfig_ToOptions_ValidConfig", t, func() {
 		Convey("when ServerConfig has valid configuration", func() {
 			config := &ServerConfig{
 				BaseConfig: BaseConfig{
 					Host: "127.0.0.1",
-					Port: 0, // Use port 0 for automatic port assignment in tests
+					Port: 0, // 使用端口 0 以便在测试中自动分配端口
 				},
 				TLS: TlsServerConfig{
 					Enabled: false,
@@ -366,7 +370,7 @@ func TestServerConfig_ToOptions_ValidConfig(t *testing.T) {
 			So(options, ShouldNotBeNil)
 			So(len(options), ShouldBeGreaterThan, 0)
 
-			// Clean up
+			// 清理
 			if listener != nil {
 				listener.Close()
 			}
@@ -376,7 +380,7 @@ func TestServerConfig_ToOptions_ValidConfig(t *testing.T) {
 			config := &ServerConfig{
 				BaseConfig: BaseConfig{
 					Host: "127.0.0.1",
-					Port: -1, // Invalid port
+					Port: -1, // 非法端口
 				},
 			}
 
@@ -388,7 +392,7 @@ func TestServerConfig_ToOptions_ValidConfig(t *testing.T) {
 	})
 }
 
-// TestDescribeServerConfig tests configuration description generation.
+// TestDescribeServerConfig 测试配置描述生成。
 func TestDescribeServerConfig(t *testing.T) {
 	Convey("TestDescribeServerConfig", t, func() {
 		Convey("when describing server config without specific names", func() {
@@ -408,22 +412,22 @@ func TestDescribeServerConfig(t *testing.T) {
 	})
 }
 
-// TestExtractServerConfig tests configuration extraction from Viper.
+// TestExtractServerConfig 测试从 Viper 提取配置。
 func TestExtractServerConfig(t *testing.T) {
 	Convey("TestExtractServerConfig", t, func() {
 		Convey("when extracting server config from Viper", func() {
-			// Create a minimal Viper instance for testing
+			// 构建一个用于测试的最小 Viper 实例
 			v := viper.New()
 
-			// Test with empty config
-			config, err := ExtractServerConfig(v, "test-server")
-			So(err, ShouldNotBeNil) // Should fail because sub-config is nil
+			// 空配置
+			config, err := ExtractServerConfig(v, testValidate, "test-server")
+			So(err, ShouldNotBeNil) // 子配置为 nil，故应失败
 			So(config, ShouldBeNil)
 		})
 
 		Convey("when extracting server config with valid data", func() {
-			// Note: In a real test, we would set up Viper with actual configuration data
-			// For now, we just test that the function signature is correct
+			// 注意：真实测试中会用实际配置数据装配 Viper；
+			// 此处仅验证函数签名正确。
 			So(ExtractServerConfig, ShouldNotBeNil)
 		})
 	})

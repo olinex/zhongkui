@@ -5,16 +5,21 @@ import type { SearchIn } from "@/components/@types/table";
 import type {
   CapturerConfigIn,
   CapturerCreateIn,
+  FlexIDs,
+  FlexNames,
+  FlexUnionIds,
   GroupCreateIn,
   GroupRbacPolicyIn,
   GroupUpdateIn,
   NamespaceCreateIn,
   NamespaceUpdateIn,
+  UserCreateIn,
   UserGroupIn,
+  UserPasswordResetIn,
 } from "./@types/admin";
 import type { profileChangeIn } from "./@types/user";
 
-// user
+// 用户
 export function userListGet(data: SearchIn): AxiosPromise {
   return request.post("/admin/user/list", data, { headers: getJwtHeader() });
 }
@@ -23,50 +28,59 @@ export function userListOptions(): AxiosPromise {
   return request.options("/admin/user/list", { headers: getJwtHeader() });
 }
 
-export function userDetailGet(unionID: string): AxiosPromise {
-  return request.post(
-    `/admin/user/${unionID}/get`,
-    {},
-    { headers: getJwtHeader() }
-  );
+export function userCreate(data: UserCreateIn): AxiosPromise {
+  return request.post("/admin/user/create", data, { headers: getJwtHeader() });
 }
 
-export function userUpdate(
-  unionID: string,
-  data: profileChangeIn
-): AxiosPromise {
+export function userDetailGet(unionID: string): AxiosPromise {
+  return request.post(`/admin/user/${unionID}/get`, {}, { headers: getJwtHeader() });
+}
+
+export function userUpdate(unionID: string, data: profileChangeIn): AxiosPromise {
   return request.post(`/admin/user/${unionID}/update`, data, {
     headers: getJwtHeader(),
   });
 }
 
-export function userSetActive(unionID: string, active: boolean): AxiosPromise {
+export function userSetActive(unionIDs: FlexUnionIds, active: boolean): AxiosPromise {
   return request.post(
-    `/admin/user/${unionID}/${active ? "activate" : "deactivate"}`,
-    null,
-    { headers: getJwtHeader() }
+    `/admin/user/${active ? "activate" : "deactivate"}`,
+    { unionIDs },
+    {
+      headers: getJwtHeader(),
+    },
   );
 }
 
-export function userGroupJoin(
-  unionID: string,
-  data: UserGroupIn
-): AxiosPromise {
+export function userPasswordReset(unionID: string, data: UserPasswordResetIn): AxiosPromise {
+  return request.post(`/admin/user/${unionID}/password/reset`, data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function userGroupJoin(unionID: string, data: UserGroupIn): AxiosPromise {
   return request.post(`/admin/user/${unionID}/join-group`, data, {
     headers: getJwtHeader(),
   });
 }
 
-export function userGroupLeave(
-  unionID: string,
-  data: UserGroupIn
-): AxiosPromise {
+export function userGroupLeave(unionID: string, data: UserGroupIn): AxiosPromise {
   return request.post(`/admin/user/${unionID}/leave-group`, data, {
     headers: getJwtHeader(),
   });
 }
 
-// group
+export function userFrontendConfigReset(unionID: string): AxiosPromise {
+  return request.post(
+    `/admin/user/${unionID}/frontend-config/reset`,
+    {},
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}
+
+// 分组
 export function groupListGet(data: SearchIn): AxiosPromise {
   return request.post("/admin/group/list", data, { headers: getJwtHeader() });
 }
@@ -76,11 +90,7 @@ export function groupListOptions(): AxiosPromise {
 }
 
 export function groupDetailGet(name: string): AxiosPromise {
-  return request.post(
-    `/admin/group/${name}/get`,
-    {},
-    { headers: getJwtHeader() }
-  );
+  return request.post(`/admin/group/${name}/get`, {}, { headers: getJwtHeader() });
 }
 
 export function groupUpdate(name: string, data: GroupUpdateIn): AxiosPromise {
@@ -95,31 +105,29 @@ export function groupCreate(data: GroupCreateIn): AxiosPromise {
   });
 }
 
-export function groupDelete(name: string): AxiosPromise {
-  return request.post(`/admin/group/${name}/delete`, null, {
-    headers: getJwtHeader(),
-  });
+export function groupDelete(names: FlexNames): AxiosPromise {
+  return request.post(
+    "/admin/group/delete",
+    { names },
+    {
+      headers: getJwtHeader(),
+    },
+  );
 }
 
-export function groupRbacPolicyAdd(
-  groupName: string,
-  data: GroupRbacPolicyIn
-): AxiosPromise {
+export function groupRbacPolicyAdd(groupName: string, data: GroupRbacPolicyIn): AxiosPromise {
   return request.post(`/admin/group/${groupName}/add-rbac-policy`, data, {
     headers: getJwtHeader(),
   });
 }
 
-export function groupRbacPolicyRemove(
-  groupName: string,
-  data: GroupRbacPolicyIn
-): AxiosPromise {
+export function groupRbacPolicyRemove(groupName: string, data: GroupRbacPolicyIn): AxiosPromise {
   return request.post(`/admin/group/${groupName}/remove-rbac-policy`, data, {
     headers: getJwtHeader(),
   });
 }
 
-// namespace
+// 命名空间
 export function namespaceListGet(data: SearchIn): AxiosPromise {
   return request.post("/admin/namespace/list", data, {
     headers: getJwtHeader(),
@@ -136,10 +144,14 @@ export function namespaceDetailGet(name: string): AxiosPromise {
   });
 }
 
-export function namespaceDelete(name: string): AxiosPromise {
-  return request.post(`/admin/namespace/${name}/create`, {
-    headers: getJwtHeader(),
-  });
+export function namespaceDelete(names: FlexNames): AxiosPromise {
+  return request.post(
+    "/admin/namespace/delete",
+    { names },
+    {
+      headers: getJwtHeader(),
+    },
+  );
 }
 
 export function namespaceCreate(data: NamespaceCreateIn): AxiosPromise {
@@ -148,16 +160,13 @@ export function namespaceCreate(data: NamespaceCreateIn): AxiosPromise {
   });
 }
 
-export function namespaceUpdate(
-  name: string,
-  data: NamespaceUpdateIn
-): AxiosPromise {
+export function namespaceUpdate(name: string, data: NamespaceUpdateIn): AxiosPromise {
   return request.post(`/admin/namespace/${name}/update`, data, {
     headers: getJwtHeader(),
   });
 }
 
-// rbac policy template
+// RBAC 策略模板
 export function rbacPolicyTemplateListGet(data: SearchIn): AxiosPromise {
   return request.post("/admin/rbac-policy-template/list", data, {
     headers: getJwtHeader(),
@@ -170,7 +179,7 @@ export function rbacPolicyTemplateListOptions(): AxiosPromise {
   });
 }
 
-// capturer
+// 采集器
 export function capturerListGet(data: SearchIn): AxiosPromise {
   return request.post("/admin/capturer/list", data, {
     headers: getJwtHeader(),
@@ -195,17 +204,25 @@ export function capturerDetailGet(id: number): AxiosPromise {
   });
 }
 
-export function capturerUpdate(
-  id: number,
-  data: CapturerConfigIn
-): AxiosPromise {
+export function capturerUpdate(id: number, data: CapturerConfigIn): AxiosPromise {
   return request.post(`/admin/capturer/${id}/update`, data, {
     headers: getJwtHeader(),
   });
 }
 
-export function capturerDelete(id: number): AxiosPromise {
-  return request.post(`/admin/capturer/${id}/delete`, null, {
-    headers: getJwtHeader(),
-  });
+export function capturerDelete(ids: FlexIDs): AxiosPromise {
+  return request.post(
+    "/admin/capturer/delete",
+    { ids },
+    {
+      headers: getJwtHeader(),
+    },
+  );
 }
+
+export function capturerStatusListGet(): AxiosPromise {
+  return request.post("/admin/capturer/status/list", {}, { headers: getJwtHeader() });
+}
+
+// 复导出类型，方便消费方按需 import。
+export type { CapturerStatusItemOut, CapturerStatusListOut } from "./@types/admin";

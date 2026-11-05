@@ -6,18 +6,22 @@ import (
 	"encoding/binary"
 	"encoding/json"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 const (
 	byteSegmentsMagicNumber uint64 = 0x5d6946ead8466e02
 )
 
+// ByteSegments 表示由多个字节段组成的二进制结构，支持二进制与 JSON 编解码。
 type ByteSegments struct {
-	Segments  [][]byte `json:"segments"`
-	MaxLength uint32   `json:"max_length"`
+	// Segments 字节段列表。
+	Segments [][]byte `json:"segments"`
+	// MaxLength 单个字节段允许的最大长度。
+	MaxLength uint32 `json:"max_length"`
 }
 
+// NewByteSegments 创建指定单段最大长度的 ByteSegments。
 func NewByteSegments(maxLength uint32) (*ByteSegments, error) {
 	return &ByteSegments{
 		Segments:  make([][]byte, 0),
@@ -25,10 +29,12 @@ func NewByteSegments(maxLength uint32) (*ByteSegments, error) {
 	}, nil
 }
 
+// Length 返回当前字节段数量。
 func (b *ByteSegments) Length() uint32 {
 	return uint32(len(b.Segments))
 }
 
+// Append 追加一个字节段，长度超出 MaxLength 时返回错误。
 func (b *ByteSegments) Append(segment []byte) error {
 	if uint64(len(segment)) > uint64(b.MaxLength) {
 		return errors.Newf(`Segment length %d out of range [0, %d)`, len(segment), b.MaxLength)
@@ -37,6 +43,7 @@ func (b *ByteSegments) Append(segment []byte) error {
 	return nil
 }
 
+// GetSegment 返回指定下标的字节段，越界返回 nil。
 func (b *ByteSegments) GetSegment(index int) []byte {
 	if index < 0 || index >= len(b.Segments) {
 		return nil
@@ -44,6 +51,7 @@ func (b *ByteSegments) GetSegment(index int) []byte {
 	return b.Segments[index]
 }
 
+// ConcatSegments 将所有字节段按顺序拼接为一个缓冲区。
 func (b *ByteSegments) ConcatSegments() (*bytes.Buffer, error) {
 	buffer := bytes.NewBuffer(nil)
 	for _, segment := range b.Segments {
@@ -60,6 +68,7 @@ func (b *ByteSegments) ConcatSegments() (*bytes.Buffer, error) {
 	return buffer, nil
 }
 
+// Marshal 将 ByteSegments 序列化为二进制格式（魔数、最大长度、段数与各段内容）。
 func (b *ByteSegments) Marshal() (*bytes.Buffer, error) {
 	buffer := bytes.NewBuffer(nil)
 	if err := binary.Write(buffer, binary.BigEndian, byteSegmentsMagicNumber); err != nil {
@@ -89,6 +98,7 @@ func (b *ByteSegments) Marshal() (*bytes.Buffer, error) {
 	return buffer, nil
 }
 
+// Unmarshal 从二进制格式解析出 ByteSegments。
 func (b *ByteSegments) Unmarshal(raw []byte) error {
 	var offset uint64 = 0
 	magicNumber := binary.BigEndian.Uint64(raw[offset:])
@@ -115,6 +125,7 @@ func (b *ByteSegments) Unmarshal(raw []byte) error {
 	return nil
 }
 
+// MarshalJSON 将二进制序列化结果编码为无 padding 的 base64 字符串。
 func (b ByteSegments) MarshalJSON() ([]byte, error) {
 	buffer, err := b.Marshal()
 	if err != nil {
@@ -124,6 +135,7 @@ func (b ByteSegments) MarshalJSON() ([]byte, error) {
 	return json.Marshal(base64.RawStdEncoding.EncodeToString(bytes))
 }
 
+// UnmarshalJSON 从 base64 字符串解码并解析出 ByteSegments。
 func (b *ByteSegments) UnmarshalJSON(data []byte) error {
 	var hexStr string
 	err := json.Unmarshal(data, &hexStr)

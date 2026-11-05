@@ -1,0 +1,338 @@
+/**
+ * src/styles/tokens.scss
+ *
+ * 设计令牌层。定义 SASS 变量（$zk-*）及其在 :root 上导出的对应 CSS
+ * 自定义属性（--zk-*）。
+ *
+ * 注意：这里刻意不定义颜色盘。颜色的唯一来源是 Vuetify 主题
+ * （`--v-theme-*` CSS 变量），其在 Vuetify 主题配置（src/plugins/vuetify.ts）
+ * 中定义。请改用 `rgb(var(--v-theme-xxx))` 消费颜色。
+ *
+ * 令牌分层约定（见 AGENTS.md「Vue Frontend Conventions / 样式体系分层」）：
+ * 本文件是唯一数值来源；组件 <style scoped> 只允许布局定位，禁止自写字号/圆角/
+ * 边框/阴影。新增视觉数值必须先在本文件登记令牌。
+ */
+
+// ---------------------------------------------------------------------------
+// 字体族
+// ---------------------------------------------------------------------------
+
+$zk-font-family:
+  "Roboto",
+  "PingFang SC",
+  "Hiragino Sans GB",
+  "Microsoft YaHei",
+  "Noto Sans SC",
+  system-ui,
+  -apple-system,
+  "Segoe UI",
+  sans-serif;
+// stylelint-disable-next-line scss/dollar-variable-colon-space-after
+$zk-font-mono:
+  ui-monospace, "SF Mono", sfmono-regular, menlo, consolas, "Liberation Mono", monospace;
+
+// ---------------------------------------------------------------------------
+// 排版 — 字号
+// 角色对照见 AGENTS.md「视觉层级与文本规范」角色表：
+//   caption  次要说明 / 表头 / 弱化辅助文本
+//   body     正文 / 单元格 / 表单字段标签
+//   subtitle 次级区块标题
+//   title    区块标题
+//   heading  页面标题
+// ---------------------------------------------------------------------------
+
+$zk-font-size-caption: 0.75rem; // 12px
+$zk-font-size-body: 0.875rem; // 14px
+$zk-font-size-subtitle: 1rem; // 16px
+$zk-font-size-title: 1.25rem; // 20px
+$zk-font-size-heading: 1.5rem; // 24px
+
+// ---------------------------------------------------------------------------
+// 排版 — 字重
+// ---------------------------------------------------------------------------
+
+$zk-font-weight-regular: 400;
+$zk-font-weight-medium: 500;
+$zk-font-weight-semibold: 600;
+
+// ---------------------------------------------------------------------------
+// 控件 / 外框高度
+//   control-height-compact        输入控件高度（Vuetify density="compact"）
+//   control-height-dense          输入控件高度（数据表页脚等需再压一档的紧凑控件）
+//   control-height-default        输入控件高度（Vuetify density="default"）
+//   toolbar-height-compact        紧凑工具栏高度（对话框标题栏）
+//   table-row-height-compact      紧凑数据表行高
+//   table-header-height-compact   紧凑数据表表头高度
+//   panel-title-height-compact    展开面板标题区紧凑高度（收起态单行，如助手思考过程）
+// ---------------------------------------------------------------------------
+
+$zk-control-height-compact: 40px;
+$zk-control-height-dense: 32px;
+$zk-control-height-default: 48px;
+$zk-toolbar-height-compact: 48px;
+$zk-table-row-height-compact: 36px;
+$zk-table-header-height-compact: 40px;
+$zk-panel-title-height-compact: 32px;
+
+// ---------------------------------------------------------------------------
+// 间距（4px 基准刻度）
+// ---------------------------------------------------------------------------
+
+$zk-space-1: 4px;
+$zk-space-2: 8px;
+$zk-space-3: 12px;
+$zk-space-4: 16px;
+$zk-space-5: 24px;
+$zk-space-6: 32px;
+
+// ---------------------------------------------------------------------------
+// 圆角
+// 仅允许四档，禁止 8px 等令牌外取值：
+//   sm    小元素、代码块、滚动条
+//   md    输入控件、按钮、面板
+//   lg    卡片、对话框
+//   pill  胶囊（徽标、计数标记）
+// ---------------------------------------------------------------------------
+
+$zk-radius-sm: 4px;
+$zk-radius-md: 6px;
+$zk-radius-lg: 12px;
+$zk-radius-pill: 999px;
+
+// ---------------------------------------------------------------------------
+// Hairline 描边
+// 主题虽定义了 border 色（--v-theme-border），但分隔线与容器描边统一改用 on-surface
+// 半透明，好处是描边强度随文字色自动适配，无需为每个主题单独维护一组边框色：
+//   hairline-width          描边宽度
+//   hairline-opacity        深色主题主用值（分隔线、卡片/抽屉/顶栏边框）
+//   hairline-opacity-strong 亮色主题强化值（白卡需更明显描边才从浅灰背景分离）
+// ---------------------------------------------------------------------------
+
+$zk-hairline-width: 1px;
+$zk-hairline-opacity: 0.12;
+$zk-hairline-opacity-strong: 0.16;
+
+// ---------------------------------------------------------------------------
+// 对话框宽度档位
+// 对话框宽度只有四档，禁止自由 px
+// ---------------------------------------------------------------------------
+
+$zk-dialog-width-sm: 560px;
+$zk-dialog-width-md: 760px;
+$zk-dialog-width-lg: 900px;
+$zk-dialog-width-xl: 1100px;
+
+// ---------------------------------------------------------------------------
+// 页面容器宽度
+// 页面内容区最大宽度：主布局（含侧边导航）与各页容器共用同一来源，
+// 禁止页面内联 max-width。
+//   container-max-width          标准内容区（与侧边导航并存的页面）
+//   container-max-width-narrow   窄内容区（页内窄控件，如首页分组名输入框）
+// ---------------------------------------------------------------------------
+
+$zk-container-max-width: 1440px;
+$zk-container-max-width-narrow: 480px;
+
+// 首页「快速开始」快捷入口网格的轨道最小宽度：可用宽度足够时一行恰好 4 个，
+// 不足时按此值逐级减少列数（见 pages/[language]/index.vue 的 .quick-link-grid）。
+$zk-quick-link-min-width: 200px;
+
+// ---------------------------------------------------------------------------
+// 居中表面（认证 / 错误页）
+// 全屏居中骨架（CentralLayout）的单一表面宽度：认证页与错误页共用同一固定值，
+// 不随视口放大（窄屏由骨架内边距退化为「100% - 边距」）。高度上限不在此声明，
+// 由骨架的确定高度（v-main）经 flex 收缩提供，见 styles/main.scss 同名区块。
+// ---------------------------------------------------------------------------
+
+$zk-centered-surface-width: 420px;
+
+// ---------------------------------------------------------------------------
+// 内容约束
+// 浮层 / 下拉 / 预览区的尺寸约束：组件内禁止裸数值，一律引用本组令牌。
+//   dropdown-max-height        下拉列表滚动区最大高度（超出内部滚动）
+//   select-min-width           候选选择下拉最小宽度
+//   select-max-width           候选选择下拉最大宽度
+//   popover-max-width          浮层（popover / 提示面板）内容最大宽度
+//   popover-max-height         浮层内长文本最大高度（超出内部滚动）
+//   preview-max-height         明文 / 长文本预览区最大高度
+//   reasoning-max-height       思考过程滚动区最大高度（取 preview-max-height 的 1/3：
+//                              思考过程是流式增量长文本，独占一屏高度会挤掉正文
+//   inline-preview-max-height  消息内嵌预览（压缩摘要增量、审批参数 / 结果）最大高度
+// ---------------------------------------------------------------------------
+
+$zk-dropdown-max-height: 300px;
+$zk-select-min-width: 240px;
+$zk-select-max-width: 360px;
+
+// token 单位选择器触发区最小宽度：使「无单位（空后缀）/ K / M」切换时宽度不抖动
+$zk-token-unit-trigger-min-width: 44px;
+$zk-popover-max-width: 420px;
+$zk-popover-max-height: 320px;
+$zk-preview-max-height: 480px;
+$zk-reasoning-max-height: 160px;
+$zk-inline-preview-max-height: 240px;
+$zk-placeholder-min-height: 48px;
+
+// ---------------------------------------------------------------------------
+// 可拖拽边框（Resize Handle）
+// 可拖拽边框的常驻握把：形状随可调整的轴向切换，让用户静态即可分辨
+// 「可拖宽」（左右边框，竖条握把）与「可拖高」（上下边框，横条握把）。
+//   resize-grip-length     握把长边（沿边框走向）
+//   resize-grip-thickness  握把短边（垂直边框走向）
+//   resize-grip-opacity    常态不透明度（悬停 / 拖拽时转 primary）
+// ---------------------------------------------------------------------------
+
+$zk-resize-grip-length: $zk-space-5;
+$zk-resize-grip-thickness: $zk-space-1;
+$zk-resize-grip-opacity: 0.24;
+
+// ---------------------------------------------------------------------------
+// 编辑器外壳（CodeMirror 族）
+//   editor-font-size           编辑器正文与 CodeMirror 内部文本字号
+//   editor-min-height          编辑器正文最小高度
+//   editor-body-height        编辑器正文固定高度（Markdown 编辑 / 预览、JSON 编辑器同高，
+//                              超出在区内纵向滚动；全屏模式下改为铺满视口）
+//   editor-padding             编辑器外壳内边距
+//   editor-header-min-height   编辑器区块标题行最小高度（标题 + 校验状态图标）
+// ---------------------------------------------------------------------------
+
+$zk-editor-font-size: 0.8125rem; // 13px
+$zk-editor-min-height: 160px;
+$zk-editor-body-height: 240px;
+$zk-editor-padding: $zk-space-2;
+$zk-editor-header-min-height: 24px;
+
+// ---------------------------------------------------------------------------
+// 面板表面
+//   弱化面板背景不透明度（代码块、键值行、预览区）
+//   抬升面板背景不透明度：叠加在弱化面板之上的次级容器（如输入框上方的待发提问条目），
+//   取比弱化面板更强的灰度以拉开层级
+// ---------------------------------------------------------------------------
+
+$zk-surface-subtle-opacity: 0.06;
+$zk-surface-raised-opacity: 0.1;
+
+// ---------------------------------------------------------------------------
+// 不透明度
+//   opacity-disabled  被闸住 / 禁用的整体弱化（仍保持形态可辨）
+// ---------------------------------------------------------------------------
+
+$zk-opacity-disabled: 0.6;
+
+// ---------------------------------------------------------------------------
+// 开关（Switch）轨道
+//   switch-track-opacity      关闭态轨道填充不透明度。Vuetify 关闭态用 surface-variant
+//                             以 0.6 不透明度填充，深色主题下该色（#1D242E）与底色
+//                             surface（#151A21）几乎同色、轨道不可见；改用 on-surface
+//                             半透明后取足不透明度，对底色约 3:1（非文本 UI 组件要求）
+//   switch-disabled-opacity   开关禁用态整体不透明度。Vuetify 统一压暗值为 0.26，
+//                             开关的形态由轨道填充承载（不像复选框有描边轮廓），压到
+//                             0.26 后形态丢失，故为开关单独抬高一档，仍明显暗于可用态
+// ---------------------------------------------------------------------------
+
+$zk-switch-track-opacity: 0.38;
+$zk-switch-disabled-opacity: 0.45;
+
+// ---------------------------------------------------------------------------
+// Z-index 层级
+//   dialog     对话框
+//   fullscreen 编辑器全屏模式（需高于对话框）
+//   tooltip    CodeMirror 补全 / lint 提示（需高于全屏编辑器）
+// ---------------------------------------------------------------------------
+
+$zk-z-dialog: 2400;
+$zk-z-fullscreen: 2600;
+$zk-z-tooltip: 5000;
+
+// ---------------------------------------------------------------------------
+// 动效
+// ---------------------------------------------------------------------------
+
+$zk-transition-fast: 0.15s;
+$zk-transition-base: 0.2s;
+
+// ---------------------------------------------------------------------------
+// 为深色主题调校的高度阴影（subtle 而非厚重）
+// ---------------------------------------------------------------------------
+
+$zk-shadow-sm:
+  0 1px 2px rgb(0 0 0 / 20%),
+  0 1px 3px rgb(0 0 0 / 30%);
+$zk-shadow-md:
+  0 2px 4px rgb(0 0 0 / 24%),
+  0 4px 12px rgb(0 0 0 / 32%);
+
+// ---------------------------------------------------------------------------
+// 将相同的令牌导出为 CSS 自定义属性
+// ---------------------------------------------------------------------------
+
+:root {
+  --zk-font-family: #{$zk-font-family};
+  --zk-font-mono: #{$zk-font-mono};
+  --zk-font-size-caption: #{$zk-font-size-caption};
+  --zk-font-size-body: #{$zk-font-size-body};
+  --zk-font-size-subtitle: #{$zk-font-size-subtitle};
+  --zk-font-size-title: #{$zk-font-size-title};
+  --zk-font-size-heading: #{$zk-font-size-heading};
+  --zk-font-weight-regular: #{$zk-font-weight-regular};
+  --zk-font-weight-medium: #{$zk-font-weight-medium};
+  --zk-font-weight-semibold: #{$zk-font-weight-semibold};
+  --zk-control-height-compact: #{$zk-control-height-compact};
+  --zk-control-height-dense: #{$zk-control-height-dense};
+  --zk-control-height-default: #{$zk-control-height-default};
+  --zk-toolbar-height-compact: #{$zk-toolbar-height-compact};
+  --zk-table-row-height-compact: #{$zk-table-row-height-compact};
+  --zk-table-header-height-compact: #{$zk-table-header-height-compact};
+  --zk-panel-title-height-compact: #{$zk-panel-title-height-compact};
+  --zk-space-1: #{$zk-space-1};
+  --zk-space-2: #{$zk-space-2};
+  --zk-space-3: #{$zk-space-3};
+  --zk-space-4: #{$zk-space-4};
+  --zk-space-5: #{$zk-space-5};
+  --zk-space-6: #{$zk-space-6};
+  --zk-radius-sm: #{$zk-radius-sm};
+  --zk-radius-md: #{$zk-radius-md};
+  --zk-radius-lg: #{$zk-radius-lg};
+  --zk-radius-pill: #{$zk-radius-pill};
+  --zk-hairline-width: #{$zk-hairline-width};
+  --zk-hairline-opacity: #{$zk-hairline-opacity};
+  --zk-hairline-opacity-strong: #{$zk-hairline-opacity-strong};
+  --zk-dialog-width-sm: #{$zk-dialog-width-sm};
+  --zk-dialog-width-md: #{$zk-dialog-width-md};
+  --zk-dialog-width-lg: #{$zk-dialog-width-lg};
+  --zk-dialog-width-xl: #{$zk-dialog-width-xl};
+  --zk-container-max-width: #{$zk-container-max-width};
+  --zk-container-max-width-narrow: #{$zk-container-max-width-narrow};
+  --zk-quick-link-min-width: #{$zk-quick-link-min-width};
+  --zk-centered-surface-width: #{$zk-centered-surface-width};
+  --zk-dropdown-max-height: #{$zk-dropdown-max-height};
+  --zk-select-min-width: #{$zk-select-min-width};
+  --zk-select-max-width: #{$zk-select-max-width};
+  --zk-token-unit-trigger-min-width: #{$zk-token-unit-trigger-min-width};
+  --zk-popover-max-width: #{$zk-popover-max-width};
+  --zk-popover-max-height: #{$zk-popover-max-height};
+  --zk-preview-max-height: #{$zk-preview-max-height};
+  --zk-reasoning-max-height: #{$zk-reasoning-max-height};
+  --zk-inline-preview-max-height: #{$zk-inline-preview-max-height};
+  --zk-placeholder-min-height: #{$zk-placeholder-min-height};
+  --zk-resize-grip-length: #{$zk-resize-grip-length};
+  --zk-resize-grip-thickness: #{$zk-resize-grip-thickness};
+  --zk-resize-grip-opacity: #{$zk-resize-grip-opacity};
+  --zk-editor-font-size: #{$zk-editor-font-size};
+  --zk-editor-min-height: #{$zk-editor-min-height};
+  --zk-editor-body-height: #{$zk-editor-body-height};
+  --zk-editor-padding: #{$zk-editor-padding};
+  --zk-editor-header-min-height: #{$zk-editor-header-min-height};
+  --zk-surface-subtle-opacity: #{$zk-surface-subtle-opacity};
+  --zk-surface-raised-opacity: #{$zk-surface-raised-opacity};
+  --zk-opacity-disabled: #{$zk-opacity-disabled};
+  --zk-switch-track-opacity: #{$zk-switch-track-opacity};
+  --zk-switch-disabled-opacity: #{$zk-switch-disabled-opacity};
+  --zk-z-dialog: #{$zk-z-dialog};
+  --zk-z-fullscreen: #{$zk-z-fullscreen};
+  --zk-z-tooltip: #{$zk-z-tooltip};
+  --zk-transition-fast: #{$zk-transition-fast};
+  --zk-transition-base: #{$zk-transition-base};
+  --zk-shadow-sm: #{$zk-shadow-sm};
+  --zk-shadow-md: #{$zk-shadow-md};
+}

@@ -3,18 +3,14 @@
     <template #body>
       <search-table
         ref="searchTableRef"
-        :title="$t('model.capturer.name')"
         :list-request="capturerListGet"
         :options-request="capturerListOptions"
         :actions="getActions"
+        :batch-actions="getBatchActions"
+        :create="openCreateDialogAction"
+        :project-fields="projectFields"
         model-name="capturer"
-      >
-        <template #top>
-          <v-btn color="success" @click="openCreateDialogAction">
-            {{ $t("action.create") }}
-          </v-btn>
-        </template>
-      </search-table>
+      />
       <confirm-dialog
         ref="confirmDialogRef"
         :title="$t(`model.capturer.name`)"
@@ -22,7 +18,13 @@
         @confirm="itemDeleteAction"
       >
         <template #body="{ proxy }">
+          <confirm-alert
+            v-if="batchState"
+            :action="$t('action.delete')"
+            :text="$t('notice.batchConfirm', { count: batchState?.items.length ?? 0 })"
+          />
           <v-alert
+            v-else
             type="warning"
             icon="mdi-table-row-remove"
             :title="$t(`action.delete`)"
@@ -38,16 +40,14 @@
       <temp-editable-dialog
         ref="createDialogRef"
         :title="$t(`model.capturer.name`)"
-        @confirm="createAction"
-        :confirm-disabled="
-          !createForm.meta.value.dirty || !createForm.meta.value.valid
-        "
+        :confirm-disabled="!createForm.meta.value.dirty || !createForm.meta.value.valid"
         prepend-icon="mdi-owl"
         force-editable
+        @confirm="createAction"
       >
         <template #body>
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <chip-search-field
                   v-model="createNamespace"
@@ -62,19 +62,15 @@
                   init
                 >
                   <template #chip="{ props, item }">
-                    <v-chip v-bind="props">{{ item.raw.name }}</v-chip>
+                    <v-chip v-bind="props">{{ item.name }}</v-chip>
                   </template>
                   <template #item="{ props, item }">
-                    <v-list-item
-                      v-bind="props"
-                      :title="item.raw.name"
-                      :subtitle="item.raw.description"
-                    />
+                    <v-list-item v-bind="props" :title="item.name" :subtitle="item.description" />
                   </template>
                 </chip-search-field>
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="9">
                 <v-text-field
                   v-model="createName"
@@ -90,7 +86,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="createDevice"
@@ -99,7 +95,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="createBpfExpr"
@@ -108,7 +104,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-number-input
                   v-model="createSnapLen"
@@ -124,7 +120,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-switch
                   v-model="createPromisc"
@@ -148,15 +144,13 @@
       <temp-editable-dialog
         ref="editDialogRef"
         :title="$t(`model.capturer.name`)"
-        @confirm="itemUpdateAction"
-        :confirm-disabled="
-          !updateForm.meta.value.dirty || !updateForm.meta.value.valid
-        "
+        :confirm-disabled="!updateForm.meta.value.dirty || !updateForm.meta.value.valid"
         prepend-icon="mdi-owl"
+        @confirm="itemUpdateAction"
       >
         <template #body="{ proxy, editable }">
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <chip-search-field
                   v-model="proxy.namespace"
@@ -170,12 +164,12 @@
                   disabled
                 >
                   <template #chip="{ props, item }">
-                    <v-chip v-bind="props" :label="item.raw.name" />
+                    <v-chip v-bind="props" :label="item.name" />
                   </template>
                 </chip-search-field>
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="9">
                 <v-text-field
                   v-model="proxy.name"
@@ -191,7 +185,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="updateDevice"
@@ -201,7 +195,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="updateBpfExpr"
@@ -211,7 +205,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-number-input
                   v-model="updateSnapLen"
@@ -229,7 +223,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-switch
                   v-model="updatePromisc"
@@ -275,10 +269,11 @@ import {
   namespaceListGet,
 } from "@/apis/admin";
 import { getResponse, getSimpleResponse } from "@/apis/base";
-import type { ItemActions } from "@/components/@types/table";
+import type { BatchActions, ItemActions } from "@/components/@types/table";
 import type { CapturerDetailOut } from "./@types";
 import { useAppStore } from "@/stores/app";
-import type { CapturerConfigIn } from "@/apis/@types/admin";
+import type { BatchResultOut, CapturerConfigIn } from "@/apis/@types/admin";
+import i18n from "@/utils/i18n";
 import { useForm } from "vee-validate";
 import { createCapturerSchema, updateCapturerSchema } from "@/schemas/capturer";
 import { vuetifyCfg } from "@/utils/form";
@@ -292,80 +287,35 @@ const updateForm = useForm({
   validationSchema: updateCapturerSchema,
 });
 
-const [createNamespace, createNamespaceProps] = createForm.defineField(
-  "namespace",
-  vuetifyCfg
-);
+const [createNamespace, createNamespaceProps] = createForm.defineField("namespace", vuetifyCfg);
 
-const [createName, createNameProps] = createForm.defineField(
-  "name",
-  vuetifyCfg
-);
+const [createName, createNameProps] = createForm.defineField("name", vuetifyCfg);
 
-const [createVersion, createVersionProps] = createForm.defineField(
-  "version",
-  vuetifyCfg
-);
+const [createVersion, createVersionProps] = createForm.defineField("version", vuetifyCfg);
 
-const [createDevice, createDeviceProps] = createForm.defineField(
-  "device",
-  vuetifyCfg
-);
+const [createDevice, createDeviceProps] = createForm.defineField("device", vuetifyCfg);
 
-const [createBpfExpr, createBpfExprProps] = createForm.defineField(
-  "bpfExpr",
-  vuetifyCfg
-);
+const [createBpfExpr, createBpfExprProps] = createForm.defineField("bpfExpr", vuetifyCfg);
 
-const [createSnapLen, createSnapLenProps] = createForm.defineField(
-  "snapLen",
-  vuetifyCfg
-);
+const [createSnapLen, createSnapLenProps] = createForm.defineField("snapLen", vuetifyCfg);
 
-const [createTimeout, createTimeoutProps] = createForm.defineField(
-  "timeout",
-  vuetifyCfg
-);
+const [createTimeout, createTimeoutProps] = createForm.defineField("timeout", vuetifyCfg);
 
-const [createPromisc, createPromiscProps] = createForm.defineField(
-  "promisc",
-  vuetifyCfg
-);
+const [createPromisc, createPromiscProps] = createForm.defineField("promisc", vuetifyCfg);
 
-const [createEnabled, createEnabledProps] = createForm.defineField(
-  "enabled",
-  vuetifyCfg
-);
+const [createEnabled, createEnabledProps] = createForm.defineField("enabled", vuetifyCfg);
 
-const [updateDevice, updateDeviceProps] = updateForm.defineField(
-  "device",
-  vuetifyCfg
-);
+const [updateDevice, updateDeviceProps] = updateForm.defineField("device", vuetifyCfg);
 
-const [updateBpfExpr, updateBpfExprProps] = updateForm.defineField(
-  "bpfExpr",
-  vuetifyCfg
-);
+const [updateBpfExpr, updateBpfExprProps] = updateForm.defineField("bpfExpr", vuetifyCfg);
 
-const [updateSnapLen, updateSnapLenProps] = updateForm.defineField(
-  "snapLen",
-  vuetifyCfg
-);
+const [updateSnapLen, updateSnapLenProps] = updateForm.defineField("snapLen", vuetifyCfg);
 
-const [updateTimeout, updateTimeoutProps] = updateForm.defineField(
-  "timeout",
-  vuetifyCfg
-);
+const [updateTimeout, updateTimeoutProps] = updateForm.defineField("timeout", vuetifyCfg);
 
-const [updatePromisc, updatePromiscProps] = updateForm.defineField(
-  "promisc",
-  vuetifyCfg
-);
+const [updatePromisc, updatePromiscProps] = updateForm.defineField("promisc", vuetifyCfg);
 
-const [updateEnabled, updateEnabledProps] = updateForm.defineField(
-  "enabled",
-  vuetifyCfg
-);
+const [updateEnabled, updateEnabledProps] = updateForm.defineField("enabled", vuetifyCfg);
 
 const appStore = useAppStore();
 const searchTableRef = useTemplateRef("searchTableRef");
@@ -377,26 +327,43 @@ const namespaceSearchHeaders: Record<string, SearchAction> = {
   name: SearchAction.CONTAIN,
 };
 
-const getActions = (item: Record<string, any>): ItemActions => {
-  let actions: ItemActions = {
+// projectFields 字段投影：行操作依赖字段恒定投影，避免用户隐藏对应列后行操作失效
+const projectFields = (visible: string[]): string[] => [
+  "id",
+  "namespace",
+  "name",
+  "version",
+  ...visible,
+];
+
+const getActions = (): ItemActions => {
+  const actions: ItemActions = {
     edit: detailGetAction,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete: function (item: Record<string, any>): void {
+      batchState.value = null;
       confirmDialogRef.value?.open(item);
     },
   };
   return actions;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<CapturerDetailOut>(
     capturerDetailGet(item.id as number),
     async (rsp) => {
-      updateForm.resetField("device", { value: rsp.data.config.device });
-      updateForm.resetField("bpfExpr", { value: rsp.data.config.bpfExpr });
-      updateForm.resetField("snapLen", { value: rsp.data.config.snapLen });
-      updateForm.resetField("timeout", { value: rsp.data.config.timeout });
-      updateForm.resetField("promisc", { value: rsp.data.config.promisc });
-      updateForm.resetField("enabled", { value: rsp.data.config.enabled });
+      // 复位与回填同属「准备本次打开的数据」：values 完整枚举该表单全部 defineField 字段
+      updateForm.resetForm({
+        values: {
+          device: rsp.data.config.device,
+          bpfExpr: rsp.data.config.bpfExpr,
+          snapLen: rsp.data.config.snapLen,
+          timeout: rsp.data.config.timeout,
+          promisc: rsp.data.config.promisc,
+          enabled: rsp.data.config.enabled,
+        },
+      });
       editDialogRef.value?.open(rsp.data);
     },
     async (rsp) => {
@@ -405,20 +372,54 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
-const itemDeleteAction = async (item: Record<string, any>): Promise<void> => {
-  await getSimpleResponse(
-    capturerDelete(item.id as number),
+// ---- 批量删除 ----
+// applyBatchResult 统一处理 BatchResultOut 响应：存在失败条目时以 error 提示失败数，否则沿用成功摘要
+const applyBatchResult = (summary: string, result: BatchResultOut): void => {
+  if (result.failed.length > 0) {
+    appStore.notify({
+      text: i18n.global.t("notice.batchResult", {
+        succeeded: result.succeeded,
+        failed: result.failed.length,
+      }),
+      timeout: 3000,
+      color: "error",
+    });
+    return;
+  }
+  appStore.notify({
+    text: summary,
+    timeout: 3000,
+    color: "success",
+  });
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type BatchState = { items: Record<string, any>[] };
+const batchState = ref<BatchState | null>(null);
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getBatchActions = (items: Record<string, any>[]): BatchActions => {
+  return {
+    delete: () => {
+      batchState.value = { items };
+      confirmDialogRef.value?.open({});
+    },
+  };
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const batchDeleteAction = async (items: Record<string, any>[]): Promise<void> => {
+  const ids = items.map((i) => i.id as number);
+  await getResponse<BatchResultOut>(
+    capturerDelete(ids),
     async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
+      searchTableRef.value?.clearSelection?.();
       await searchTableRef.value?.refresh();
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "success",
-      });
     },
     async (rsp) => {
       appStore.notify({
@@ -426,7 +427,31 @@ const itemDeleteAction = async (item: Record<string, any>): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
+  );
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
+  const state = batchState.value;
+  if (state) {
+    batchState.value = null;
+    await batchDeleteAction(state.items);
+    return;
+  }
+  await getResponse<BatchResultOut>(
+    capturerDelete(proxy.id as number),
+    async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
+      await searchTableRef.value?.refresh();
+    },
+    async (rsp) => {
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "error",
+      });
+    },
   );
 };
 
@@ -442,22 +467,22 @@ const openCreateDialogAction = () => {
     bpfExpr: "tcp port 80",
     enabled: true,
   };
-  createForm.resetField("namespace", { value: defaults.namespace });
-  createForm.resetField("name", { value: defaults.name });
-  createForm.resetField("version", { value: defaults.version });
-  createForm.resetField("device", { value: defaults.device });
-  createForm.resetField("snapLen", { value: defaults.snapLen });
-  createForm.resetField("promisc", { value: defaults.promisc });
-  createForm.resetField("timeout", { value: defaults.timeout });
-  createForm.resetField("bpfExpr", { value: defaults.bpfExpr });
-  createForm.resetField("enabled", { value: defaults.enabled });
+  // 复位是「准备本次打开的数据」的一部分：resetForm 原子重置全部字段值与校验状态，
+  // values 完整枚举该表单全部 defineField 字段，避免未列出字段被重置为初始值造成残影。
+  createForm.resetForm({ values: defaults });
   createDialogRef.value?.open(defaults);
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const itemUpdateAction = (proxy: Record<string, any>) => {
   updateForm.handleSubmit(async (values) => {
     await getSimpleResponse(
-      capturerUpdate(proxy.id, values as CapturerConfigIn),
+      // 单行文本提交前去除首尾空白，避免误输入空白导致数据异常
+      capturerUpdate(proxy.id, {
+        ...values,
+        device: (values.device as string).trim(),
+        bpfExpr: (values.bpfExpr as string).trim(),
+      } as CapturerConfigIn),
       async (rsp) => {
         await searchTableRef.value?.refresh();
         appStore.notify({
@@ -472,7 +497,7 @@ const itemUpdateAction = (proxy: Record<string, any>) => {
           timeout: 3000,
           color: "error",
         });
-      }
+      },
     );
   })();
 };
@@ -480,15 +505,16 @@ const itemUpdateAction = (proxy: Record<string, any>) => {
 const createAction = createForm.handleSubmit(async (values): Promise<void> => {
   await getSimpleResponse(
     capturerCreate({
-      namespace: values.namespace,
-      name: values.name,
-      version: values.version,
+      // 单行文本提交前去除首尾空白，避免误输入空白导致查询失败或数据异常
+      namespace: (values.namespace as string).trim(),
+      name: (values.name as string).trim(),
+      version: (values.version as string).trim(),
       config: {
-        device: values.device,
+        device: (values.device as string).trim(),
         snapLen: values.snapLen,
         promisc: values.promisc,
         timeout: values.timeout,
-        bpfExpr: values.bpfExpr,
+        bpfExpr: (values.bpfExpr as string).trim(),
         enabled: values.enabled,
       },
     }),
@@ -506,7 +532,7 @@ const createAction = createForm.handleSubmit(async (values): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 });
 </script>

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 var (
@@ -19,15 +19,13 @@ var (
 //
 // ISO 639-2 定义了语言的 Alpha-3（三位字母）代码，部分语言同时拥有
 // 对应 ISO 639-1 的 Alpha-2（两位字母）代码。
-//
-// 字段说明：
-//   - Alpha2：对应 ISO 639-1 的两位字母代码（如 "zh"、"en"），部分语言无此代码则留空。
-//   - Alpha3：对应 ISO 639-2/T 的三位字母代码（如 "zho"、"eng"），所有语言均具备。
-//   - Name：语言的英文标准名称（如 "Chinese"、"English"）。
 type ISO6392Entry struct {
+	// Alpha2 对应 ISO 639-1 的两位字母代码，如 "zh"、"en"；部分语言无此代码则为空。
 	Alpha2 string `json:"alpha_2,omitempty"`
+	// Alpha3 对应 ISO 639-2/T 的三位字母代码，如 "zho"、"eng"。
 	Alpha3 string `json:"alpha_3"`
-	Name   string `json:"name"`
+	// Name 语言的英文标准名称，如 "Chinese"、"English"。
+	Name string `json:"name"`
 }
 
 // ISO6392Data 表示 ISO 639-2 JSON 数据文件的顶层结构。
@@ -41,6 +39,7 @@ type ISO6392Entry struct {
 //	  ]
 //	}
 type ISO6392Data struct {
+	// Languages 包含所有 ISO 639-2 语言条目。
 	Languages []ISO6392Entry `json:"639-2"`
 }
 
@@ -86,7 +85,7 @@ func GetISO6392Codes() *ISO6392Codes {
 //
 // 注意：对于没有 Alpha-2 代码的语言（如古希腊语 grc），仅将其加入 Alpha-3 和名称索引。
 func newISO6392Codes() (*ISO6392Codes, error) {
-	file, err := embeddedStandards.Open(LANGUAGE)
+	file, err := embeddedStandards.Open(Language)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

@@ -4,17 +4,13 @@
       <app-header />
     </template>
     <template #body>
-      <v-card
-        class="justify-center align-center"
-        prepend-avatar="@/assets/logo.png"
-        width="30%"
-      >
+      <v-card prepend-avatar="@/assets/logo.png">
         <template #title>
           <span class="font-weight-black">{{ $t("title.zk") }}</span>
         </template>
         <template #text>
           <v-spacer />
-          <v-form>
+          <v-form @submit.prevent="submit">
             <v-text-field
               v-model="username"
               v-bind="usernameProps"
@@ -26,23 +22,31 @@
               v-bind="passwordProps"
               :label="$t('model.user.field.password')"
             />
+            <!-- 将提交按钮放入表单内，使其成为默认按钮，
+                 这样在任一输入框内按回车即可隐式提交表单 -->
+            <v-card-actions class="d-flex justify-space-between">
+              <v-btn
+                v-if="showForgot"
+                type="button"
+                variant="text"
+                color="primary"
+                @click="$router.push(`/${appStore.language}/auth/forgot-password`)"
+                >{{ $t("action.pwdForget") }}</v-btn
+              >
+              <template v-else>
+                <span></span>
+              </template>
+              <v-btn
+                v-request="submit"
+                :disabled="!meta.dirty || !meta.valid"
+                type="submit"
+                color="primary"
+                variant="flat"
+                >{{ $t("action.signIn") }}</v-btn
+              >
+            </v-card-actions>
           </v-form>
         </template>
-
-        <v-card-actions class="d-flex justify-space-between">
-          <v-btn color="third" class="ma-2 pa-2">{{
-            $t("action.pwdForget")
-          }}</v-btn>
-          <v-btn
-            :disabled="!meta.dirty || !meta.valid"
-            @click="submit"
-            @keyup.enter="submit"
-            type="submit"
-            color="primary"
-            class="ma-2 pa-2"
-            >{{ $t("action.signIn") }}</v-btn
-          >
-        </v-card-actions>
       </v-card>
     </template>
   </central-layout>
@@ -54,6 +58,8 @@ meta:
   title: title.signIn
   requiresAuth: false
   requiresPerm: false
+  # 仅面向未登录用户：已登录时由路由守卫按 redirect/主页自动放行，避免重复登录
+  guestOnly: true
 </route>
 
 <script setup lang="ts">
@@ -61,11 +67,16 @@ import { useForm } from "vee-validate";
 import router from "@/router";
 import { loginSchema } from "@/schemas/user";
 import { passwordLogin } from "@/apis/user";
-import { getSimpleResponse } from "@/apis/base";
+import { getResponse } from "@/apis/base";
 import { useUserStore } from "@/stores/user";
+import { localManager } from "@/stores/local";
 import { vuetifyCfg } from "@/utils/form";
 import i18n from "@/utils/i18n";
 import { useAppStore } from "@/stores/app";
+import { useFeaturesStore, FEATURE_PASSWORD_RESET } from "@/stores/features";
+
+// 类型
+import type { UserTokenOut } from "@/apis/@types/user";
 
 const route = useRoute();
 const { defineField, handleSubmit, setFieldError, meta } = useForm({
@@ -77,18 +88,31 @@ const [password, passwordProps] = defineField("password", vuetifyCfg);
 
 const appStore = useAppStore();
 const userStore = useUserStore();
+const featuresStore = useFeaturesStore();
+
+// 密码重置功能开启时才展示"忘记密码"入口：系统未配置 SMTP 时后端该功能关闭，
+// 前端据此隐藏组件，避免开放无意义的功能入口。
+const showForgot = computed(() => featuresStore.isEnable(FEATURE_PASSWORD_RESET));
+onMounted(() => {
+  featuresStore.load();
+});
 
 const submit = handleSubmit(async (values) => {
-  await getSimpleResponse(
+  await getResponse<UserTokenOut>(
     passwordLogin({
-      username: values.username as string,
+      // 用户名单行文本提交前去除首尾空白，避免误输入空白导致登录失败
+      // （密码字段按规范豁免 trim：首尾空白是密码的合法字符）
+      username: (values.username as string).trim(),
       password: values.password as string,
     }),
-    async () => {
-      let redirect = route.query.redirect as string;
-      let next = redirect || "/";
-      setTimeout(() => {
-        userStore.load();
+    async (rsp) => {
+      const redirect = route.query.redirect as string;
+      const next = redirect || "/";
+      setTimeout(async () => {
+        // 将登录返回的令牌持久化到本地存储，避免依赖受主机作用域限制的 Cookie
+        localManager.setJwt(rsp.data.token);
+        // 等待用户信息加载完成后再跳转，否则路由守卫会误判未登录而跳转 401
+        await userStore.load();
         router.push(next);
         appStore.notify({
           text: i18n.global.t("notice.wellcome"),
@@ -112,7 +136,7 @@ const submit = handleSubmit(async (values) => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 });
 </script>

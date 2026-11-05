@@ -6,10 +6,15 @@ import (
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/protobuf/proto"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+)
+
+var (
+	// ReporterEtcdPrefix reporter 配置与状态在 etcd 中的存储键前缀
+	ReporterEtcdPrefix = etcd.WithPrefix("reporter/")
 )
 
 // ReporterConfigKey 生成 reporter 配置在 etcd 中的存储键
@@ -20,7 +25,7 @@ import (
 // 返回:
 //   - 配置键字符串
 func ReporterConfigKey(r *reporter_v1.Resource) string {
-	return fmt.Sprintf(`%s%s/%s/%s/cfg`, etcd.WithPrefix("reporter/"), r.Namespace, r.Name, r.Version)
+	return fmt.Sprintf(`%s%s/%s/%s/cfg`, ReporterEtcdPrefix, r.Namespace, r.Name, r.Version)
 }
 
 // ReporterStatusListKey 生成 reporter 状态列表在 etcd 中的存储键
@@ -31,7 +36,7 @@ func ReporterConfigKey(r *reporter_v1.Resource) string {
 // 返回:
 //   - 状态列表键字符串
 func ReporterStatusListKey(r *reporter_v1.Resource) string {
-	return fmt.Sprintf(`%s%s/%s/%s/sts`, etcd.WithPrefix("reporter/"), r.Namespace, r.Name, r.Version)
+	return fmt.Sprintf(`%s%s/%s/%s/sts`, ReporterEtcdPrefix, r.Namespace, r.Name, r.Version)
 }
 
 // ReporterStatusDetailKey 生成 reporter 具体状态在 etcd 中的存储键
@@ -94,10 +99,14 @@ func ReporterConfigMarshalAsBytes(config *reporter_v1.Config) ([]byte, error) {
 // 采集器通过命名空间、名称和版本唯一标识
 type Capturer struct {
 	database.BaseModel
-	Namespace     Namespace `gorm:"foreignKey:NamespaceName;references:Name"`
+	// Namespace 所属命名空间关联模型，通过 NamespaceName 关联
+	Namespace Namespace `gorm:"foreignKey:NamespaceName;references:Name"`
+	// NamespaceName 所属命名空间名称
 	NamespaceName string `gorm:"type:VARCHAR(32)"`
-	Name          string `gorm:"type:VARCHAR(32)"`
-	Version       string `gorm:"type:VARCHAR(32)"`
+	// Name 采集器名称
+	Name string `gorm:"type:VARCHAR(32)"`
+	// Version 采集器版本
+	Version string `gorm:"type:VARCHAR(32)"`
 }
 
 // CreateWithConfig 创建采集器记录并存储其配置到 etcd
@@ -257,5 +266,3 @@ func (c *Capturer) GetStatusList(ctx context.Context, client *etcd.EtcdClient) (
 	}
 	return statusList, nil
 }
-
-

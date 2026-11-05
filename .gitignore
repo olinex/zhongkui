@@ -27,6 +27,9 @@ bin-debug/
 bin-release/
 build/
 vendor/
+# 例外：huginn-net-db 的仓库内补丁副本（[patch.crates-io] 依赖，必须随工程提交）
+!third_party/huginn-net/vendor/
+!third_party/huginn-net/vendor/huginn-net-db/
 *.exe
 *.exe~
 *.dll
@@ -35,6 +38,13 @@ vendor/
 
 # Go test coverage
 coverage.out
+
+# VitePress 构建缓存与临时文件
+docs/.vitepress/cache/
+docs/.vitepress/.temp/
+
+# Rust / Huginn Net specific
+third_party/huginn-net/target/
 
 # TypeScript / Vue specific
 node_modules/
@@ -91,5 +101,10 @@ config.toml
 *.prof
 *.pprof
 *.test
-testdata
+# 测试夹具（golden/回归测试依赖）一律入库；
+# 仅排除 benchmark 的大型可下载基准包（缺失时测试显式 Skip，可经 make bench-prepare 获取）
+internal/benchmark/capture/testdata/smallFlows.pcap
+internal/benchmark/capture/testdata/bigFlows.pcap
 config/uptrace.yml
+certs/
+zki

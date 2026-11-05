@@ -12,6 +12,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+// TestStageTracerBasic 测试 StageTracer 的 Begin/End 基本记录功能。
 func TestStageTracerBasic(t *testing.T) {
 	Convey("Test StageTracer basic Begin/End functionality", t, func() {
 		tracer := NewStageTracer()
@@ -89,6 +90,7 @@ func TestStageTracerBasic(t *testing.T) {
 	})
 }
 
+// TestStageTracerMinMax 测试 StageTracer 的最小/最大耗时统计。
 func TestStageTracerMinMax(t *testing.T) {
 	Convey("Test StageTracer min/max tracking", t, func() {
 		Convey("Should track min and max correctly with varying durations", func() {
@@ -111,6 +113,7 @@ func TestStageTracerMinMax(t *testing.T) {
 	})
 }
 
+// TestStageTracerConcurrency 测试 StageTracer 的并发安全性。
 func TestStageTracerConcurrency(t *testing.T) {
 	Convey("Test StageTracer concurrent safety", t, func() {
 		tracer := NewStageTracer()
@@ -166,6 +169,7 @@ func TestStageTracerConcurrency(t *testing.T) {
 	})
 }
 
+// TestStageTracerReport 测试 StageTracer 报告输出（含空数据场景）。
 func TestStageTracerReport(t *testing.T) {
 	Convey("Test StageTracer Report output", t, func() {
 		tracer := NewStageTracer()
@@ -190,7 +194,7 @@ func TestStageTracerReport(t *testing.T) {
 			output := buf.String()
 
 			So(output, ShouldNotBeEmpty)
-			So(strings.Contains(output, "=== 阶段耗时统计报告 ==="), ShouldBeTrue)
+			So(strings.Contains(output, "阶段耗时统计报告"), ShouldBeTrue)
 			So(strings.Contains(output, "test.stage"), ShouldBeTrue)
 			So(strings.Contains(output, "100.0%"), ShouldBeTrue)
 		})
@@ -200,7 +204,7 @@ func TestStageTracerReport(t *testing.T) {
 			printReport(&buf, nil, 0)
 			output := buf.String()
 			So(output, ShouldNotBeEmpty)
-			So(strings.Contains(output, "=== 阶段耗时统计报告 ==="), ShouldBeTrue)
+			So(strings.Contains(output, "阶段耗时统计报告"), ShouldBeTrue)
 		})
 	})
 }

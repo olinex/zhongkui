@@ -17,6 +17,7 @@ export interface UserBaseDetailOut extends NormalModelOut {
   username: string;
   email: string;
   active: boolean;
+  frontendConfigSyncEnabled: boolean;
 }
 
 export interface UserDetailOut extends UserBaseDetailOut {

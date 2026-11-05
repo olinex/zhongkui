@@ -2,11 +2,10 @@
 package {{ .PackageName }}
 
 import (
-    {{- if .TimeModule }}
-    "time"
-    {{- end }}
-    "zhongkui.com/zhongkui/internal/pkg/utils"
-    "zhongkui.com/zhongkui/internal/pkg/serializer"
+{{ if .TimeModule }}	"time"
+
+{{ end }}	"zhongkuisec.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 type Pagination struct {
@@ -67,13 +66,21 @@ func (i *{{ .FieldName }}{{ $typeName }}FilterByItem) GetAction() string {
 }
 
 func (i *{{ .FieldName }}{{ $typeName }}FilterByItem) GetValue() any {
+    {{- if .TextValue }}
+    return i.Value.String()
+    {{- else }}
     return i.Value
+    {{- end }}
 }
 {{- end }}
 
 type {{ $typeName }}FilterBy struct {
     {{- range $item.FilterByFields }}
+    {{- if .Required }}
+    {{ .FieldName | capitalize }} {{ .FieldName }}{{ $typeName }}FilterByItem `mapstructure:"{{ .FieldName }}" binding:"required"`
+    {{- else }}
     {{ .FieldName | capitalize }} *{{ .FieldName }}{{ $typeName }}FilterByItem `mapstructure:"{{ .FieldName }}"`
+    {{- end }}
     {{- end }}
 }
 
@@ -81,7 +88,12 @@ type {{ $typeName }}SearchIn struct {
     Pagination
     Greedy   bool                         `mapstructure:"greedy" default:"false"`
     OrderBy  []{{ $typeName }}OrderBy     `mapstructure:"orderBy"`
+    {{- if hasRequired $item.FilterByFields }}
+    FilterBy {{ $typeName }}FilterBy       `mapstructure:"filterBy"`
+    {{- else }}
     FilterBy *{{ $typeName }}FilterBy     `mapstructure:"filterBy"`
+    {{- end }}
+    Fields   []string                     `mapstructure:"fields"`
 }
 
 func (s *{{ $typeName }}SearchIn) GetGreedy() bool {
@@ -107,15 +119,49 @@ func (s *{{ $typeName }}SearchIn) GetOrderBy() []utils.OrderByItem {
 
 func (s *{{ $typeName }}SearchIn) GetFilterBy() map[string]utils.FilterByItem {
     items := make(map[string]utils.FilterByItem)
+    {{- if not (hasRequired $item.FilterByFields) }}
     if s.FilterBy == nil {
         return items
     }
+    {{- end }}
     {{- range $item.FilterByFields }}
+    {{- if .Required }}
+    items["{{ .FieldName }}"] = &s.FilterBy.{{ .FieldName | capitalize }}
+    {{- else }}
     if s.FilterBy.{{ .FieldName | capitalize }} != nil {
         items["{{ .FieldName }}"] = s.FilterBy.{{ .FieldName | capitalize }}
     }
     {{- end }}
+    {{- end }}
     return items
+}
+
+func (s *{{ $typeName }}SearchIn) GetFields() []string {
+    return s.Fields
+}
+
+func (s *{{ $typeName }}SearchIn) ResolveSelectColumns() []string {
+    if len(s.Fields) == 0 {
+        return nil
+    }
+    columns := make([]string, 0, len(s.Fields))
+    seen := make(map[string]struct{}, len(s.Fields))
+    add := func(column string) {
+        if _, dup := seen[column]; dup {
+            return
+        }
+        seen[column] = struct{}{}
+        columns = append(columns, column)
+    }
+    for _, name := range s.Fields {
+        switch name {
+        {{- range $item.SelectFields }}
+        case "{{ .FieldName }}":
+            add("{{ .Column }}")
+        {{- end }}
+        }
+    }
+    return columns
 }
 
 func (s *{{ $typeName }}SearchIn) GetOptions() *utils.SearchOptions {
@@ -136,6 +182,11 @@ func (s *{{ $typeName }}SearchIn) GetOptions() *utils.SearchOptions {
                 {{- end }}
                 },
             },
+        {{- end }}
+        },
+        Fields: []string{
+        {{- range $item.SelectFields }}
+            "{{ .FieldName }}",
         {{- end }}
         },
     }

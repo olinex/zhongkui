@@ -22,11 +22,11 @@ import (
 	g "google.golang.org/grpc"
 	"gorm.io/gorm"
 	"gorm.io/plugin/opentelemetry/tracing"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/redis"
-	"zhongkui.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/redis"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
 )
 
 // AsynqServerMiddleware 返回 Asynq 任务处理中间件，为每个任务执行创建 trace span。
@@ -37,7 +37,7 @@ func AsynqServerMiddleware() asynq.MiddlewareFunc {
 	if !Env.Enabled {
 		return func(next asynq.Handler) asynq.Handler { return next }
 	}
-	tracer := otel.Tracer(fmt.Sprintf(`%s-asynq-server`, base.GLOBAL_PREFIX))
+	tracer := otel.Tracer(fmt.Sprintf(`%s-asynq-server`, base.GlobalPrefix))
 	return func(next asynq.Handler) asynq.Handler {
 		return asynq.HandlerFunc(func(ctx context.Context, task *asynq.Task) error {
 			spanName := fmt.Sprintf(`task.process.%s`, task.Type())
@@ -54,23 +54,26 @@ func AsynqServerMiddleware() asynq.MiddlewareFunc {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
 			}
-			return err
+			return errors.WithStack(err)
 		})
 	}
 }
 
+// TracedAsynqClient 包装 asynq.Client，在任务入队时自动创建追踪 span。
 type TracedAsynqClient struct {
 	*asynq.Client
+	// tracer 用于为任务入队创建追踪 span 的 Tracer。
 	tracer trace.Tracer
 }
 
+// WrapAsynqClient 把 asynq.Client 包装为带追踪能力的 TracedAsynqClient；OTEL 未启用时返回 nil。
 func WrapAsynqClient(cli *asynq.Client) *TracedAsynqClient {
 	if !Env.Enabled {
 		return nil
 	}
 	return &TracedAsynqClient{
 		Client: cli,
-		tracer: otel.Tracer(fmt.Sprintf(`%s-asynq-client`, base.GLOBAL_PREFIX)),
+		tracer: otel.Tracer(fmt.Sprintf(`%s-asynq-client`, base.GlobalPrefix)),
 	}
 }
 
@@ -84,7 +87,7 @@ func (c *TracedAsynqClient) EnqueueContext(ctx context.Context, task *asynq.Task
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return info, err
+		return info, errors.WithStack(err)
 	}
 	span.SetAttributes(
 		attribute.String("task.id", info.ID),
@@ -99,9 +102,10 @@ func (c *TracedAsynqClient) EnqueueContext(ctx context.Context, task *asynq.Task
 		attribute.Int("task.retried", info.Retried),
 		attribute.Int("task.payload_size", len(info.Payload)),
 	)
-	return info, err
+	return info, errors.WithStack(err)
 }
 
+// InjectRedisClient 为 Redis 客户端注入 OpenTelemetry 的链路追踪与指标采集；OTEL 未启用时不作处理。
 func InjectRedisClient(client *redis.Client) error {
 	if !Env.Enabled {
 		return nil
@@ -123,14 +127,17 @@ type contextStrippingCore struct {
 	zapcore.Core
 }
 
+// With 返回携带过滤后字段的新 Core，剔除 context.Context 字段。
 func (c *contextStrippingCore) With(fields []zapcore.Field) zapcore.Core {
 	return &contextStrippingCore{c.Core.With(stripContextFields(fields))}
 }
 
+// Check 透传底层 Core，判断该日志条目是否需要记录。
 func (c *contextStrippingCore) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
 	return c.Core.Check(ent, ce)
 }
 
+// Write 剔除 context.Context 字段后写入底层 Core。
 func (c *contextStrippingCore) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	return c.Core.Write(ent, stripContextFields(fields))
 }
@@ -186,6 +193,7 @@ func GormPlugin() gorm.Plugin {
 	return tracing.NewPlugin()
 }
 
+// GinMiddleware 返回基于 otelgin 的 Gin 中间件，为 HTTP 请求创建追踪 span；OTEL 未启用时返回 nil。
 func GinMiddleware(name string) gin.HandlerFunc {
 	if !Env.Enabled {
 		return nil
@@ -230,6 +238,7 @@ func EtcdDialOptions() []g.DialOption {
 	}
 }
 
+// S3ClientOptions 返回 S3 客户端的 OTEL 追踪选项（经自定义 RoundTripper 埋点）；OTEL 未启用时返回 nil。
 func S3ClientOptions() []s3.ClientOption {
 	if !Env.Enabled {
 		return nil

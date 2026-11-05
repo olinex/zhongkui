@@ -7,12 +7,14 @@ import (
 	"strings"
 
 	"gorm.io/gorm/schema"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
+// MacAddr 是以 net.HardwareAddr 为底层的 MAC 地址类型，支持数据库、JSON 与文本之间的序列化。
 type MacAddr net.HardwareAddr
 
+// NewMacAddr 从任意值（字符串或字节切片）解析并返回一个 *MacAddr。
 func NewMacAddr(value any) (*MacAddr, error) {
 	var m MacAddr
 	if err := m.Scan(value); err != nil {
@@ -21,10 +23,12 @@ func NewMacAddr(value any) (*MacAddr, error) {
 	return &m, nil
 }
 
+// String 返回 MAC 地址的可读字符串表示。
 func (m MacAddr) String() string {
 	return net.HardwareAddr(m).String()
 }
 
+// UnmarshalJSON 实现 json.Unmarshaler 接口，从 JSON 值解析 MAC 地址。
 func (m *MacAddr) UnmarshalJSON(data []byte) error {
 	mac := string(data)
 	if mac == "null" || mac == "" {
@@ -38,10 +42,13 @@ func (m *MacAddr) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON 实现 json.Marshaler 接口，将 MAC 地址序列化为 JSON 字符串。
 func (m MacAddr) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m.String())
 }
 
+// GormDBDataType 返回该类型在 GORM 中对应的数据库列类型（postgres 为 MACADDR，
+// clickhouse 为 FixedString(6)，其余为空）。
 func (m MacAddr) GormDBDataType(db *database.DB, field *schema.Field) string {
 	name := db.Dialector.Name()
 	switch name {
@@ -54,6 +61,7 @@ func (m MacAddr) GormDBDataType(db *database.DB, field *schema.Field) string {
 	}
 }
 
+// Value 实现 driver.Valuer 接口，返回写入数据库的值；空地址返回 nil。
 func (m MacAddr) Value() (driver.Value, error) {
 	if len(m) == 0 {
 		return nil, nil
@@ -61,6 +69,7 @@ func (m MacAddr) Value() (driver.Value, error) {
 	return []byte(m), nil
 }
 
+// Scan 实现 sql.Scanner 接口，从数据库值解析 MAC 地址；nil 或空值置为空地址。
 func (m *MacAddr) Scan(value any) error {
 	if value == nil {
 		*m = nil

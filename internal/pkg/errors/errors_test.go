@@ -6,9 +6,10 @@ import (
 	"testing"
 
 	"github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 )
 
+// 测试 New 创建带消息的错误。
 func TestNew(t *testing.T) {
 	convey.Convey("Test New function", t, func() {
 		convey.Convey("simple error message", func() {
@@ -60,6 +61,7 @@ func TestNew(t *testing.T) {
 	})
 }
 
+// 测试 Newf 格式化创建错误。
 func TestNewf(t *testing.T) {
 	convey.Convey("Test Newf function", t, func() {
 		convey.Convey("format with string", func() {
@@ -123,6 +125,7 @@ func TestNewf(t *testing.T) {
 	})
 }
 
+// 测试关闭堆栈时 WithStack 的行为。
 func TestWithStack(t *testing.T) {
 	original := base.Env.ErrorStack
 	base.Env.ErrorStack = false
@@ -167,6 +170,7 @@ func TestWithStack(t *testing.T) {
 	})
 }
 
+// 测试 Is 沿错误链匹配。
 func TestIs(t *testing.T) {
 	errNotFound := New("not found")
 	errInvalid := New("invalid input")
@@ -253,6 +257,7 @@ func TestIs(t *testing.T) {
 	})
 }
 
+// 测试 StackError 实现 error 接口。
 func TestStackError(t *testing.T) {
 	convey.Convey("Test StackError", t, func() {
 		convey.Convey("StackError implements error interface", func() {
@@ -262,6 +267,7 @@ func TestStackError(t *testing.T) {
 	})
 }
 
+// 测试启用堆栈时创建 StackError。
 func TestWithStackEnabled(t *testing.T) {
 	original := base.Env.ErrorStack
 	base.Env.ErrorStack = true
@@ -311,6 +317,7 @@ func TestWithStackEnabled(t *testing.T) {
 	})
 }
 
+// 测试关闭堆栈时返回原始错误。
 func TestWithStackDisabled(t *testing.T) {
 	original := base.Env.ErrorStack
 	base.Env.ErrorStack = false
@@ -350,6 +357,7 @@ func TestWithStackDisabled(t *testing.T) {
 	})
 }
 
+// 测试复杂错误链的匹配与包装。
 func TestComplexErrorChains(t *testing.T) {
 	convey.Convey("Test complex error chains", t, func() {
 		convey.Convey("deeply nested error chain", func() {
@@ -374,18 +382,21 @@ func TestComplexErrorChains(t *testing.T) {
 	})
 }
 
+// 基准测试 New 的创建开销。
 func BenchmarkNew(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = New("benchmark error")
 	}
 }
 
+// 基准测试 Newf 的格式化创建开销。
 func BenchmarkNewf(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = Newf("benchmark error %d", i)
 	}
 }
 
+// 基准测试 WithStack 的包装开销。
 func BenchmarkCause(b *testing.B) {
 	err := New("test error")
 	b.ResetTimer()
@@ -394,6 +405,7 @@ func BenchmarkCause(b *testing.B) {
 	}
 }
 
+// 基准测试 Is 的匹配开销。
 func BenchmarkIs(b *testing.B) {
 	err := New("test error")
 	target := New("test error")

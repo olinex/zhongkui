@@ -1,30 +1,175 @@
 navbar:
   admin:
-    self: 管理
+    self: 系统管理
     user: 用户
     group: 用户组
     namespace: 命名空间
     capturer: 采集器
+    systemStatus: 系统状态
+    llmConfig: LLM 配置
   etl:
     self: 数据处理
     server: 服务端
+    queue: 管道
     task: 任务
+    scheduler: 定时任务
+  ai:
+    self: AI
+    knowledge: 知识库管理
+    memory: 长期记忆
+    skill: 技能
+    periodicReport: 周期性报告
+  notification:
+    self: 通知管理
+    channel: 通知渠道
+    target: 通知目标
+    group: 通知组
+    template: 通知模板
+    record: 发送记录
+  traffic:
+    self: 流量审计
+    ipv4Tcp: IPv4 TCP
+    ipv6Tcp: IPv6 TCP
+    httpTransport: HTTP 传输
+  tagEvent:
+    self: 标签事件
+    tagRule: 标签规则
+    tagEventRule: 标签事件规则
+    record: 标签事件记录
+  datasource:
+    self: 数据源
+  # 侧边栏标识 tooltip：受抽屉左侧可用宽度限制（约 6~7 个汉字），只表达「是什么」，
+  # 不承载后端下发的具体不可用原因（长文案会折行或被翻转到右侧）
+  namespaceScoped: 命名空间隔离
+  featureUnavailable: 功能不可用
+  pin: 固定侧边栏
+  unpin: 取消固定
 model:
   __base:
     field:
       __actions: 操作
       date: 日期
       time: 时间
+      startTime: 起始时间
+      endTime: 截止时间
       field: 字段
       action: 操作
       search: 搜索
+      value: 值
+      encrypted: 已加密
+      # 时间范围筛选标签（通用字段，非具体模型字段）
+      timestampRange: 采集时间范围
+      createdAtRange: 入库时间范围
     content:
       condition: 条件
       doubleCheck: 请输入 `{random}` 以二次确认
     value:
       blank: "空白"
-      null: "空"
+      "null": "空"
       undefined: "未定义"
+      yes: 是
+      no: 否
+      "true": 是
+      "false": 否
+  notificationChannel:
+    name: 通知渠道
+    field:
+      id: ID
+      name: 名称
+      type: 类型
+      enabled: 启用
+      config: 配置
+      description: 描述
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+  service:
+    name: 服务
+    field:
+      serviceName: 服务名
+      instanceID: 实例ID
+      host: 主机
+      version: 版本
+      pid: 进程ID
+      startedAt: 启动时间
+      running: 运行时长
+      live: 存活
+      ready: 就绪
+      started: 已启动
+  notificationTarget:
+    name: 通知目标
+    field:
+      id: ID
+      name: 名称
+      channelID: 渠道
+      channelName: 所属渠道
+      channelType: 渠道类型
+      channelEnabled: 渠道状态
+      type: 类型
+      enabled: 启用
+      config: 配置
+      language: 语言
+      description: 描述
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+  notificationGroup:
+    name: 通知组
+    field:
+      id: ID
+      name: 名称
+      isDefault: 默认组
+      description: 描述
+      targetCount: 目标数
+      targets: 绑定目标
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+  notificationTemplate:
+    name: 通知模板
+    field:
+      id: ID
+      namespaceName: 命名空间
+      event: 事件
+      channelType: 渠道类型
+      language: 语言
+      title: 标题
+      content: 正文
+      source: 来源
+      description: 描述
+      params: 模板参数
+  notificationRecord:
+    name: 发送记录
+    field:
+      id: ID
+      eventType: 事件类型
+      eventID: 事件 ID
+      groupID: 通知组 ID
+      targetID: 目标 ID
+      targetName: 目标名称
+      channelID: 渠道 ID
+      channelName: 渠道名称
+      channelType: 渠道类型
+      status: 状态
+      error: 错误信息
+      messageID: 消息 ID
+      payload: 消息内容
+      notifiedAt: 发送时间
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
   user:
     name: 用户
     field:
@@ -42,11 +187,17 @@ model:
       active: 是否可用
       username: 用户名
       password: 密码
+      passwordAgain: 确认密码
       nickleName: 昵称
       email: 邮箱
       oldPassword: 旧密码
       newPassword: 新密码
       newPasswordAgain: 新密码二次确认
+      token: 重置令牌
+      randomPassword: 随机生成
+      specifyPassword: 指定密码
+      passwordResetNotice: 请将新密码安全地告知目标用户
+      frontendConfigSyncEnabled: 开启前端配置同步
   policy:
     name: 规则
     field:
@@ -56,7 +207,11 @@ model:
       effect: 影响
       action: 动作
       createdAt: 创建时日
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
       updatedAt: 更新时日
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
   group:
     name: 用户组
     field:
@@ -100,6 +255,15 @@ model:
       timeout: 超时时长
       promisc: 混杂模式
       enabled: 启用
+      sessionID: 会话ID
+      status: 状态
+      configVersion: 配置版本
+      globalVersion: 全局版本
+      lastSeen: 最后上报
+    option:
+      status:
+        running: 运行中
+        stopped: 已停止
   accessKey:
     name: 访问密钥
     field:
@@ -109,6 +273,207 @@ model:
       lastAccessAt: 最后使用时日
       enabled: 启用
       description: 描述
+  aiDocument:
+    name: 知识文档
+    field:
+      id: ID
+      title: 标题
+      namespaceName: 命名空间
+      content: 内容
+      chunkCount: 分块数
+      format: 格式
+      status: 状态
+      sizeBytes: 原件大小
+      useCount: 命中次数
+      lastUsedAt: 最近命中
+      hash: 内容摘要
+      originalName: 原文件名
+      parseError: 解析错误
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+  aiSession:
+    name: AI 会话
+    field:
+      title: 标题
+      slot: 档位
+      status: 状态
+      agentKind: Agent 类型
+      summary: 上下文摘要
+      createdAt: 创建时间
+      updatedAt: 更新时间
+      query: 诉求
+  agentMemory:
+    name: 长期记忆
+    field:
+      id: ID
+      keyword: 关键字
+      agentKind: Agent 类型
+      kind: 记忆类别
+      title: 标题
+      content: 正文
+      status: 状态
+      useCount: 命中次数
+      lastUsedAt: 最近命中
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+      namespaceName: 命名空间
+      sessionID: 来源会话
+  agentSkill:
+    name: 技能
+    field:
+      id: ID
+      name: 名称
+      source: 来源
+      keyword: 关键字
+      description: 描述
+      content: 正文
+      enabled: 启用
+      periodicCapable: 可周期执行
+      inputFields: 输入字段
+      noInputFields: 无输入字段
+      fixedFields: 固定字段
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+  periodicReportPlan:
+    name: 周期性报告计划
+    field:
+      id: ID
+      name: 名称
+      description: 说明
+      skillID: 技能 ID
+      skill: 技能
+      skillName: 技能
+      keyword: 关键字
+      cronSpec: Cron 表达式
+      inputValues: 输入参数
+      retentionDays: 保留天数
+      nextRunAt: 下次执行
+      expiresAt: 失效时间
+      sessionID: 会话 ID
+      enabled: 启用
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+  periodicReportRun:
+    name: 周期性报告运行
+    field:
+      status: 状态
+      title: 标题
+      triggerAt: 触发时间
+      createdAt: 创建时间
+      sizeBytes: 大小
+      error: 错误
+  llmModel:
+    name: LLM 模型
+    field:
+      id: ID
+      name: 名称
+      kind: 模型类型
+      apiMode: API 模式
+      baseURL: 接入地址
+      apiKey: 凭据
+      model: 模型名
+      timeoutSeconds: 超时（秒）
+      temperature: 温度
+      maxTokens: 最大输出 Token
+      contextTokens: 上下文容量 Token
+      dimensions: 向量维度
+      enabled: 启用
+      description: 描述
+      extraBody: 额外请求配置
+      thinkingField: 思考开关字段
+      thinkingOnValue: 思考开启取值
+      thinkingOffValue: 思考关闭取值
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+    apiMode:
+      chat: Chat Completions
+      responses: Responses
+    validation:
+      jsonObject: "{path}必须是合法的 JSON 对象"
+      jsonValue: "{path}必须是合法的 JSON 值"
+  llmBinding:
+    name: 档位绑定
+    field:
+      slot: 档位
+      modelID: 模型 ID
+      modelName: 已绑定模型
+      kind: 模型类型
+      providerModel: 供应商模型
+      enabled: 模型状态
+      dimensions: 向量维度
+      bound: 已绑定
+      available: 可用
+  agentParam:
+    name: Agent 参数
+    field:
+      key: 参数键
+      group: 分组
+      kind: 参数类型
+      default: 默认值
+      value: 当前值
+      overridden: 已覆盖
+      label: 参数名
+      comment: 说明
+    type:
+      agent: Agent 行为
+      retrieval: 检索
+      session: 会话上下文
+      chunking: 分块
+      eval: 质量评估
+      sanitize: 数据清洗
+  mcpServer:
+    name: MCP 服务器
+    field:
+      id: ID
+      name: 名称
+      transport: 传输方式
+      url: 接入地址
+      headers: 请求头
+      timeoutSeconds: 超时（秒）
+      enabled: 启用
+      description: 描述
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+  llmTool:
+    name: 工具
+    field:
+      id: ID
+      name: 名称
+      source: 来源
+      mcpServerName: 所属服务器
+      remoteName: 远端工具名
+      enabled: 启用
+      description: 描述
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
   server:
     name: 服务端
     field:
@@ -137,14 +502,23 @@ model:
   scheduler:
     name: 定时任务
     field:
-      id: ID
-      spec: 规划
-      next: 下一次调度时日
-      prev: 上一次调度时日
-      typeName: 任务类型名称
+      typeName: 类型
+      cronSpec: Cron 表达式
+      interval: 触发间隔
+      queue: 管道
+      timeout: 超时时长
+      maxRetry: 最大重试次数
+      retention: 完成保留时长
+      lookback: 回看偏移
+      enabled: 是否启用
       payload: 请求负载
+      backlogEnabled: 补投历史触发点
+      backlogWindow: 历史回溯窗口
+      backlogLimit: 单次补投上限
   task:
     name: 任务
+    value:
+      allTypes: 全部类型
     field:
       id: ID
       type: 类型
@@ -163,6 +537,661 @@ model:
       retention: 保留时长
       group: 组名
       isOrphaned: 孤立任务
+  tagRule:
+    name: 标签规则
+    field:
+      id: ID
+      createdAt: 创建时日
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时日
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+      name: 名称
+      model: 目标模型
+      description: 描述
+      rego: Rego 规则
+      enabled: 启用
+      version: 版本号
+      versionCount: 版本数量
+
+  tagRuleSample:
+    name: 标签规则样例
+    field:
+      id: ID
+      createdAt: 创建时日
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时日
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+      name: 名称
+      model: 目标模型
+      description: 描述
+      input: 输入文档
+
+  tagEventRule:
+    name: 标签事件规则
+    field:
+      id: ID
+      createdAt: 创建时日
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时日
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+      name: 名称
+      description: 描述
+      matchAll: 全部条件满足
+      enabled: 启用
+      version: 版本号
+      versionCount: 版本数量
+      conditions: 条件集合
+      suppressWindow: 抑制窗口（分钟）
+      notification: 通知方式
+    content:
+      notificationDefault: 使用命名空间默认通知组
+      notificationGroup: 通知组
+      notificationTarget: 通知目标
+  datasource:
+    name: 第三方数据源
+    schemaRequiredHint: 请先点击「自省表结构」生成列定义，或手动填写完整列定义后再保存
+    field:
+      id: ID
+      createdAt: 创建时日
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时日
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+      name: 名称
+      type: 类型
+      enabled: 启用
+      config: 连接配置
+      description: 描述
+
+    configField:
+      addr: 主机地址
+      port: 端口
+      password: 密码
+      db: 逻辑库
+      struct: 数据结构
+      user: 用户名
+      username: 用户名
+      dbName: 库名
+      table: 表
+      path: 数据库文件 (.db)
+      fileHint: 上传 SQLite 数据库文件（.db/.sqlite/.sqlite3），加密存储于 S3
+      uri: 连接串
+      collection: 集合名
+      endpoints: 端点地址
+      schema: 手动表结构
+      schemaHint: 此列为必填；后端不再自动自省
+      schemaMongoHint: MongoDB 无固定表结构，无法自动自省，必须手动填写列名与类型
+      addColumn: 添加列
+      columnName: 列名
+      columnType: 类型
+    columnType:
+      any: 任意
+      integer: 整数
+      float: 浮点
+      string: 字符串
+      blob: 二进制
+      bool: 布尔
+    action:
+      testConnection: 测试连接
+      introspectSchema: 自省表结构
+      introspectColumns: 列
+  tagEventRecord:
+    name: 标签事件记录
+    field:
+      id: ID
+      createdAt: 创建时日
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时日
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+      ruleID: 规则 ID
+      ruleName: 规则名称
+      matchAll: 全部条件满足
+      status: 状态
+      dedupKey: 抑制指纹
+      detectedAt: 检测时日
+      detectedAtTime: 检测时间
+      detectedAtDate: 检测日期
+    type: 状态
+
+    content:
+      info: 事件基础信息
+      hits: 命中明细
+      sends: 关联发送记录
+  tagEventRecordHit:
+    name: 命中明细
+    field:
+      conditionName: 条件名称
+      model: 目标模型
+      dimension: 标签维度
+      item: 维度取值
+      count: 命中次数
+      threshold: 条件阈值
+      window: 时间窗口
+      ids: 原始记录 ID
+  tagEventRecordSend:
+    name: 发送记录
+    field:
+      targetName: 通知目标
+      channelName: 通知渠道
+      channelType: 渠道类型
+      status: 状态
+      messageID: 消息 ID
+      notifiedAt: 发送时间
+  tagEventCondition:
+    name: 条件
+    field:
+      name: 条件名称
+      model: 目标模型
+      dimension: 标签维度
+      item: 维度值
+      window: 时间窗口（分钟）
+      threshold: 阈值
+      expression: 标签表达式
+      enabled: 启用
+      description: 描述
+      count: 命中次数
+      detectedAt: 检测时日
+  # 流量审计由三种独立数据类型组成，各自完整翻译字段
+  ipv4Tcp:
+    name: IPv4 TCP
+    field:
+      # 基础审计列
+      namespace: 命名空间
+      timestamp: 采集时间
+      createdAt: 入库时间
+      sessionID: 会话 ID
+      tcpStreamID: TCP 流 ID
+      capture: 采集器
+      version: 版本号
+      traceID: 追踪 ID
+      # IPv4 地址与端口
+      ipv4Src: IPv4 源地址
+      ipv4Dst: IPv4 目的地址
+      srcPort: 源端口
+      dstPort: 目的端口
+      # TCP 审计列
+      seq: 序列号
+      ack: 确认号
+      bitFin: FIN 标志
+      bitSyn: SYN 标志
+      bitRst: RST 标志
+      bitPsh: PSH 标志
+      bitAck: ACK 标志
+      bitUrg: URG 标志
+      window: 窗口大小
+      ipv4Ttl: IPv4 TTL
+      ipv4IpProtocol: IPv4 协议
+      ipv4Length: IPv4 长度
+      # TCP 被动指纹（p0f 风格）
+      fpOs: OS 指纹
+      fpSig: TCP 指纹签名
+      fpMtu: MTU
+      # ---- 列设置全量字段（默认隐藏）----
+      # 采集与链路层
+      truncated: 截断
+      captureLength: 采集长度
+      layerStack: 协议栈
+      payload: 负载
+      ethDstMac: 目的 MAC
+      ethSrcMac: 源 MAC
+      ethType: 以太网类型
+      ethLength: 以太网长度
+      # IPv4
+      ipv4Version: IPv4 版本
+      ipv4Ihl: IPv4 头部长度
+      ipv4Tos: 服务类型
+      ipv4ID: 分片标识
+      ipv4Flags: 分片标志
+      ipv4FragOffset: 分片偏移
+      ipv4Checksum: 头部校验和
+      ipv4Options: IPv4 选项
+      ipv4Padding: IPv4 填充
+      # TCP
+      dataOffset: 数据偏移
+      bitEce: ECE 标志
+      bitCwr: CWR 标志
+      bitNs: NS 标志
+      checksum: 校验和
+      urgent: 紧急指针
+      options: TCP 选项
+      fpOsQuality: OS 指纹置信度
+  ipv6Tcp:
+    name: IPv6 TCP
+    field:
+      id: ID
+      # 基础审计列
+      namespace: 命名空间
+      timestamp: 采集时间
+      createdAt: 入库时间
+      sessionID: 会话 ID
+      tcpStreamID: TCP 流 ID
+      capture: 采集器
+      version: 版本号
+      traceID: 追踪 ID
+      # IPv6 地址与端口
+      ipv6Src: IPv6 源地址
+      ipv6Dst: IPv6 目的地址
+      srcPort: 源端口
+      dstPort: 目的端口
+      # TCP 审计列
+      seq: 序列号
+      ack: 确认号
+      bitFin: FIN 标志
+      bitSyn: SYN 标志
+      bitRst: RST 标志
+      bitPsh: PSH 标志
+      bitAck: ACK 标志
+      bitUrg: URG 标志
+      window: 窗口大小
+      ipv6HopLimit: IPv6 跳数限制
+      ipv6NextHeader: IPv6 下一头部
+      ipv6Length: IPv6 长度
+      # TCP 被动指纹（p0f 风格）
+      fpOs: OS 指纹
+      fpSig: TCP 指纹签名
+      fpMtu: MTU
+      # ---- 列设置全量字段（默认隐藏）----
+      # 采集与链路层
+      truncated: 截断
+      captureLength: 采集长度
+      layerStack: 协议栈
+      payload: 负载
+      ethDstMac: 目的 MAC
+      ethSrcMac: 源 MAC
+      ethType: 以太网类型
+      ethLength: 以太网长度
+      # IPv6
+      ipv6Version: IPv6 版本
+      ipv6TrafficClass: 流量类别
+      ipv6FlowLabel: 流标签
+      ipv6HopByHop: 逐跳扩展头
+      ipv6LastHeader: 末级头部
+      # TCP
+      dataOffset: 数据偏移
+      bitEce: ECE 标志
+      bitCwr: CWR 标志
+      bitNs: NS 标志
+      checksum: 校验和
+      urgent: 紧急指针
+      options: TCP 选项
+      fpOsQuality: OS 指纹置信度
+  httpTransport:
+    name: HTTP 传输
+    field:
+      id: ID
+      # 基础审计列
+      namespace: 命名空间
+      timestamp: 采集时间
+      createdAt: 入库时间
+      sessionID: 会话 ID
+      tcpStreamID: TCP 流 ID
+      capture: 采集器
+      version: 版本号
+      traceID: 追踪 ID
+      # HTTP 审计列
+      method: 请求方法
+      host: 主机
+      path: 路径
+      clientIp: 客户端 IP
+      serverIp: 服务端 IP
+      clientPort: 客户端端口
+      serverPort: 服务端端口
+      httpVersion: HTTP 版本
+      reqBodyLength: 请求体长度
+      rspBodyLength: 响应体长度
+      # HTTP 指纹
+      fpTcpClientOs: 客户端 OS 指纹
+      fpTcpServerOs: 服务端 OS 指纹
+      fpHttpBrowser: 浏览器指纹
+      fpHttpServer: 服务端指纹
+      fpDeviceGuess: 设备类型
+      # ---- 列设置全量字段（默认隐藏）----
+      clientIsn: 客户端初始序列号
+      serverIsn: 服务端初始序列号
+      seq: 序列号
+      ack: 确认号
+      bitFin: FIN 标志
+      bitSyn: SYN 标志
+      bitRst: RST 标志
+      bitPsh: PSH 标志
+      bitAck: ACK 标志
+      bitUrg: URG 标志
+      window: 窗口大小
+      fpOs: OS 指纹
+      fpSig: TCP 指纹签名
+      fpMtu: MTU
+      streamIndex: 流序号
+      ipVersion: IP 版本
+      url: 请求 URL
+      scheme: 协议方案
+      fileExt: 文件扩展名
+      queries: 查询参数
+      fragment: URL 片段
+      reqBody: 请求体
+      rspBody: 响应体
+      reqBodyHash: 请求体哈希
+      rspBodyHash: 响应体哈希
+      clientConsumed: 客户端消费字节数
+      clientStartPayloadOffset: 客户端负载起始偏移
+      clientEndPayloadOffset: 客户端负载结束偏移
+      clientStartTimestamp: 客户端开始时间
+      clientEndTimestamp: 客户端结束时间
+      serverConsumed: 服务端消费字节数
+      serverStartPayloadOffset: 服务端负载起始偏移
+      serverEndPayloadOffset: 服务端负载结束偏移
+      serverStartTimestamp: 服务端开始时间
+      serverEndTimestamp: 服务端结束时间
+      fpTcpClientOsQuality: 客户端 OS 指纹置信度
+      fpTcpClientSig: 客户端指纹签名
+      fpTcpServerOsQuality: 服务端 OS 指纹置信度
+      fpTcpServerSig: 服务端指纹签名
+      fpTcpMtu: TCP MTU
+      fpHttpBrowserQuality: 浏览器指纹置信度
+      fpHttpServerQuality: 服务端指纹置信度
+      fpHttpLanguage: 语言偏好
+      tags: 标签
+      # 请求头
+      reqHdrAuthorization: 请求头 Authorization
+      reqHdrProxyAuthorization: 请求头 Proxy-Authorization
+      reqHdrCacheControl: 请求头 Cache-Control
+      reqHdrIfMatch: 请求头 If-Match
+      reqHdrIfNoneMatch: 请求头 If-None-Match
+      reqHdrIfModifiedSince: 请求头 If-Modified-Since
+      reqHdrIfUnmodifiedSince: 请求头 If-Unmodified-Since
+      reqHdrIfRange: 请求头 If-Range
+      reqHdrConnection: 请求头 Connection
+      reqHdrKeepAlive: 请求头 Keep-Alive
+      reqHdrAccept: 请求头 Accept
+      reqHdrAcceptEncoding: 请求头 Accept-Encoding
+      reqHdrAcceptLanguage: 请求头 Accept-Language
+      reqHdrExpect: 请求头 Expect
+      reqHdrMaxForwards: 请求头 Max-Forwards
+      reqHdrCookie: 请求头 Cookie
+      reqHdrOrigin: 请求头 Origin
+      reqHdrAccessControlRequestHeaders: 请求头 Access-Control-Request-Headers
+      reqHdrAccessControlRequestMethod: 请求头 Access-Control-Request-Method
+      reqHdrContentType: 请求头 Content-Type
+      reqHdrContentLength: 请求头 Content-Length
+      reqHdrContentEncoding: 请求头 Content-Encoding
+      reqHdrContentLanguage: 请求头 Content-Language
+      reqHdrForwarded: 请求头 Forwarded
+      reqHdrVia: 请求头 Via
+      reqHdrRange: 请求头 Range
+      reqHdrFrom: 请求头 From
+      reqHdrHost: 请求头 Host
+      reqHdrReferer: 请求头 Referer
+      reqHdrReferrerPolicy: 请求头 Referrer-Policy
+      reqHdrUserAgent: 请求头 User-Agent
+      reqHdrTe: 请求头 TE
+      reqHdrTransferEncoding: 请求头 Transfer-Encoding
+      reqHdrTrailer: 请求头 Trailer
+      reqHdrSecWebsocketKey: 请求头 Sec-WebSocket-Key
+      reqHdrSecWebsocketVersion: 请求头 Sec-WebSocket-Version
+      reqHdrSecWebsocketProtocol: 请求头 Sec-WebSocket-Protocol
+      reqHdrSecWebsocketExtensions: 请求头 Sec-WebSocket-Extensions
+      reqHdrSecFetchSite: 请求头 Sec-Fetch-Site
+      reqHdrSecFetchMode: 请求头 Sec-Fetch-Mode
+      reqHdrSecFetchUser: 请求头 Sec-Fetch-User
+      reqHdrSecFetchDest: 请求头 Sec-Fetch-Dest
+      reqHdrSecPurpose: 请求头 Sec-Purpose
+      reqHdrServiceWorkerNavigationPreload: 请求头 Service-Worker-Navigation-Preload
+      reqHdrSecChUa: 请求头 Sec-CH-UA
+      reqHdrSecChUaArch: 请求头 Sec-CH-UA-Arch
+      reqHdrSecChUaBitness: 请求头 Sec-CH-UA-Bitness
+      reqHdrSecChUaFullVersion: 请求头 Sec-CH-UA-Full-Version
+      reqHdrSecChUaFullVersionList: 请求头 Sec-CH-UA-Full-Version-List
+      reqHdrSecChUaMobile: 请求头 Sec-CH-UA-Mobile
+      reqHdrSecChUaModel: 请求头 Sec-CH-UA-Model
+      reqHdrSecChUaPlatform: 请求头 Sec-CH-UA-Platform
+      reqHdrSecChUaPlatformVersion: 请求头 Sec-CH-UA-Platform-Version
+      reqHdrSecChUaWow64: 请求头 Sec-CH-UA-WoW64
+      reqHdrSecChPrefersColorScheme: 请求头 Sec-CH-Prefers-Color-Scheme
+      reqHdrSecChPrefersReducedMotion: 请求头 Sec-CH-Prefers-Reduced-Motion
+      reqHdrSecChPrefersReducedTransparency: 请求头 Sec-CH-Prefers-Reduced-Transparency
+      reqHdrWantContentDigest: 请求头 Want-Content-Digest
+      reqHdrWantReprDigest: 请求头 Want-Repr-Digest
+      reqHdrUpgradeInsecureRequests: 请求头 Upgrade-Insecure-Requests
+      reqHdrDate: 请求头 Date
+      reqHdrLink: 请求头 Link
+      reqHdrUpgrade: 请求头 Upgrade
+      reqHdrPriority: 请求头 Priority
+      reqHdrAltUsed: 请求头 Alt-Used
+      # 响应头
+      rspHdrWwwAuthenticate: 响应头 WWW-Authenticate
+      rspHdrProxyAuthenticate: 响应头 Proxy-Authenticate
+      rspHdrAge: 响应头 Age
+      rspHdrCacheControl: 响应头 Cache-Control
+      rspHdrClearSiteData: 响应头 Clear-Site-Data
+      rspHdrExpires: 响应头 Expires
+      rspHdrNoVarySearch: 响应头 No-Vary-Search
+      rspHdrLastModified: 响应头 Last-Modified
+      rspHdrEtag: 响应头 ETag
+      rspHdrVary: 响应头 Vary
+      rspHdrConnection: 响应头 Connection
+      rspHdrKeepAlive: 响应头 Keep-Alive
+      rspHdrAcceptPatch: 响应头 Accept-Patch
+      rspHdrAcceptPost: 响应头 Accept-Post
+      rspHdrSetCookie: 响应头 Set-Cookie
+      rspHdrAccessControlAllowCredentials: 响应头 Access-Control-Allow-Credentials
+      rspHdrAccessControlAllowHeaders: 响应头 Access-Control-Allow-Headers
+      rspHdrAccessControlAllowMethods: 响应头 Access-Control-Allow-Methods
+      rspHdrAccessControlAllowOrigin: 响应头 Access-Control-Allow-Origin
+      rspHdrAccessControlExposeHeaders: 响应头 Access-Control-Expose-Headers
+      rspHdrAccessControlMaxAge: 响应头 Access-Control-Max-Age
+      rspHdrTimingAllowOrigin: 响应头 Timing-Allow-Origin
+      rspHdrContentDisposition: 响应头 Content-Disposition
+      rspHdrContentDigest: 响应头 Content-Digest
+      rspHdrReprDigest: 响应头 Repr-Digest
+      rspHdrContentType: 响应头 Content-Type
+      rspHdrContentLength: 响应头 Content-Length
+      rspHdrContentEncoding: 响应头 Content-Encoding
+      rspHdrContentLanguage: 响应头 Content-Language
+      rspHdrContentLocation: 响应头 Content-Location
+      rspHdrForwarded: 响应头 Forwarded
+      rspHdrVia: 响应头 Via
+      rspHdrAcceptRanges: 响应头 Accept-Ranges
+      rspHdrContentRange: 响应头 Content-Range
+      rspHdrLocation: 响应头 Location
+      rspHdrRefresh: 响应头 Refresh
+      rspHdrAllow: 响应头 Allow
+      rspHdrServer: 响应头 Server
+      rspHdrCrossOriginEmbedderPolicy: 响应头 Cross-Origin-Embedder-Policy
+      rspHdrCrossOriginOpenerPolicy: 响应头 Cross-Origin-Opener-Policy
+      rspHdrCrossOriginResourcePolicy: 响应头 Cross-Origin-Resource-Policy
+      rspHdrContentSecurityPolicy: 响应头 Content-Security-Policy
+      rspHdrContentSecurityPolicyReportOnly: 响应头 Content-Security-Policy-Report-Only
+      rspHdrExpectCt: 响应头 Expect-CT
+      rspHdrPermissionsPolicy: 响应头 Permissions-Policy
+      rspHdrStrictTransportSecurity: 响应头 Strict-Transport-Security
+      rspHdrXContentTypeOptions: 响应头 X-Content-Type-Options
+      rspHdrXFrameOptions: 响应头 X-Frame-Options
+      rspHdrXPermittedCrossDomainPolicies: 响应头 X-Permitted-Cross-Domain-Policies
+      rspHdrXPoweredBy: 响应头 X-Powered-By
+      rspHdrXXssProtection: 响应头 X-XSS-Protection
+      rspHdrReportingEndpoints: 响应头 Reporting-Endpoints
+      rspHdrReportTo: 响应头 Report-To
+      rspHdrTransferEncoding: 响应头 Transfer-Encoding
+      rspHdrTrailer: 响应头 Trailer
+      rspHdrSecWebsocketAccept: 响应头 Sec-WebSocket-Accept
+      rspHdrSecWebsocketProtocol: 响应头 Sec-WebSocket-Protocol
+      rspHdrSecWebsocketExtensions: 响应头 Sec-WebSocket-Extensions
+      rspHdrAcceptCh: 响应头 Accept-CH
+      rspHdrCriticalCh: 响应头 Critical-CH
+      rspHdrAttributionReportingEligible: 响应头 Attribution-Reporting-Eligible
+      rspHdrAttributionReportingRegisterSource: 响应头 Attribution-Reporting-Register-Source
+      rspHdrAttributionReportingRegisterTrigger: 响应头 Attribution-Reporting-Register-Trigger
+      rspHdrDate: 响应头 Date
+      rspHdrLink: 响应头 Link
+      rspHdrRetryAfter: 响应头 Retry-After
+      rspHdrServerTiming: 响应头 Server-Timing
+      rspHdrServiceWorker: 响应头 Service-Worker
+      rspHdrServiceWorkerAllowed: 响应头 Service-Worker-Allowed
+      rspHdrSourceMap: 响应头 SourceMap
+      rspHdrUpgrade: 响应头 Upgrade
+      rspHdrAltSvc: 响应头 Alt-Svc
+      rspHdrPriority: 响应头 Priority
+  networkStack:
+    name: 网络堆栈
+    field:
+      namespace: 命名空间
+      timestamp: 采集时间
+      createdAt: 入库时间
+      sessionID: 会话 ID
+      traceID: 追踪 ID
+      capture: 采集器
+      version: 版本号
+      cli2Srv: 客户端到服务端
+      topProto: 顶层协议
+      proto: 协议
+      seq: 包序号
+      level: 协议层级
+      headers: 协议头部
+      payloadStartOffset: 载荷起始偏移
+      payloadEndOffset: 载荷结束偏移
+    level:
+      link: 链路层
+      network: 网络层
+      transport: 传输层
+      application: 应用层
+      unknown: 未知
+    packet:
+      request: 请求包
+      response: 响应包
+      other: 其他
+    direction:
+      clientToServer: 客户端 → 服务端
+      serverToClient: 服务端 → 客户端
+    summary:
+      packets: 包总数
+      requests: 请求包
+      responses: 响应包
+      loaded: 已加载
+      loadMore: 加载更多
+      empty: 该传输暂无网络堆栈数据
+      noTraceID: 该记录缺少 traceID，无法关联网络堆栈
+      error: 网络堆栈加载失败
+    # 协议头部可读化：逐字段名/值/说明（header.field.<key> 与 header.desc.<key> 的 key 与 JSON 字段名一致）
+    header:
+      title: 协议头部详情
+      rawJson: 查看原始 JSON
+      loopbackNote: 本机回环（Loopback）流量，无真实链路层信息
+      col:
+        field: 字段
+        value: 值
+        desc: 说明
+      field:
+        ethDstMac: 目的 MAC
+        ethSrcMac: 源 MAC
+        ethType: 以太网类型
+        ethLength: 帧长度
+        ipv4Version: IP 版本
+        ipv4Ihl: 头部长度
+        ipv4Tos: 服务类型
+        ipv4Length: 总长度
+        ipv4ID: 标识符
+        ipv4Flags: 标志位
+        ipv4FragOffset: 分片偏移
+        ipv4Ttl: 生存时间
+        ipv4IpProtocol: 上层协议
+        ipv4Checksum: 头部校验和
+        ipv4Src: 源 IP
+        ipv4Dst: 目的 IP
+        ipv4Options: IP 选项
+        ipv4Padding: 填充字节
+        ipv6Version: IP 版本
+        ipv6TrafficClass: 流量类别
+        ipv6FlowLabel: 流标签
+        ipv6Length: 载荷长度
+        ipv6NextHeader: 下一头部
+        ipv6HopLimit: 跳数限制
+        ipv6Src: 源 IP
+        ipv6Dst: 目的 IP
+        ipv6HopByHop: 逐跳选项
+        ipv6LastHeader: 最后头部
+        srcPort: 源端口
+        dstPort: 目的端口
+        seq: 序列号
+        ack: 确认号
+        dataOffset: 头部长度
+        bitFin: 结束标志
+        bitSyn: 同步标志
+        bitRst: 重置标志
+        bitPsh: 推送标志
+        bitAck: 确认标志
+        bitUrg: 紧急标志
+        bitEce: ECE 标志
+        bitCwr: CWR 标志
+        bitNs: NS 标志
+        window: 窗口大小
+        checksum: 校验和
+        urgent: 紧急指针
+        options: TCP 选项
+        length: 数据长度
+      desc:
+        ethDstMac: 目的 MAC 地址，标识数据帧的目标网卡
+        ethSrcMac: 源 MAC 地址，标识数据帧的发送网卡
+        ethType: 以太网类型，标识上层协议（如 IPv4、IPv6、ARP）
+        ethLength: 以太网帧的长度（字节）
+        ipv4Version: IP 协议版本，IPv4 固定为 4
+        ipv4Ihl: IPv4 头部长度（单位：4 字节）
+        ipv4Tos: 服务类型，用于 QoS 优先级控制
+        ipv4Length: IP 数据报总长度（头部 + 数据，字节）
+        ipv4ID: 标识符，用于分片重组
+        ipv4Flags: 分片标志位：DF（不分片）、MF（更多分片）
+        ipv4FragOffset: 分片偏移（单位：8 字节）
+        ipv4Ttl: 生存时间，每经过一跳减 1，为 0 时丢弃
+        ipv4IpProtocol: 上层协议类型（如 TCP=6、UDP=17、ICMP=1）
+        ipv4Checksum: 头部校验和，用于差错检测
+        ipv4Src: 源 IP 地址，数据包的发送方
+        ipv4Dst: 目的 IP 地址，数据包的接收方
+        ipv4Options: IP 选项（可选，通常为空）
+        ipv4Padding: 填充字节，保证头部长度对齐
+        ipv6Version: IP 协议版本，IPv6 固定为 6
+        ipv6TrafficClass: 流量类别，用于 QoS 区分
+        ipv6FlowLabel: 流标签，标识同一条数据流
+        ipv6Length: 有效载荷长度（不含 IPv6 头部，字节）
+        ipv6NextHeader: 下一头部类型（扩展头或传输层协议）
+        ipv6HopLimit: 跳数限制，等价于 IPv4 的 TTL
+        ipv6Src: 源 IPv6 地址，数据包的发送方
+        ipv6Dst: 目的 IPv6 地址，数据包的接收方
+        ipv6HopByHop: 逐跳选项扩展头，由沿途每个路由器处理
+        ipv6LastHeader: 最后一个头部类型（通常是 TCP/UDP）
+        srcPort: 源端口号，标识发送数据的应用
+        dstPort: 目的端口号，标识接收数据的应用
+        seq: TCP 序列号，标识字节流中第一个字节的位置
+        ack: TCP 确认号，期望接收的下一个字节序号
+        dataOffset: TCP 头部长度（单位：4 字节）
+        bitFin: FIN 标志：发送方数据已发送完毕
+        bitSyn: SYN 标志：用于建立连接时同步序列号
+        bitRst: RST 标志：异常中断连接
+        bitPsh: PSH 标志：接收方应立即交付数据
+        bitAck: ACK 标志：确认号有效
+        bitUrg: URG 标志：紧急指针有效
+        bitEce: ECE 标志：显式拥塞通知回显
+        bitCwr: CWR 标志：拥塞窗口已减小
+        bitNs: NS 标志：随机序列号保护（Nonce Sum）
+        window: 接收窗口大小，用于流量控制
+        checksum: 校验和，用于差错检测
+        urgent: 紧急指针，配合 URG 标志使用
+        options: TCP 选项列表（MSS、窗口缩放、时间戳等）
+        length: UDP 数据报总长度（头部 + 数据，字节）
+      value:
+        yes: 是
+        no: 否
+        none: 无
+      flag:
+        evil: 保留位
+        df: 不分片（DF）
+        mf: 更多分片（MF）
 chart:
   title:
     queueSize: 管道大小
@@ -182,23 +1211,41 @@ chart:
     failed: 已失败
   serie:
     queueSize: 管道大小
+enum:
+  periodicReportRunStatus:
+    running: 运行中
+    success: 成功
+    failed: 失败
 action:
   signIn: 登录
   signOut: 退出
-  signUp: 注册
   language: 语言
+  aiAssistant: AI 助手
+  toggleTheme: 切换主题
+  accountMenu: 账号菜单
   pwdForget: 忘记密码
+  forgotSend: 发送重置邮件
+  forgotBackToSignIn: 返回登录
+  resetSubmit: 重置密码
   profile: 个人资料
   expand: 展开
+  collapse: 收起
+  scrollToBottom: 直达底部
+  jumpToContainerTop: 跳到容器上边界
+  jumpToContainerBottom: 跳到容器下边界
+  resizeWidth: 拖拽调整宽度
+  resizeHeight: 拖拽调整高度
   reset: 重置
   create: 创建
   update: 更新
   delete: 删除
   edit: 修改
+  pinTop: 置顶
   close: 关闭
   confirm: 确认
   activate: 启用
   deactivate: 禁用
+  resetPassword: 重置密码
   pause: 暂停
   unpause: 继续
   add: 添加
@@ -209,49 +1256,587 @@ action:
   archive: 归档
   cancel: 取消
   run: 运行
+  runNow: 立即执行
+  history: 历史报告
   previousDate: 上一天
   currentDate: 当天
   nextDate: 下一天
+  previousRecord: 上一条
+  nextRecord: 下一条
   currentTime: 当前时间
   copySecret: 复制密钥
+  validate: 校验
+  dryRun: 试运行
+  version: 版本
+  rollback: 回滚
+  generateSkeleton: 生成骨架
+  reuseFields: 复用已有规则字段
+  selectSample: 选择样例
+  regoFieldHint: 输入 / 打开字段列表，输入 // 输入字面量 /
+  regoSqlMustStartSelect: sqlite.query 仅支持只读查询，SQL 须以 SELECT 开头
+  regoSqlUnclosedString: SQL 单引号字符串未闭合
+  regoSqlUnmatchedParen: SQL 括号不配对
+  regoSqlUnknownTable: 未注册的数据源表：{table}（请先在第三方数据源中接入）
+  tagExprFieldHint: 输入 / 打开标签列表，输入 // 输入字面量 /
+  addCondition: 添加条件
+  removeCondition: 移除条件
+  beautifyJson: 美化
+  markdownSource: Markdown
+  markdownPreview: 预览
+  validatePassed: 校验通过
+  validateFailed: 校验未通过
+  viewPlaintext: 查看明文
+  viewRecords: 查看原始数据
+  viewDetail: 查看详情
+  viewStack: 查看网络堆栈
+  viewInput: 查看 input
+  fullscreen: 全屏编辑
+  exitFullscreen: 退出全屏
+  fullscreenView: 全屏查看
+  exportPdf: 导出 PDF
+  exportImage: 导出图片
+  exportHtml: 导出 HTML
+  print: 打印
+  favoriteSample: 收藏样例
+  resetFrontendConfig: 重置前端配置
+  download: 下载
+  back: 返回
+  backPrevious: 返回上一级
+  backHome: 返回首页
+  signInAnyway: 仍要登录
+  refresh: 刷新
+  refreshInterval: 自动刷新间隔
+  enableAutoRefresh: 开启自动刷新
+  disableAutoRefresh: 停止自动刷新
+  reindex: 重新索引
+  reparse: 重新解析
+  chunks: 分块明细
+  query: 查询
+  columns: 列设置
+  selectAll: 全选
+  setDefault: 设为默认
+  systemDefault: 系统默认
+  detail: 详情
+  batchActivate: 批量启用
+  batchDeactivate: 批量禁用
+  batchDelete: 批量删除
+  batchDisable: 批量禁用
+  batchEnable: 批量启用
+  clearSelection: 清空选择
+  testSend: 测试发送
+  restoreDefault: 恢复默认
+  renderTest: 渲染测试
+  templateValidate: 语法校验
+  templateDryRun: 试运行
+  bind: 绑定
+  unbind: 解绑
+  save: 保存
+  test: 连通性测试
+  sync: 同步工具
+guide:
+  title: 第三方数据查询
+  subtitle: 当前命名空间已注册的第三方数据源及其可运行查询样例
+  datasource: 数据源速查
+  columns: 列
+  datasourceEmpty: 该命名空间暂无已注册的数据源
+  insertSelect: 插入 SELECT
+  clickInsertColumn: 点击插入 表.列
+  samples: 场景样例
+  sampleEmpty: 暂无可运行样例
+  clickInsertSample: 点击把可运行样例插入编辑器
+  sample:
+    exists: 存在性判断
+    existsDesc: 用 COUNT(*)>0 判断第三方数据是否命中
+    value: 取单值回填
+    valueDesc: 用 rows[0].列 读取 SQL 结果的字段值
+    aggregate: 聚合统计
+    aggregateDesc: 用 COUNT(DISTINCT) / SUM / AVG 统计第三方数据
 title:
   zk: Zhong Kui
-  home: 首页 
+  home: 首页
   signIn: 用户登录
+  alreadySignedIn: 已登录
+  pwdForget: 忘记密码
   err404: 错误 - 404
   err401: 错误 - 401
+  featureUnavailable: 功能不可用
   userProfile: 用户个人资料
   profileInfo: 个人信息
+  frontendConfigSync: 页面配置同步
   accessKey: 访问密钥
+  aiKnowledge: 知识库管理
+  aiMemory: 长期记忆
+  aiSkill: 技能管理
+  aiPeriodicReport: 周期性报告计划
+  aiDocumentDetail: 知识文档详情
   passwordReset: 重置密码
   userAdmin: 管理 - 用户
   groupAdmin: 管理 - 用户组
   namespaceAdmin: 管理 - 命名空间
   capturerAdmin: 管理 - 采集器
+  systemStatus: 管理 - 系统状态
+  llmConfigAdmin: 管理 - LLM 配置
+  notification:
+    channel: 通知渠道
+    target: 通知目标
+    group: 通知组
+    template: 通知模板
+    record: 发送记录
+  datasource:
+    self: 第三方数据源
+  tagEvent:
+    record: 标签事件记录
+    recordDetail: 标签事件记录详情
+    hitRecords: 命中条件原始数据
+  tagRuleTagEvent: 标签事件 - 标签规则
+  tagEventRuleTagEvent: 标签事件 - 标签事件规则
   queueEtl: 数据处理 - 管道
+  serverEtl: 数据处理 - 服务端
+  schedulerEtl: 数据处理 - 定时任务
+  taskEtl: 数据处理 - 任务
+  traffic: 流量审计 - 列表
+  trafficDetail: 流量审计 - 详情
+  dryRunTags: 标签结果
+  dryRunRules: 规则明细
+  dryRunRuleTags: 命中 {count} 个标签
+  dryRunRuleFailed: 规则执行出错
+  dryRunSummary: 规则概要
+  dryRunEvents: 检测事件
+  dryRunEventHits: 命中 {count} 个条件
+home:
+  subtitle: 网络安全审计平台
+  periodicReportBoard:
+    self: 周期性报告看板
+    settings: 设置关注
+    empty: 暂无关注的周期性报告，选择一个计划开始关注
+    selectPlans: 去选择关注计划
+    loadMore: 加载更多
+    viewDetail: 查看详情
+    noPlans: 当前命名空间暂无可关注的周期性报告计划
+  quickStart:
+    self: 快速开始
+    addGroup: 新建分组
+    newGroup: 新分组
+    groupName: 分组名称
+    renameGroup: 重命名分组
+    deleteGroup: 删除分组
+    deleteGroupConfirm: 确定删除分组「{group}」吗？
+    removeLink: 移除入口
+    addLink: 添加入口
+    searchNav: 搜索导航路径
+    emptyGroup: 拖入或添加导航入口
+    dropHere: 松开放入此处
+    defaultGroup: 默认
+page:
+  featureUnavailable:
+    title: "{feature}暂未开通"
+    hint: 该功能当前不可用，请先前往开通页面完成配置
+    activate: 前往{page}开通
+    contactAdmin: 该功能需要管理员开通，请联系管理员
+  aiAssistant:
+    generate: 生成
+    enqueueQuery: 加入待发队列
+    awaitingResponse: 等待响应中…
+    generating: 生成中…
+    queuedQueryLocked: 输入框已有内容，需先清空才能修改排队中的提问
+    stop: 停止
+    newSession: 新建会话
+    untitledSession: 新会话
+    renameSession: 重命名会话
+    deleteSession: 删除会话
+    citations: 引用来源
+    citationOpen: 在新标签页打开来源
+    citationsExpand: 展开其余 {count} 条
+    emptyQuery: 请输入诉求
+    optimizePrompt: 优化提问
+    optimizePromptFailed: 提示词优化失败
+    undoOptimizePrompt: 撤回优化
+    skillsLoading: 正在加载技能…
+    skillsEmpty: 暂无可用技能，请先在技能管理中创建并启用
+    composerPlaceholder: 输入 / 选择技能；再次输入 / 关闭技能列表并保留字面斜杠
+    error: 生成失败
+    runFailed: 本次回答未正常结束（运行出错或超时），以上为中断前已生成的内容。
+    runCancelled: 本次回答已被取消，以上为取消前已生成的内容。
+    noResponse: 请求超时或网络异常，请稍后重试
+    me: 我
+    assistant: 助手
+    hintSelectSession: 请先新建或选择一个会话开始对话
+    hintNoSession: 暂无会话，点击右上角「新建会话」开始对话
+    hintFirstQuery: 输入首个问题即可开始对话，会话主题将由系统自动生成
+    questionRail: 提问导航
+    confirmDeleteSession: 确定删除该会话及其全部消息吗？
+    slotHint: 新建会话时该档位会成为会话缺省档位
+    disabled: AI 能力未启用
+    stageFailed: 阶段失败
+    compact: 压缩上下文并记忆
+    compactSummary: 上下文摘要
+    compactExtracted: 已提取记忆条数
+    compactWarnings: 提取警告
+    contextUsage: "{percent}%"
+    contextUsageTitle: "上下文占用 {used} / {limit} Tokens"
+    compressToHere: 压缩到此
+    compressStart: 正在压缩上下文…
+    compressDone: "压缩前 {before} · 已折叠 {count} 条"
+    compressCompare: "压缩前 {before} → 压缩后 {after}（占用 {percent}%）"
+    compressTokensUnknown: 未知
+    compressSucceeded: 上下文压缩完成
+    compressFailed: 上下文压缩失败
+    approvalTitle: 工具调用审批
+    approvalWaiting: 等待审批
+    approvalHint: 请逐项批准或拒绝，全部决定后自动继续
+    approvalPrev: 上一项
+    approvalNext: 下一项
+    approvalParams: 调用参数
+    approvalResult: 调用结果
+    approvalError: 调用错误
+    approve: 批准
+    reject: 拒绝
+    approved: 已批准
+    rejected: 已拒绝
+    reviewValve: 审核阀门
+    reviewValveHint:
+      each: 每次客户端工具调用都需你人工批准后才执行
+      auto: 可自动审核与无需审核的调用直接执行，其余仍需人工批准
+      none: 仅「必须审核」的调用需人工批准，其余直接执行
+    autoApproved: 已自动批准
+    approvalBackendNote: 该调用由服务端执行，你只需批准或拒绝
+    apiInvokeInvalidArgs: 调用参数无法解析，未执行本次只读接口调用
+    thinking: 思考
+    thinkingHint: 开启后请求模型输出思考过程，回答将附带可折叠的思考内容
+    reasoningDefaultOnHint: 该模型默认开启思考，未配置思考开关时也会输出思考内容；可在「LLM 模型」的高级配置中填写思考开关字段与开启 / 关闭取值，以手动控制思考。
+    reasoningStreaming: 思考中…
+    reasoningDone: 思考完成
+    parallelCalls: 并行调用 ×{count}
+    copyMessage: 复制
+    retryMessage: 重试
+    branchMessage: 分支
+    branchTitle: "{title}（分支）"
+    branchCreated: 已创建分支会话
+    usageTokens: "{count} tokens"
+    usagePromptTokens: "输入 {count} tokens"
+    usageCompletionTokens: "输出 {count} tokens"
+    usageElapsed: "耗时 {seconds}s"
+    rollbackMessage: 回退
+    deleteMessage: 删除
+    confirmRollbackMessage: 确定从这一轮对话重新开始吗？该条消息及其之后的全部内容将被删除。
+    confirmDeleteMessage: 确定删除该条消息及其之后的全部内容吗？
+    questionnaireTitle: AI 提问
+    questionnaireOther: 其他
+    questionnaireCustomPlaceholder: 请输入你的回答
+    questionnaireSubmit: 提交
+    questionnaireCancel: 取消回答
+    questionnairePrev: 上一题
+    questionnaireNext: 下一题
+    questionnaireUnanswered: 未作答的题目将按「未作答」提交
+    questionnaireUnavailable: 本次提问已失效，无法提交作答，请直接发起新的提问
+    questionnaireReanswer: 重新回答
+    questionnaireReanswerBusy: 本轮仍在生成，完成后可重新回答
+    confirmReanswerQuestionnaire: 确定重新回答吗？该问卷之后的回答将被清除，你可以重新作答。
+    approvalRerun: 重新审批
+    approvalRerunBusy: 本轮仍在生成，完成后可重新审批
+    confirmRerunApproval: 确定重新审批吗？该审批之后的回答将被清除，你可以重新选择批准或拒绝。
+    questionnaireNoAnswer: 未作答
+    questionnairePendingHint: AI 正在等待你回答上方的问题，请先完成作答
+    questionnaireJump: 查看问题
+    blockNav: 块间快速跳读
+    blockPrev: 上一块
+    blockNext: 下一块
+    lockedHint: "会话{label}（{used}/{max} 轮），回滚历史消息后可继续提问"
+    lockedReject: 会话已达提问轮次上限，请先回滚历史消息后再提问
+    stateGuardReject: 当前会话状态暂不允许该操作，请稍后再试
+    nextStepsTitle: 推荐的下一步
+    nextStepsHint: 点击直接发送，或填入输入框
+    nextStepsRecommended: 推荐
+    nextStepsFill: 填入输入框
+    nextStepsDraftNotEmpty: 输入框已有内容，清空后才能直接发送
+  aiKnowledge:
+    dryRun: 检索试运行
+    query: 查询问题
+    advancedParams: 高级参数
+    advancedParamsHint: "未配置时使用后端默认值（{topKLabel}: {topK} · {candidatesLabel}: {candidates} · {fusionLabel}: {fusion}）"
+    topK: 重排保留条数
+    candidates: 候选条数
+    fusion: 融合策略
+    weightVector: 向量权重
+    weightKeyword: 关键词权重
+    run: 运行
+    running: 运行中…
+    stop: 停止
+    process: 运行过程
+    stageNoOutput: 该阶段暂无输出
+    stageFailed: 阶段失败
+    retrievedChunks: 检索分块
+    retrievedChunksSubtitle: 检索命中的文档分块及其相似度
+    answer: 生成回答
+    metrics: 量化指标
+    contextPrecision: 召回质量
+    faithfulness: 答案忠实度
+    answerRelevance: 答案相关性
+    contextUtilization: 上下文利用率
+    relevantOfTotal: "相关分块 {relevant}/{total}"
+    judgments: 分块相关性判断
+    judgmentsSubtitle: 逐条判定检索分块与问题的相关性
+    claims: 声明忠实度明细
+    claimsSubtitle: 逐条判定回答中的声明能否由检索内容支撑
+    reverseQuestions: 反推问题
+    reverseQuestionsSubtitle: 由检索分块反推、本应能被回答的问题
+    suggestions: 改进建议
+    suggestionsEmpty: 本次检索与生成未见明显问题，暂无改进建议
+    suggestionsSubtitle: 依据检索结果与量化指标给出的可执行改进方向
+    warnings: 评估警告
+    evalError: 评估不可用
+    metaModel: 模型
+    metaElapsed: 耗时
+    metaPromptTokens: 输入 Token
+    metaCompletionTokens: 输出 Token
+    metaTotalTokens: 合计 Token
+    metaRetrieveElapsed: 检索耗时
+    metaTotal: 总计耗时
+    close: 关闭
+    chunks: 分块明细
+    chunkSummary: 索引摘要
+    chunkIndexed: 已索引
+    chunkNotIndexed: 未索引
+    chunkStale: 索引落后正文
+    chunkList: 分块列表
+    chunkNotIndexedHint: 该文档尚未建立索引，暂无分块；请先执行重新索引
+    chunkCharsValue: "{count} 字符"
+    chunkLinesValue: "{count} 行"
+    chunkStatCount: 分块数量
+    chunkStatContentChars: 正文字符数
+    chunkStatCharsTotal: 分块字符合计
+    chunkStatCharsAvg: 分块字符均值
+    chunkStatCharsMin: 分块字符最少
+    chunkStatCharsMax: 分块字符最多
+    chunkStatHeadingPaths: 标题路径数
+    chunkStatAtomic: 原子分块数
+    chunkSize: 切片粒度
+    chunkOverlap: 切片重叠
+    chunkEmbeddingModel: 向量模型
+    chunkEmbeddingDimensions: 向量维度
+    chunkHash: 内容指纹
+    chunkIndexedAt: 索引时间
+    importDocument: 导入文档
+    importTitlePlaceholder: 留空则使用文件名（去扩展名）
+    importFile: 原件文件
+    importFileHint: 支持 Markdown / TXT / PDF / DOCX，单文件不超过 64 MB
+    importedContentReadOnly: 正文来自导入原件的解析结果，只读；仅可修改标题
+    parseError: 解析错误
+    scopeCurrent: 当前命名空间
+    scopeSystem: 系统知识库
+    scopeSystemHint: 系统知识库为代码声明的共享知识，仅供查看，不可编辑
+    documentUnreadable: 该知识文档不存在或不在可读范围内
+  aiSkill:
+    scopeHint: 内置技能为代码声明的全局能力，仅可启停；自定义技能按命名空间隔离
+    builtinReadonly: 内置技能由代码维护，不可编辑或删除
+    create: 新建技能
+    edit: 编辑技能
+    importMarkdown: 导入 Markdown
+    importHint: 支持 .md / .markdown / .txt 文件；读取后会填入正文，名称为空时以文件名（去扩展名）预填
+    importFailed: 读取文件 {name} 失败，请重试或直接粘贴正文
+    namePlaceholder: 用于在列表中识别技能，例如日志排障
+    descriptionPlaceholder: 一句话说明技能的用途，可留空
+    contentPlaceholder: 粘贴技能正文，可使用 Markdown 编写步骤与说明
+    addInputField: 添加输入字段
+    inputFieldsHint: 输入字段用于周期计划的参数表单；nowTime 由系统在运行时注入
+    inputFieldName: 字段名
+    inputFieldType: 类型
+    inputFieldRequired: 必填
+    inputFieldDescription: 说明
+    fixedFieldsHint: 固定参数须为 JSON 对象；周期技能必须包含 timeOffset 与 timeWindow（Go 时长，如 -24h、24h）
+    invalidFixedFields: 固定参数必须是合法的 JSON 对象
+    inputFieldNameRequired: 输入字段名不能为空
+    nowTimeRequired: 可周期执行的技能必须包含一个 name=nowTime、类型为 date 的输入字段
+    nowTimeLocked: nowTime 由系统在运行时注入，不可删除或改名
+  periodicReportPlan:
+    scopeHint: 仅固定参数含合法时间窗口、输入字段含 nowTime 的自定义周期技能可用于报告计划；未偏置的固定字段沿用技能默认值
+    nowTimeInjected: nowTime 由系统在运行时注入
+    inputFieldsTitle: 输入字段
+    fixedFieldsTitle: 固定字段
+    fixedFieldsHint: 整段 JSON 可直接编辑（含对象与数组）；未修改的固定字段沿用技能默认值，仅提交改动项
+    fixedFieldsInvalid: 固定字段必须是合法的 JSON 对象
+    noInputValues: 无输入参数
+    create: 新建周期性报告计划
+    edit: 编辑周期性报告计划
+    history: 历史报告
+    viewReport: 查看报告
+    viewSession: 查看会话
+    sessionReadonlyHint: 运行结束后会话已冻结，本视图仅用于回顾与审计，不能继续对话或修改
+    sessionEmpty: 该运行没有可展示的会话记录
+    sessionUserLabel: 用户提问
+    sessionAssistantLabel: 助手回答
+    sessionToolCalls: 工具调用
+    sessionArguments: 入参
+    sessionResult: 结果
+    sessionQuestionnaire: 向用户提问
+    sessionNextSteps: 推荐下一步
+    sessionToolRunning: 运行中
+    sessionToolDone: 完成
+    sessionToolFailed: 失败
+    sessionApproved: 已批准
+    sessionDeclined: 已拒绝
+    sessionPendingDecision: 未决策
+    noRuns: 该计划暂无运行记录
+    runsTitle: 运行记录
+    cronPlaceholder: "0 9 * * *"
+    expiresHint: 留空表示长期有效
+    longTerm: 长期有效
+    pendingSchedule: 待计算
+    retentionHint: 生成周期性报告保留 1 至 3650 天，默认 90 天
+    runNow: 立即执行
+    runNowConfirm: 确定立即执行周期性报告计划「{name}」吗？
+    deleteRun: 删除运行记录
+    deleteRunConfirm: 确定删除该运行记录吗？已生成的报告正文将一并删除，且不可恢复。
+  llmModelAdmin:
+    baseURLHint: 供应商的 OpenAI 兼容接口基地址（例如 https://dashscope.aliyuncs.com/compatible-mode/v1）
+    apiKeyKeepHint: 凭据不以明文回显；留空表示沿用原凭据
+    scopeHint: 模型注册表为全局配置，不随命名空间隔离
+    dimensionsHint: 向量维度由后端在绑定 embedding 档位时探测确定；如需调整索引维度，请联系运维在服务器上执行
+    extraBodyHint: '为该模型每次请求自动合并的 JSON 对象（例如 {''{"top_k": 20}''}）；留空表示不附加'
+    thinkingHint: 字段名与开启/关闭取值三者齐备时生效；留空表示该模型不支持思考开关
+    apiModeHint: 仅对话模型可选；Responses 使用 Agentic 消息协议，工具调用与中断续跑语义一致
+    advancedTitle: 高级配置
+    advancedHint: 额外请求字段与思考开关，均为可选；仅对话模型适用
+  llmBindingAdmin:
+    hint: 四个档位各绑定一个模型：对话档位需对话模型，向量化槽位需向量化模型；档位可用性以运行时快照为准
+    indexDimensions: 知识库索引维度 {dimensions}
+    indexDimensionsUnavailable: 知识库索引维度未知（索引列未就绪，请先执行数据库迁移）
+    selectModel: 选择模型
+    unbound: 未绑定
+  agentParamAdmin:
+    hint: 参数出厂值由数据库迁移写入并在启动时校验，修改后即时生效；留空提交即写回出厂值
+    dirtyCount: "{count} 项待保存"
+    groupCount: "{count} 项"
+    groupSubtitle:
+      agent: 系统提示词、消息分节标题与检索片段截断
+      retrieval: 混合检索的召回条数、融合权重与 LLM 重排
+      session: 注入模型的会话历史条数与字节上限
+      chunking: Markdown 结构感知的切片粒度与重叠
+      eval: RAG 评估各阶段的判定提示词与参数
+      sanitize: 业务数据注入模型前的条目数与字节限界
+    defaultValue: "默认值：{value}"
+  mcpServerAdmin:
+    scopeHint: MCP 服务器注册表为全局配置，不随命名空间隔离
+    urlHint: MCP 端点地址（http / https）
+    # JSON 示例的花括号须用 vue-i18n 字面量语法 {'...'} 包裹；裸花括号会被当作
+    # 插值占位符解析，构建期报错（code 2）
+    headersHint: '请求头以 JSON 对象文本填写（如 {''{"Authorization":"Bearer xxx"}''}），值须为字符串；落库为密文'
+    headersKeepHint: 请求头不以明文回显；留空表示沿用原凭据
+  llmToolAdmin:
+    scopeHint: 工具注册表为全局配置，不随命名空间隔离；内置来源工具由系统维护、不可删除
+    builtinReadonly: 内置来源工具由系统维护，不可删除
+profile:
+  pageSubtitle: 管理你的账号信息、访问密钥与密码安全
+  infoSubtitle: 修改昵称与邮箱后点击「更新」保存
+  accessKeySubtitle: 访问密钥用于以程序化方式调用 API，创建后请妥善保存
+  passwordSubtitle: 修改登录密码，建议使用强密码并定期更换
+  emptyAccessKeys: 暂无访问密钥
+  configSyncSubtitle: 将浏览器中的页面配置（主题、语言、侧边栏等）同步到服务端，跨主机登录时保持一致
+  configSyncHint: 开启后，页面配置调整会立即上传；同步失败时恢复为最近一次同步的配置
 summary:
   pageNotFound: 页面不存在！
   notSignInYet: 请先登录。
   goingToSignIn: 正在前往登录页...
+  alreadySignedIn: 您已处于登录状态。
+  alreadySignedInHint: 无需重复登录，请选择下一步操作。
   dataLoading: 数据加载中...
   endOfData: 到头了
+  noEventDetected: 未检测到事件
+  noTagMatched: 未命中任何标签
   noServerYet: "目前尚未有正在运行中的{name}哦！"
-  noServerYetHelp: "您可以尝试点击下面的{btn}按钮，再次获取数据。"
+  unknownError: 出现未知错误...
 notice:
   wellcome: 欢迎！
+  forgotEmailSent: "若账号与邮箱匹配，重置邮件已发送至您邮箱，请查收"
+  resetTokenMissing: "重置链接无效或缺少有效令牌，请重新发起密码重置申请"
   goodBye: 再见！
   profileUpdated: 个人资料更新成功！
   passwordReset: 密码重置成功！
+  frontendConfigSyncFailed: 前端配置同步失败，已恢复最近一次同步的配置
+  missingParam: 缺少必要参数，无法加载详情
+  tagExpr:
+    empty: 表达式不能为空
+    unexpectedChar: '非法字符 "{char}"'
+    unexpectedToken: '非法词元 "{token}"'
+    unexpectedEnd: 表达式意外结束
+    missingClose: 缺少右括号 ")"
+    expectedOperand: '此处应为标签或左括号，但遇到 "{token}"'
   copied: 已复制！
   copyFailed: 复制失败！
+  copyImageFallback: 当前环境无法写入图片剪贴板（需 HTTPS 且允许剪贴板权限），已改为复制图表源码
+  exportImageSuccess: 图片已导出
+  exportHtmlSuccess: HTML 已导出
+  exportFailed: 导出失败，请稍后重试
+  printReady: 已打开打印视图，请在打印对话框中选择「另存为 PDF」
+  printBlocked: 打印视图被浏览器拦截，请允许本站打开新窗口后重试
   deleteConfirm: "确认删除 {category} {key} 吗？"
   archiveConfirm: "确认归档 {category} {key} 吗？"
   cancelConfirm: "确认取消 {category} {key} 吗？"
   runConfirm: "确认运行 {category} {key} 吗？"
+  rollbackConfirm: "确认回滚 {category} {key} 到版本 {version} 吗？"
+  reindexConfirm: "确认重新索引 {category} {key} 吗？"
+  reparseConfirm: "确认重新解析 {category} {key} 吗？"
+  noVersion: 该规则暂无历史版本
+  dryRunConfirm: "确认对 {category} {key} 执行试运行吗？"
+  enableConfirm: "确认启用 {category} {key} 吗？"
+  disableConfirm: "确认禁用 {category} {key} 吗？"
+  regoInvalid: "Rego 校验未通过，无法提交！"
+  expressionInvalid: "表达式校验未通过，无法提交！"
+  plaintextLoadFailed: 明文获取失败
+  plaintextEmpty: 该字段无明文内容
+  plaintextBinary: 二进制内容，以下为十六进制预览
+  plaintextTruncated: 内容过长，已截断预览
+  selectedCount: "已选 {count} 项"
+  batchConfirm: "将对选中的 {count} 项执行操作"
+  batchResult: "成功 {succeeded} 项，失败 {failed} 项"
+  schedulerScheduleConflict: Cron 表达式与触发间隔只能二选一
+  schedulerScheduleEmpty: 触发间隔与 Cron 表达式至少填写一项
+  payloadInvalid: 请求负载 JSON 格式不正确
+  notification:
+    testSendSuccess: 测试消息发送成功
+    setDefaultSuccess: 已设为默认组
+    setDefaultConfirm: "确认将 {category} {key} 设为默认通知组吗？"
+    noTargets: 该通知组暂未绑定任何目标
+    restoreDefaultConfirm: "确认将事件 {event}（{language}）的通知模板恢复为内置默认吗？"
+    restoreDefaultSuccess: 已恢复为内置默认模板
+  datasource:
+    testSuccess: 连接成功
+    testFailed: 连接失败
+    introspectSuccess: 表结构解析成功
+    introspectFailed: 表结构解析失败
+    introspectNoFile: 请先选择 SQLite 数据库文件
+  llmModel:
+    testSuccess: 连通性测试通过
+    testFailed: 连通性测试失败
+  llmBinding:
+    bindSuccess: 档位绑定成功
+    unbindSuccess: 档位解绑成功
+    unbindConfirm: "确认解绑档位 {key} 吗？解绑后该档位不可用"
+  agentParam:
+    saveSuccess: 参数保存成功
+    resetSuccess: 参数已恢复默认值
+    resetGroupConfirm: "确认将「{key}」分组的参数全部恢复默认吗？"
+  mcpServer:
+    testSuccess: "连通性测试通过，远端发现 {count} 个工具"
+    testFailed: 连通性测试失败
+    syncSuccess: "同步完成：新增 {created} 项、刷新 {updated} 项、清理 {removed} 项"
+  aiDocument:
+    downloadSuccess: "已开始下载 {name}"
+    downloadFailed: 原件下载失败
+    notDownloadable: 该文档没有可下载的原件
+inputType:
+  string: 字符串
+  number: 数字
+  boolean: 布尔
+  object: 对象
+  array: 数组
 unit:
   day: 天
   second: 秒
   count: 个
+  tokenNone: 无单位
+  tokenK: 千（K）
+  tokenM: 百万（M）
 option:
   search:
     eq: 等于
@@ -274,45 +1859,130 @@ option:
     lte: 小于等于
     gt: 大于
     gte: 大于等于
+    fts: 全文检索
+  language:
+    "*": 全部语言
+    en: 英语
+    zh-Hans: 简体中文
+  channel:
+    "*": 全部渠道
+# Cron 表达式字段的引导面板与校验文案（components/forms/CronField.vue 与 utils/cron.ts）
+cron:
+  builder: 定时计划设置
+  title: 定时计划
+  frequency: 执行频率
+  frequencyOption:
+    minute: 每分钟
+    hourly: 每小时
+    daily: 每天
+    weekly: 每周
+    monthly: 每月
+    yearly: 每年
+  field:
+    minute: 分钟
+    hour: 小时
+    dayOfMonth: 日
+    month: 月
+    dayOfWeek: 星期
+  weekday:
+    sun: 周日
+    mon: 周一
+    tue: 周二
+    wed: 周三
+    thu: 周四
+    fri: 周五
+    sat: 周六
+  descriptorHint: "该模式仅支持 {'@hourly'} / {'@daily'} / {'@weekly'} / {'@monthly'} / {'@yearly'} 等宏描述符"
+  nextRuns: 下次执行
+  noNextRuns: 无法计算下次执行时间
+  customHint: 当前为自定义表达式；调整上方选项会覆盖它
+  weekdayRequired: 至少选择一个星期
+  descriptorTitle: 常用描述符
+  guide: 分 0-59 · 时 0-23 · 日 1-31 · 月 1-12 · 周 0-6（0 为周日）；支持 *、a-b、a,b、*/n
+  error:
+    empty: 表达式不能为空
+    fieldCount: "应为 5 段（分 时 日 月 周），或使用 {'@daily'} 等描述符"
+    descriptorOnly: "仅支持 {'@hourly'} / {'@daily'} / {'@weekly'} / {'@monthly'} / {'@yearly'} 等宏描述符"
+    cronOnly: "仅支持 5 段 cron 表达式（分 时 日 月 周），不支持 {'@daily'} 等描述符"
+    syntax: "{field}字段格式不正确"
+    range: "{field}字段的取值须在 {min} 到 {max} 之间"
+    order: "{field}字段的起始值不能大于结束值"
+    descriptor: "不支持的计划描述符 {token}"
+  describe:
+    everyMinute: 每分钟执行
+    hourlyAt: "每小时的第 {minute} 分钟执行"
+    dailyAt: "每天 {time} 执行"
+    weeklyAt: "每周 {weekdays} 的 {time} 执行"
+    monthlyAt: "每月 {day} 日的 {time} 执行"
+    yearlyAt: "每年 {month} 月 {day} 日的 {time} 执行"
+    every: "每 {duration} 执行"
+    custom: 自定义计划
+# Markdown 语法校验文案（components/forms/MarkdownEditor.vue）
+markdown:
+  fullscreenTitle: 文档预览
+  lint:
+    fenceUnclosed: 代码块未闭合
+    linkMissingParen: 链接缺少右括号
+    linkEmptyTarget: 链接地址为空
+    headingMissingSpace: 标题 # 后缺少空格
+    listMissingSpace: 列表标记后缺少空格
+    summary: "第 {line} 行：{message}"
+    summaryMore: "第 {line} 行：{message}（共 {count} 处）"
 validation:
   mixed:
-    default: '{path}不合法'
-    required: '{path}是必填项'
-    defined: '{path}必须被携带'
-    notNull: '{path}不能为空'
-    oneOf: '{path}必须是以下值之一: {values}'
-    notOneOf: '{path}必须不是以下值之一: {values}'
+    default: "{path}不合法"
+    required: "{path}是必填项"
+    defined: "{path}必须被携带"
+    notNull: "{path}不能为空"
+    notType: "{path}必须为{type}类型"
+    oneOf: "{path}必须是以下值之一: {values}"
+    notOneOf: "{path}必须不是以下值之一: {values}"
   string:
-    length: '{path}字符长度必须为{length}'
-    min: '{path}字符最小长度必须为{min}'
-    max: '{path}字符最大长度必须为{max}'
+    length: "{path}字符长度必须为{length}"
+    min: "{path}字符最小长度必须为{min}"
+    max: "{path}字符最大长度必须为{max}"
     matches: '{path}必须匹配正则"{regex}"'
-    email: '{path}必须是合法的邮箱地址'
-    url: '{path}必须是合法的URL地址'
-    uuid: '{path}必须是合法的UUID'
-    datetime: '{path}必须为合法的ISO日期时间'
-    datetime_precision: '{path}必须为合法的ISO日期时间，精确到{precision}位小数'
+    email: "{path}必须是合法的邮箱地址"
+    url: "{path}必须是合法的URL地址"
+    uuid: "{path}必须是合法的UUID"
+    datetime: "{path}必须为合法的ISO日期时间"
+    datetime_precision: "{path}必须为合法的ISO日期时间，精确到{precision}位小数"
     datetime_offset: '{path}必须为合法的ISO日期时间，时区为UTC "Z"'
-    trim: '{path}必须为去除两端空白字符后的字符串'
-    lowercase: '{path}必须为小写字符串'
-    uppercase: '{path}必须为大写字符串'
+    trim: "{path}必须为去除两端空白字符后的字符串"
+    lowercase: "{path}必须为小写字符串"
+    uppercase: "{path}必须为大写字符串"
   number:
-    min: '{path}必须大于或等于{min}'
-    max: '{path}必须小于或等于{max}'
-    lessThan: '{path}必须小于{less}'
-    moreThan: '{path}必须大于{more}'
-    positive: '{path}必须为正数'
-    negative: '{path}必须为负数'
-    integer: '{path}必须为整数'
+    min: "{path}必须大于或等于{min}"
+    max: "{path}必须小于或等于{max}"
+    lessThan: "{path}必须小于{less}"
+    moreThan: "{path}必须大于{more}"
+    positive: "{path}必须为正数"
+    negative: "{path}必须为负数"
+    integer: "{path}必须为整数"
   date:
-    min: '{path}必须晚于{min}'
-    max: '{path}必须早于{max}'
+    min: "{path}必须晚于{min}"
+    max: "{path}必须早于{max}"
   boolean:
-    isValue: '{path}必须为{value}'
+    isValue: "{path}必须为{value}"
   object:
-    noUnknown: '{path}字段包含未指定的键：{unknown}'
-    exact: '{path}对象包含未知属性：{properties}'
+    noUnknown: "{path}字段包含未指定的键：{unknown}"
+    exact: "{path}对象包含未知属性：{properties}"
   array:
-    min: '{path}必须至少有{min}项'
-    max: '{path}必须至多有{max}项'
-    length: '{path}必须有{length}项'
+    min: "{path}必须至少有{min}项"
+    max: "{path}必须至多有{max}项"
+    length: "{path}必须有{length}项"
+# 通知渠道/目标配置字段标签：由后端 /notification/channel/types 返回 key，前端 $t(f.label) 渲染
+notify:
+  channel:
+    email:
+      field:
+        host: SMTP 主机
+        port: 端口
+        username: 用户名
+        password: 密码
+        from: 发件人
+        to: 收件人邮箱
+    webhook:
+      field:
+        url: Webhook URL
+        headers: 请求头

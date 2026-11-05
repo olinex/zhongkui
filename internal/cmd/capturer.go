@@ -6,29 +6,36 @@ import (
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"zhongkui.com/zhongkui/internal/manager/routes"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/cliinput"
-	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/manager/views/admin"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/cliinput"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 var createCapturerCmd = &cobra.Command{
 	Use:   "capturer",
-	Short: "Create a network capturer",
-	Long:  "Create a new network capturer with device configuration. Parameters can be provided via command-line flags or prompted interactively.",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		_, injector := cmdToolBox(cmd)
-		v := provider.MustInvokeViper(injector)
+	Short: "cmd.create.capturer.short",
+	Long:  "cmd.create.capturer.long",
+	Run: func(cmd *cobra.Command, args []string) {
+		_, i := cmdToolBox(cmd)
+		_ = provider.MustInvokeKeyDerivation(i)
+		v := provider.MustInvokeViper(i)
+
 		timeout := v.GetDuration("timeout")
 
-		var in routes.CapturerCreateIn
-		if err := cliinput.Extract(v, &in, ""); err != nil {
+		var in admin.CapturerCreateIn
+		if err := cliinput.Extract(v, validator.Validate, &in, ""); err != nil {
 			pterm.Error.Println(err.Error())
-			return err
+			return
 		}
 
-		db := provider.MustInvokeCoreDatabase(injector)
-		client := provider.MustInvokeEtcdClient(injector)
+		ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
+		defer cancel()
+
+		db := provider.MustInvokeCoreDatabase(i)
+		client := provider.MustInvokeEtcdClient(i)
 
 		instance := core.Capturer{
 			NamespaceName: in.Namespace,
@@ -36,31 +43,27 @@ var createCapturerCmd = &cobra.Command{
 			Version:       in.Version,
 		}
 
-		ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
-		defer cancel()
-
 		if err := instance.CreateWithConfig(db.WithContext(ctx), client, in.Config.ToGRPC()); err != nil {
-			pterm.Error.Printf("cannot create capturer: %v\n", err)
-			return err
+			pterm.Error.Println(translate.T("cli.capturer.create-failed", map[string]any{"Err": err}))
+			return
 		}
 
-		pterm.Success.Printf("capturer %s/%s (%s) created successfully\n", in.Namespace, in.Name, in.Version)
-		return nil
+		pterm.Success.Println(translate.T("cli.capturer.created", map[string]any{"Namespace": in.Namespace, "Name": in.Name, "Version": in.Version}))
 	},
 }
 
 func init() {
 	flags := createCapturerCmd.Flags()
-	flags.String("namespace", "", "namespace for the capturer")
-	flags.String("name", "", "name of the capturer")
-	flags.String("version", "", "version of the capturer")
-	// CapturerConfig fields
-	flags.String("device", "", "network device name (e.g. eth0)")
-	flags.Uint32("snap-len", 0, "snap length in bytes")
-	flags.Bool("promisc", false, "enable promiscuous mode")
-	flags.Int32("read-timeout", 0, "read timeout in milliseconds")
-	flags.String("bpf-expr", "", "BPF filter expression (e.g. tcp port 80)")
-	flags.Bool("enabled", false, "enable this capturer")
-	// Meta flags
-	flags.Duration("timeout", time.Minute, "timeout for database operations")
+	flags.String("namespace", "", "flag.create.capturer.namespace")
+	flags.String("name", "", "flag.create.capturer.name")
+	flags.String("version", "", "flag.create.capturer.version")
+	// CapturerConfig 抓包配置字段
+	flags.String("device", "", "flag.create.capturer.device")
+	flags.Uint32("snap-len", 0, "flag.create.capturer.snap-len")
+	flags.Bool("promisc", false, "flag.create.capturer.promisc")
+	flags.Int32("read-timeout", 0, "flag.create.capturer.read-timeout")
+	flags.String("bpf-expr", "", "flag.create.capturer.bpf-expr")
+	flags.Bool("enabled", false, "flag.create.capturer.enabled")
+	// 元信息标志
+	flags.Duration("timeout", time.Minute, "flag.create.capturer.timeout")
 }

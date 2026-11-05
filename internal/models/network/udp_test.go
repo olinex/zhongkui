@@ -7,7 +7,7 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // TestUDPHeaders_Basic 测试UDPHeaders结构体的基本功能
@@ -140,9 +140,9 @@ func TestPacketIPv4UDP_Basic(t *testing.T) {
 								CaptureLength: 1024,
 							},
 							PacketMeta: PacketMeta{
-							LayerStack: LayerStack{},
+								LayerStack: LayerStack{},
+							},
 						},
-					},
 						EthernetHeaders: EthernetHeaders{
 							EthSrcMAC: serializer.MacAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
 							EthDstMAC: serializer.MacAddr{0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF},
@@ -154,7 +154,7 @@ func TestPacketIPv4UDP_Basic(t *testing.T) {
 						IPv4IHL:        5,
 						IPv4TOS:        0,
 						IPv4Length:     1024,
-						IPv4Id:         12345,
+						IPv4ID:         12345,
 						IPv4Flags:      layers.IPv4Flag(0x02), // DF flag
 						IPv4FragOffset: 0,
 						IPv4TTL:        64,
@@ -316,7 +316,7 @@ func TestUDPHeaders_JSONCompatibility(t *testing.T) {
 
 		Convey("Should handle JSON with missing optional fields gracefully", func() {
 			// 模拟可能缺少某些字段的JSON数据
-			jsonStr := `{"src_port": 53, "dst_port": 53, "length": 512}`
+			jsonStr := `{"srcPort": 53, "dstPort": 53, "length": 512}`
 
 			var headers UDPHeaders
 			err := json.Unmarshal([]byte(jsonStr), &headers)
@@ -327,6 +327,102 @@ func TestUDPHeaders_JSONCompatibility(t *testing.T) {
 			So(headers.UDPDstPort, ShouldEqual, layers.UDPPort(53))
 			So(headers.UDPLength, ShouldEqual, uint16(512))
 			So(headers.UDPChecksum, ShouldEqual, uint16(0)) // 零值
+		})
+	})
+}
+
+// TestPacketIPv4UDP_StreamID 测试 PacketIPv4UDP.StreamID 方法
+// 验证 UDP 流 ID 的方向无关一致性
+func TestPacketIPv4UDP_StreamID(t *testing.T) {
+	Convey("Test PacketIPv4UDP StreamID generation", t, func() {
+		Convey("Should generate consistent StreamID regardless of packet direction", func() {
+			packet1 := &PacketIPv4UDP{
+				PacketIPv4: PacketIPv4{
+					IPv4Headers: IPv4Headers{
+						IPv4Src: serializer.IPv4Addr{192, 168, 1, 100},
+						IPv4Dst: serializer.IPv4Addr{192, 168, 1, 1},
+					},
+				},
+				UDPHeaders: UDPHeaders{
+					UDPSrcPort: layers.UDPPort(54321),
+					UDPDstPort: layers.UDPPort(53),
+				},
+			}
+
+			packet2 := &PacketIPv4UDP{
+				PacketIPv4: PacketIPv4{
+					IPv4Headers: IPv4Headers{
+						IPv4Src: serializer.IPv4Addr{192, 168, 1, 1},
+						IPv4Dst: serializer.IPv4Addr{192, 168, 1, 100},
+					},
+				},
+				UDPHeaders: UDPHeaders{
+					UDPSrcPort: layers.UDPPort(53),
+					UDPDstPort: layers.UDPPort(54321),
+				},
+			}
+
+			streamID1 := packet1.StreamID()
+			streamID2 := packet2.StreamID()
+
+			So(streamID1, ShouldEqual, streamID2)
+			So(len(streamID1), ShouldEqual, 16) // 64-bit hash hex
+
+			// 验证 UDPStreamID 字段可直接赋值
+			packet1.UDPStreamID = packet1.StreamID()
+			packet2.UDPStreamID = packet2.StreamID()
+			So(packet1.UDPStreamID, ShouldEqual, streamID1)
+			So(packet2.UDPStreamID, ShouldEqual, streamID2)
+		})
+	})
+}
+
+// TestPacketIPv6UDP_StreamID 测试 PacketIPv6UDP.StreamID 方法
+// 验证 IPv6 UDP 流 ID 的方向无关一致性
+func TestPacketIPv6UDP_StreamID(t *testing.T) {
+	Convey("Test PacketIPv6UDP StreamID generation", t, func() {
+		Convey("Should generate consistent StreamID for IPv6 regardless of packet direction", func() {
+			packet1 := &PacketIPv6UDP{
+				PacketIPv6: PacketIPv6{
+					IPv6Headers: IPv6Headers{
+						IPv6Base: IPv6Base{
+							IPv6Src: serializer.IPv6Addr{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+							IPv6Dst: serializer.IPv6Addr{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
+						},
+					},
+				},
+				UDPHeaders: UDPHeaders{
+					UDPSrcPort: layers.UDPPort(54321),
+					UDPDstPort: layers.UDPPort(53),
+				},
+			}
+
+			packet2 := &PacketIPv6UDP{
+				PacketIPv6: PacketIPv6{
+					IPv6Headers: IPv6Headers{
+						IPv6Base: IPv6Base{
+							IPv6Src: serializer.IPv6Addr{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
+							IPv6Dst: serializer.IPv6Addr{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+						},
+					},
+				},
+				UDPHeaders: UDPHeaders{
+					UDPSrcPort: layers.UDPPort(53),
+					UDPDstPort: layers.UDPPort(54321),
+				},
+			}
+
+			streamID1 := packet1.StreamID()
+			streamID2 := packet2.StreamID()
+
+			So(streamID1, ShouldEqual, streamID2)
+			So(len(streamID1), ShouldEqual, 16) // 64-bit hash hex
+
+			// 验证 UDPStreamID 字段可直接赋值
+			packet1.UDPStreamID = packet1.StreamID()
+			packet2.UDPStreamID = packet2.StreamID()
+			So(packet1.UDPStreamID, ShouldEqual, streamID1)
+			So(packet2.UDPStreamID, ShouldEqual, streamID2)
 		})
 	})
 }

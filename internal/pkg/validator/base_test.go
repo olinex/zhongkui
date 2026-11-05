@@ -4,28 +4,24 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin/binding"
-	"github.com/go-playground/validator/v10"
+	uv "github.com/go-playground/validator/v10"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-// TestMustValidate 测试 mustValidate 函数的功能
-// 该测试验证 mustValidate 函数是否能正确获取全局验证器实例，
-// 并自动注册所有在 validations map 中定义的自定义验证规则
-func TestMustValidate(t *testing.T) {
-	Convey("Test mustValidate function", t, func() {
+// TestCustomValidations 测试自定义验证规则的功能
+// 该测试验证 newTestValidate 返回的验证器实例包含所有自定义验证规则，
+// 且各规则能正确判断合法与非法输入
+func TestCustomValidations(t *testing.T) {
+	Convey("Test custom validations", t, func() {
 		Convey("Should return validator instance with all custom validations registered", func() {
-			// 设置 Gin 的 binding validator
-			binding.Validator = &defaultValidator{}
-
-			// 调用 mustValidate 函数，会自动注册 validations map 中的所有验证规则
-			validate := mustValidate()
+			// 调用 newTestValidate 函数，注册所有自定义验证规则
+			validate := newTestValidate()
 
 			// 验证返回的实例不为 nil
 			So(validate, ShouldNotBeNil)
 
 			// 验证返回的是正确的类型
-			So(validate, ShouldHaveSameTypeAs, &validator.Validate{})
+			So(validate, ShouldHaveSameTypeAs, &uv.Validate{})
 
 			// 验证所有自定义验证标签已成功注册
 			// 测试强密码验证
@@ -86,11 +82,8 @@ func TestMustValidate(t *testing.T) {
 		})
 
 		Convey("Should register tag name function for better error messages", func() {
-			// 设置 Gin 的 binding validator
-			binding.Validator = &defaultValidator{}
-
-			// 获取验证器实例，tag name function 在 mustValidate 中自动注册
-			validate := mustValidate()
+			// 获取验证器实例，tag name function 在 newTestValidate 中自动注册
+			validate := newTestValidate()
 
 			// 创建一个测试结构体来验证标签名称函数
 			type TestStruct struct {
@@ -113,11 +106,8 @@ func TestMustValidate(t *testing.T) {
 		})
 
 		Convey("Should validate strong password correctly", func() {
-			// 设置 Gin 的 binding validator
-			binding.Validator = &defaultValidator{}
-
 			// 获取验证器实例，已自动注册所有自定义验证规则
-			validate := mustValidate()
+			validate := newTestValidate()
 
 			// 测试强密码验证
 			type PasswordTest struct {
@@ -144,11 +134,8 @@ func TestMustValidate(t *testing.T) {
 		})
 
 		Convey("Should validate time comparisons correctly", func() {
-			// 设置 Gin 的 binding validator
-			binding.Validator = &defaultValidator{}
-
 			// 获取验证器实例，已自动注册所有自定义验证规则
-			validate := mustValidate()
+			validate := newTestValidate()
 
 			// 测试时间验证
 			type TimeTest struct {
@@ -178,11 +165,8 @@ func TestMustValidate(t *testing.T) {
 		})
 
 		Convey("Should validate file names correctly", func() {
-			// 设置 Gin 的 binding validator
-			binding.Validator = &defaultValidator{}
-
 			// 获取验证器实例，已自动注册所有自定义验证规则
-			validate := mustValidate()
+			validate := newTestValidate()
 
 			// 测试文件名验证
 			type FileNameTest struct {
@@ -217,20 +201,39 @@ func TestMustValidate(t *testing.T) {
 				So(err, ShouldNotBeNil)
 			})
 		})
+
+		Convey("Should validate alphanumspecial correctly", func() {
+			// 获取验证器实例，已自动注册所有自定义验证规则
+			validate := newTestValidate()
+
+			// 测试 alphanumspecial 标签：字母数字（含 Unicode）+ 指定特殊字符，且不能仅有特殊符号
+			type AlphanumSpecialTest struct {
+				Value string `binding:"alphanumspecial=_-"`
+			}
+
+			Convey("Valid values should pass validation", func() {
+				for _, v := range []string{"rule-a", "rule_a", "RuleA", "123", "a1_b2-c3", "你好"} {
+					err := validate.Struct(AlphanumSpecialTest{Value: v})
+					So(err, ShouldBeNil)
+				}
+			})
+
+			Convey("Invalid values should fail validation", func() {
+				for _, v := range []string{"", "bad name", "rule@x", "rule.x", "-_", "a-b!"} {
+					err := validate.Struct(AlphanumSpecialTest{Value: v})
+					So(err, ShouldNotBeNil)
+				}
+			})
+		})
 	})
 }
 
-// TestValidationsAfterMultipleMustValidate 测试多次调用 mustValidate 的行为
-// 由于 mustValidate 内部会迭代 validations map 注册验证，重复注册会触发 panic，
-// 此测试验证单次调用后所有验证规则正常工作
-func TestValidationsAfterMultipleMustValidate(t *testing.T) {
+// TestValidationsAfterInitialization 测试初始化后所有验证规则正常工作
+func TestValidationsAfterInitialization(t *testing.T) {
 	Convey("Test validations work correctly after initialization", t, func() {
-		// 设置 Gin 的 binding validator
-		binding.Validator = &defaultValidator{}
-
-		Convey("All validation rules should work after mustValidate", func() {
+		Convey("All validation rules should work", func() {
 			// 获取验证器实例
-			validate := mustValidate()
+			validate := newTestValidate()
 
 			// 验证所有验证规则都正常工作
 			// 测试强密码规则
@@ -257,11 +260,9 @@ func TestValidationsAfterMultipleMustValidate(t *testing.T) {
 			So(validate, ShouldNotBeNil)
 		})
 
-		Convey("Should maintain all validation rules via Validate variable", func() {
-			// 直接使用包级 Validate 变量（由 init() 初始化）
-			// 由于在测试中 binding.Validator 可能未正确初始化，
-			// 这里通过 mustValidate 获取验证器实例
-			validate := mustValidate()
+		Convey("Should maintain all validation rules", func() {
+			// 通过 newTestValidate 获取验证器实例
+			validate := newTestValidate()
 
 			// 测试所有验证标签在正确设置后可用
 			type FileNameTest struct {
@@ -282,25 +283,4 @@ func TestValidationsAfterMultipleMustValidate(t *testing.T) {
 			So(err, ShouldBeNil)
 		})
 	})
-}
-
-// defaultValidator 是 Gin 的默认验证器实现
-// 用于测试中模拟 Gin 的 binding validator
-type defaultValidator struct {
-	validator *validator.Validate
-}
-
-func (v *defaultValidator) Engine() any {
-	if v.validator == nil {
-		v.validator = validator.New()
-	}
-	return v.validator
-}
-
-func (v *defaultValidator) ValidateStruct(any) error {
-	return nil
-}
-
-func (v *defaultValidator) ValidateTag() string {
-	return "validate"
 }

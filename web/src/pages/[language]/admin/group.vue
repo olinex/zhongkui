@@ -3,18 +3,14 @@
     <template #body>
       <search-table
         ref="searchTableRef"
-        :title="$t('model.group.name')"
         :list-request="groupListGet"
         :options-request="groupListOptions"
         :actions="getActions"
+        :batch-actions="getBatchActions"
+        :create="openCreateDialogAction"
+        :project-fields="projectFields"
         model-name="group"
-      >
-        <template #top>
-          <v-btn color="success" @click="openCreateDialogAction">
-            {{ $t("action.create") }}
-          </v-btn>
-        </template>
-      </search-table>
+      />
       <confirm-dialog
         ref="confirmDialogRef"
         :title="$t(`model.group.name`)"
@@ -23,6 +19,12 @@
       >
         <template #body="{ proxy }">
           <confirm-alert
+            v-if="batchState"
+            :action="$t('action.delete')"
+            :text="$t('notice.batchConfirm', { count: batchState?.items.length ?? 0 })"
+          />
+          <confirm-alert
+            v-else
             :action="$t('action.delete')"
             :text="
               $t(`notice.deleteConfirm`, {
@@ -36,16 +38,14 @@
       <temp-editable-dialog
         ref="createDialogRef"
         :title="$t('model.group.name')"
-        @confirm="createAction"
-        :confirm-disabled="
-          !createForm.meta.value.dirty || !createForm.meta.value.valid
-        "
+        :confirm-disabled="!createForm.meta.value.dirty || !createForm.meta.value.valid"
         force-editable
         prepend-icon="mdi-account-multiple"
+        @confirm="createAction"
       >
         <template #body>
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="createName"
@@ -54,12 +54,13 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="createDescription"
                   v-bind="createDescriptionProps"
                   :label="$t('model.group.field.description')"
+                  rows="3"
                 />
               </v-col>
             </v-row>
@@ -69,34 +70,29 @@
       <temp-editable-dialog
         ref="editDialogRef"
         :title="$t('model.group.name')"
-        @confirm="itemUpdateAction"
-        :confirm-disabled="
-          !updateForm.meta.value.dirty || !updateForm.meta.value.valid
-        "
+        :confirm-disabled="!updateForm.meta.value.dirty || !updateForm.meta.value.valid"
         prepend-icon="mdi-account-multiple"
+        @confirm="itemUpdateAction"
       >
         <template #body="{ proxy, editable }">
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
-                <v-text-field
-                  v-model="proxy.name"
-                  :label="$t('model.group.field.name')"
-                  disabled
-                />
+                <v-text-field v-model="proxy.name" :label="$t('model.group.field.name')" disabled />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="updateDescription"
                   v-bind="updateDescriptionProps"
                   :label="$t('model.group.field.description')"
                   :disabled="!editable"
+                  rows="3"
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <inner-edit-table
                   v-model="proxy.policies"
@@ -107,62 +103,49 @@
                   :editable="editable"
                   order-by-field="createdAt"
                 >
-                  <template #list-item-action="{ item, editable, removeItem }">
+                  <template #list-item-action="{ item, editable: listEditable, removeItem }">
                     <v-btn
-                      @click="removePolicyAction(proxy.name, item, removeItem)"
-                      :disabled="!editable"
+                      :disabled="!listEditable"
                       icon="mdi-minus"
                       variant="tonal"
                       color="error"
-                      density="compact"
+                      :title="$t('action.remove')"
+                      :aria-label="$t('action.remove')"
+                      @click="removePolicyAction(proxy.name, item, removeItem)"
                     />
                   </template>
-                  <template #search="{ items, close, appendItem }">
-                    <v-list :items="items">
-                      <v-list-item v-for="item in items" :key="item.id">
-                        <v-card
-                          color="surface-variant"
-                          variant="tonal"
-                          density="compact"
-                        >
-                          <v-card-title>
-                            {{ item.action }} {{ item.target }}
-                          </v-card-title>
-                          <v-card-text>
-                            <v-form>
-                              <v-select
-                                v-model="item.effect"
-                                :items="['allow', 'deny']"
-                                :disabled="!editable"
-                                variant="outlined"
-                                density="compact"
-                                rounded
-                              />
-                            </v-form>
-                          </v-card-text>
-                          <v-card-actions>
-                            <v-btn
-                              @click="
-                                addPolicyAction(
-                                  proxy.name,
-                                  item.target,
-                                  item.action,
-                                  item.effect,
-                                  appendItem,
-                                  close
-                                )
-                              "
-                              :disabled="!(editable && item.effect)"
-                              :text="$t('action.add')"
-                              color="success"
-                              density="compact"
-                              variant="tonal"
-                              block
-                            />
-                          </v-card-actions>
-                        </v-card>
-                      </v-list-item>
-                    </v-list>
+                  <template #item-title="{ item }">
+                    <span class="font-weight-medium">{{ item.action }}</span>
+                    &nbsp;{{ item.target }}
+                  </template>
+                  <template #item-append="{ item, appendItem, close, editable: listEditable }">
+                    <v-select
+                      v-model="item.effect"
+                      :items="policyEffectOptions"
+                      :item-title="policyEffectTitle"
+                      :disabled="!listEditable"
+                      hide-details
+                      single-line
+                      class="policy-effect-select"
+                    />
+                    <v-btn
+                      v-request="
+                        () =>
+                          addPolicyAction(
+                            proxy.name,
+                            item.target,
+                            item.action,
+                            item.effect,
+                            appendItem,
+                            close,
+                          )
+                      "
+                      :disabled="!(listEditable && item.effect)"
+                      :text="$t('action.add')"
+                      color="primary"
+                      variant="tonal"
+                      size="small"
+                    />
                   </template>
                 </inner-edit-table>
               </v-col>
@@ -195,36 +178,45 @@ import {
   rbacPolicyTemplateListGet,
 } from "@/apis/admin";
 import { getResponse, getSimpleResponse } from "@/apis/base";
-import type { ItemActions, TableHeader } from "@/components/@types/table";
+import type { BatchActions, ItemActions, TableHeader } from "@/components/@types/table";
 import type { GroupDetailOut, GroupRbacPolicyDetailOut } from "./@types";
+import type { BatchResultOut } from "@/apis/@types/admin";
 import { useAppStore } from "@/stores/app";
 import { BackendDataType, SearchAction } from "@/types";
 import i18n from "@/utils/i18n";
 import { useForm } from "vee-validate";
 import { updateGroupSchema, createGroupSchema } from "@/schemas/group";
 import { vuetifyCfg } from "@/utils/form";
+import { EnumClass, enumLabelOf, enumOptionsOf } from "@/utils/enums";
 
+// policyEffectOptions 权限 effect 下拉可选项：来自统一枚举注册表 policyEffect，
+// title 为 label、value 为枚举值，语言切换即时刷新
+const policyEffectOptions = computed(() => enumOptionsOf(EnumClass.policyEffect));
+
+// policyEffectTitle 权限 effect 下拉项展示名：value 为枚举值，渲染期经统一枚举注册表 policyEffect 翻译
+const policyEffectTitle = (option: { title: string; value: string }): string =>
+  enumLabelOf(EnumClass.policyEffect, option.value);
+
+// 编辑表单：校验规则为 updateGroupSchema，用于修改用户组描述。
 const updateForm = useForm({
   validationSchema: updateGroupSchema,
 });
 
+// 新建表单：校验规则为 createGroupSchema，用于创建用户组。
 const createForm = useForm({
   validationSchema: createGroupSchema,
 });
 
 const [updateDescription, updateDescriptionProps] = updateForm.defineField(
   "description",
-  vuetifyCfg
+  vuetifyCfg,
 );
 
-const [createName, createNameProps] = createForm.defineField(
-  "name",
-  vuetifyCfg
-);
+const [createName, createNameProps] = createForm.defineField("name", vuetifyCfg);
 
 const [createDescription, createDescriptionProps] = createForm.defineField(
   "description",
-  vuetifyCfg
+  vuetifyCfg,
 );
 
 const appStore = useAppStore();
@@ -232,6 +224,7 @@ const searchTableRef = useTemplateRef("searchTableRef");
 const confirmDialogRef = useTemplateRef("confirmDialogRef");
 const createDialogRef = useTemplateRef("createDialogRef");
 const editDialogRef = useTemplateRef("editDialogRef");
+// 用户组内嵌策略表格的列定义。
 const groupPolicyHeaders: Array<TableHeader> = [
   {
     key: "target",
@@ -270,25 +263,35 @@ const groupPolicyHeaders: Array<TableHeader> = [
   },
 ];
 
+// 用户组内嵌策略表格的搜索列定义。
 const groupPolicySearchHeaders: Record<string, SearchAction> = {
   target: SearchAction.CONTAIN,
   action: SearchAction.CONTAIN,
 };
 
-const getActions = (item: Record<string, any>): ItemActions => {
+// projectFields 字段投影：行操作依赖字段恒定投影（name 定位），避免用户隐藏对应列后行操作失效
+const projectFields = (visible: string[]): string[] => ["id", "name", ...visible];
+
+// 行操作定义：编辑走详情弹窗，删除走确认弹窗。
+const getActions = (): ItemActions => {
   return {
     edit: detailGetAction,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete: function (item: Record<string, any>): void {
+      batchState.value = null;
       confirmDialogRef.value?.open(item);
     },
   };
 };
 
+// 拉取用户组详情并打开编辑弹窗。
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<GroupDetailOut>(
     groupDetailGet(item.name),
     async (rsp) => {
-      updateForm.resetField("description", { value: rsp.data.description });
+      // 复位与回填同属打开动作：原子重置全部字段与校验状态
+      updateForm.resetForm({ values: { description: rsp.data.description } });
       editDialogRef.value?.open(rsp.data);
     },
     async (rsp) => {
@@ -297,10 +300,12 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
+// 提交用户组描述修改。
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const itemUpdateAction = (proxy: Record<string, any>) => {
   updateForm.handleSubmit(async (values) => {
     await getSimpleResponse(
@@ -321,21 +326,57 @@ const itemUpdateAction = (proxy: Record<string, any>) => {
           timeout: 3000,
           color: "error",
         });
-      }
+      },
     );
   })();
 };
 
-const itemDeleteAction = async (item: Record<string, any>): Promise<void> => {
-  await getSimpleResponse(
-    groupDelete(item.name as string),
+// ---- 批量删除 ----
+// applyBatchResult 统一处理 BatchResultOut 响应：存在失败条目时以 error 提示失败数，否则沿用成功摘要
+const applyBatchResult = (summary: string, result: BatchResultOut): void => {
+  if (result.failed.length > 0) {
+    appStore.notify({
+      text: i18n.global.t("notice.batchResult", {
+        succeeded: result.succeeded,
+        failed: result.failed.length,
+      }),
+      timeout: 3000,
+      color: "error",
+    });
+    return;
+  }
+  appStore.notify({
+    text: summary,
+    timeout: 3000,
+    color: "success",
+  });
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type BatchState = { items: Record<string, any>[] };
+const batchState = ref<BatchState | null>(null);
+
+// 批量操作定义：删除需二次确认。
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getBatchActions = (items: Record<string, any>[]): BatchActions => {
+  return {
+    delete: () => {
+      batchState.value = { items };
+      confirmDialogRef.value?.open({});
+    },
+  };
+};
+
+// 批量删除用户组并刷新列表。
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const batchDeleteAction = async (items: Record<string, any>[]): Promise<void> => {
+  const names = items.map((i) => i.name as string);
+  await getResponse<BatchResultOut>(
+    groupDelete(names),
     async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
+      searchTableRef.value?.clearSelection?.();
       await searchTableRef.value?.refresh();
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "success",
-      });
     },
     async (rsp) => {
       appStore.notify({
@@ -343,20 +384,49 @@ const itemDeleteAction = async (item: Record<string, any>): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
-const openCreateDialogAction = () => {
-  createDialogRef.value?.open({ name: "", description: "" });
-  createForm.resetField("name", { value: "" });
-  createForm.resetField("description", { value: "" });
+// 删除单条或批量选中的用户组，并刷新列表。
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
+  const state = batchState.value;
+  if (state) {
+    batchState.value = null;
+    await batchDeleteAction(state.items);
+    return;
+  }
+  await getResponse<BatchResultOut>(
+    groupDelete(proxy.name as string),
+    async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
+      await searchTableRef.value?.refresh();
+    },
+    async (rsp) => {
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "error",
+      });
+    },
+  );
 };
 
+// 打开新建弹窗并重置表单。
+const openCreateDialogAction = () => {
+  // 打开动作里原子复位全部字段
+  const defaults = { name: "", description: "" };
+  createForm.resetForm({ values: defaults });
+  createDialogRef.value?.open(defaults);
+};
+
+// 提交新建用户组。
 const createAction = createForm.handleSubmit(async (values) => {
   await getSimpleResponse(
     groupCreate({
-      name: values.name,
+      // 名称单行文本提交前去除首尾空白，避免误输入空白创建出看似相同实则不同的记录
+      name: (values.name as string).trim(),
       description: values.description,
     }),
     async (rsp) => {
@@ -373,17 +443,19 @@ const createAction = createForm.handleSubmit(async (values) => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 });
 
+// 向用户组追加一条 RBAC 策略。
 const addPolicyAction = async (
   groupName: string,
   target: string,
   action: string,
   effect: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   appendItem: (item: Record<string, any>) => void,
-  close: () => void
+  close: () => void,
 ): Promise<void> => {
   await getResponse<GroupRbacPolicyDetailOut>(
     groupRbacPolicyAdd(groupName, {
@@ -407,14 +479,16 @@ const addPolicyAction = async (
         color: "error",
       });
       close();
-    }
+    },
   );
 };
 
+// 从用户组移除一条 RBAC 策略。
 const removePolicyAction = async (
   groupName: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   item: Record<string, any>,
-  callback: () => void
+  callback: () => void,
 ): Promise<void> => {
   await getSimpleResponse(
     groupRbacPolicyRemove(groupName, {
@@ -436,7 +510,14 @@ const removePolicyAction = async (
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 </script>
+
+<style scoped>
+/* effect 下拉保持固定宽度，使行内追加操作对齐。 */
+.policy-effect-select {
+  width: 108px;
+}
+</style>

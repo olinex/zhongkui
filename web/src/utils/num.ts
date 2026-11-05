@@ -25,7 +25,7 @@ export function numbersToHexArray(numbers: number[], padLength: number = 2): str
 export function numbersToHexString(
   numbers: number[],
   padLength: number = 2,
-  separator: string = ""
+  separator: string = "",
 ): string {
   const hexArray = numbersToHexArray(numbers, padLength);
   return hexArray.join(separator);

@@ -2,6 +2,7 @@ import * as yup from "yup";
 
 const namespace = yup
   .string()
+  .trim()
   .nonNullable()
   .required()
   .min(3)
@@ -9,6 +10,7 @@ const namespace = yup
   .label("model.capturer.field.namespace");
 const name = yup
   .string()
+  .trim()
   .nonNullable()
   .required()
   .min(3)
@@ -16,6 +18,7 @@ const name = yup
   .label("model.capturer.field.name");
 const version = yup
   .string()
+  .trim()
   .nonNullable()
   .required()
   .min(3)
@@ -23,6 +26,7 @@ const version = yup
   .label("model.capturer.field.version");
 const device = yup
   .string()
+  .trim()
   .nonNullable()
   .required()
   .min(2)
@@ -30,6 +34,7 @@ const device = yup
   .label("model.capturer.field.device");
 const bpfExpr = yup
   .string()
+  .trim()
   .nonNullable()
   .required()
   .min(3)
@@ -49,16 +54,8 @@ const timeout = yup
   .min(1)
   .max(24 * 60 * 60)
   .label("model.capturer.field.timeout");
-const promisc = yup
-  .bool()
-  .nonNullable()
-  .required()
-  .label("model.capturer.field.promisc");
-const enabled = yup
-  .bool()
-  .nonNullable()
-  .required()
-  .label("model.capturer.field.enabled");
+const promisc = yup.bool().nonNullable().required().label("model.capturer.field.promisc");
+const enabled = yup.bool().nonNullable().required().label("model.capturer.field.enabled");
 
 export const updateCapturerSchema = yup.object({
   device,

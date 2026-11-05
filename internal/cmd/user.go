@@ -7,53 +7,64 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"zhongkui.com/zhongkui/internal/manager"
-	"zhongkui.com/zhongkui/internal/manager/routes"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/cliinput"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/manager/config"
+	"zhongkuisec.com/zhongkui/internal/manager/views/user"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/cliinput"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
-func extractUserInput(v *viper.Viper) (routes.UserRegisterIn, error) {
-	var in routes.UserRegisterIn
-	if err := cliinput.Extract(v, &in, ""); err != nil {
-		return in, err
+// createUserInput 定义命令行创建用户的输入结构体
+// 继承 HTTP 注册输入，并额外包含是否为超级管理员的交互式确认
+type createUserInput struct {
+	user.UserRegisterIn
+	Superuser bool `viper:"superuser" prompt:"是否为超级管理员？"`
+}
+
+func extractUserInput(v *viper.Viper) (createUserInput, error) {
+	var in createUserInput
+	if err := cliinput.Extract(v, validator.Validate, &in, ""); err != nil {
+		return in, errors.WithStack(err)
 	}
 	return in, nil
 }
 
 func extractUsernamePassword(v *viper.Viper) (username, password string, err error) {
-	var in routes.UserPasswordLoginIn
-	if err := cliinput.Extract(v, &in, ""); err != nil {
-		return "", "", err
+	var in user.UserPasswordLoginIn
+	if err := cliinput.Extract(v, validator.Validate, &in, ""); err != nil {
+		return "", "", errors.WithStack(err)
 	}
 	return in.Username, in.Password, nil
 }
 
 var createUserCmd = &cobra.Command{
 	Use:   "user",
-	Short: "Create user by command line",
-	Long:  "Create a new user. Parameters can be provided via command-line flags. Any missing parameters will be prompted interactively.",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx, injector := cmdToolBox(cmd)
-		v := provider.MustInvokeViper(injector)
+	Short: "cmd.create.user.short",
+	Long:  "cmd.create.user.long",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx, i := cmdToolBox(cmd)
+		_ = provider.MustInvokeKeyDerivation(i)
+		v := provider.MustInvokeViper(i)
 		timeout := v.GetDuration("timeout")
-		superuser := v.GetBool("superuser")
 
 		userIn, err := extractUserInput(v)
 		if err != nil {
 			pterm.Error.Println(err.Error())
-			return err
+			return
 		}
 
 		hashedPassword, err := crypto.HashPassword(userIn.Password)
 		if err != nil {
-			return err
+			pterm.Error.Println(err.Error())
+			return
 		}
 
-		db := provider.MustInvokeCoreDatabase(injector)
+		db := provider.MustInvokeCoreDatabase(i)
 		user := &core.User{
 			UnionID:    serializer.NewHexUUIDv4(),
 			Username:   userIn.Username,
@@ -65,30 +76,30 @@ var createUserCmd = &cobra.Command{
 		ctx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
-		if err := user.Create(db.WithContext(ctx), superuser); err != nil {
+		if err := user.Create(db.WithContext(ctx), userIn.Superuser); err != nil {
 			pterm.Error.Println(err.Error())
-			return err
+			return
 		}
 
-		pterm.Success.Printf("create user %s success\n", user.Username)
-		return nil
+		pterm.Success.Println(translate.T("cli.user.create-success", map[string]any{"Username": user.Username}))
 	},
 }
 
 var forceResetPasswordCmd = &cobra.Command{
 	Use:   "force-reset-password",
-	Short: "Force reset user's password by command line",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx, injector := cmdToolBox(cmd)
-		v := provider.MustInvokeViper(injector)
+	Short: "cmd.force-reset-password.short",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx, i := cmdToolBox(cmd)
+		_ = provider.MustInvokeKeyDerivation(i)
+		v := provider.MustInvokeViper(i)
 		timeout := v.GetDuration("timeout")
 
-		db := provider.MustInvokeCoreDatabase(injector)
-		provider.MustInvokeRbac(injector)
+		db := provider.MustInvokeCoreDatabase(i)
+		provider.MustInvokeRbac(i)
 		username, password, err := extractUsernamePassword(v)
 		if err != nil {
 			pterm.Error.Println(err.Error())
-			return err
+			return
 		}
 		ctx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
@@ -96,50 +107,50 @@ var forceResetPasswordCmd = &cobra.Command{
 		var user core.User
 		if err := db.WithContext(ctx).Take(&user, &core.User{Username: username}).Error; err != nil {
 			pterm.Error.Println(err.Error())
-			return err
+			return
 		}
 
 		if err := user.ResetPassword(db.WithContext(ctx), password); err != nil {
 			pterm.Error.Println(err.Error())
-			return err
+			return
 		}
 
-		pterm.Success.Printf("reset user %s's password success\n", username)
-		return nil
+		pterm.Success.Println(translate.T("cli.user.reset-password-success", map[string]any{"Username": username}))
 	},
 }
 
 type createAccessKeyInput struct {
-	Username    string        `viper:"username" prompt:"please enter username" binding:"required,min=6,max=32,alphaunicode"`
-	Description string        `viper:"description" prompt:"please enter description" binding:"required,min=6,max=256"`
-	Enabled     bool          `viper:"enabled" prompt:"enable this access key?"`
-	TTL         time.Duration `viper:"ttl" prompt:"please enter ttl (e.g. 8760h, 0 for never)"`
+	Username    string        `viper:"username" prompt:"请输入用户名" binding:"required,min=6,max=32,alphaunicode"`
+	Description string        `viper:"description" prompt:"请输入描述" binding:"required,min=6,max=256"`
+	Enabled     bool          `viper:"enabled" prompt:"是否启用该访问密钥？"`
+	TTL         time.Duration `viper:"ttl" prompt:"请输入有效期 TTL（如 8760h，0 表示永不过期）"`
 }
 
 var createAccessKeyCmd = &cobra.Command{
 	Use:   "access-key",
-	Short: "Create access key for a user",
-	Long:  "Create an API access key for an existing user. Parameters can be provided via command-line flags or prompted interactively.",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx, injector := cmdToolBox(cmd)
-		v := provider.MustInvokeViper(injector)
+	Short: "cmd.create.access-key.short",
+	Long:  "cmd.create.access-key.long",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx, i := cmdToolBox(cmd)
+		_ = provider.MustInvokeKeyDerivation(i)
+		v := provider.MustInvokeViper(i)
 		timeout := v.GetDuration("timeout")
 
 		var in createAccessKeyInput
-		if err := cliinput.Extract(v, &in, ""); err != nil {
+		if err := cliinput.Extract(v, validator.Validate, &in, ""); err != nil {
 			pterm.Error.Println(err.Error())
-			return err
+			return
 		}
 
 		// 从配置文件读取最大数量，通过 ExtractConfig 获取带默认值的配置
-		cfg, err := manager.ExtractConfig(v)
+		cfg, err := config.ExtractConfig(v, validator.Validate)
 		if err != nil {
-			pterm.Error.Printf("cannot extract config: %v\n", err)
-			return err
+			pterm.Error.Println(translate.T("cli.user.extract-config-failed", map[string]any{"Err": err}))
+			return
 		}
 		maxCount := int(cfg.Auth.AccessKeyCount)
 
-		db := provider.MustInvokeCoreDatabase(injector)
+		db := provider.MustInvokeCoreDatabase(i)
 
 		// 查找用户
 		ctx, cancel := context.WithTimeout(ctx, timeout)
@@ -147,8 +158,8 @@ var createAccessKeyCmd = &cobra.Command{
 
 		var user core.User
 		if err := db.WithContext(ctx).Take(&user, &core.User{Username: in.Username}).Error; err != nil {
-			pterm.Error.Printf("cannot find user %s: %v\n", in.Username, err)
-			return err
+			pterm.Error.Println(translate.T("cli.user.not-found", map[string]any{"Username": in.Username, "Err": err}))
+			return
 		}
 
 		// 计算过期时间
@@ -161,53 +172,51 @@ var createAccessKeyCmd = &cobra.Command{
 		// 创建访问密钥对象
 		key, err := core.NewAccessKey(&user, in.Enabled, in.Description, expiredAt)
 		if err != nil {
-			pterm.Error.Printf("cannot create access key: %v\n", err)
-			return err
+			pterm.Error.Println(translate.T("cli.user.access-key-create-failed", map[string]any{"Err": err}))
+			return
 		}
 
 		// 使用复用方法在事务中创建
 		if err := key.CreateWithLimit(db.WithContext(ctx), maxCount); err != nil {
 			if err == core.ErrTooManyAccessKey {
-				pterm.Error.Printf("user %s already has %d access keys (max: %d)\n", in.Username, maxCount, maxCount)
+				pterm.Error.Println(translate.T("cli.user.access-key-max", map[string]any{"Username": in.Username, "Max": maxCount}))
 			} else {
-				pterm.Error.Printf("cannot create access key: %v\n", err)
+				pterm.Error.Println(translate.T("cli.user.access-key-create-failed", map[string]any{"Err": err}))
 			}
-			return err
+			return
 		}
 
 		// 输出访问密钥信息
-		pterm.Success.Printf("access key created for user %s\n", in.Username)
-		pterm.Info.Printf("  AccessKeyID:     %s\n", key.AccessKeyID)
-		pterm.Info.Printf("  AccessKeySecret: %s\n", key.Secret())
-		pterm.Info.Printf("  Description:     %s\n", key.Description)
-		pterm.Info.Printf("  Enabled:         %v\n", key.Enabled)
+		pterm.Success.Println(translate.T("cli.user.access-key-created", map[string]any{"Username": in.Username}))
+		pterm.Info.Println(translate.T("cli.user.access-key-id", map[string]any{"Value": key.AccessKeyID}))
+		pterm.Info.Println(translate.T("cli.user.access-key-secret", map[string]any{"Value": key.Secret()}))
+		pterm.Info.Println(translate.T("cli.user.access-key-description", map[string]any{"Value": key.Description}))
+		pterm.Info.Println(translate.T("cli.user.access-key-enabled", map[string]any{"Value": key.Enabled}))
 		if key.RawExpiredAt != nil {
-			pterm.Info.Printf("  ExpiredAt:       %s\n", key.RawExpiredAt.Format(time.RFC3339))
+			pterm.Info.Println(translate.T("cli.user.access-key-expired-at", map[string]any{"Value": key.RawExpiredAt.Format(time.RFC3339)}))
 		} else {
-			pterm.Info.Printf("  ExpiredAt:       never\n")
+			pterm.Info.Println(translate.T("cli.user.access-key-never-expires", nil))
 		}
-		return nil
 	},
 }
 
 func init() {
 	flags := createUserCmd.Flags()
-	flags.StringP("username", "u", "", "username for the new user (min 6 chars)")
-	flags.StringP("password", "p", "", "password for the new user (min 8 chars)")
-	flags.StringP("nicklename", "n", "", "nicklename for the new user (min 6 chars)")
-	flags.StringP("email", "e", "", "email for the new user")
-	flags.Duration("timeout", time.Minute, "timeout for inserting data into database")
-	flags.Bool("superuser", false, "create as superuser")
+	flags.StringP("username", "u", "", "flag.create.user.username")
+	flags.StringP("password", "p", "", "flag.create.user.password")
+	flags.StringP("nicklename", "n", "", "flag.create.user.nicklename")
+	flags.StringP("email", "e", "", "flag.create.user.email")
+	flags.Duration("timeout", time.Minute, "flag.create.user.timeout")
 
 	flags = forceResetPasswordCmd.Flags()
-	flags.StringP("username", "u", "", "username of the user to reset password for")
-	flags.StringP("password", "p", "", "new password for the user")
-	flags.Duration("timeout", time.Minute, "timeout for inserting data into database")
+	flags.StringP("username", "u", "", "flag.force-reset-password.username")
+	flags.StringP("password", "p", "", "flag.force-reset-password.password")
+	flags.Duration("timeout", time.Minute, "flag.force-reset-password.timeout")
 
 	flags = createAccessKeyCmd.Flags()
-	flags.StringP("username", "u", "", "username of the user to create access key for")
-	flags.StringP("description", "d", "", "description of the access key")
-	flags.Bool("enabled", true, "whether the access key is enabled")
-	flags.Duration("ttl", 0, "time-to-live for the access key from now (0 means never expires)")
-	flags.Duration("timeout", time.Minute, "timeout for database operations")
+	flags.StringP("username", "u", "", "flag.create.access-key.username")
+	flags.StringP("description", "d", "", "flag.create.access-key.description")
+	flags.Bool("enabled", true, "flag.create.access-key.enabled")
+	flags.Duration("ttl", 0, "flag.create.access-key.ttl")
+	flags.Duration("timeout", time.Minute, "flag.create.access-key.timeout")
 }

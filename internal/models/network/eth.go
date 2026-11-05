@@ -4,28 +4,26 @@ import (
 	"net"
 
 	"github.com/gopacket/gopacket/layers"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // EthernetHeaders 表示以太网帧的头部信息
 // 该结构体封装了以太网帧的关键头部字段，包括源MAC地址、目的MAC地址、
 // 以太网类型和帧长度。这些字段用于网络数据包的识别、路由和分析。
 //
-// 字段说明:
-//   - EthDstMAC: 目的MAC地址，标识数据包的目标网络接口
-//   - EthSrcMAC: 源MAC地址，标识数据包的发送网络接口
-//   - EthType:   以太网类型，标识上层协议类型（如IPv4、IPv6、ARP等）
-//   - EthLength: 帧长度，表示以太网帧的数据部分长度
-//
 // 数据库映射:
 //   - 使用GORM标签定义数据库约束和列类型
 //   - 使用JSON标签支持序列化和反序列化
 //   - 在ClickHouse中使用ZSTD(3)压缩算法优化存储
 type EthernetHeaders struct {
-	EthDstMAC serializer.MacAddr  `gorm:"type:FixedString(6)" json:"eth_dst_mac"`
-	EthSrcMAC serializer.MacAddr  `gorm:"type:FixedString(6)" json:"eth_src_mac"`
-	EthType   layers.EthernetType `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"eth_type"`
-	EthLength uint16              `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"eth_length"`
+	// EthDstMAC 目的 MAC 地址
+	EthDstMAC serializer.MacAddr `gorm:"type:FixedString(6)" json:"ethDstMac"`
+	// EthSrcMAC 源 MAC 地址
+	EthSrcMAC serializer.MacAddr `gorm:"type:FixedString(6)" json:"ethSrcMac"`
+	// EthType 以太网类型，标识上层协议类型（如 IPv4、IPv6、ARP 等）
+	EthType layers.EthernetType `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ethType"`
+	// EthLength 以太网帧数据部分长度（字节）
+	EthLength uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ethLength"`
 }
 
 // NewEthernetHeaders 从gopacket以太网层创建EthernetHeaders实例
@@ -51,6 +49,7 @@ func NewEthernetHeaders(eth *layers.Ethernet) *EthernetHeaders {
 	}
 }
 
+// NewLoopbackHeaders 构造回环（loopback）数据包使用的空以太网头部实例。
 func NewLoopbackHeaders() *EthernetHeaders {
 	return &EthernetHeaders{
 		EthDstMAC: serializer.MacAddr(net.HardwareAddr{}),
@@ -66,6 +65,8 @@ func NewLoopbackHeaders() *EthernetHeaders {
 //
 // 结构说明:
 //   - AsPacket: 提供数据包的基础元数据，包括时间戳、捕获信息、层堆栈等
+//   - RowMeta: 提供行级全局唯一 ID，供行详情接口按 namespace + id 定位单行；
+//     作为最底层的数据包模型，其 ID 经嵌入传递被 IPv4/IPv6/UDP/TCP 各上层数据包模型继承
 //   - EthernetHeaders: 提供以太网特定的头部信息
 //
 // 使用场景:
@@ -75,34 +76,6 @@ func NewLoopbackHeaders() *EthernetHeaders {
 //   - 网络故障排查
 type PacketEthernet struct {
 	AsPacket
-	EthernetHeaders
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=83,length=32"`
-}
-
-// GetPayload 返回载荷数据
-// 提供统一的接口获取载荷数据，便于后续处理
-func (p *PacketEthernet) GetPayload() []byte {
-	if p.Payload == nil {
-		return nil
-	}
-	return p.Payload.Value()
-}
-
-// FusedEthernet 表示融合后的以太网数据
-// 该结构体组合了AsFused基础结构和EthernetHeaders以太网头部信息，
-// 用于存储经过融合处理的数据包。融合数据通常包含多个相关数据包的信息，
-// 用于高级分析和聚合查询。
-//
-// 结构说明:
-//   - AsFused: 提供融合数据的基础元数据，包括时间戳、帧堆栈等
-//   - EthernetHeaders: 提供以太网特定的头部信息
-//
-// 使用场景:
-//   - 网络会话重组和分析
-//   - 流量聚合统计
-//   - 长期趋势分析
-//   - 大数据查询和报表
-type FusedEthernet struct {
-	AsFused
+	RowMeta
 	EthernetHeaders
 }

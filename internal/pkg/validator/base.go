@@ -1,45 +1,25 @@
 package validator
 
 import (
+	"fmt"
 	"reflect"
-	"sync"
 
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 )
 
+// Validate 是全局共享的校验器实例，绑定 gin 的 binding.Validator 引擎，
+// 已注册自定义标签名称函数：优先取 json 标签名，其次 mapstructure 标签名，最后回退字段名。
 var (
-	validations = map[string]func(fl validator.FieldLevel) bool{}
-	Validate    *validator.Validate
-	initOnce    sync.Once
+	Validate *validator.Validate
 )
 
-// mustValidate 获取全局验证器实例，用于数据校验。
-// 从 Gin 框架的 binding.Validator.Engine() 中提取 validator.Validate 实例，
-// 该函数通常在应用启动时调用，确保验证器可用。
-//
-// 使用场景：
-// 1. 在应用启动时初始化验证器
-// 2. 注册自定义验证规则
-// 3. 获取验证器实例进行手动验证
-//
-// 注意事项：
-// - 如果类型断言失败，函数会触发 panic，因此应在应用启动时确保验证器正确配置
-// - 该函数依赖于 Gin 框架的 binding 包，确保 Gin 已正确初始化
-//
-// 返回值：
-// *validator.Validate - 全局验证器实例，可用于注册自定义验证规则或执行验证
-func mustValidate() *validator.Validate {
+func newValidate() *validator.Validate {
 	v, ok := binding.Validator.Engine().(*validator.Validate)
 	if !ok {
 		panic("binding validator is not valid")
 	}
 	v.SetTagName("binding")
-	for tag, fn := range validations {
-		if err := v.RegisterValidation(tag, fn); err != nil {
-			panic(err)
-		}
-	}
 	// 注册标签名称函数，提高错误消息的可读性
 	// 优先使用 json 标签，其次使用 mapstructure 标签，最后使用字段名称
 	v.RegisterTagNameFunc(func(fld reflect.StructField) string {
@@ -54,16 +34,38 @@ func mustValidate() *validator.Validate {
 	return v
 }
 
-func init() {
-	// 注意：validations map 由 string.go、time.go 中包级变量的 init() 函数填充，
-	// 这些 init() 按文件名排序在 base.go 之后执行。因此不能在 base.go 的 init() 中
-	// 调用 mustValidate()，改为由外部调用方通过 Init() 显式触发。
+// Funcs 返回全部自定义校验规则的登记表（tag → 校验函数），是自定义规则的唯一登记处：
+// provider 用它把规则注册到全局校验器并为每个 tag 挂本地化文案，测试用它注册到自己的校验器。
+// 集中登记可避免各调用方重复抄写 tag 清单——漏抄某项会让该 tag 在对应场景被判为未注册规则，
+// 表现为绑定失败而非编译错误。
+func Funcs() map[string]validator.Func {
+	return map[string]validator.Func{
+		TagStrongPassword:         ValidateStrongPassword,
+		TagWindowsFileName:        ValidateWindowsFileName,
+		TagUnixFileName:           ValidateUnixFileName,
+		TagFileName:               ValidateFileName,
+		TagStrictFileName:         ValidateStrictFileName,
+		TagDirpath:                ValidateDirPath,
+		TagAlphanumSpecial:        ValidateAlphanumSpecial,
+		TagEnum:                   ValidateEnum,
+		TagHTTPURL:                ValidateHTTPURL,
+		TagJSONObject:             ValidateJSONObject,
+		TagTrimmed:                ValidateTrimmed,
+		TagNotBlank:               ValidateNotBlank,
+		TagGreaterThanCurrentTime: ValidateGtCurrentTime,
+		TagLesserThanCurrentTime:  ValidateLtCurrentTime,
+		TagCron:                   ValidateCronSpec,
+	}
 }
 
-// Init 初始化验证器，将 validations map 中的所有自定义验证规则注册到 Gin 的 binding engine。
-// 应用启动时或测试初始化时必须调用一次。使用 sync.Once 保证多次调用安全。
-func Init() {
-	initOnce.Do(func() {
-		Validate = mustValidate()
-	})
+func init() {
+	Validate = newValidate()
+	// 全局引擎自注册自定义校验规则：任何包（worker / CLI / 测试等）无需重复登记即可执行自定义 tag；
+	// 同名 tag 的 RegisterValidation 是覆盖写入，provider 与测试中的重复注册不会 panic。
+	for tag, fn := range Funcs() {
+		// 注册失败说明 tag 名非法或函数为 nil，属编程错误：启动期直接暴露，避免规则静默失效。
+		if err := Validate.RegisterValidation(tag, fn); err != nil {
+			panic(fmt.Sprintf("validator: register custom tag %q failed: %v", tag, err))
+		}
+	}
 }

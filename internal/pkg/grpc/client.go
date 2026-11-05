@@ -5,7 +5,7 @@ package grpc
 
 import (
 	g "google.golang.org/grpc"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // Client 是gRPC客户端连接的类型别名。
@@ -74,6 +74,7 @@ func NewClient(cfg *ClientConfig, extraOpts ...g.DialOption) (*Client, error) {
 	return &Client{conn}, nil
 }
 
+// Shutdown 关闭底层 gRPC 连接。
 func (c *Client) Shutdown() error {
 	return c.ClientConn.Close()
 }

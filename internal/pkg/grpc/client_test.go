@@ -8,7 +8,7 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/tls"
+	"zhongkuisec.com/zhongkui/internal/pkg/tls"
 )
 
 // ============================================
@@ -365,8 +365,8 @@ func TestNewClient_MultipleClients(t *testing.T) {
 			So(err2, ShouldBeNil)
 			So(client2, ShouldNotBeNil)
 
-			// 验证两个客户端是不同的实例
-			So(client1, ShouldNotEqual, client2)
+			// 验证两个客户端是不同的实例（指针比较，避免对活跃连接做反射深比较触发 data race）
+			So(client1 == client2, ShouldBeFalse)
 
 			// 清理
 			client1.Close()

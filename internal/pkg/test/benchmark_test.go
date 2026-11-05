@@ -1,3 +1,4 @@
+// Package test（本文件）提供基准测试与性能剖析能力的单元测试。
 package test
 
 import (
@@ -28,6 +29,7 @@ func allocWork() func() {
 	}
 }
 
+// TestRunBasic 测试 Run 的基本基准测试能力。
 func TestRunBasic(t *testing.T) {
 	Convey("Test Run basic functionality", t, func() {
 		Convey("Should benchmark a noop function", func() {
@@ -46,6 +48,7 @@ func TestRunBasic(t *testing.T) {
 	})
 }
 
+// TestRunWarmup 测试 Run 的预热选项。
 func TestRunWarmup(t *testing.T) {
 	Convey("Test Run with warmup", t, func() {
 		Convey("Should run warmup iterations without affecting result", func() {
@@ -62,6 +65,7 @@ func TestRunWarmup(t *testing.T) {
 	})
 }
 
+// TestRunWithAutoReport 测试 Run 的自动报告生成开关。
 func TestRunWithAutoReport(t *testing.T) {
 	Convey("Test Run with auto report", t, func() {
 		Convey("Should generate report file when autoReport is enabled", func() {
@@ -96,6 +100,7 @@ func TestRunWithAutoReport(t *testing.T) {
 	})
 }
 
+// TestBenchResultMetrics 测试 BenchResult 各项指标的换算。
 func TestBenchResultMetrics(t *testing.T) {
 	Convey("Test BenchResult metrics computation", t, func() {
 		Convey("NsPerOp should compute correctly", func() {
@@ -147,6 +152,7 @@ func TestBenchResultMetrics(t *testing.T) {
 	})
 }
 
+// TestBenchResultTimings 测试 BenchResult 的耗时分布统计。
 func TestBenchResultTimings(t *testing.T) {
 	Convey("Test BenchResult timing distribution", t, func() {
 		Convey("MinNs/MaxNs/AvgNs should compute from timings", func() {
@@ -190,6 +196,7 @@ func TestBenchResultTimings(t *testing.T) {
 	})
 }
 
+// TestReportString 测试 Markdown 报告的生成。
 func TestReportString(t *testing.T) {
 	Convey("Test ReportString output", t, func() {
 		Convey("Should generate valid markdown report", func() {
@@ -227,6 +234,7 @@ func TestReportString(t *testing.T) {
 	})
 }
 
+// TestReportToFile 测试报告写入文件及目录创建。
 func TestReportToFile(t *testing.T) {
 	Convey("Test ReportToFile", t, func() {
 		Convey("Should write report to file", func() {
@@ -267,6 +275,7 @@ func TestReportToFile(t *testing.T) {
 	})
 }
 
+// TestRunWithAllocWork 测试 Run 对内存分配工作负载的采集。
 func TestRunWithAllocWork(t *testing.T) {
 	Convey("Test Run with allocation workload", t, func() {
 		Convey("Should detect memory allocations", func() {
@@ -280,6 +289,7 @@ func TestRunWithAllocWork(t *testing.T) {
 	})
 }
 
+// TestRunMultipleCalls 测试多次调用 Run 的结果一致性。
 func TestRunMultipleCalls(t *testing.T) {
 	Convey("Test multiple Run calls produce consistent results", t, func() {
 		Convey("Should produce similar ns/op across runs", func() {
@@ -292,6 +302,7 @@ func TestRunMultipleCalls(t *testing.T) {
 	})
 }
 
+// TestRunWithProfiling 测试启用性能剖析时 Run 的行为。
 func TestRunWithProfiling(t *testing.T) {
 	Convey("Test Run with profiling enabled", t, func() {
 		Convey("Should generate profile files when profiling is enabled", func() {
@@ -344,6 +355,7 @@ func TestRunWithProfiling(t *testing.T) {
 	})
 }
 
+// TestRunWithoutProfiling 测试未启用剖析时不产生剖析数据。
 func TestRunWithoutProfiling(t *testing.T) {
 	Convey("Test Run without profiling", t, func() {
 		Convey("Should not include profiling sections when profiling is disabled", func() {
@@ -358,6 +370,7 @@ func TestRunWithoutProfiling(t *testing.T) {
 	})
 }
 
+// TestWithProfilingConfig 测试自定义剖析配置选项。
 func TestWithProfilingConfig(t *testing.T) {
 	Convey("Test WithProfilingConfig option", t, func() {
 		Convey("Should respect custom profiling configuration", func() {
@@ -382,6 +395,7 @@ func TestWithProfilingConfig(t *testing.T) {
 	})
 }
 
+// TestProfileResultMemStats 测试剖析过程中的内存统计采集。
 func TestProfileResultMemStats(t *testing.T) {
 	Convey("Test ProfileResult memory statistics", t, func() {
 		Convey("Should capture memory stats during profiling", func() {
@@ -406,6 +420,7 @@ func TestProfileResultMemStats(t *testing.T) {
 	})
 }
 
+// TestProfileTopFunctions 测试剖析结果中热点函数与分配点的解析。
 func TestProfileTopFunctions(t *testing.T) {
 	Convey("Test ProfileResult top functions", t, func() {
 		Convey("Should parse CPU profile into top functions", func() {
@@ -452,6 +467,7 @@ func TestProfileTopFunctions(t *testing.T) {
 	})
 }
 
+// TestGoroutineProfiling 验证性能剖析能捕获 goroutine 数量。
 func TestGoroutineProfiling(t *testing.T) {
 	Convey("Test goroutine profiling", t, func() {
 		Convey("Should capture goroutine count", func() {

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,111 +12,71 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	migcore "zhongkui.com/zhongkui/internal/migrations/core"
-	migraw "zhongkui.com/zhongkui/internal/migrations/raw"
-	apimodel "zhongkui.com/zhongkui/internal/models/api"
-	coremodel "zhongkui.com/zhongkui/internal/models/core"
-	netmodel "zhongkui.com/zhongkui/internal/models/network"
-	tagmodel "zhongkui.com/zhongkui/internal/models/tag"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/migrate"
-	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/migrations"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/migrate"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
-
-func coreModels() []any {
-	return []any{
-		&coremodel.User{},
-		&coremodel.Group{},
-		&coremodel.Namespace{},
-		&coremodel.Capturer{},
-		&coremodel.AccessKey{},
-		&coremodel.RbacPolicy{},
-		&coremodel.RbacPolicyTemplate{},
-		&tagmodel.RuleTag{},
-		&tagmodel.RuleCondition{},
-	}
-}
-
-func rawModels() []any {
-	return []any{
-		&netmodel.PacketEthernet{},
-		&netmodel.PacketIPv4{},
-		&netmodel.PacketIPv6{},
-		&netmodel.PacketIPv4TCP{},
-		&netmodel.PacketIPv6TCP{},
-		&netmodel.PacketIPv4UDP{},
-		&netmodel.FusedIPv4UDP{},
-		&netmodel.PacketIPv6UDP{},
-		&netmodel.FusedIPv6UDP{},
-		&netmodel.FusedIPv4{},
-		&netmodel.FusedIPv6{},
-		&netmodel.FusedIPv4TCP{},
-		&netmodel.FusedIPv6TCP{},
-		&netmodel.FusedIPv4UDP{},
-		&netmodel.FusedIPv6UDP{},
-		&netmodel.HttpTransport{},
-		&apimodel.HttpApiMeta{},
-		&apimodel.HttpApiNode{},
-		&tagmodel.TagSumming{},
-	}
-}
 
 var migrateUpCmd = &cobra.Command{
 	Use:   "up",
-	Short: "Apply all pending migrations",
-	RunE:  runMigrateCmd("up"),
+	Short: "cmd.migrate.up.short",
+	Run:   runMigrateCmd("up"),
 }
 
 var migrateDownCmd = &cobra.Command{
 	Use:   "down",
-	Short: "Rollback all applied migrations",
-	RunE:  runMigrateCmd("down"),
+	Short: "cmd.migrate.down.short",
+	Run:   runMigrateCmd("down"),
 }
 
 var migrateUpToCmd = &cobra.Command{
 	Use:   "up-to [version]",
-	Short: "Migrate up to a specific version",
+	Short: "cmd.migrate.up-to.short",
 	Args:  cobra.ExactArgs(1),
-	RunE:  runMigrateCmd("up-to"),
+	Run:   runMigrateCmd("up-to"),
 }
 
 var migrateDownToCmd = &cobra.Command{
 	Use:   "down-to [version]",
-	Short: "Rollback down to a specific version",
+	Short: "cmd.migrate.down-to.short",
 	Args:  cobra.ExactArgs(1),
-	RunE:  runMigrateCmd("down-to"),
+	Run:   runMigrateCmd("down-to"),
 }
 
 var migrateStatusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "Show migration status",
-	RunE:  runMigrateCmd("status"),
+	Short: "cmd.migrate.status.short",
+	Run:   runMigrateCmd("status"),
 }
 
 var migrateDryRunCmd = &cobra.Command{
 	Use:   "dry-run",
-	Short: "Dry run migrations on a temp database",
-	RunE:  runDryRunMigrateCmd,
+	Short: "cmd.migrate.dry-run.short",
+	Run:   runDryRunMigrateCmd,
 }
 
 var migrateDiffCmd = &cobra.Command{
 	Use:   "diff",
-	Short: "Compare database schema differences",
-	RunE:  runDiffMigrateCmd,
+	Short: "cmd.migrate.diff.short",
+	Run:   runDiffMigrateCmd,
 }
 
 var migrateCheckCmd = &cobra.Command{
 	Use:   "check",
-	Short: "Check model definitions against database schema",
-	RunE:  runCheckMigrateCmd,
+	Short: "cmd.migrate.check.short",
+	Run:   runCheckMigrateCmd,
 }
 
 var migrateCreateCmd = &cobra.Command{
 	Use:   "create [name]",
-	Short: "Create a SQL migration file in the migrations directory",
+	Short: "cmd.migrate.create.short",
 	Args:  cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		_, i := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(i)
 		dbTarget := targetFromViper(v)
@@ -126,12 +85,11 @@ var migrateCreateCmd = &cobra.Command{
 		for _, dbName := range targetDBs(dbTarget) {
 			filePath, err := createMigrationFile(dbName, name)
 			if err != nil {
-				pterm.Error.Printf("%s: %v\n", dbName, err)
-				return err
+				pterm.Error.Println(translate.T("cli.migrate.create-failed", map[string]any{"DB": dbName, "Err": err}))
+				return
 			}
-			pterm.Success.Printf("created %s\n", filePath)
+			pterm.Success.Println(translate.T("cli.migrate.created", map[string]any{"Path": filePath}))
 		}
-		return nil
 	},
 }
 
@@ -181,12 +139,11 @@ func nextMigrationVersion(dir string) int {
 	return maxVersion + 1
 }
 
-func runMigrateCmd(action string) func(cmd *cobra.Command, args []string) error {
-	return func(cmd *cobra.Command, args []string) error {
+func runMigrateCmd(action string) func(cmd *cobra.Command, args []string) {
+	return func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
+		_ = provider.MustInvokeKeyDerivation(i)
 		v := provider.MustInvokeViper(i)
-		coreDB := provider.MustInvokeCoreDatabase(i)
-		rawDB := provider.MustInvokeRawDatabase(i)
 
 		timeout := v.GetDuration("timeout")
 		if timeout > 0 {
@@ -198,20 +155,22 @@ func runMigrateCmd(action string) func(cmd *cobra.Command, args []string) error 
 		dbTarget := targetFromViper(v)
 
 		for _, dbName := range targetDBs(dbTarget) {
-			pterm.DefaultSection.Printf("%s (%s)", action, dbName)
-			if err := migrateDB(ctx, v, coreDB, rawDB, dbName, args, action); err != nil {
-				pterm.Error.Printf("%s %s: %v\n", dbName, action, err)
-				return err
+			gormDB := provider.MustInvokeDatabase(i, dbName)
+			pterm.DefaultSection.Println(translate.T("cli.migrate.section", map[string]any{"Action": action, "DB": dbName}))
+
+			if err := migrateDB(ctx, v, gormDB, dbName, args, action); err != nil {
+				pterm.Error.Println(translate.T("cli.migrate.action-failed", map[string]any{"DB": dbName, "Action": action, "Err": err}))
+				return
 			}
 		}
-		return nil
+		pterm.Success.Println(translate.T("cli.migrate.completed", nil))
 	}
 }
 
-func migrateDB(ctx context.Context, v *viper.Viper, coreDB, rawDB *database.DB, dbName string, args []string, action string) error {
-	m, err := createMigratorForDB(v, coreDB, rawDB, dbName)
+func migrateDB(ctx context.Context, v *viper.Viper, gormDB *database.DB, dbName string, args []string, action string) error {
+	m, err := createMigratorForDB(v, gormDB, dbName)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	defer m.Close()
 
@@ -223,22 +182,23 @@ func migrateDB(ctx context.Context, v *viper.Viper, coreDB, rawDB *database.DB, 
 	case "status":
 		return m.Status(ctx)
 	case "up-to":
-		v := parseInt64(args[0])
+		v, err := parseInt64(args[0])
+		if err != nil {
+			return errors.WithStack(err)
+		}
 		return m.UpTo(ctx, v)
 	case "down-to":
-		v := parseInt64(args[0])
+		v, err := parseInt64(args[0])
+		if err != nil {
+			return errors.WithStack(err)
+		}
 		return m.DownTo(ctx, v)
 	default:
 		return errors.Newf("unknown action: %s", action)
 	}
 }
 
-func createMigratorForDB(v *viper.Viper, coreDB, rawDB *database.DB, dbName string) (*migrate.Migrator, error) {
-	gormDB := dbForName(coreDB, rawDB, dbName)
-	if gormDB == nil {
-		return nil, errors.Newf("unknown database: %s", dbName)
-	}
-
+func createMigratorForDB(v *viper.Viper, gormDB *database.DB, dbName string) (*migrate.Migrator, error) {
 	sqlDB, err := gormDB.DB()
 	if err != nil {
 		return nil, errors.Newf("failed to get database connection: %v", err)
@@ -251,157 +211,123 @@ func createMigratorForDB(v *viper.Viper, coreDB, rawDB *database.DB, dbName stri
 		driverName = "postgres"
 	case "clickhouse":
 		driverName = "clickhouse"
-	case "sqlite":
-		driverName = "sqlite3"
 	}
 
 	verbose := v.GetBool("verbose")
 	cfg := migrate.NewConfig(driverName, "").
+		WithName(dbName).
 		WithVerbose(verbose).
-		WithMigrations(migrationsFor(dbName), ".")
+		WithMigrations(migrations.MigrationFor(dbName), ".")
 
-	goose.SetBaseFS(migrationsFor(dbName))
+	goose.SetBaseFS(migrations.MigrationFor(dbName))
 
 	return migrate.NewMigratorFromDB(cfg, sqlDB)
 }
 
-func runDryRunMigrateCmd(cmd *cobra.Command, args []string) error {
+func runDryRunMigrateCmd(cmd *cobra.Command, args []string) {
 	ctx, i := cmdToolBox(cmd)
 	v := provider.MustInvokeViper(i)
 
 	dbTarget := targetFromViper(v)
 	for _, dbName := range targetDBs(dbTarget) {
-		pterm.DefaultSection.Printf("dry-run %s", dbName)
+		pterm.DefaultSection.Println(translate.T("cli.migrate.dry-run-section", map[string]any{"DB": dbName}))
 		if err := migrateDryRunDB(ctx, v, dbName); err != nil {
-			pterm.Error.Printf("dry-run %s: %v\n", dbName, err)
+			pterm.Error.Println(translate.T("cli.migrate.dry-run-db-failed", map[string]any{"DB": dbName, "Err": err}))
 		}
 	}
-	return nil
 }
 
 func migrateDryRunDB(ctx context.Context, v *viper.Viper, dbName string) error {
 	dbCfg, err := getDBConfig(v, dbName)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	mc := migrate.NewConfig(dbCfg.Driver, dbCfg.DSN).
+		WithName(dbName).
 		WithKeepTemp(false).
-		WithMigrations(migrationsFor(dbName), ".")
+		WithMigrations(migrations.MigrationFor(dbName), ".")
 
 	result, err := migrate.DryRun(ctx, mc)
 	if err != nil {
 		return errors.Newf("dry-run failed: %v", err)
 	}
 	if result.Success {
-		pterm.Success.Println("dry-run succeeded")
+		pterm.Success.Println(translate.T("cli.migrate.dry-run-succeeded", nil))
 	} else {
-		pterm.Error.Printf("dry-run failed: %v\n", result.Error)
+		pterm.Error.Println(translate.T("cli.migrate.dry-run-failed", map[string]any{"Err": result.Error}))
 	}
 	return nil
 }
 
-func runDiffMigrateCmd(cmd *cobra.Command, args []string) error {
+func runDiffMigrateCmd(cmd *cobra.Command, args []string) {
 	ctx, i := cmdToolBox(cmd)
 	v := provider.MustInvokeViper(i)
 
 	dbTarget := targetFromViper(v)
 	for _, dbName := range targetDBs(dbTarget) {
-		pterm.DefaultSection.Printf("diff %s", dbName)
+		pterm.DefaultSection.Println(translate.T("cli.migrate.diff-section", map[string]any{"DB": dbName}))
 		if err := migrateDiffDB(ctx, v, dbName); err != nil {
-			pterm.Error.Printf("diff %s: %v\n", dbName, err)
+			pterm.Error.Println(translate.T("cli.migrate.diff-failed", map[string]any{"DB": dbName, "Err": err}))
 		}
 	}
-	return nil
 }
 
-func runCheckMigrateCmd(cmd *cobra.Command, args []string) error {
+func runCheckMigrateCmd(cmd *cobra.Command, args []string) {
 	ctx, i := cmdToolBox(cmd)
 	v := provider.MustInvokeViper(i)
 
 	dbTarget := targetFromViper(v)
 	keepTemp := v.GetBool("keep-temp")
 	for _, dbName := range targetDBs(dbTarget) {
-		pterm.DefaultSection.Printf("check %s", dbName)
-		if err := migrateCheckDB(ctx, v, dbName, keepTemp); err != nil {
-			pterm.Error.Printf("check %s: %v\n", dbName, err)
+		pterm.DefaultSection.Println(translate.T("cli.migrate.check-section", map[string]any{"DB": dbName}))
+		if err := migrateCheckDB(ctx, v, dbName, keepTemp, provider.Models(dbName)); err != nil {
+			pterm.Error.Println(translate.T("cli.migrate.check-failed", map[string]any{"DB": dbName, "Err": err}))
 		}
 	}
-	return nil
 }
 
-func migrateCheckDB(ctx context.Context, v *viper.Viper, dbName string, keepTemp bool) error {
+func migrateCheckDB(ctx context.Context, v *viper.Viper, dbName string, keepTemp bool, models []any) error {
 	dbCfg, err := getDBConfig(v, dbName)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	mc := migrate.NewConfig(dbCfg.Driver, dbCfg.DSN).
+		WithName(dbName).
 		WithKeepTemp(keepTemp).
-		WithMigrations(migrationsFor(dbName), ".")
+		WithMigrations(migrations.MigrationFor(dbName), ".")
 
-	return migrate.Check(ctx, mc, modelsForDB(dbName))
-}
-
-func modelsForDB(dbName string) []any {
-	switch dbName {
-	case "core":
-		return coreModels()
-	case "raw":
-		return rawModels()
-	default:
-		return nil
-	}
+	return migrate.Check(ctx, mc, models)
 }
 
 func migrateDiffDB(ctx context.Context, v *viper.Viper, dbName string) error {
 	dbCfg, err := getDBConfig(v, dbName)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	mc := migrate.NewConfig(dbCfg.Driver, dbCfg.DSN).
+		WithName(dbName).
 		WithKeepTemp(false).
-		WithMigrations(migrationsFor(dbName), ".")
+		WithMigrations(migrations.MigrationFor(dbName), ".")
 
 	return migrate.Diff(ctx, mc, mc)
 }
 
-func dbForName(coreDB, rawDB *database.DB, dbName string) *database.DB {
-	switch dbName {
-	case "core":
-		return coreDB
-	case "raw":
-		return rawDB
-	default:
-		return nil
-	}
-}
-
 func targetDBs(target string) []string {
 	switch target {
-	case "core":
-		return []string{"core"}
-	case "raw":
-		return []string{"raw"}
+	case base.CoreDbName:
+		return []string{base.CoreDbName}
+	case base.RawDbName:
+		return []string{base.RawDbName}
 	default:
-		return []string{"core", "raw"}
-	}
-}
-
-func migrationsFor(dbName string) embed.FS {
-	switch dbName {
-	case "core":
-		return migcore.Migrations
-	case "raw":
-		return migraw.Migrations
-	default:
-		panic("unknown db: " + dbName)
+		return []string{base.CoreDbName, base.RawDbName}
 	}
 }
 
 func getDBConfig(v *viper.Viper, dbName string) (*database.Config, error) {
-	cfg, err := database.ExtractConfig(v, dbName)
+	cfg, err := database.ExtractConfig(v, validator.Validate, dbName)
 	if err != nil {
 		return nil, errors.Newf("failed to extract %s database config: %v", dbName, err)
 	}
@@ -413,10 +339,13 @@ func targetFromViper(v *viper.Viper) string {
 	return target
 }
 
-func parseInt64(s string) int64 {
+// parseInt64 解析迁移版本号；非法输入必须报错，不能静默按 0 处理。
+func parseInt64(s string) (int64, error) {
 	var v int64
-	fmt.Sscanf(s, "%d", &v)
-	return v
+	if _, err := fmt.Sscanf(s, "%d", &v); err != nil {
+		return 0, errors.Newf("invalid migration version %q: %v", s, err)
+	}
+	return v, nil
 }
 
 func init() {
@@ -424,13 +353,13 @@ func init() {
 		migrateUpCmd, migrateDownCmd, migrateUpToCmd, migrateDownToCmd,
 		migrateStatusCmd, migrateDryRunCmd, migrateDiffCmd, migrateCheckCmd, migrateCreateCmd,
 	} {
-		c.Flags().String("db", "all", "target database: core, raw, all")
-		c.Flags().Bool("verbose", false, "print migration SQL")
-		c.Flags().Duration("timeout", 0, "migration timeout (0 means no timeout)")
+		c.Flags().String("db", "all", "flag.migrate.db")
+		c.Flags().Bool("verbose", false, "flag.migrate.verbose")
+		c.Flags().Duration("timeout", 0, "flag.migrate.timeout")
 	}
 
-	migrateDownCmd.Flags().Bool("force", false, "skip confirmation")
-	migrateDryRunCmd.Flags().Bool("keep-temp", false, "keep temp database")
-	migrateDiffCmd.Flags().Bool("keep-temp", false, "keep temp database")
-	migrateCheckCmd.Flags().Bool("keep-temp", false, "keep temp database")
+	migrateDownCmd.Flags().Bool("force", false, "flag.migrate.force")
+	migrateDryRunCmd.Flags().Bool("keep-temp", false, "flag.migrate.keep-temp")
+	migrateDiffCmd.Flags().Bool("keep-temp", false, "flag.migrate.keep-temp")
+	migrateCheckCmd.Flags().Bool("keep-temp", false, "flag.migrate.keep-temp")
 }

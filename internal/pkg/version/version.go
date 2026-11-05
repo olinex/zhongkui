@@ -1,7 +1,8 @@
+// Package version 提供构建版本信息的读取与格式化：语义化版本号、commit、构建时间与
+// 构建者，支持经 -ldflags 注入，并在缺失时回退到 git 命令获取 commit。
 package version
 
 import (
-	"encoding/json"
 	"os/exec"
 	"strings"
 )
@@ -78,12 +79,6 @@ func (v versionInfo) Verbose() string {
 		panic(err)
 	}
 	return b.String()
-}
-
-// JSON 返回 JSON 格式的版本信息
-func (v versionInfo) JSON() string {
-	data, _ := json.MarshalIndent(v, "", "  ")
-	return string(data)
 }
 
 // gitCommit 尝试通过执行 git rev-parse 获取当前 commit hash

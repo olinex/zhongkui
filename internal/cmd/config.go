@@ -1,17 +1,19 @@
 package cmd
 
 import (
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"zhongkui.com/zhongkui/internal/manager"
-	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/manager/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 var describeConfigCmd = &cobra.Command{
 	Use:   "config",
-	Short: "Show default config descriptions",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Short: "cmd.describe.config.short",
+	Run: func(cmd *cobra.Command, args []string) {
 		descs := provider.DescribeLoggerConfig()
-		descs.Join(manager.DescribeConfig())
+		descs.Join(config.DescribeConfig())
 		descs.Join(provider.DescribeCryptoConfig())
 		descs.Join(provider.DescribeDatabaseConfig())
 		descs.Join(provider.DescribeEtcdConfig())
@@ -20,7 +22,13 @@ var describeConfigCmd = &cobra.Command{
 		descs.Join(provider.DescribeGrpcClientConfig())
 		descs.Join(provider.DescribeGrpcServerConfig())
 		descs.Join(provider.DescribePipelineConfig())
-		descs.Join(provider.DescribeTranslateConfig())
-		return descs.Describe()
+		descs.Join(provider.DescribeMailConfig())
+		descs.Join(provider.DescribeHealthConfig())
+		// 表头经 translate.T 按 key 本地化（cli.config.col-*）；配置项说明以结构体
+		// comment 标签为唯一事实来源，英文翻译可追加到 en.toml 的 config.<path>
+		if err := descs.Describe(func(key, fallback string) string { return translate.T(key, nil) }); err != nil {
+			pterm.Error.Println(err.Error())
+			return
+		}
 	},
 }

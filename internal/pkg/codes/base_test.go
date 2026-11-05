@@ -8,69 +8,71 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+// 测试 ISO 标准与集合类常量的取值。
 func TestBaseConstants(t *testing.T) {
 	Convey("验证 ISO 标准常量值", t, func() {
 		Convey("1. 验证 LANGUAGE 常量", func(c C) {
-			So(LANGUAGE, ShouldEqual, "standards/iso_639-2.json")
+			So(Language, ShouldEqual, "standards/iso_639-2.json")
 		})
-		Convey("2. 验证 COUNTRY_AREA 常量", func(c C) {
-			So(COUNTRY_AREA, ShouldEqual, "standards/iso_3166-1.json")
+		Convey("2. 验证 CountryArea 常量", func(c C) {
+			So(CountryArea, ShouldEqual, "standards/iso_3166-1.json")
 		})
 		Convey("3. 验证 CURRENCY 常量", func(c C) {
-			So(CURRENCY, ShouldEqual, "standards/iso_4217.json")
+			So(Currency, ShouldEqual, "standards/iso_4217.json")
 		})
-		Convey("4. 验证 SCRIPT_LANGUAGE 常量", func(c C) {
-			So(SCRIPT_LANGUAGE, ShouldEqual, "standards/iso_15924.json")
+		Convey("4. 验证 ScriptLanguage 常量", func(c C) {
+			So(ScriptLanguage, ShouldEqual, "standards/iso_15924.json")
 		})
 	})
 
 	Convey("验证集合类常量值", t, func() {
-		Convey("1. 验证 FILENAME_EXTENSION 常量", func(c C) {
-			So(FILENAME_EXTENSION, ShouldEqual, "collections/filename_extensions.json")
+		Convey("1. 验证 FilenameExtension 常量", func(c C) {
+			So(FilenameExtension, ShouldEqual, "collections/filename_extensions.json")
 		})
 	})
 }
 
+// 测试常量路径的前缀、后缀与 ISO 编号。
 func TestBaseConstantsPathFormat(t *testing.T) {
 	Convey("验证常量路径前缀格式", t, func() {
 		Convey("1. 标准类常量路径应以 standards/ 开头", func(c C) {
-			So(strings.HasPrefix(LANGUAGE, "standards/"), ShouldBeTrue)
-			So(strings.HasPrefix(COUNTRY_AREA, "standards/"), ShouldBeTrue)
-			So(strings.HasPrefix(CURRENCY, "standards/"), ShouldBeTrue)
-			So(strings.HasPrefix(SCRIPT_LANGUAGE, "standards/"), ShouldBeTrue)
+			So(strings.HasPrefix(Language, "standards/"), ShouldBeTrue)
+			So(strings.HasPrefix(CountryArea, "standards/"), ShouldBeTrue)
+			So(strings.HasPrefix(Currency, "standards/"), ShouldBeTrue)
+			So(strings.HasPrefix(ScriptLanguage, "standards/"), ShouldBeTrue)
 		})
 		Convey("2. 集合类常量路径应以 collections/ 开头", func(c C) {
-			So(strings.HasPrefix(FILENAME_EXTENSION, "collections/"), ShouldBeTrue)
+			So(strings.HasPrefix(FilenameExtension, "collections/"), ShouldBeTrue)
 		})
 	})
 
 	Convey("验证常量路径后缀格式", t, func() {
 		Convey("1. 所有常量路径应以 .json 结尾", func(c C) {
-			So(strings.HasSuffix(LANGUAGE, ".json"), ShouldBeTrue)
-			So(strings.HasSuffix(COUNTRY_AREA, ".json"), ShouldBeTrue)
-			So(strings.HasSuffix(CURRENCY, ".json"), ShouldBeTrue)
-			So(strings.HasSuffix(SCRIPT_LANGUAGE, ".json"), ShouldBeTrue)
-			So(strings.HasSuffix(FILENAME_EXTENSION, ".json"), ShouldBeTrue)
+			So(strings.HasSuffix(Language, ".json"), ShouldBeTrue)
+			So(strings.HasSuffix(CountryArea, ".json"), ShouldBeTrue)
+			So(strings.HasSuffix(Currency, ".json"), ShouldBeTrue)
+			So(strings.HasSuffix(ScriptLanguage, ".json"), ShouldBeTrue)
+			So(strings.HasSuffix(FilenameExtension, ".json"), ShouldBeTrue)
 		})
 	})
 
 	Convey("验证常量路径中包含对应的 ISO 编号", t, func() {
 		Convey("1. LANGUAGE 路径应包含 639-2", func(c C) {
-			So(strings.Contains(LANGUAGE, "639-2"), ShouldBeTrue)
+			So(strings.Contains(Language, "639-2"), ShouldBeTrue)
 		})
-		Convey("2. COUNTRY_AREA 路径应包含 3166-1", func(c C) {
-			So(strings.Contains(COUNTRY_AREA, "3166-1"), ShouldBeTrue)
+		Convey("2. CountryArea 路径应包含 3166-1", func(c C) {
+			So(strings.Contains(CountryArea, "3166-1"), ShouldBeTrue)
 		})
 		Convey("3. CURRENCY 路径应包含 4217", func(c C) {
-			So(strings.Contains(CURRENCY, "4217"), ShouldBeTrue)
+			So(strings.Contains(Currency, "4217"), ShouldBeTrue)
 		})
-		Convey("4. SCRIPT_LANGUAGE 路径应包含 15924", func(c C) {
-			So(strings.Contains(SCRIPT_LANGUAGE, "15924"), ShouldBeTrue)
+		Convey("4. ScriptLanguage 路径应包含 15924", func(c C) {
+			So(strings.Contains(ScriptLanguage, "15924"), ShouldBeTrue)
 		})
 	})
 
 	Convey("验证各常量值互不相同", t, func() {
-		all := []string{LANGUAGE, COUNTRY_AREA, CURRENCY, SCRIPT_LANGUAGE, FILENAME_EXTENSION}
+		all := []string{Language, CountryArea, Currency, ScriptLanguage, FilenameExtension}
 		seen := make(map[string]bool, len(all))
 		for _, v := range all {
 			So(seen[v], ShouldBeFalse)
@@ -79,28 +81,29 @@ func TestBaseConstantsPathFormat(t *testing.T) {
 	})
 }
 
+// 测试嵌入的标准文件可访问且为合法 JSON。
 func TestEmbeddedStandards(t *testing.T) {
 	Convey("验证嵌入的标准文件可访问", t, func() {
 		Convey("1. LANGUAGE 文件可打开", func(c C) {
-			f, err := embeddedStandards.Open(LANGUAGE)
+			f, err := embeddedStandards.Open(Language)
 			So(err, ShouldBeNil)
 			So(f, ShouldNotBeNil)
 			f.Close()
 		})
-		Convey("2. COUNTRY_AREA 文件可打开", func(c C) {
-			f, err := embeddedStandards.Open(COUNTRY_AREA)
+		Convey("2. CountryArea 文件可打开", func(c C) {
+			f, err := embeddedStandards.Open(CountryArea)
 			So(err, ShouldBeNil)
 			So(f, ShouldNotBeNil)
 			f.Close()
 		})
 		Convey("3. CURRENCY 文件可打开", func(c C) {
-			f, err := embeddedStandards.Open(CURRENCY)
+			f, err := embeddedStandards.Open(Currency)
 			So(err, ShouldBeNil)
 			So(f, ShouldNotBeNil)
 			f.Close()
 		})
-		Convey("4. SCRIPT_LANGUAGE 文件可打开", func(c C) {
-			f, err := embeddedStandards.Open(SCRIPT_LANGUAGE)
+		Convey("4. ScriptLanguage 文件可打开", func(c C) {
+			f, err := embeddedStandards.Open(ScriptLanguage)
 			So(err, ShouldBeNil)
 			So(f, ShouldNotBeNil)
 			f.Close()
@@ -109,7 +112,7 @@ func TestEmbeddedStandards(t *testing.T) {
 
 	Convey("验证嵌入的标准文件非空且为合法 JSON", t, func() {
 		Convey("1. LANGUAGE 文件内容非空且以 { 开头", func(c C) {
-			f, err := embeddedStandards.Open(LANGUAGE)
+			f, err := embeddedStandards.Open(Language)
 			So(err, ShouldBeNil)
 			defer f.Close()
 			info, err := f.Stat()
@@ -120,8 +123,8 @@ func TestEmbeddedStandards(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(string(buf), ShouldEqual, "{")
 		})
-		Convey("2. COUNTRY_AREA 文件内容非空且以 { 开头", func(c C) {
-			f, err := embeddedStandards.Open(COUNTRY_AREA)
+		Convey("2. CountryArea 文件内容非空且以 { 开头", func(c C) {
+			f, err := embeddedStandards.Open(CountryArea)
 			So(err, ShouldBeNil)
 			defer f.Close()
 			info, err := f.Stat()
@@ -133,7 +136,7 @@ func TestEmbeddedStandards(t *testing.T) {
 			So(string(buf), ShouldEqual, "{")
 		})
 		Convey("3. CURRENCY 文件内容非空且以 { 开头", func(c C) {
-			f, err := embeddedStandards.Open(CURRENCY)
+			f, err := embeddedStandards.Open(Currency)
 			So(err, ShouldBeNil)
 			defer f.Close()
 			info, err := f.Stat()
@@ -144,8 +147,8 @@ func TestEmbeddedStandards(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(string(buf), ShouldEqual, "{")
 		})
-		Convey("4. SCRIPT_LANGUAGE 文件内容非空且以 { 开头", func(c C) {
-			f, err := embeddedStandards.Open(SCRIPT_LANGUAGE)
+		Convey("4. ScriptLanguage 文件内容非空且以 { 开头", func(c C) {
+			f, err := embeddedStandards.Open(ScriptLanguage)
 			So(err, ShouldBeNil)
 			defer f.Close()
 			info, err := f.Stat()
@@ -181,10 +184,11 @@ func TestEmbeddedStandards(t *testing.T) {
 	})
 }
 
+// 测试嵌入的集合文件可访问且为合法 JSON。
 func TestEmbeddedCollections(t *testing.T) {
 	Convey("验证嵌入的集合文件可访问", t, func() {
-		Convey("1. FILENAME_EXTENSION 文件可打开", func(c C) {
-			f, err := embeddedCollections.Open(FILENAME_EXTENSION)
+		Convey("1. FilenameExtension 文件可打开", func(c C) {
+			f, err := embeddedCollections.Open(FilenameExtension)
 			So(err, ShouldBeNil)
 			So(f, ShouldNotBeNil)
 			f.Close()
@@ -192,8 +196,8 @@ func TestEmbeddedCollections(t *testing.T) {
 	})
 
 	Convey("验证嵌入的集合文件非空且为合法 JSON", t, func() {
-		Convey("1. FILENAME_EXTENSION 文件内容非空且以 { 开头", func(c C) {
-			f, err := embeddedCollections.Open(FILENAME_EXTENSION)
+		Convey("1. FilenameExtension 文件内容非空且以 { 开头", func(c C) {
+			f, err := embeddedCollections.Open(FilenameExtension)
 			So(err, ShouldBeNil)
 			defer f.Close()
 			info, err := f.Stat()
@@ -221,25 +225,27 @@ func TestEmbeddedCollections(t *testing.T) {
 	})
 }
 
+// 测试两个嵌入文件系统相互隔离。
 func TestEmbeddedFSIsolation(t *testing.T) {
 	Convey("验证两个嵌入文件系统相互隔离", t, func() {
 		Convey("1. embeddedStandards 不能访问 collections 目录中的文件", func(c C) {
-			_, err := embeddedStandards.Open(FILENAME_EXTENSION)
+			_, err := embeddedStandards.Open(FilenameExtension)
 			So(err, ShouldNotBeNil)
 		})
 		Convey("2. embeddedCollections 不能访问 standards 目录中的文件", func(c C) {
-			_, err := embeddedCollections.Open(LANGUAGE)
+			_, err := embeddedCollections.Open(Language)
 			So(err, ShouldNotBeNil)
-			_, err = embeddedCollections.Open(COUNTRY_AREA)
+			_, err = embeddedCollections.Open(CountryArea)
 			So(err, ShouldNotBeNil)
-			_, err = embeddedCollections.Open(CURRENCY)
+			_, err = embeddedCollections.Open(Currency)
 			So(err, ShouldNotBeNil)
-			_, err = embeddedCollections.Open(SCRIPT_LANGUAGE)
+			_, err = embeddedCollections.Open(ScriptLanguage)
 			So(err, ShouldNotBeNil)
 		})
 	})
 }
 
+// 测试嵌入文件系统的目录结构。
 func TestEmbeddedFSReadDir(t *testing.T) {
 	Convey("验证嵌入文件系统的目录结构", t, func() {
 		Convey("1. embeddedStandards 的 standards 目录应包含 4 个文件", func(c C) {
@@ -277,17 +283,18 @@ func TestEmbeddedFSReadDir(t *testing.T) {
 	})
 }
 
+// 测试通过 Stat 获取嵌入文件信息。
 func TestEmbeddedFSStat(t *testing.T) {
 	Convey("验证通过 Stat 获取文件信息", t, func() {
 		Convey("1. 获取 LANGUAGE 文件信息", func(c C) {
-			info, err := fs.Stat(embeddedStandards, LANGUAGE)
+			info, err := fs.Stat(embeddedStandards, Language)
 			So(err, ShouldBeNil)
 			So(info.Name(), ShouldEqual, "iso_639-2.json")
 			So(info.Size(), ShouldBeGreaterThan, 0)
 			So(info.IsDir(), ShouldBeFalse)
 		})
-		Convey("2. 获取 FILENAME_EXTENSION 文件信息", func(c C) {
-			info, err := fs.Stat(embeddedCollections, FILENAME_EXTENSION)
+		Convey("2. 获取 FilenameExtension 文件信息", func(c C) {
+			info, err := fs.Stat(embeddedCollections, FilenameExtension)
 			So(err, ShouldBeNil)
 			So(info.Name(), ShouldEqual, "filename_extensions.json")
 			So(info.Size(), ShouldBeGreaterThan, 0)

@@ -6,19 +6,19 @@ import (
 	"io"
 	"sync"
 
-	"zhongkui.com/zhongkui/internal/pkg/crypto/mode"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/mode"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // 加密算法标识常量
 const (
-	MODE_ENCRYPTION_AES_GCM byte = 0x01
+	ModeEncryptionAesGcm byte = 0x01
 )
 
 const (
-	// CHUNK_SIZE 控制每个明文分块的大小。
+	// ChunkSize 控制每个明文分块的大小。
 	// 每块达到此大小时立即加密并写入底层 writer，避免缓冲全部数据。
-	CHUNK_SIZE = 64 * 1024 // 64KB
+	ChunkSize = 64 * 1024 // 64KB
 )
 
 // 编译期断言：确保 AESGCMCryptor 实现了 Transform 和 ModeIDer 接口
@@ -33,6 +33,7 @@ var (
 //
 // 密钥长度决定 AES 变体：16 字节 = AES-128，24 字节 = AES-192，32 字节 = AES-256。
 type AESGCMCryptor struct {
+	// key AES 密钥，长度决定 AES 变体（16/24/32 字节）。
 	key []byte
 }
 
@@ -48,7 +49,7 @@ func NewAESGCMCryptor(cryptoKey []byte) (*AESGCMCryptor, error) {
 }
 
 // ModeID 返回 AES-GCM 加密算法的标识字节。
-func (e *AESGCMCryptor) ModeID() byte { return MODE_ENCRYPTION_AES_GCM }
+func (e *AESGCMCryptor) ModeID() byte { return ModeEncryptionAesGcm }
 
 // WrapWriter 包装 io.Writer，返回一个写入即加密的 WriteCloser。
 // 采用分块加密模式，每块格式：[4B 密文长度][12B nonce][密文]。
@@ -57,7 +58,7 @@ func (e *AESGCMCryptor) WrapWriter(w io.Writer) (io.WriteCloser, error) {
 	return &aesGCMWriteCloser{
 		w:         w,
 		key:       e.key,
-		chunkSize: CHUNK_SIZE,
+		chunkSize: ChunkSize,
 	}, nil
 }
 
@@ -83,6 +84,7 @@ type aesGCMWriteCloser struct {
 	closed    bool
 }
 
+// Write 将 p 写入内部缓冲区，缓冲满一块（chunkSize）时立即加密并写入底层 writer，返回已接收字节数。
 func (wc *aesGCMWriteCloser) Write(p []byte) (int, error) {
 	wc.mu.Lock()
 	defer wc.mu.Unlock()
@@ -116,6 +118,7 @@ func (wc *aesGCMWriteCloser) Write(p []byte) (int, error) {
 	return n, nil
 }
 
+// Close 加密并写入缓冲区中剩余的不完整块后关闭写入器；重复关闭安全幂等。
 func (wc *aesGCMWriteCloser) Close() error {
 	wc.mu.Lock()
 	defer wc.mu.Unlock()
@@ -176,6 +179,7 @@ type aesGCMReadCloser struct {
 	closed    bool
 }
 
+// Read 从已解密的缓冲区读取明文，缓冲区为空时解密下一个密文块，读到流末尾返回 io.EOF。
 func (rc *aesGCMReadCloser) Read(p []byte) (int, error) {
 	// 当缓冲区无数据时，尝试读取下一个块
 	for rc.buf.Len() == 0 && !rc.exhausted {
@@ -191,6 +195,7 @@ func (rc *aesGCMReadCloser) Read(p []byte) (int, error) {
 	return rc.buf.Read(p)
 }
 
+// Close 关闭读取器；重复关闭安全幂等。
 func (rc *aesGCMReadCloser) Close() error {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()

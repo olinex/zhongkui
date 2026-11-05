@@ -6,8 +6,12 @@ import (
 	"net"
 
 	"github.com/gopacket/gopacket/layers"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+)
+
+var (
+	_ driver.Valuer = (*IPv4Options)(nil)
 )
 
 // IPv4Options 表示IPv4协议头部中的选项列表
@@ -42,6 +46,9 @@ type IPv4Options []layers.IPv4Option
 // 示例:
 //   - 将IPv4Options序列化为JSON字符串存储在ClickHouse的String类型列中
 func (i IPv4Options) Value() (driver.Value, error) {
+	if i == nil {
+		return nil, nil
+	}
 	return json.Marshal(i)
 }
 
@@ -70,8 +77,16 @@ func (i *IPv4Options) Scan(value any) error {
 	var bytes []byte
 	switch raw := value.(type) {
 	case []byte:
+		if len(raw) == 0 {
+			*i = nil
+			return nil
+		}
 		bytes = raw
 	case string:
+		if raw == "" {
+			*i = nil
+			return nil
+		}
 		bytes = []byte(raw)
 	default:
 		return errors.Newf("Ipv4_options scan failed, except []byte, got %T", value)
@@ -82,22 +97,6 @@ func (i *IPv4Options) Scan(value any) error {
 // IPv4Headers 表示IPv4协议头部信息
 // IPv4（Internet Protocol version 4）是互联网协议的第4版，是当前互联网最主要的网络层协议
 // 该结构体封装了IPv4协议头部的所有字段，用于存储、查询和分析网络数据包
-//
-// 字段说明:
-//   - IPv4Version:    协议版本号，固定为4（4位）
-//   - IPv4IHL:        头部长度（Internet Header Length），以32位字为单位（4位）
-//   - IPv4TOS:        服务类型（Type of Service），用于QoS优先级控制（8位）
-//   - IPv4Length:     总长度（Total Length），包括头部和数据，以字节为单位（16位）
-//   - IPv4Id:         标识符（Identification），用于分片重组（16位）
-//   - IPv4Flags:      标志位（Flags），包含DF（Don't Fragment）和MF（More Fragments）（3位）
-//   - IPv4FragOffset: 分片偏移（Fragment Offset），以8字节为单位（13位）
-//   - IPv4TTL:        生存时间（Time To Live），防止数据包无限循环（8位）
-//   - IPv4IPProtocol: 上层协议类型（Protocol），如TCP(6)、UDP(17)、ICMP(1)等（8位）
-//   - IPv4Checksum:   头部校验和（Header Checksum），用于错误检测（16位）
-//   - IPv4Src:        源IP地址（Source Address）（32位）
-//   - IPv4Dst:        目的IP地址（Destination Address）（32位）
-//   - IPv4Options:    IPv4选项列表，可选字段
-//   - IPv4Padding:    填充字节，确保头部长度为32位的整数倍
 //
 // 数据库映射:
 //   - 使用GORM标签定义数据库约束和列类型
@@ -111,20 +110,34 @@ func (i *IPv4Options) Scan(value any) error {
 //   - 路径追踪：通过TTL递减分析网络路径
 //   - QoS分析：根据TOS字段分析服务质量
 type IPv4Headers struct {
-	IPv4Version    uint8               `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4_version"`
-	IPv4IHL        uint8               `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4_ihl"`
-	IPv4TOS        uint8               `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4_tos"`
-	IPv4Length     uint16              `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4_length"`
-	IPv4Id         uint16              `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4_id"`
-	IPv4Flags      layers.IPv4Flag     `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4_flags"`
-	IPv4FragOffset uint16              `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4_frag_offset"`
-	IPv4TTL        uint8               `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4_ttl"`
-	IPv4IPProtocol layers.IPProtocol   `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4_ip_protocol"`
-	IPv4Checksum   uint16              `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4_checksum"`
-	IPv4Src        serializer.IPv4Addr `gorm:"type:FixedString(4)" json:"ipv4_src"`
-	IPv4Dst        serializer.IPv4Addr `gorm:"type:FixedString(4)" json:"ipv4_dst"`
-	IPv4Options    IPv4Options         `gorm:"type:String CODEC(ZSTD(3))" json:"ipv4_options"`
-	IPv4Padding    []byte              `gorm:"type:String CODEC(ZSTD(3))" json:"ipv4_padding"`
+	// IPv4Version 协议版本号，固定为 4（4 位）
+	IPv4Version uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4Version"`
+	// IPv4IHL 头部长度（IHL），以 32 位字为单位（4 位）
+	IPv4IHL uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4Ihl"`
+	// IPv4TOS 服务类型（TOS），用于 QoS 优先级控制（8 位）
+	IPv4TOS uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4Tos"`
+	// IPv4Length 总长度，含头部与数据，单位字节（16 位）
+	IPv4Length uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4Length"`
+	// IPv4ID 标识符，用于分片重组（16 位）
+	IPv4ID uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4ID"`
+	// IPv4Flags 标志位，包含 DF、MF（3 位）
+	IPv4Flags layers.IPv4Flag `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4Flags"`
+	// IPv4FragOffset 分片偏移，以 8 字节为单位（13 位）
+	IPv4FragOffset uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4FragOffset"`
+	// IPv4TTL 生存时间，防止数据包无限循环（8 位）
+	IPv4TTL uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4Ttl"`
+	// IPv4IPProtocol 上层协议类型，如 TCP=6、UDP=17、ICMP=1（8 位）
+	IPv4IPProtocol layers.IPProtocol `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4IpProtocol"`
+	// IPv4Checksum 头部校验和，用于错误检测（16 位）
+	IPv4Checksum uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4Checksum"`
+	// IPv4Src 源 IP 地址（32 位）
+	IPv4Src serializer.IPv4Addr `gorm:"type:IPv4" json:"ipv4Src"`
+	// IPv4Dst 目的 IP 地址（32 位）
+	IPv4Dst serializer.IPv4Addr `gorm:"type:IPv4" json:"ipv4Dst"`
+	// IPv4Options IPv4 选项列表，可选字段
+	IPv4Options IPv4Options `gorm:"type:String CODEC(ZSTD(3))" json:"ipv4Options"`
+	// IPv4Padding 填充字节，确保头部长度为 32 位的整数倍
+	IPv4Padding string `gorm:"type:String CODEC(ZSTD(3))" json:"ipv4Padding"`
 }
 
 // NewIPv4Headers 从gopacket IPv4层创建IPv4Headers结构体
@@ -162,7 +175,7 @@ func NewIPv4Headers(ipv4 *layers.IPv4) *IPv4Headers {
 		IPv4IHL:        ipv4.IHL,
 		IPv4TOS:        ipv4.TOS,
 		IPv4Length:     ipv4.Length,
-		IPv4Id:         ipv4.Id,
+		IPv4ID:         ipv4.Id,
 		IPv4Flags:      ipv4.Flags,
 		IPv4FragOffset: ipv4.FragOffset,
 		IPv4TTL:        ipv4.TTL,
@@ -171,7 +184,7 @@ func NewIPv4Headers(ipv4 *layers.IPv4) *IPv4Headers {
 		IPv4Src:        serializer.IPv4Addr(ipv4.SrcIP),
 		IPv4Dst:        serializer.IPv4Addr(ipv4.DstIP),
 		IPv4Options:    IPv4Options(ipv4.Options),
-		IPv4Padding:    ipv4.Padding,
+		IPv4Padding:    string(ipv4.Padding),
 	}
 }
 
@@ -258,35 +271,6 @@ func (i *IPv4Headers) DstAddr() net.IP {
 type PacketIPv4 struct {
 	PacketEthernet
 	IPv4Headers
+	// 加密存储的 IP 载荷
 	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=16429,length=32"`
-}
-
-// FusedIPv4 表示融合的IPv4数据
-// 该结构体用于存储经过ETL处理后的融合数据，相比原始数据包进行了聚合和优化
-// 融合数据通常包含统计信息、聚合结果或经过处理的业务数据
-//
-// 结构组成:
-//   - FusedEthernet: 融合的以太网层数据，可能包含统计信息
-//   - IPv4Headers:   IPv4网络层头部信息
-//
-// 数据库特性:
-//   - 使用MergeTree引擎存储，支持高性能查询
-//   - 按时间分区（每小时），优化时间范围查询性能
-//   - 设置更长的TTL（7天），保留更长时间的历史数据
-//   - 复合排序键，优化业务查询模式
-//
-// 数据特点:
-//   - 数据量通常比原始数据包小
-//   - 包含业务相关的聚合信息
-//   - 适合长期存储和历史分析
-//
-// 使用场景:
-//   - 业务指标监控和报表
-//   - 长期趋势分析
-//   - 容量规划和性能优化
-//   - 合规性审计和报告
-type FusedIPv4 struct {
-	FusedEthernet
-	IPv4Headers
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=60580,length=32"`
 }

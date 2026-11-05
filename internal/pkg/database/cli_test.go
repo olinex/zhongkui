@@ -6,15 +6,18 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
+
+// testPGDSN 本地 dev-deps 的 postgres 连接串，用于驱动识别类用例。
+var testPGDSN = "host=localhost user=postgres password=root_password dbname=postgres sslmode=disable TimeZone=Asia/Shanghai"
 
 // TestNewDatabase_ValidConfig 测试 NewDatabase 函数使用有效配置时的行为
 func TestNewDatabase_ValidConfig(t *testing.T) {
-	Convey("当使用有效的 SQLite 配置时", t, func() {
+	Convey("当使用有效的 PostgreSQL 配置时", t, func() {
 		cfg := &Config{
-			Driver: "sqlite",
-			DSN:    ":memory:", // 使用内存数据库避免文件IO
+			Driver: "postgres",
+			DSN:    testPGDSN,
 		}
 
 		// 创建一个简单的日志记录器
@@ -180,8 +183,8 @@ func TestNewDatabase_NilConfig(t *testing.T) {
 func TestNewDatabase_NilLogger(t *testing.T) {
 	Convey("当日志记录器为 nil 时", t, func() {
 		cfg := &Config{
-			Driver: "sqlite",
-			DSN:    ":memory:",
+			Driver: "postgres",
+			DSN:    testPGDSN,
 		}
 
 		db, err := NewDatabase(cfg, nil)
@@ -244,8 +247,8 @@ func TestNewDatabase_InvalidDSN(t *testing.T) {
 func TestNewDatabase_WithMetaConfig(t *testing.T) {
 	Convey("当使用完整的元配置时", t, func() {
 		cfg := &Config{
-			Driver: "sqlite",
-			DSN:    ":memory:",
+			Driver: "postgres",
+			DSN:    testPGDSN,
 			Meta: MetaConfig{
 				SkipDefaultTransaction:                   true,
 				FullSaveAssociations:                     true,

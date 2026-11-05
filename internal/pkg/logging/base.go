@@ -1,3 +1,6 @@
+// Package logging 提供基于 zap 的日志记录封装：Logger 包装 *zap.SugaredLogger，
+// 支持 context 注入（Ctx）与 OpenTelemetry 关联，并提供生产/默认/调试三种
+// 日志记录器构建函数及配置转换（见 config.go）。
 package logging
 
 import (
@@ -5,11 +8,10 @@ import (
 
 	"github.com/creasty/defaults"
 	"go.uber.org/zap"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // LoggerCfg 是 zap.Config 的类型别名，用于简化导入和类型引用
-// LoggerCfg is a type alias for zap.Config, simplifying imports and type references
 type LoggerCfg = zap.Config
 
 // Logger 包装 *zap.SugaredLogger，提供结构化日志记录功能。
@@ -56,26 +58,6 @@ func (l *Logger) Ctx(ctx context.Context) *Logger {
 //	    log.Fatal("Failed to create logger:", err)
 //	}
 //	defer logger.Sync()
-//
-// # NewProductionLogger creates a production-ready logger based on the provided configuration
-//
-// Parameters:
-//
-//	cfg - zap logger configuration containing log level, output paths, encoding format, etc.
-//
-// Returns:
-//
-//	*Logger - configured logger instance on success
-//	error  - error with stack trace if configuration is invalid or build fails
-//
-// Example:
-//
-//	cfg := &zap.Config{...}
-//	logger, err := NewProductionLogger(cfg)
-//	if err != nil {
-//	    log.Fatal("Failed to create logger:", err)
-//	}
-//	defer logger.Sync()
 func NewProductionLogger(cfg *LoggerCfg) (*Logger, error) {
 	logger, err := cfg.Build()
 	if err != nil {
@@ -110,37 +92,21 @@ func NewProductionLogger(cfg *LoggerCfg) (*Logger, error) {
 //	    log.Fatal("Failed to create default logger:", err)
 //	}
 //	defer logger.Sync()
-//
-// # NewDefaultLogger creates a logger with default configuration
-//
-// This method uses default values for the Config structure (set via github.com/creasty/defaults package),
-// then converts to zap configuration and creates a production-ready logger.
-//
-// Default configuration includes:
-//   - Level: info
-//   - Development: false
-//   - DisableCaller: false
-//   - DisableStacktrace: false
-//   - Encoding: json
-//   - OutputPaths: ["stdout"]
-//   - ErrorOutputPaths: ["stderr"]
-//
-// Returns:
-//
-//	*Logger - logger instance with default configuration on success
-//	error  - error with stack trace if configuration is invalid or build fails
-//
-// Example:
-//
-//	logger, err := NewDefaultLogger()
-//	if err != nil {
-//	    log.Fatal("Failed to create default logger:", err)
-//	}
-//	defer logger.Sync()
 func NewDefaultLogger() (*Logger, error) {
 	var cfg Config
 	if err := defaults.Set(&cfg); err != nil {
 		return nil, errors.WithStack(err)
 	}
+	return NewProductionLogger(cfg.ToZapConfig())
+}
+
+// NewDebugLogger 在默认配置基础上启用开发模式并将日志级别设为 debug，用于本地调试。
+func NewDebugLogger() (*Logger, error) {
+	var cfg Config
+	if err := defaults.Set(&cfg); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	cfg.Development = true
+	cfg.Level = "debug"
 	return NewProductionLogger(cfg.ToZapConfig())
 }

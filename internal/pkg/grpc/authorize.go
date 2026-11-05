@@ -7,13 +7,13 @@ import (
 
 	g "google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
-// ACCESS_KEY_USER_ID 是上下文(Context)中存储用户ID的键名
+// AccessKeyUserId 是上下文(Context)中存储用户ID的键名
 // 当身份验证成功后，用户ID会被存储到上下文中，后续处理可以通过该键名获取用户身份信息
 const (
-	ACCESS_KEY_USER_ID = "access_key_user_id"
+	AccessKeyUserId = "access_key_user_id"
 )
 
 // ExtractUserID 从上下文中提取用户ID
@@ -26,18 +26,17 @@ const (
 //
 // 注意: 调用此函数前必须确保上下文已通过身份验证并包含用户ID
 func ExtractUserID(ctx context.Context) string {
-	return ctx.Value(ACCESS_KEY_USER_ID).(string)
+	return ctx.Value(AccessKeyUserId).(string)
 }
 
 // AuthRouter 是gRPC身份验证路由器
 // 负责管理和路由不同的身份验证器，支持多种认证协议
-// 结构体字段:
-//   - lock: 读写锁，保护authes映射的并发访问
-//   - authes: 身份验证器映射，键为验证器名称，值为Authenticator接口实现
-//   - config: 身份验证服务器配置，包含认证相关的配置选项
 type AuthRouter struct {
-	lock   sync.RWMutex
+	// lock 读写锁，保护 authes 映射的并发访问。
+	lock sync.RWMutex
+	// authes 验证器映射，键为验证器名称，值为 Authenticator 接口实现。
 	authes map[string]Authenticator
+	// config 身份验证服务器配置，包含认证相关的配置选项。
 	config *AuthServerConfig
 }
 
@@ -142,7 +141,7 @@ func (a *AuthRouter) authUnary(ctx context.Context, req any, info *g.UnaryServer
 	if userID, err := a.auth(ctx, info.FullMethod); err != nil {
 		return nil, errors.WithStack(err)
 	} else {
-		return handler(context.WithValue(ctx, ACCESS_KEY_USER_ID, userID), req)
+		return handler(context.WithValue(ctx, AccessKeyUserId, userID), req)
 	}
 }
 

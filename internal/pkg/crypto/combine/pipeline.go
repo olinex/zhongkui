@@ -3,7 +3,7 @@ package combine
 import (
 	"io"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // ---------------------------------------------------------------------------
@@ -11,21 +11,29 @@ import (
 // ---------------------------------------------------------------------------
 
 const (
-	FILE_EXT              = "zkcn"
-	FILE_DOT_EXT          = "." + FILE_EXT
-	COMPRESS_CONTENT_TYPE = "application/zkcn"
-	MAGIC_BYTES           = "\x5a\x4b\x43\x4e" // "ZKCN" — Zhongkui Crypto Notation
-	HEADER_VERSION        = 0x01
-	HEADER_SIZE           = 7 // magic(4) + version(1) + compressID(1) + encryptID(1)
+	// FileExt 管道输出文件的扩展名（不含点）。
+	FileExt = "zkcn"
+	// FileDotExt 带点的管道输出文件扩展名（.zkcn）。
+	FileDotExt = "." + FileExt
+	// CompressContentType 管道输出流的内容类型。
+	CompressContentType = "application/zkcn"
+	MagicBytes          = "\x5a\x4b\x43\x4e" // "ZKCN" — Zhongkui Crypto Notation
+	// HeaderVersion 管道自描述头部的版本号。
+	HeaderVersion = 0x01
+	HeaderSize    = 7 // magic(4) + version(1) + compressID(1) + encryptID(1)
 )
 
 // Pipeline 表示一个流式变换管道，固定按 先压缩(Compress) → 后加密(Encrypt) 的顺序处理数据。
 // 输出流包含自描述头部，携带压缩算法和加密算法的标识信息。
 type Pipeline struct {
+	// compressor 压缩变换器，写入方向先对数据进行压缩。
 	compressor Transform
-	cryptor    Transform
+	// cryptor 加密变换器，对压缩后的数据进行加密。
+	cryptor Transform
+	// compressID 压缩算法的标识字节，写入自描述头部。
 	compressID byte
-	cryptID    byte
+	// cryptID 加密算法的标识字节，写入自描述头部。
+	cryptID byte
 }
 
 // NewCompressEncryptPipeline 创建先压缩后加密的管道。
@@ -52,9 +60,9 @@ func NewCompressEncryptPipeline(compressor, cryptor Transform) (*Pipeline, error
 // 必须调用 Close() 以确保所有数据刷新到底层 writer。
 func (p *Pipeline) CompressEncrypt(w io.Writer) (io.WriteCloser, error) {
 	// 写入自描述头部
-	header := make([]byte, HEADER_SIZE)
-	copy(header[0:4], MAGIC_BYTES)
-	header[4] = HEADER_VERSION
+	header := make([]byte, HeaderSize)
+	copy(header[0:4], MagicBytes)
+	header[4] = HeaderVersion
 	header[5] = p.compressID
 	header[6] = p.cryptID
 
@@ -71,9 +79,8 @@ func (p *Pipeline) CompressEncrypt(w io.Writer) (io.WriteCloser, error) {
 	// 创建压缩写入器（包裹 encWriter）
 	compWriter, err := p.compressor.WrapWriter(encWriter)
 	if err != nil {
-		// 尝试关闭已创建的 encWriter
-		encWriter.Close()
-		return nil, errors.WithStack(err)
+		// 尝试关闭已创建的 encWriter，其错误一并返回，避免被首个错误掩盖。
+		return nil, errors.WithStack(errors.Join(err, encWriter.Close()))
 	}
 
 	return &pipelineWriteCloser{
@@ -87,13 +94,13 @@ func (p *Pipeline) CompressEncrypt(w io.Writer) (io.WriteCloser, error) {
 // 读取完成后调用 Close() 释放资源。
 func (p *Pipeline) DecryptDecompress(r io.Reader) (io.ReadCloser, error) {
 	// 读取并校验自描述头部
-	header := make([]byte, HEADER_SIZE)
+	header := make([]byte, HeaderSize)
 	if _, err := io.ReadFull(r, header); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	if err := p.validateHeader(header); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	// 创建解密读取器（包裹 r，自动读 nonce + 解密）
@@ -105,8 +112,7 @@ func (p *Pipeline) DecryptDecompress(r io.Reader) (io.ReadCloser, error) {
 	// 创建解压读取器（包裹 encReader）
 	decompReader, err := p.compressor.WrapReader(encReader)
 	if err != nil {
-		encReader.Close()
-		return nil, errors.WithStack(err)
+		return nil, errors.WithStack(errors.Join(err, encReader.Close()))
 	}
 
 	// 收集源 reader 的 Closer（如果实现了的话），用于级联关闭
@@ -123,10 +129,10 @@ func (p *Pipeline) DecryptDecompress(r io.Reader) (io.ReadCloser, error) {
 }
 
 func (p *Pipeline) validateHeader(header []byte) error {
-	if string(header[0:4]) != MAGIC_BYTES {
+	if string(header[0:4]) != MagicBytes {
 		return errors.New("invalid magic bytes in stream header")
 	}
-	if header[4] != HEADER_VERSION {
+	if header[4] != HeaderVersion {
 		return errors.Newf("unsupported stream version: %d", header[4])
 	}
 	if header[5] != p.compressID {
@@ -147,16 +153,17 @@ type pipelineWriteCloser struct {
 	encWriter  io.WriteCloser
 }
 
+// Write 将 p 写入压缩写入器，数据经压缩后交由加密写入器写入底层 writer。
 func (pwc *pipelineWriteCloser) Write(p []byte) (int, error) {
 	return pwc.compWriter.Write(p)
 }
 
+// Close 依次关闭压缩写入器与加密写入器，确保剩余数据全部刷入底层 writer。
 func (pwc *pipelineWriteCloser) Close() error {
 	// 先关闭压缩写入器（刷新缓冲区，写入剩余压缩数据）
 	if err := pwc.compWriter.Close(); err != nil {
-		// 仍尝试关闭加密写入器
-		pwc.encWriter.Close()
-		return errors.WithStack(err)
+		// 仍尝试关闭加密写入器，并把两个错误合并上报。
+		return errors.WithStack(errors.Join(err, pwc.encWriter.Close()))
 	}
 	// 再关闭加密写入器（写入 nonce + 加密所有数据）
 	if err := pwc.encWriter.Close(); err != nil {
@@ -175,24 +182,27 @@ type pipelineReadCloser struct {
 	decompReader io.ReadCloser // 解压读取器（外层，直接面向调用者）
 }
 
+// Read 从解压读取器读取数据，数据已依次经解密与解压还原为明文。
 func (prc *pipelineReadCloser) Read(p []byte) (int, error) {
 	return prc.decompReader.Read(p)
 }
 
+// Close 依次关闭解压读取器、解密读取器与源 reader，释放各层资源。
 func (prc *pipelineReadCloser) Close() error {
 	// 先关闭解压读取器（释放解压器内部资源）
 	if err := prc.decompReader.Close(); err != nil {
-		// 仍尝试关闭剩余层
-		prc.encReader.Close()
+		// 仍尝试关闭剩余层，并把所有错误合并上报。
+		var closers []error
+		closers = append(closers, err, prc.encReader.Close())
 		if prc.srcCloser != nil {
-			prc.srcCloser.Close()
+			closers = append(closers, prc.srcCloser.Close())
 		}
-		return errors.WithStack(err)
+		return errors.WithStack(errors.Join(closers...))
 	}
 	// 再关闭解密读取器（清理加密状态）
 	if err := prc.encReader.Close(); err != nil {
 		if prc.srcCloser != nil {
-			prc.srcCloser.Close()
+			return errors.WithStack(errors.Join(err, prc.srcCloser.Close()))
 		}
 		return errors.WithStack(err)
 	}

@@ -5,18 +5,23 @@ import (
 	"fmt"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/pkg/auth"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/redis"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	// 第三方
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+
+	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/pkg/auth"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/redis"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 const (
-	// ACCESS_KEY_PREFIX 是访问键在 Redis 缓存中的前缀
+	// AccessKeyPrefix 是访问键在 Redis 缓存中的前缀
 	// 用于构建唯一的缓存键，防止与其他缓存键冲突
-	ACCESS_KEY_PREFIX = "akp"
+	AccessKeyPrefix = "akp"
 )
 
 var (
@@ -124,6 +129,11 @@ func NewAccessKey(user *User, enabled bool, description string, expiredAt *time.
 //   - error: 创建过程中发生的错误，如果超出数量限制返回 ErrTooManyAccessKey
 func (a *AccessKey) CreateWithLimit(db *database.DB, maxCount int) error {
 	return db.Transaction(func(tx *database.DB) error {
+		// 以 FOR UPDATE 行锁锁定用户行，按用户串行化创建，
+		// 避免"计数检查通过后被并发创建超限"的竞态
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&User{}, "id = ?", a.RawUserID).Error; err != nil {
+			return errors.WithStack(err)
+		}
 		var count int64
 		if err := tx.Model(&AccessKey{}).Where("user_id = ?", a.RawUserID).Count(&count).Error; err != nil {
 			return errors.WithStack(err)
@@ -150,7 +160,7 @@ type AccessKeyPool struct {
 // nonceKey 生成用于防重放检查的 Redis 缓存键
 // 格式: akp:{access_key_id}:{nonce}
 func nonceKey(id, nonce string) string {
-	return fmt.Sprintf("%s:%s:%s", ACCESS_KEY_PREFIX, id, nonce)
+	return fmt.Sprintf("%s:%s:%s", AccessKeyPrefix, id, nonce)
 }
 
 // NewAccessKeyPool 创建一个新的访问键池实例
@@ -179,7 +189,36 @@ func NewAccessKeyPool(db *database.DB, cache *redis.Client, ttl time.Duration) *
 //   - error: 查询过程中发生的错误
 func (a *AccessKeyPool) GetKey(ctx context.Context, id string) (auth.AccessKey, error) {
 	key := AccessKey{}
-	if err := a.db.WithContext(ctx).First(&key, "access_key_id = ?", id).Error; err != nil {
+	if err := a.db.WithContext(ctx).Preload("User").First(&key, "access_key_id = ?", id).Error; err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return &key, nil
+}
+
+// FirstUsableByUser 返回指定用户下第一条可用的访问密钥。
+//
+// 可用条件为：密钥属于该用户、已启用，且未设置过期时间或过期时间晚于当前时刻。
+// 按 id 升序取第一条；用户没有任何可用密钥时返回 (nil, nil)，便于调用方区分
+// 「没有可用密钥」与「查询出错」。
+//
+// 参数:
+//   - ctx: 上下文，用于传递请求级数据和控制超时
+//   - userID: 用户数据库 ID
+//
+// 返回:
+//   - *AccessKey: 可用的访问密钥（已预加载 User），不存在时为 nil
+//   - error: 查询过程中发生的错误
+func (a *AccessKeyPool) FirstUsableByUser(ctx context.Context, userID uint) (*AccessKey, error) {
+	key := AccessKey{}
+	err := a.db.WithContext(ctx).
+		Preload("User").
+		Where("user_id = ? AND enabled = ? AND (expired_at IS NULL OR expired_at > ?)", userID, true, time.Now()).
+		Order("id ASC").
+		First(&key).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		return nil, errors.WithStack(err)
 	}
 	return &key, nil

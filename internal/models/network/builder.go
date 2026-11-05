@@ -6,8 +6,8 @@ import (
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // ExtractLayerInfos 从数据包中提取网络层信息
@@ -334,6 +334,7 @@ func (b *ModelBuilder) BuildAsPacketLinkModel() any {
 				},
 				TimestampMeta: TimestampMeta{
 					Timestamp: b.Timestamp,
+					CreatedAt: time.Now(),
 				},
 				CaptureMeta: CaptureMeta{
 					Truncated:     b.Truncated,
@@ -343,8 +344,12 @@ func (b *ModelBuilder) BuildAsPacketLinkModel() any {
 					LayerStack: b.Stack,
 				},
 			},
+			// 行详情接口依赖非空的全局唯一 ID，构造时即生成，落库路径无需再补；
+			// 作为最底层模型，其 ID 经嵌入传递被 IPv4/IPv6/UDP/TCP 各上层数据包模型继承
+			RowMeta: RowMeta{
+				ID: serializer.NewHexUUIDv4(),
+			},
 			EthernetHeaders: *eth,
-			Payload:         serializer.NewCrypto(b.Payload),
 		}
 	default:
 		return nil
@@ -392,6 +397,7 @@ func (b *ModelBuilder) BuildAsPacketNetworkModel() any {
 		return &PacketIPv4{
 			PacketEthernet: *model.(*PacketEthernet),
 			IPv4Headers:    *net,
+			Payload:        serializer.NewCrypto(b.Payload),
 		}
 	case layers.LayerTypeIPv6:
 		net := info.Headers.(*IPv6Headers)
@@ -402,6 +408,7 @@ func (b *ModelBuilder) BuildAsPacketNetworkModel() any {
 		return &PacketIPv6{
 			PacketEthernet: *model.(*PacketEthernet),
 			IPv6Headers:    *net,
+			Payload:        serializer.NewCrypto(b.Payload),
 		}
 	default:
 		panic(fmt.Sprintf("unknown network layer protocol %s", info.Proto))
@@ -453,16 +460,22 @@ func (b *ModelBuilder) BuildAsPacketTransportModel() any {
 		switch info.Proto {
 		case layers.LayerTypeTCP:
 			tcp := info.Headers.(*TCPHeaders)
-			return &PacketIPv4TCP{
+			pkt := &PacketIPv4TCP{
 				PacketIPv4: *model.(*PacketIPv4),
 				TCPHeaders: *tcp,
+				Payload:    serializer.NewCrypto(b.Payload),
 			}
+			pkt.TCPStreamID = pkt.StreamID()
+			return pkt
 		case layers.LayerTypeUDP:
 			udp := info.Headers.(*UDPHeaders)
-			return &PacketIPv4UDP{
+			pkt := &PacketIPv4UDP{
 				PacketIPv4: *model.(*PacketIPv4),
 				UDPHeaders: *udp,
+				Payload:    serializer.NewCrypto(b.Payload),
 			}
+			pkt.UDPStreamID = pkt.StreamID()
+			return pkt
 		default:
 			panic(fmt.Sprintf("unknown transport layer protocol %s", info.Proto))
 		}
@@ -470,16 +483,22 @@ func (b *ModelBuilder) BuildAsPacketTransportModel() any {
 		switch info.Proto {
 		case layers.LayerTypeTCP:
 			tcp := info.Headers.(*TCPHeaders)
-			return &PacketIPv6TCP{
+			pkt := &PacketIPv6TCP{
 				PacketIPv6: *model.(*PacketIPv6),
 				TCPHeaders: *tcp,
+				Payload:    serializer.NewCrypto(b.Payload),
 			}
+			pkt.TCPStreamID = pkt.StreamID()
+			return pkt
 		case layers.LayerTypeUDP:
 			udp := info.Headers.(*UDPHeaders)
-			return &PacketIPv6UDP{
+			pkt := &PacketIPv6UDP{
 				PacketIPv6: *model.(*PacketIPv6),
 				UDPHeaders: *udp,
+				Payload:    serializer.NewCrypto(b.Payload),
 			}
+			pkt.UDPStreamID = pkt.StreamID()
+			return pkt
 		default:
 			panic(fmt.Sprintf("unknown transport layer protocol %s", info.Proto))
 		}

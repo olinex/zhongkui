@@ -1,14 +1,16 @@
 package tcp
 
 import (
+	"bufio"
 	"context"
-	"encoding/json"
+	"sync"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-
-	n "zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"github.com/smallnest/ringbuffer"
+	n "zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // TCPState 表示TCP连接的状态，遵循标准TCP状态机。
@@ -17,6 +19,12 @@ import (
 type TCPState int
 
 const (
+	// BufferSize TCP缓冲区大小，用于存储接收和发送的数据包。
+	// 该值必须大于等于65495，这是TCP最大数据包大小。
+	// IP层限制：IP协议的理论最大数据报大小为 65535 字节。这是由IP头部的16位总长度字段决定的（2^16 - 1 = 65535）。
+	// 减去头部开销：一个标准的IPv4头部是 20 字节，一个标准的TCP头部至少也是 20 字节。
+	// 得出结果：因此，TCP Payload的最大理论值 = 65535 - 20 (IP头) - 20 (TCP头) = 65495 字节
+	BufferSize = 65495
 	// StateClosed 表示连接已关闭
 	// 这是TCP连接的初始状态和最终状态，表示连接不存在或已完全终止。
 	// 在此状态下，不接受任何数据包，所有资源已释放。
@@ -47,54 +55,6 @@ const (
 	// 正在等待本地应用发出FIN包已完成连接终止过程。
 	StateCloseWait
 )
-
-// Side 表示TCP流的一端（客户端或服务端），包含该端的连接状态、缓冲区和数据。
-// 该结构体使用泛型设计，支持不同类型的TCP数据包实现，如IPv4 TCP和IPv6 TCP。
-// Side负责管理TCP连接的状态转换、序列号跟踪、乱序包缓冲和数据包重组等功能，
-// 是TCP流重组和状态管理的核心组件。
-//
-// 类型参数:
-//   - P: 实现了TCPPacket接口的数据包类型，用于支持不同的TCP数据包实现
-type Side[P TCPPacket] struct {
-	// buffer 单端应用层数据环形缓冲区，存储该端方向的TCP数据流。
-	// 使用环形缓冲区设计，支持高效的数据读写和滑动窗口管理。
-	buffer *serializer.RingBuffer
-
-	// frameStack 单端帧堆栈，记录构成当前请求数据的所有TCP帧信息。
-	// 每个FrameInfo包含时间戳和网络层堆栈信息，用于追踪数据的来源。
-	// 在数据溯源、调试和分析场景中，frameStack提供了原始数据包的完整上下文信息。
-	frameStack n.FrameStack
-
-	// cli2Srv 表示数据包方向是否为客户端到服务端
-	// true表示客户端到服务端方向，false表示服务端到客户端方向
-	// 该字段用于区分TCP连接的两端，确保正确的状态转换和数据处理
-	cli2Srv bool
-
-	// state 表示当前TCP连接状态
-	// 遵循TCP状态机规范，跟踪连接的生命周期状态变化
-	// 状态转换由TCP协议事件（如SYN、ACK、FIN、RST包）触发
-	state TCPState
-
-	// isn 表示初始序列号（Initial Sequence Number）
-	// 在TCP连接建立时确定的随机起始序列号，用于后续序列号计算
-	// 客户端isn由第一个SYN包确定，服务端isn由SYN-ACK包确定
-	isn uint32
-
-	// expectedSeq 表示期望接收的下一个数据包的序列号
-	// 用于检测数据包顺序、处理乱序包和确认数据包完整性
-	// 根据接收到的数据包载荷长度动态更新，确保序列号连续性
-	expectedSeq uint32
-
-	// outOrderPackets 存储乱序到达的数据包
-	// 键为数据包序列号，值为对应的TCP数据包
-	// 当数据包乱序到达时临时存储，待期望序列号的数据包到达后进行重组
-	outOrderPackets map[uint32]P
-
-	// MaxOutOrderPacketSize 最大乱序包缓冲区大小
-	// 限制每个方向（客户端或服务端）可以缓冲的乱序数据包数量，防止内存溢出
-	// 当缓冲区达到此限制时，新的乱序包将被拒绝，避免资源耗尽
-	maxOutOrderPacketSize int
-}
 
 // seqLess 比较两个TCP序列号，正确处理序列号回绕情况。
 // TCP序列号是32位无符号整数，当达到最大值（2^32-1）后会回绕到0。
@@ -130,6 +90,161 @@ func seqLess(a, b uint32) bool {
 	}
 	// 差值大于等于2^31，说明发生了回绕
 	return a > b
+}
+
+// Side 表示TCP流的一端（客户端或服务端），包含该端的连接状态、缓冲区和数据。
+// 该结构体使用泛型设计，支持不同类型的TCP数据包实现，如IPv4 TCP和IPv6 TCP。
+// Side负责管理TCP连接的状态转换、序列号跟踪、乱序包缓冲和数据包重组等功能，
+// 是TCP流重组和状态管理的核心组件。
+//
+// 类型参数:
+//   - P: 实现了TCPPacket接口的数据包类型，用于支持不同的TCP数据包实现
+type Side[P TCPPacket] struct {
+	// tailerMu 用于跟踪已写入和已取数据的偏移量
+	tailerMu sync.Mutex
+
+	// Written 已写入数据的偏移量
+	Written uint64
+
+	// Readed 已读取数据的偏移量
+	Readed uint64
+
+	// PayloadOffsets 已读取数据的偏移量列表
+	PayloadOffsets []uint64
+
+	// CaptureTimestampOffsets 已读取数据的时间戳列表
+	CaptureTimestampOffsets []time.Time
+
+	// logger 日志记录器，用于记录TCP流的事件和错误信息
+	logger *logging.Logger
+
+	// rb 环形缓冲区，用于存储接收到的数据包
+	rb *ringbuffer.RingBuffer
+
+	// brw 读写器，用于同时读取和写入环形缓冲区
+	// 该字段用于在应用层协议检测器中提取数据，避免直接操作环形缓冲区。
+	brw *bufio.ReadWriter
+
+	// dstChan 目标管道，用于即时发送展平后的NetworkStack帧记录。
+	// 数据包进入缓冲区时立即写入，不在Side内累积，避免长期流导致的内存增长。
+	dstChan chan<- any
+
+	// traceID 流跟踪ID，随NetworkStack记录一并写入，用于关联数据溯源。
+	traceID serializer.HexUUID
+
+	// cli2Srv 表示数据包方向是否为客户端到服务端
+	// true表示客户端到服务端方向，false表示服务端到客户端方向
+	// 该字段用于区分TCP连接的两端，确保正确的状态转换和数据处理
+	cli2Srv bool
+
+	// state 表示当前TCP连接状态
+	// 遵循TCP状态机规范，跟踪连接的生命周期状态变化
+	// 状态转换由TCP协议事件（如SYN、ACK、FIN、RST包）触发
+	state TCPState
+
+	// isn 表示初始序列号（Initial Sequence Number）
+	// 在TCP连接建立时确定的随机起始序列号，用于后续序列号计算
+	// 客户端isn由第一个SYN包确定，服务端isn由SYN-ACK包确定
+	isn uint32
+
+	// fingerprint 本端的被动 TCP 指纹（p0f 风格）。
+	// 客户端指纹来自首个 SYN 包，服务端指纹来自 SYN-ACK 包，
+	// 均由 pcap 导入阶段识别并落库后，经 TCPPacket.TcpFingerprint 透传至此；
+	// 无指纹时为 nil。
+	fingerprint *n.PacketTCPFingerprint
+
+	// expectedSeq 表示期望接收的下一个数据包的序列号
+	// 用于检测数据包顺序、处理乱序包和确认数据包完整性
+	// 根据接收到的数据包载荷长度动态更新，确保序列号连续性
+	expectedSeq uint32
+
+	// outOrderPackets 存储乱序到达的数据包
+	// 键为数据包序列号，值为对应的TCP数据包
+	// 当数据包乱序到达时临时存储，待期望序列号的数据包到达后进行重组
+	outOrderPackets map[uint32]P
+
+	// MaxOutOrderPacketSize 最大乱序包缓冲区大小
+	// 限制每个方向（客户端或服务端）可以缓冲的乱序数据包数量，防止内存溢出
+	// 当缓冲区达到此限制时，新的乱序包将被拒绝，避免资源耗尽
+	maxOutOrderPacketSize int
+}
+
+// newClientSide 根据第一个SYN包创建客户端流的一端。
+// 该函数用于初始化TCP连接中客户端方向的Side实例，设置初始状态和序列号。
+// 客户端ISN由第一个SYN包的序列号确定，期望序列号为ISN+1，表示已发送SYN包。
+//
+// 参数:
+//   - first: 第一个SYN包，包含客户端的初始序列号
+//
+// 返回值:
+//   - *Side[P]: 初始化完成的客户端Side实例，状态为StateSynSent
+//
+// 注意:
+//   - 该函数假设传入的数据包是有效的SYN包
+//   - 客户端ISN应具有随机性，避免序列号预测攻击
+func newSides[P TCPPacket](ctx context.Context, logger *logging.Logger, first P, maxOutOrderPacketSize int, timeout time.Duration, traceID serializer.HexUUID, dstChan chan<- any) (clientSide, serverSide *Side[P], err error) {
+	if !first.IsSyn() {
+		panic("first packet must be SYN")
+	}
+	seq := first.SeqNum()
+	buffer := ringbuffer.New(BufferSize).
+		WithCancel(ctx).
+		WithTimeout(timeout).
+		SetBlocking(true)
+	reader, writer := buffer.Pipe()
+	clientSide = &Side[P]{
+		tailerMu:                sync.Mutex{},
+		Written:                 0,
+		Readed:                  0,
+		PayloadOffsets:          make([]uint64, 0, 32),
+		CaptureTimestampOffsets: make([]time.Time, 0, 32),
+		logger:                  logger,
+		rb:                      buffer,
+		brw:                     bufio.NewReadWriter(bufio.NewReaderSize(reader, BufferSize), bufio.NewWriterSize(writer, BufferSize)),
+		dstChan:                 dstChan,
+		traceID:                 traceID,
+		cli2Srv:                 true,
+		state:                   StateSynSent,
+		isn:                     seq,
+		fingerprint:             first.TcpFingerprint(),
+		expectedSeq:             seq + 1,
+		maxOutOrderPacketSize:   maxOutOrderPacketSize,
+	}
+	if err := clientSide.appendPacket(ctx, first); err != nil {
+		return nil, nil, errors.WithStack(err)
+	}
+	buffer = ringbuffer.New(BufferSize).
+		WithCancel(ctx).
+		WithTimeout(timeout).
+		SetBlocking(true)
+	reader, writer = buffer.Pipe()
+	serverSide = &Side[P]{
+		tailerMu:                sync.Mutex{},
+		Written:                 0,
+		Readed:                  0,
+		PayloadOffsets:          make([]uint64, 0, 32),
+		CaptureTimestampOffsets: make([]time.Time, 0, 32),
+		logger:                  logger,
+		rb:                      buffer,
+		brw:                     bufio.NewReadWriter(bufio.NewReaderSize(reader, BufferSize), bufio.NewWriterSize(writer, BufferSize)),
+		dstChan:                 dstChan,
+		traceID:                 traceID,
+		cli2Srv:                 false,
+		state:                   StateListen,
+		isn:                     0,
+		expectedSeq:             0,
+		maxOutOrderPacketSize:   maxOutOrderPacketSize,
+	}
+	return
+}
+
+func (s *Side[P]) bufferClose() {
+	s.rb.CloseWriter()
+}
+
+func (s *Side[P]) peekAll() ([]byte, error) {
+	length := min(s.brw.Reader.Buffered()+s.rb.Length(), BufferSize)
+	return s.brw.Reader.Peek(length)
 }
 
 // isSynSent 检查当前是否为客户端且处于SynSent状态。
@@ -235,65 +350,122 @@ func (s *Side[P]) appendPacket(ctx context.Context, packet P) error {
 	payload := packet.GetPayload()
 	length := len(payload)
 	s.expectedSeq += uint32(length)
-	s.frameStack = append(s.frameStack, packet.FrameInfo())
-	recordBytesWritten(ctx, length)
+	// 将数据包的网络层堆栈展平为NetworkStack记录并即时发送到目标管道，
+	// 不在Side内累积，避免长期流导致的内存增长。
+	// 同一数据包的所有记录共享Seq与TopProto，但Proto/Level/Headers各不相同。
+	seq := uint32(len(s.PayloadOffsets))
+	// 载荷字节区间：包 i 的载荷区间为 (PayloadOffsets[i-1], PayloadOffsets[i]]，
+	// 起始偏移即前一包的累计字节数（第 0 包为 0），结束偏移为起始偏移加本包载荷长度，
+	// 与 appendPacket 末尾追加的 PayloadOffsets[seq] 边界一致；空载荷包区间为空。
+	var startOffset uint64
+	if seq > 0 {
+		startOffset = s.PayloadOffsets[seq-1]
+	}
+	endOffset := startOffset + uint64(length)
+	for _, stack := range packet.NetworkFrame() {
+		stack.Seq = seq
+		stack.TraceID = s.traceID
+		stack.Cli2Srv = s.cli2Srv
+		stack.PayloadStartOffset = startOffset
+		stack.PayloadEndOffset = endOffset
+		select {
+		case <-ctx.Done():
+			return nil
+		case s.dstChan <- stack:
+		}
+	}
 	// 将新进入的TCP包的有效载荷写入到应用层数据缓冲区中
-	if n, err := s.buffer.Write(payload); err != nil {
+	if n, err := s.brw.Write(payload); err != nil {
 		return errors.WithStack(err)
 	} else if n != length {
 		return errors.New("payload not fully written to buffer")
+	} else if err := s.brw.Flush(); err != nil {
+		return errors.WithStack(err)
 	}
+	s.tailerMu.Lock()
+	s.Written += uint64(length)
+	s.PayloadOffsets = append(s.PayloadOffsets, uint64(s.Written))
+	s.CaptureTimestampOffsets = append(s.CaptureTimestampOffsets, packet.CaptureTimestamp())
+	s.tailerMu.Unlock()
+	recordBytesWritten(ctx, length)
 	return nil
 }
 
-// newClientSide 根据第一个SYN包创建客户端流的一端。
-// 该函数用于初始化TCP连接中客户端方向的Side实例，设置初始状态和序列号。
-// 客户端ISN由第一个SYN包的序列号确定，期望序列号为ISN+1，表示已发送SYN包。
+// findIndex 二分法查找给定字节偏移所属的数据包索引
+// 在有序（非严格递增，空载荷包会写入相同的边界值）的 PayloadOffsets 中，
+// 返回包含字节 offset 的数据包索引，即第一个右边界严格大于 offset 的包。
+// 包 i 的载荷区间为 [PayloadOffsets[i-1], PayloadOffsets[i])，第 0 个包的左边界为 0。
+// 空载荷包（如握手 SYN/SYN-ACK 包）对应空区间，不包含任何字节，会被正确跳过。
 //
-// 参数:
-//   - first: 第一个SYN包，包含客户端的初始序列号
-//
-// 返回值:
-//   - *Side[P]: 初始化完成的客户端Side实例，状态为StateSynSent
-//
-// 注意:
-//   - 该函数假设传入的数据包是有效的SYN包
-//   - 客户端ISN应具有随机性，避免序列号预测攻击
-func newSides[P TCPPacket](ctx context.Context, first P, maxOutOrderPacketSize int, rwBufferTimeout time.Duration) (clientSide, serverSide *Side[P], err error) {
-	if !first.IsSyn() {
-		panic("first packet must be SYN")
+// 示例（PayloadOffsets = [0, 0, 5, 11, 13]，前两个为握手阶段空包）:
+//   - offset=0 是第一个数据包（区间 [0, 5)）的首字节，返回 2
+//   - offset=8 落在区间 [5, 11) 内，返回 3
+//   - offset=13 位于流尾（等于最后一个边界值），返回最后一个包索引 4
+//   - offset=14 超出流尾，返回 -1；PayloadOffsets 为空时也返回 -1
+func (s *Side[P]) findIndex(offset uint64) int {
+	n := len(s.PayloadOffsets)
+	if n == 0 {
+		return -1
 	}
-	seq := first.SeqNum()
-	clientSide = &Side[P]{
-		buffer: serializer.
-			NewRingBuffer(serializer.MiddleBufferSize).
-			WithCancel(ctx).
-			WithTimeout(rwBufferTimeout).
-			SetBlocking(true),
-		frameStack:            make(n.FrameStack, 0, 32),
-		cli2Srv:               true,
-		state:                 StateSynSent,
-		isn:                   seq,
-		expectedSeq:           seq + 1,
-		maxOutOrderPacketSize: maxOutOrderPacketSize,
+	if offset > s.PayloadOffsets[n-1] {
+		return -1
 	}
-	if err := clientSide.appendPacket(ctx, first); err != nil {
-		return nil, nil, errors.WithStack(err)
+	// 查找第一个 PayloadOffsets[i] > offset 的索引，该索引即包含 offset 字节的包；
+	// 空载荷包右边界等于前一个包的右边界，其索引永远不会成为答案，从而被正确跳过。
+	start, end := 0, n-1
+	ans := n
+	for start <= end {
+		mid := (start + end) / 2
+		if s.PayloadOffsets[mid] > offset {
+			ans = mid
+			end = mid - 1
+		} else {
+			start = mid + 1
+		}
 	}
-	serverSide = &Side[P]{
-		buffer: serializer.
-			NewRingBuffer(serializer.MiddleBufferSize).
-			WithCancel(ctx).
-			WithTimeout(rwBufferTimeout).
-			SetBlocking(true),
-		frameStack:            make(n.FrameStack, 0, 32),
-		cli2Srv:               false,
-		state:                 StateListen,
-		isn:                   0,
-		expectedSeq:           0,
-		maxOutOrderPacketSize: maxOutOrderPacketSize,
+	if ans < n {
+		return ans
 	}
-	return
+	// offset 等于流尾（最后一个边界值），没有任何包包含该字节，返回最后一个包以便取流尾时间戳
+	return n - 1
+}
+
+// UpdateComsumed 记账自上次调用以来已被消费（读取器取走）的字节数，
+// 返回本次消费量、段的起止载荷偏移与起止时间戳；无可可靠计算的消费量时返回 0。
+func (s *Side[P]) UpdateComsumed() (consumed uint64, startPayloadOffset, endPayloadOffset uint64, startTimestamp, endTimestamp time.Time) {
+	s.tailerMu.Lock()
+	defer s.tailerMu.Unlock()
+	startReaded := s.Readed
+	// 段的起止偏移即实际读取位置，可能落在某个 TCP 包载荷的中间，
+	// 不能向上取整为 PayloadOffsets 中的包边界值。
+	startPayloadOffset = startReaded
+	if startIndex := s.findIndex(startReaded); startIndex >= 0 {
+		startTimestamp = s.CaptureTimestampOffsets[startIndex]
+	}
+	remained := uint64(s.brw.Reader.Buffered() + s.rb.Length())
+	// 并发安全：appendPacket 先将数据 Flush 进 ring buffer，随后才在 tailerMu 下更新 Written，
+	// 因此 UpdateComsumed 可能观测到 remained 大于已记账的未消费量 (Written-Readed)。
+	// 此时无法可靠计算本次消费量，置 0 提前返回，避免 consumed 下溢破坏 Readed，
+	// 进而触发 findIndex 返回 -1 导致 PayloadOffsets[-1] 越界 panic。
+	if available := s.Written - s.Readed; remained > available {
+		endPayloadOffset = s.Readed
+		endTimestamp = startTimestamp
+		return 0, startPayloadOffset, endPayloadOffset, startTimestamp, endTimestamp
+	}
+	consumed = (s.Written - s.Readed) - remained
+	s.Readed += consumed
+	endReaded := s.Readed
+	endPayloadOffset = endReaded
+	if endReaded > startReaded {
+		// 段的最后一个字节偏移为 endReaded-1，据此定位结束时间戳对应的包；
+		// 若段恰好以包边界结束，endReaded 本身已不属于本段，不能直接用于查包。
+		if endIndex := s.findIndex(endReaded - 1); endIndex >= 0 {
+			endTimestamp = s.CaptureTimestampOffsets[endIndex]
+		}
+	} else {
+		endTimestamp = startTimestamp
+	}
+	return consumed, startPayloadOffset, endPayloadOffset, startTimestamp, endTimestamp
 }
 
 // handshakeWithSecondSynAck 处理TCP三次握手的第二个SYN-ACK包。
@@ -318,6 +490,7 @@ func (s *Side[P]) handshakeWithSecondSynAck(ctx context.Context, second P) error
 	}
 	s.state = StateSynReceived
 	s.isn = second.SeqNum()
+	s.fingerprint = second.TcpFingerprint()
 	s.expectedSeq = s.isn + 1
 	if err := s.appendPacket(ctx, second); err != nil {
 		return errors.WithStack(err)
@@ -376,6 +549,7 @@ func (s *Side[P]) handshakeWithThirdAck(ctx context.Context, third P, otherSide 
 //   - 期望序列号递增1，表示已处理RST包
 //   - 连接资源应立即释放，不再接受任何数据包
 func (s *Side[P]) reset(ctx context.Context, packet P, otherSide *Side[P]) error {
+	defer s.bufferClose()
 	s.state = StateClosed
 	otherSide.state = StateClosed
 	s.expectedSeq += 1
@@ -403,6 +577,7 @@ func (s *Side[P]) reset(ctx context.Context, packet P, otherSide *Side[P]) error
 //  3. 等待本地应用发出FIN包
 //  4. 收到对方的ACK确认，进入Closed状态
 func (s *Side[P]) handwaveWithFin(ctx context.Context, first P) error {
+	defer s.bufferClose()
 	s.state = StateCloseWait
 	s.expectedSeq += 1
 	if err := s.appendPacket(ctx, first); err != nil {
@@ -478,11 +653,15 @@ func (s *Side[P]) tryReassembly(ctx context.Context, otherSide *Side[P]) error {
 //     2. 如果当前处于Established状态且是FIN包，处理连接终止
 //     3. 否则，按正常数据包处理
 func (s *Side[P]) addPacket(ctx context.Context, packet P, otherSide *Side[P]) (err error) {
+	s.logger.Ctx(ctx).Debugf("packet ENTER  cli2Srv=%v state=%d isn=%d seq=%d expectedSeq=%d ack=%d syn=%v fin=%v rst=%v payloadLen=%d",
+		s.cli2Srv, s.state, s.isn, packet.SeqNum(), s.expectedSeq, packet.AckNum(),
+		packet.IsSyn(), packet.IsFin(), packet.IsRst(), len(packet.GetPayload()))
 	ctx, span := startSideSpan(ctx, packet, s.cli2Srv)
 	defer endSpan(span, &err)
 	defer recordPacket(ctx, packet)
 	// 若连接已关闭，直接忽略
 	if s.isCompleted() {
+		s.logger.Ctx(ctx).Debugf("packet DROP(completed) cli2Srv=%v state=%d isn=%d, seq=%d", s.cli2Srv, s.state, s.isn, packet.SeqNum())
 		return nil
 	}
 
@@ -503,9 +682,13 @@ func (s *Side[P]) addPacket(ctx context.Context, packet P, otherSide *Side[P]) (
 	// 处理乱序包
 	seq := packet.SeqNum()
 	if seqLess(seq, s.expectedSeq) {
+		s.logger.Ctx(ctx).Debugf("packet DROP(retransmit) cli2Srv=%v state=%d isn=%d, seq=%d expectedSeq=%d payloadLen=%d",
+			s.cli2Srv, s.state, s.isn, seq, s.expectedSeq, len(packet.GetPayload()))
 		recordRetransmit(ctx)
 		return nil
 	} else if seqLess(s.expectedSeq, seq) {
+		s.logger.Ctx(ctx).Debugf("packet STASH(out-of-order) cli2Srv=%v state=%d isn=%d, seq=%d expectedSeq=%d payloadLen=%d",
+			s.cli2Srv, s.state, s.isn, seq, s.expectedSeq, len(packet.GetPayload()))
 		if s.outOrderPackets == nil {
 			s.outOrderPackets = make(map[uint32]P)
 		} else if len(s.outOrderPackets) >= s.maxOutOrderPacketSize {
@@ -527,67 +710,6 @@ func (s *Side[P]) addPacket(ctx context.Context, packet P, otherSide *Side[P]) (
 	}
 	if err := s.tryReassembly(ctx, otherSide); err != nil {
 		return errors.WithStack(err)
-	}
-	return nil
-}
-
-func (s *Side[P]) release() {
-	s.buffer.Release()
-}
-
-// sideAux 是 Side 序列化的辅助结构体，导出 TCP 状态字段和乱序包数据。
-// 运行时字段（buffer、frameStack）不参与序列化。
-type sideAux struct {
-	Cli2Srv               bool                       `json:"cli2srv"`
-	State                 TCPState                   `json:"state"`
-	Isn                   uint32                     `json:"isn"`
-	ExpectedSeq           uint32                     `json:"expected_seq"`
-	MaxOutOrderPacketSize int                        `json:"max_out_order_packet_size"`
-	OutOrderPackets       map[uint32]json.RawMessage `json:"out_order_packets,omitempty"`
-}
-
-// MarshalJSON 实现 Side[P] 的 JSON 序列化。
-// 序列化 TCP 状态字段和乱序包数据，跳过运行时缓冲区、帧堆栈。
-func (s Side[P]) MarshalJSON() ([]byte, error) {
-	ooPackets := make(map[uint32]json.RawMessage, len(s.outOrderPackets))
-	for seq, pkt := range s.outOrderPackets {
-		raw, err := json.Marshal(pkt)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		ooPackets[seq] = raw
-	}
-	return json.Marshal(sideAux{
-		Cli2Srv:               s.cli2Srv,
-		State:                 s.state,
-		Isn:                   s.isn,
-		ExpectedSeq:           s.expectedSeq,
-		MaxOutOrderPacketSize: s.maxOutOrderPacketSize,
-		OutOrderPackets:       ooPackets,
-	})
-}
-
-// UnmarshalJSON 实现 Side[P] 的 JSON 反序列化。
-// 恢复 TCP 状态字段和乱序包数据。运行时缓冲区、帧堆栈保持零值。
-func (s *Side[P]) UnmarshalJSON(data []byte) error {
-	var aux sideAux
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return errors.WithStack(err)
-	}
-	s.cli2Srv = aux.Cli2Srv
-	s.state = aux.State
-	s.isn = aux.Isn
-	s.expectedSeq = aux.ExpectedSeq
-	s.maxOutOrderPacketSize = aux.MaxOutOrderPacketSize
-	if len(aux.OutOrderPackets) > 0 {
-		s.outOrderPackets = make(map[uint32]P, len(aux.OutOrderPackets))
-		for seq, raw := range aux.OutOrderPackets {
-			var p P
-			if err := json.Unmarshal(raw, &p); err != nil {
-				return errors.WithStack(err)
-			}
-			s.outOrderPackets[seq] = p
-		}
 	}
 	return nil
 }

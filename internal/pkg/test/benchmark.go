@@ -1,3 +1,5 @@
+// Package test（本文件）提供基准测试运行与报告生成能力：Run 运行基准并采集耗时、
+// 内存等指标，BenchResult 负责统计与 Markdown 报告输出。
 package test
 
 import (
@@ -11,10 +13,11 @@ import (
 	"testing"
 	"text/template"
 	"time"
+
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 type benchConfig struct {
-	minDuration time.Duration
 	warmupCount int
 	outputDir   string
 	autoReport  bool
@@ -24,7 +27,6 @@ type benchConfig struct {
 
 func defaultConfig() benchConfig {
 	return benchConfig{
-		minDuration: 1 * time.Second,
 		warmupCount: 0,
 		outputDir:   ".",
 		autoReport:  true,
@@ -32,38 +34,38 @@ func defaultConfig() benchConfig {
 	}
 }
 
+// BenchOption 定义基准测试的运行选项。
 type BenchOption func(*benchConfig)
 
-func WithMinDuration(d time.Duration) BenchOption {
-	return func(c *benchConfig) {
-		c.minDuration = d
-	}
-}
-
+// WithWarmup 设置基准运行前的预热次数。
 func WithWarmup(n int) BenchOption {
 	return func(c *benchConfig) {
 		c.warmupCount = n
 	}
 }
 
+// WithOutputDir 设置报告输出目录。
 func WithOutputDir(dir string) BenchOption {
 	return func(c *benchConfig) {
 		c.outputDir = dir
 	}
 }
 
+// WithAutoReport 设置是否自动生成报告文件。
 func WithAutoReport(enabled bool) BenchOption {
 	return func(c *benchConfig) {
 		c.autoReport = enabled
 	}
 }
 
+// WithProfiling 设置是否启用性能剖析。
 func WithProfiling(enabled bool) BenchOption {
 	return func(c *benchConfig) {
 		c.profiling = enabled
 	}
 }
 
+// WithProfilingConfig 设置性能剖析配置并启用剖析。
 func WithProfilingConfig(cfg ProfilingConfig) BenchOption {
 	return func(c *benchConfig) {
 		c.profiling = true
@@ -71,18 +73,28 @@ func WithProfilingConfig(cfg ProfilingConfig) BenchOption {
 	}
 }
 
+// BenchResult 保存单次基准测试的统计结果。
 type BenchResult struct {
-	Name      string
-	N         int
-	T         time.Duration
-	Bytes     int64
+	// Name 基准测试名称。
+	Name string
+	// N 迭代次数。
+	N int
+	// T 总耗时。
+	T time.Duration
+	// Bytes 单次迭代处理的字节数。
+	Bytes int64
+	// MemAllocs 内存分配次数。
 	MemAllocs int64
-	MemBytes  int64
+	// MemBytes 内存分配字节数。
+	MemBytes int64
 
+	// timings 各次采样的耗时列表（纳秒）。
 	timings []float64
+	// Profile 性能剖析结果，未启用剖析时为 nil。
 	Profile *ProfileResult
 }
 
+// NsPerOp 返回单次操作的纳秒耗时。
 func (r *BenchResult) NsPerOp() float64 {
 	if r.N == 0 {
 		return 0
@@ -90,6 +102,7 @@ func (r *BenchResult) NsPerOp() float64 {
 	return float64(r.T.Nanoseconds()) / float64(r.N)
 }
 
+// MbPerSec 返回吞吐量（MB/s）。
 func (r *BenchResult) MbPerSec() float64 {
 	if r.T.Seconds() <= 0 || r.Bytes <= 0 {
 		return 0
@@ -97,6 +110,7 @@ func (r *BenchResult) MbPerSec() float64 {
 	return float64(r.Bytes) * float64(r.N) / r.T.Seconds() / 1024 / 1024
 }
 
+// AllocsPerOp 返回单次操作的内存分配次数。
 func (r *BenchResult) AllocsPerOp() int64 {
 	if r.N == 0 {
 		return 0
@@ -104,6 +118,7 @@ func (r *BenchResult) AllocsPerOp() int64 {
 	return r.MemAllocs / int64(r.N)
 }
 
+// BytesPerOp 返回单次操作的内存分配字节数。
 func (r *BenchResult) BytesPerOp() int64 {
 	if r.N == 0 {
 		return 0
@@ -111,6 +126,7 @@ func (r *BenchResult) BytesPerOp() int64 {
 	return r.MemBytes / int64(r.N)
 }
 
+// MinNs 返回采样耗时中的最小值（纳秒）。
 func (r *BenchResult) MinNs() float64 {
 	if len(r.timings) == 0 {
 		return 0
@@ -124,6 +140,7 @@ func (r *BenchResult) MinNs() float64 {
 	return min
 }
 
+// MaxNs 返回采样耗时中的最大值（纳秒）。
 func (r *BenchResult) MaxNs() float64 {
 	if len(r.timings) == 0 {
 		return 0
@@ -137,6 +154,7 @@ func (r *BenchResult) MaxNs() float64 {
 	return max
 }
 
+// AvgNs 返回采样耗时的平均值（纳秒）。
 func (r *BenchResult) AvgNs() float64 {
 	if len(r.timings) == 0 {
 		return 0
@@ -148,6 +166,7 @@ func (r *BenchResult) AvgNs() float64 {
 	return sum / float64(len(r.timings))
 }
 
+// Percentile 返回给定百分位（0-100）的采样耗时（纳秒）。
 func (r *BenchResult) Percentile(p float64) float64 {
 	if len(r.timings) == 0 {
 		return 0
@@ -342,6 +361,7 @@ const reportTemplate = `# Performance Benchmark Report
 | **Timestamp** | {{.Timestamp}} |
 `
 
+// ReportString 生成 Markdown 格式的基准测试报告。
 func (r *BenchResult) ReportString() string {
 	data := r.buildReportData()
 	tmpl := template.Must(template.New("report").Funcs(template.FuncMap{
@@ -356,6 +376,7 @@ func (r *BenchResult) ReportString() string {
 	return buf.String()
 }
 
+// ReportToFile 将报告写入指定文件，必要时创建父目录。
 func (r *BenchResult) ReportToFile(path string) error {
 	dir := filepath.Dir(path)
 	if dir != "" && dir != "." {
@@ -464,6 +485,7 @@ func sampleTimings(fn func(), targetSamples int) []float64 {
 	return timings
 }
 
+// Run 运行基准测试并返回统计结果，可选生成报告与采集剖析数据。
 func Run(name string, fn func(), opts ...BenchOption) *BenchResult {
 	cfg := defaultConfig()
 	for _, opt := range opts {
@@ -521,9 +543,9 @@ func Run(name string, fn func(), opts ...BenchOption) *BenchResult {
 		}
 		reportPath := filepath.Join(cfg.outputDir, fmt.Sprintf("benchreport_%s_%s.md", safeName, timestamp))
 		if err := result.ReportToFile(reportPath); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to save benchmark report: %v\n", err)
+			fmt.Fprintln(os.Stderr, translate.T("cli.bench.report-save-failed", map[string]any{"Err": err}))
 		} else {
-			fmt.Fprintf(os.Stderr, "Benchmark report saved: %s\n", reportPath)
+			fmt.Fprintln(os.Stderr, translate.T("cli.bench.report-saved", map[string]any{"Path": reportPath}))
 		}
 	}
 

@@ -1,6 +1,7 @@
 package tcp
 
 import (
+	"bufio"
 	"context"
 	stderrors "errors"
 	"net"
@@ -9,8 +10,10 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	. "github.com/smartystreets/goconvey/convey"
-	n "zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"go.uber.org/zap"
+	n "zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/network/detectors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // mockDetector 是用于测试的 AppProtocolDetector 实现。
@@ -23,6 +26,7 @@ type mockDetector struct {
 	matchRsp   bool  // 响应侧检测是否匹配
 }
 
+// Detect 返回预设的检测错误或按请求/响应侧返回是否匹配。
 func (m *mockDetector) Detect(ctx context.Context, peek []byte, c2s bool) (bool, error) {
 	if m.detectErr != nil {
 		return false, m.detectErr
@@ -33,29 +37,31 @@ func (m *mockDetector) Detect(ctx context.Context, peek []byte, c2s bool) (bool,
 	return m.matchRsp, nil
 }
 
-func (m *mockDetector) Extract(ctx context.Context, clientRb, serverRb *serializer.RingBuffer) (any, any, error) {
+// Extract 返回预设错误，否则读取双方缓冲区全部可用数据作为提取结果。
+func (m *mockDetector) Extract(ctx context.Context, clientReader, serverReader *bufio.Reader) (any, any, error) {
 	if m.extractErr != nil {
 		return nil, nil, m.extractErr
 	}
 	// 正常提取：读取所有可用数据
-	clientData := make([]byte, clientRb.Capacity())
-	serverData := make([]byte, serverRb.Capacity())
-	n1, err := clientRb.Read(clientData)
+	clientData := make([]byte, clientReader.Size())
+	serverData := make([]byte, serverReader.Size())
+	n1, err := clientReader.Read(clientData)
 	if err != nil {
 		return nil, nil, err
 	}
-	n2, err := serverRb.Read(serverData)
+	n2, err := serverReader.Read(serverData)
 	if err != nil {
 		return nil, nil, err
 	}
 	return clientData[:n1], serverData[:n2], nil
 }
 
-func (m *mockDetector) Build(ctx context.Context, meta *n.BaseMeta,
-	clientAddr, serverAddr net.IP,
-	clientPort, serverPort layers.TCPPort,
-	clientFrameStack, serverFrameStack n.FrameStack,
+// Build 将客户端与服务器端负载组装为应用层对象。
+func (m *mockDetector) Build(ctx context.Context, baseMeta *n.BaseMeta,
+	streamMeta *detectors.StreamMeta,
+	streamIndex uint32,
 	clientPayload, serverPayload any,
+	buildTailer detectors.BuildTailer,
 ) (any, error) {
 	return map[string]any{
 		"client": clientPayload,
@@ -69,12 +75,31 @@ type testReassemblerFixture struct {
 	meta      *n.BaseMeta
 	rsmCtx    context.Context
 	rsmCancel context.CancelFunc
+	// dstChan 与rsm共用的目标管道，帧记录（NetworkStack）在appendPacket时即时写入，
+	// 应用层对象在parse中写入，测试通过该管道断言输出。
+	dstChan chan any
 }
 
 // newTestReassemblerWithHandshake 创建一个完成三次握手的 Reassembler，
 // 双方缓冲区中已写入测试数据，供 extractApplication 的 Detect 阶段使用。
 // 返回 fixture 和 cancel，调用方应 defer cancel 并 defer rsm.release。
-func newTestReassemblerWithHandshake(t *testing.T, timeout time.Duration, sessionID byte) *testReassemblerFixture {
+func newTestReassemblerWithHandshake(_ *testing.T, sessionID byte) *testReassemblerFixture {
+	fixture := newTestReassemblerWithHandshakeWithoutBuffer(nil, sessionID)
+
+	// 向双方缓冲区写入测试数据，使 Detect 阶段能匹配
+	_, err := fixture.rsm.client.brw.Write([]byte("mock request data for detect"))
+	So(err, ShouldBeNil)
+	So(fixture.rsm.client.brw.Flush(), ShouldBeNil)
+	_, err = fixture.rsm.server.brw.Write([]byte("mock response data for detect"))
+	So(err, ShouldBeNil)
+	So(fixture.rsm.server.brw.Flush(), ShouldBeNil)
+
+	return fixture
+}
+
+// newTestReassemblerWithHandshakeWithoutBuffer 创建一个完成三次握手的 Reassembler，
+// 但不向缓冲区中写入测试数据，用于测试 buildTailer 等不依赖缓冲数据的场景
+func newTestReassemblerWithHandshakeWithoutBuffer(_ *testing.T, sessionID byte) *testReassemblerFixture {
 	clientAddr := net.ParseIP("192.168.1.100")
 	serverAddr := net.ParseIP("10.0.0.1")
 
@@ -82,7 +107,7 @@ func newTestReassemblerWithHandshake(t *testing.T, timeout time.Duration, sessio
 		Namespace: "test-ns",
 		Capture:   "test-cap",
 		Version:   "1.0",
-		SessionID: serializer.HexUUID{0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
+		SessionID: [16]byte{0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
 			0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF},
 	}
 	meta.SessionID[0] = sessionID
@@ -99,10 +124,11 @@ func newTestReassemblerWithHandshake(t *testing.T, timeout time.Duration, sessio
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	rsm, err := newReassembler(ctx, syn, 10, timeout)
+	logger := &logging.Logger{SugaredLogger: zap.NewNop().Sugar()}
+	dstChan := make(chan any, 32)
+	rsm, err := newReassembler(ctx, logger, syn, 10, time.Second*5, dstChan)
 	So(err, ShouldBeNil)
 
-	// 模拟三次握手完成
 	synAck := newMockTCPPacketWithOptions(
 		withSynAckFlag(true), withAckFlag(true),
 		withSrcAddr(serverAddr), withDstAddr(clientAddr),
@@ -112,7 +138,7 @@ func newTestReassemblerWithHandshake(t *testing.T, timeout time.Duration, sessio
 	)
 	synAck.ackNum = 1001
 
-	err = rsm.Server.handshakeWithSecondSynAck(ctx, synAck)
+	err = rsm.server.handshakeWithSecondSynAck(ctx, synAck)
 	So(err, ShouldBeNil)
 
 	ack := newMockTCPPacketWithOptions(
@@ -124,13 +150,7 @@ func newTestReassemblerWithHandshake(t *testing.T, timeout time.Duration, sessio
 	)
 	ack.ackNum = 5001
 
-	err = rsm.Client.handshakeWithThirdAck(ctx, ack, rsm.Server)
-	So(err, ShouldBeNil)
-
-	// 向双方缓冲区写入测试数据，使 Detect 阶段能匹配
-	_, err = rsm.Client.buffer.Write([]byte("mock request data for detect"))
-	So(err, ShouldBeNil)
-	_, err = rsm.Server.buffer.Write([]byte("mock response data for detect"))
+	err = rsm.client.handshakeWithThirdAck(ctx, ack, rsm.server)
 	So(err, ShouldBeNil)
 
 	return &testReassemblerFixture{
@@ -138,12 +158,14 @@ func newTestReassemblerWithHandshake(t *testing.T, timeout time.Duration, sessio
 		meta:      meta,
 		rsmCtx:    ctx,
 		rsmCancel: cancel,
+		dstChan:   dstChan,
 	}
 }
 
 // fatalError 是用于测试非可重试错误的哨兵错误。
 var fatalError = stderrors.New("fatal extraction error")
 
+// TestReassemblerParse_RetryableError 验证 parse 循环对可重试与非可重试错误的处理策略。
 func TestReassemblerParse_RetryableError(t *testing.T) {
 	// 初始化 OTEL metrics：生产环境由 NewRouter 调用，测试需手动调用
 	InitMetrics()
@@ -151,36 +173,35 @@ func TestReassemblerParse_RetryableError(t *testing.T) {
 	Convey("Test parse handles retryable errors", t, func() {
 
 		Convey("parse should continue when Extract returns ErrDataIncomplete", func() {
-			protocolKey := AppProtocol("test-retryable-incomplete")
+			protocolKey := detectors.AppProtocol("test-retryable-incomplete")
 			detector := &mockDetector{
 				matchReq:   true,
 				matchRsp:   true,
-				extractErr: ErrDataIncomplete,
+				extractErr: detectors.ErrDataIncomplete,
 			}
-			RegisterAppProtocolDetector(protocolKey, detector)
-			defer delete(detectors, protocolKey)
+			detectors.RegisterAppProtocolDetector(protocolKey, detector)
+			defer delete(detectors.Detectors, protocolKey)
 
-			fixture := newTestReassemblerWithHandshake(t, 100*time.Millisecond, 0x01)
+			fixture := newTestReassemblerWithHandshake(t, 0x01)
 			defer fixture.rsmCancel()
-			defer fixture.rsm.release()
+			defer fixture.rsm.Close()
 
-			fixture.rsm.lastNoticeTime = time.Now()
-
-			dstChan := make(chan any, 10)
+			signalChan := make(chan any, 1)
+			dstChan := fixture.dstChan
 
 			parseCtx, parseCancel := context.WithCancel(context.Background())
 			defer parseCancel()
 
 			done := make(chan error, 1)
 			go func() {
-				done <- fixture.rsm.parse(parseCtx, fixture.meta, dstChan)
+				done <- fixture.rsm.parse(parseCtx, fixture.meta, signalChan, dstChan)
 			}()
 
 			// 等待 parse 协程进入 select 循环
 			time.Sleep(20 * time.Millisecond)
 
 			// 发送信号触发提取，Extract 返回 ErrDataIncomplete
-			fixture.rsm.notice(parseCtx)
+			signalChan <- nil
 			time.Sleep(50 * time.Millisecond)
 
 			// parse 不应退出（可重试错误）
@@ -195,78 +216,34 @@ func TestReassemblerParse_RetryableError(t *testing.T) {
 			<-done
 		})
 
-		Convey("parse should exit when flow is stuck (lastNoticeTime exceeded timeout)", func() {
-			protocolKey := AppProtocol("test-stuck-flow")
-			detector := &mockDetector{
-				matchReq:   true,
-				matchRsp:   true,
-				extractErr: ErrDataIncomplete,
-			}
-			RegisterAppProtocolDetector(protocolKey, detector)
-			defer delete(detectors, protocolKey)
-
-			fixture := newTestReassemblerWithHandshake(t, 50*time.Millisecond, 0x02)
-			defer fixture.rsmCancel()
-			defer fixture.rsm.release()
-
-			// 将 lastNoticeTime 设置为很久以前，模拟僵死流
-			fixture.rsm.lastNoticeTime = time.Now().Add(-time.Hour)
-
-			dstChan := make(chan any, 10)
-
-			parseCtx, parseCancel := context.WithCancel(context.Background())
-			defer parseCancel()
-
-			done := make(chan error, 1)
-			go func() {
-				done <- fixture.rsm.parse(parseCtx, fixture.meta, dstChan)
-			}()
-
-			time.Sleep(20 * time.Millisecond)
-
-			// 直接向 signalChan 发送信号（绕过 notice()，避免更新 lastNoticeTime）
-			// parse 应检测到 lastNoticeTime 已过期并退出
-			fixture.rsm.signalChan <- nil
-
-			select {
-			case parseErr := <-done:
-				So(parseErr, ShouldBeNil) // 僵死流退出应返回 nil（正常释放）
-			case <-time.After(time.Second):
-				t.Fatal("parse did not exit when flow should be stuck")
-			}
-
-			parseCancel()
-		})
-
 		Convey("parse should return error on non-retryable error", func() {
-			protocolKey := AppProtocol("test-fatal-error")
+			protocolKey := detectors.AppProtocol("test-fatal-error")
 			detector := &mockDetector{
 				matchReq:   true,
 				matchRsp:   true,
 				extractErr: fatalError,
 			}
-			RegisterAppProtocolDetector(protocolKey, detector)
-			defer delete(detectors, protocolKey)
+			detectors.RegisterAppProtocolDetector(protocolKey, detector)
+			defer delete(detectors.Detectors, protocolKey)
 
-			fixture := newTestReassemblerWithHandshake(t, 100*time.Millisecond, 0x03)
+			fixture := newTestReassemblerWithHandshake(t, 0x03)
 			defer fixture.rsmCancel()
-			defer fixture.rsm.release()
+			defer fixture.rsm.Close()
 
-			fixture.rsm.lastNoticeTime = time.Now()
-
-			dstChan := make(chan any, 10)
+			signalChan := make(chan any, 1)
+			dstChan := fixture.dstChan
 
 			parseCtx, parseCancel := context.WithCancel(context.Background())
 			defer parseCancel()
 
 			done := make(chan error, 1)
 			go func() {
-				done <- fixture.rsm.parse(parseCtx, fixture.meta, dstChan)
+				done <- fixture.rsm.parse(parseCtx, fixture.meta, signalChan, dstChan)
 			}()
 
 			time.Sleep(20 * time.Millisecond)
 
-			fixture.rsm.notice(parseCtx)
+			signalChan <- nil
 
 			select {
 			case parseErr := <-done:
@@ -280,34 +257,33 @@ func TestReassemblerParse_RetryableError(t *testing.T) {
 
 		Convey("parse should not exit when no protocol matches (app is nil)", func() {
 			// 注册一个不匹配任何数据的 detector
-			protocolKey := AppProtocol("test-no-match")
+			protocolKey := detectors.AppProtocol("test-no-match")
 			detector := &mockDetector{
 				matchReq: false, // 永远不匹配
 				matchRsp: false,
 			}
-			RegisterAppProtocolDetector(protocolKey, detector)
-			defer delete(detectors, protocolKey)
+			detectors.RegisterAppProtocolDetector(protocolKey, detector)
+			defer delete(detectors.Detectors, protocolKey)
 
-			fixture := newTestReassemblerWithHandshake(t, 100*time.Millisecond, 0x04)
+			fixture := newTestReassemblerWithHandshake(t, 0x04)
 			defer fixture.rsmCancel()
-			defer fixture.rsm.release()
+			defer fixture.rsm.Close()
 
-			fixture.rsm.lastNoticeTime = time.Now()
-
-			dstChan := make(chan any, 10)
+			signalChan := make(chan any, 1)
+			dstChan := fixture.dstChan
 
 			parseCtx, parseCancel := context.WithCancel(context.Background())
 			defer parseCancel()
 
 			done := make(chan error, 1)
 			go func() {
-				done <- fixture.rsm.parse(parseCtx, fixture.meta, dstChan)
+				done <- fixture.rsm.parse(parseCtx, fixture.meta, signalChan, dstChan)
 			}()
 
 			time.Sleep(20 * time.Millisecond)
 
 			// 发送信号，无协议匹配 → extractApplication 返回 nil, nil
-			fixture.rsm.notice(parseCtx)
+			signalChan <- nil
 			time.Sleep(50 * time.Millisecond)
 
 			// parse 不应退出
@@ -322,5 +298,135 @@ func TestReassemblerParse_RetryableError(t *testing.T) {
 			<-done
 		})
 
+	})
+}
+
+// TestReassemblerMeta 测试 Reassembler.Meta 方法
+// 验证创建的 StreamMeta 包含正确的连接信息
+func TestReassemblerMeta(t *testing.T) {
+	InitMetrics()
+
+	Convey("Test Reassembler.Meta", t, func() {
+		Convey("Meta should return correct StreamMeta with connection info", func() {
+			fixture := newTestReassemblerWithHandshake(t, 0x10)
+			defer fixture.rsmCancel()
+			defer fixture.rsm.Close()
+
+			meta := fixture.rsm.Meta()
+			So(meta, ShouldNotBeNil)
+			So(meta.TraceID, ShouldNotBeNil)
+			So(meta.ClientAddr.String(), ShouldEqual, "192.168.1.100")
+			So(meta.ClientPort, ShouldEqual, layers.TCPPort(50000))
+			So(meta.ClientISN, ShouldEqual, uint32(1000))
+			So(meta.ServerAddr.String(), ShouldEqual, "10.0.0.1")
+			So(meta.ServerPort, ShouldEqual, layers.TCPPort(80))
+			So(meta.ServerISN, ShouldEqual, uint32(5000))
+			So(meta.Timestamp.IsZero(), ShouldBeFalse)
+		})
+	})
+}
+
+// TestReassemblerBuildTailer 测试 Reassembler.buildTailer 方法
+// 验证 buildTailer 在无缓冲数据时返回零值 AppTailer，且可重入安全
+func TestReassemblerBuildTailer(t *testing.T) {
+	InitMetrics()
+
+	Convey("Test Reassembler.buildTailer", t, func() {
+		Convey("buildTailer should return AppTailer with zero consumed when no data in buffers", func() {
+			fixture := newTestReassemblerWithHandshakeWithoutBuffer(t, 0x11)
+			defer fixture.rsmCancel()
+			defer fixture.rsm.Close()
+
+			tailer, err := fixture.rsm.buildTailer(fixture.rsmCtx)
+			So(err, ShouldBeNil)
+			So(tailer, ShouldNotBeNil)
+			// 握手包均无 payload，consumed 应为 0
+			So(tailer.ClientConsumed, ShouldEqual, uint64(0))
+			So(tailer.ServerConsumed, ShouldEqual, uint64(0))
+		})
+
+		Convey("buildTailer should be reentrant safe", func() {
+			fixture := newTestReassemblerWithHandshakeWithoutBuffer(t, 0x12)
+			defer fixture.rsmCancel()
+			defer fixture.rsm.Close()
+
+			tailer1, err := fixture.rsm.buildTailer(fixture.rsmCtx)
+			So(err, ShouldBeNil)
+			So(tailer1, ShouldNotBeNil)
+
+			tailer2, err := fixture.rsm.buildTailer(fixture.rsmCtx)
+			So(err, ShouldBeNil)
+			So(tailer2, ShouldNotBeNil)
+			// 第二次调用 consumed 不会增加（无新数据写入）
+			So(tailer2.ClientConsumed, ShouldEqual, uint64(0))
+			So(tailer2.ServerConsumed, ShouldEqual, uint64(0))
+		})
+	})
+}
+
+// TestReassemblerParse_StreamIndexIncrement 测试 streamIndex 递增
+// 验证每次成功 push app 后 streamIndex 递增
+func TestReassemblerParse_StreamIndexIncrement(t *testing.T) {
+	InitMetrics()
+
+	Convey("Test parse streamIndex increment", t, func() {
+		Convey("streamIndex should increment after each successful push", func() {
+			protocolKey := detectors.AppProtocol("test-stream-index")
+			detector := &mockDetector{
+				matchReq:   true,
+				matchRsp:   true,
+				extractErr: nil, // 正常提取
+			}
+			detectors.RegisterAppProtocolDetector(protocolKey, detector)
+			defer delete(detectors.Detectors, protocolKey)
+
+			fixture := newTestReassemblerWithHandshake(t, 0x13)
+			defer fixture.rsmCancel()
+			defer fixture.rsm.Close()
+
+			signalChan := make(chan any, 5)
+			dstChan := fixture.dstChan
+
+			parseCtx, parseCancel := context.WithCancel(context.Background())
+			defer parseCancel()
+
+			done := make(chan error, 1)
+			go func() {
+				done <- fixture.rsm.parse(parseCtx, fixture.meta, signalChan, dstChan)
+			}()
+
+			time.Sleep(20 * time.Millisecond)
+
+			// 发送两次信号，期望两次 build 的 streamIndex 不同
+			// 第一次
+			signalChan <- nil
+			time.Sleep(50 * time.Millisecond)
+
+			// 向双方缓冲区再写入数据，使第二次提取也能命中
+			_, err := fixture.rsm.client.brw.Write([]byte("mock request data 2"))
+			So(err, ShouldBeNil)
+			So(fixture.rsm.client.brw.Flush(), ShouldBeNil)
+			_, err = fixture.rsm.server.brw.Write([]byte("mock response data 2"))
+			So(err, ShouldBeNil)
+			So(fixture.rsm.server.brw.Flush(), ShouldBeNil)
+
+			// 第二次
+			signalChan <- nil
+			time.Sleep(50 * time.Millisecond)
+
+			parseCancel()
+			<-done
+
+			// 验证 dstChan 中收到了两个 app（帧记录为NetworkStack，需过滤）
+			var apps []any
+			close(dstChan)
+			for item := range dstChan {
+				if _, isStack := item.(*n.NetworkStack); isStack {
+					continue
+				}
+				apps = append(apps, item)
+			}
+			So(len(apps), ShouldBeGreaterThanOrEqualTo, 2)
+		})
 	})
 }

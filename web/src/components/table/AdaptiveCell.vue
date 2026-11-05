@@ -1,18 +1,12 @@
 <template>
-  <v-chip
-    v-if="
-      header.type !== BackendDataType.ACTIONS && item[header.key] === undefined
-    "
-  >
+  <v-chip v-if="header.type !== BackendDataType.ACTIONS && item[header.key] === undefined">
     {{ $t("model.__base.value.undefined") }}
   </v-chip>
-
-  <v-chip
-    v-else-if="
-      header.type !== BackendDataType.ACTIONS && item[header.key] === null
-    "
-  >
+  <v-chip v-else-if="header.type !== BackendDataType.ACTIONS && item[header.key] === null">
     {{ $t("model.__base.value.null") }}
+  </v-chip>
+  <v-chip v-else-if="header.type !== BackendDataType.ACTIONS && item[header.key] === ''">
+    {{ $t("model.__base.value.blank") }}
   </v-chip>
   <hex-string-chip
     v-else-if="header.type === BackendDataType.UUID"
@@ -20,10 +14,13 @@
     suffix="..."
     :value="item[header.key]"
   />
-  <boolean-chip
-    v-else-if="header.type === BackendDataType.BOOLEAN"
+  <hex-string-chip
+    v-else-if="header.type === BackendDataType.HEX"
+    color="info"
+    suffix="..."
     :value="item[header.key]"
   />
+  <boolean-chip v-else-if="header.type === BackendDataType.BOOLEAN" :value="item[header.key]" />
   <storage-size-chip
     v-else-if="header.type === BackendDataType.BINARY_BYTE"
     :value="item[header.key]"
@@ -34,8 +31,8 @@
     :value="item[header.key]"
   />
   <json-chip
-    v-else-if="header.type === BackendDataType.JSON"
-    :value="item[header.key]"
+    v-else-if="header.kind === 'json' || header.type === BackendDataType.JSON"
+    :value="headerJson(item[header.key])"
   />
   <div v-else-if="header.type === BackendDataType.DATETIME">
     {{ localeDatetimeFormat(DateTime.fromISO(item[header.key])) }}
@@ -49,22 +46,27 @@
   <div v-else-if="header.type === BackendDataType.DURATION">
     {{ localDurationFormat(item[header.key]) }}
   </div>
+  <div v-else-if="header.enumType && item[header.key] !== undefined && item[header.key] !== null">
+    {{ enumLabelOf(header.enumType, item[header.key]) }}
+  </div>
   <v-menu
-    v-else-if="header.type === BackendDataType.ACTIONS && actions"
+    v-else-if="header.type === BackendDataType.ACTIONS && Object.keys(rowActions(item)).length > 0"
     location="bottom right"
     open-on-hover
   >
-    <template #activator="{ props }">
+    <template #activator="{ props: activatorProps }">
+      <!-- 密度由主题层决定（VBtn density="compact"）。 -->
       <v-btn
         icon="mdi-dots-vertical"
         variant="plain"
-        density="compact"
-        v-bind="props"
+        :title="$t('model.__base.field.__actions')"
+        :aria-label="$t('model.__base.field.__actions')"
+        v-bind="activatorProps"
       />
     </template>
     <v-list>
       <v-list-item
-        v-for="(action, name) in actions(item)"
+        v-for="(action, name) in rowActions(item)"
         :key="name"
         :vallue="name"
         @click="action(item)"
@@ -88,6 +90,7 @@ import {
   localeDatetimeFormat,
   localeTimeFormat,
 } from "@/utils/i18n";
+import { enumLabelOf } from "@/utils/enums";
 import { DateTime } from "luxon";
 
 const props = defineProps({
@@ -96,15 +99,35 @@ const props = defineProps({
     required: true,
   },
   item: {
+    // 表格行值类型异构；列类型由 header.type 决定。
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     type: Object as PropType<Record<string, any>>,
     required: true,
   },
   actions: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     type: Function as PropType<(item: Record<string, any>) => ItemActions>,
+    default: undefined,
   },
   refresh: {
     type: Function as PropType<() => void>,
-    default: Function(),
+    default: () => {},
   },
 });
+
+// rowActions 取当前行的可用操作集合；空集合表示该行没有任何可选动作，单元格不渲染菜单入口。
+const rowActions = (item: Record<string, unknown>): ItemActions =>
+  props.actions ? props.actions(item) : {};
+
+// headerJson 将单元格值归一化为 JSON 字符串
+// json-chip 期望接收 JSON 字符串；对象/数组等结构化值经 JSON.stringify 后展示
+const headerJson = (value: unknown): string => {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value === null || value === undefined) {
+    return "";
+  }
+  return JSON.stringify(value);
+};
 </script>

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/dustin/go-humanize"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // BibyteSize64 以字节为单位的存储容量类型，底层使用 int64
@@ -65,6 +65,7 @@ func (s *BibyteSize64) UnmarshalJSON(text []byte) error {
 	return s.unmarshal([]byte(sizeStr))
 }
 
+// MarshalJSON 实现 json.Marshaler 接口，将存储容量序列化为 JSON 字符串
 func (s BibyteSize64) MarshalJSON() ([]byte, error) {
 	data, err := json.Marshal(s.String())
 	if err != nil {
@@ -78,6 +79,7 @@ func (s *BibyteSize64) UnmarshalText(text []byte) error {
 	return s.unmarshal(text)
 }
 
+// MarshalText 实现 encoding.TextMarshaler 接口，将存储容量序列化为文本
 func (s BibyteSize64) MarshalText() ([]byte, error) {
 	return s.marshal(), nil
 }
@@ -87,10 +89,13 @@ func (s *BibyteSize64) UnmarshalBinary(text []byte) error {
 	return s.unmarshal(text)
 }
 
+// MarshalBinary 实现 encoding.BinaryMarshaler 接口，将存储容量序列化为二进制
 func (s BibyteSize64) MarshalBinary() ([]byte, error) {
 	return s.marshal(), nil
 }
 
+// BibyteSize 以字节为单位的存储容量类型，底层使用 uint32
+// 支持 JSON/Text/Binary 多种反序列化格式，可解析如 "10 MB"、"1.5 GiB" 等人类可读的容量字符串
 type BibyteSize uint32
 
 // unmarshal 是内部反序列化方法，将字节切片解析为 BibyteSize 值
@@ -146,6 +151,7 @@ func (s *BibyteSize) UnmarshalJSON(text []byte) error {
 	return s.unmarshal([]byte(sizeStr))
 }
 
+// MarshalJSON 实现 json.Marshaler 接口，将存储容量序列化为 JSON 字符串
 func (s BibyteSize) MarshalJSON() ([]byte, error) {
 	data, err := json.Marshal(s.String())
 	if err != nil {
@@ -159,6 +165,7 @@ func (s *BibyteSize) UnmarshalText(text []byte) error {
 	return s.unmarshal(text)
 }
 
+// MarshalText 实现 encoding.TextMarshaler 接口，将存储容量序列化为文本
 func (s BibyteSize) MarshalText() ([]byte, error) {
 	return s.marshal(), nil
 }
@@ -168,6 +175,7 @@ func (s *BibyteSize) UnmarshalBinary(text []byte) error {
 	return s.unmarshal(text)
 }
 
+// MarshalBinary 实现 encoding.BinaryMarshaler 接口，将存储容量序列化为二进制
 func (s BibyteSize) MarshalBinary() ([]byte, error) {
 	return s.marshal(), nil
 }

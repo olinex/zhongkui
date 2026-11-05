@@ -6,6 +6,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+// 测试 ISO 639-2 语言的 Alpha2/Alpha3/名称查询。
 func TestISO6392Codes(t *testing.T) {
 	Convey("根据 Alpha-2 代码查询", t, func() {
 		checker := GetISO6392Codes()
@@ -215,6 +216,7 @@ func TestISO6392Codes(t *testing.T) {
 	})
 }
 
+// 测试 GetISO6392Codes 的单例行为。
 func TestISO6392CodesSingleton(t *testing.T) {
 	Convey("验证 GetISO6392Codes 单例行为", t, func() {
 		Convey("多次调用应返回相同的实例", func(c C) {
@@ -225,6 +227,7 @@ func TestISO6392CodesSingleton(t *testing.T) {
 	})
 }
 
+// 测试不同索引查询同一语言返回同一条目。
 func TestISO6392CodesCrossIndexConsistency(t *testing.T) {
 	Convey("验证不同索引之间的交叉一致性", t, func() {
 		checker := GetISO6392Codes()
@@ -251,6 +254,7 @@ func TestISO6392CodesCrossIndexConsistency(t *testing.T) {
 	})
 }
 
+// 测试查询区分大小写。
 func TestISO6392CodesCaseSensitive(t *testing.T) {
 	Convey("验证查询区分大小写", t, func() {
 		checker := GetISO6392Codes()
@@ -269,6 +273,7 @@ func TestISO6392CodesCaseSensitive(t *testing.T) {
 	})
 }
 
+// 测试更多语言数据。
 func TestISO6392CodesMoreLanguages(t *testing.T) {
 	Convey("验证更多语言数据", t, func() {
 		checker := GetISO6392Codes()
@@ -317,6 +322,7 @@ func TestISO6392CodesMoreLanguages(t *testing.T) {
 	})
 }
 
+// 测试 ISO6392Entry 字段完整性。
 func TestISO6392EntryFields(t *testing.T) {
 	Convey("验证 ISO6392Entry 字段完整性", t, func() {
 		checker := GetISO6392Codes()
@@ -345,6 +351,7 @@ func TestISO6392EntryFields(t *testing.T) {
 	})
 }
 
+// 测试 Alpha-2 与 Alpha-3 双向查询的一致性。
 func TestISO6392CodesAlpha2Alpha3Bidirectional(t *testing.T) {
 	Convey("验证 Alpha-2 与 Alpha-3 双向查询的一致性", t, func() {
 		checker := GetISO6392Codes()

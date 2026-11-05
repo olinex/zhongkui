@@ -1,6 +1,7 @@
-// Utilities
+// 工具
 import { defineStore } from "pinia";
 import i18n from "@/utils/i18n";
+import { useConfigSyncStore } from "./configSync";
 import { localManager } from "./local";
 import type { SupportLanguage } from "@/types";
 import { setLocale } from "@vee-validate/i18n";
@@ -31,6 +32,8 @@ export const useAppStore = defineStore("app", {
       }
       this.namespace = namespace;
       localManager.setNamespace(namespace);
+      // 页面配置变更：通知前端配置同步 store 防抖上传
+      useConfigSyncStore().notifyLocalChange();
     },
     asLanguage(language?: SupportLanguage) {
       if (!language) {
@@ -43,10 +46,12 @@ export const useAppStore = defineStore("app", {
       this.language = language;
       localManager.setLanguage(language);
       i18n.global.locale.value = language;
+      useConfigSyncStore().notifyLocalChange();
     },
     toggleTheme() {
       localManager.toggleTheme();
       this.theme = localManager.getTheme();
+      useConfigSyncStore().notifyLocalChange();
     },
     notify(msg: Message) {
       this.messages.push(msg);

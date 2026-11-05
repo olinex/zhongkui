@@ -10,6 +10,7 @@ type mockSecretKeyProvider struct {
 	key []byte
 }
 
+// GetSecretKey 返回预设的密钥，用于测试子密钥派生。
 func (m *mockSecretKeyProvider) GetSecretKey() ([]byte, error) {
 	return m.key, nil
 }
@@ -88,7 +89,7 @@ func TestDeriveChildKey_WrapAround(t *testing.T) {
 	book := newTestPasswordBook(32)
 	kd := newTestKeyDerivation([]byte("wrap-test-key"), book)
 
-	// offset 24 + saltLen(17) = 41 > 32, will wrap around
+	// 偏移 24 + saltLen(17) = 41 > 32，会发生回绕
 	key1, err := kd.DeriveChildKey(24, 17)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -103,7 +104,7 @@ func TestDeriveChildKey_WrapAround(t *testing.T) {
 		t.Fatal("wrap-around derivation should be deterministic")
 	}
 
-	// Verify wrap-around produces a different key than a non-wrap call
+	// 验证回绕产生的密钥与非回绕调用不同
 	key3, err := kd.DeriveChildKey(0, 17)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -136,6 +137,6 @@ func TestDeriveChildKey_TooShortKeyLen(t *testing.T) {
 
 	_, err := kd.DeriveChildKey(0, 16)
 	if err == nil {
-		t.Fatal("expected error for keyLen=16 (not greater than MIN_KEY_LENGTH), got nil")
+		t.Fatal("expected error for keyLen=16 (not greater than MinKeyLength), got nil")
 	}
 }

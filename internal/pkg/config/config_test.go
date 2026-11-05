@@ -5,38 +5,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
-
-// testDefaultValidator 用于测试中模拟 Gin 的 binding validator
-type testDefaultValidator struct {
-	validator *validator.Validate
-}
-
-func (v *testDefaultValidator) Engine() any {
-	if v.validator == nil {
-		v.validator = validator.New()
-	}
-	return v.validator
-}
-
-func (v *testDefaultValidator) ValidateStruct(any) error {
-	return nil
-}
-
-func (v *testDefaultValidator) ValidateTag() string {
-	return "validate"
-}
-
-// setupTestValidator 初始化测试用的验证器
-func setupTestValidator() {
-	binding.Validator = &testDefaultValidator{}
-}
 
 // TestConfigDescription 测试 ConfigDescription 结构体
 func TestConfigDescription(t *testing.T) {
@@ -140,13 +114,13 @@ func TestConfigDescriptions_Describe(t *testing.T) {
 				{Path: "app.host", Kind: "string", Default: "localhost", Comment: "应用地址"},
 				{Path: "app.port", Kind: "int", Default: "8080", Comment: "应用端口"},
 			}
-			err := descs.Describe()
+			err := descs.Describe(nil)
 			So(err, ShouldBeNil)
 		})
 
 		Convey("空的配置描述也应正常渲染", func() {
 			descs := ConfigDescriptions{}
-			err := descs.Describe()
+			err := descs.Describe(nil)
 			So(err, ShouldBeNil)
 		})
 
@@ -154,7 +128,7 @@ func TestConfigDescriptions_Describe(t *testing.T) {
 			descs := ConfigDescriptions{
 				{Path: "app.name", Kind: "string", Default: "zhongkui", Comment: "应用名称 (ref: https://example.com)"},
 			}
-			err := descs.Describe()
+			err := descs.Describe(nil)
 			So(err, ShouldBeNil)
 		})
 	})
@@ -295,7 +269,7 @@ func TestDescribeConfig(t *testing.T) {
 
 // TestExtractConfig 测试 ExtractConfig 泛型函数
 func TestExtractConfig(t *testing.T) {
-	setupTestValidator()
+	validate := validator.New()
 
 	Convey("测试 ExtractConfig 泛型函数", t, func() {
 		Convey("应从 viper 中成功提取简单配置", func() {
@@ -303,7 +277,7 @@ func TestExtractConfig(t *testing.T) {
 			v.Set("app.host", "10.0.0.1")
 			v.Set("app.port", 9090)
 
-			cfg, err := ExtractConfig[simpleConfig](v, "app")
+			cfg, err := ExtractConfig[simpleConfig](v, validate, "app")
 			So(err, ShouldBeNil)
 			So(cfg, ShouldNotBeNil)
 			So(cfg.Host, ShouldEqual, "10.0.0.1")
@@ -314,7 +288,7 @@ func TestExtractConfig(t *testing.T) {
 			v := viper.New()
 			v.Set("app.host", "192.168.1.1")
 
-			cfg, err := ExtractConfig[simpleConfig](v, "app")
+			cfg, err := ExtractConfig[simpleConfig](v, validate, "app")
 			So(err, ShouldBeNil)
 			So(cfg, ShouldNotBeNil)
 			So(cfg.Host, ShouldEqual, "192.168.1.1")
@@ -323,14 +297,14 @@ func TestExtractConfig(t *testing.T) {
 
 		Convey("当指定前缀不存在时应返回错误", func() {
 			v := viper.New()
-			cfg, err := ExtractConfig[simpleConfig](v, "nonexistent")
+			cfg, err := ExtractConfig[simpleConfig](v, validate, "nonexistent")
 			So(err, ShouldNotBeNil)
 			So(cfg, ShouldBeNil)
 		})
 
 		Convey("错误信息应包含配置类型名称", func() {
 			v := viper.New()
-			_, err := ExtractConfig[simpleConfig](v, "missing")
+			_, err := ExtractConfig[simpleConfig](v, validate, "missing")
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "simpleConfig")
 		})
@@ -341,7 +315,7 @@ func TestExtractConfig(t *testing.T) {
 			v.Set("server.inner.enabled", true)
 			v.Set("server.inner.endpoint", "10.0.0.1:9999")
 
-			cfg, err := ExtractConfig[nestedConfig](v, "server")
+			cfg, err := ExtractConfig[nestedConfig](v, validate, "server")
 			So(err, ShouldBeNil)
 			So(cfg, ShouldNotBeNil)
 			So(cfg.Host, ShouldEqual, "0.0.0.0")
@@ -353,7 +327,7 @@ func TestExtractConfig(t *testing.T) {
 			v := viper.New()
 			v.Set("server.host", "0.0.0.0")
 
-			cfg, err := ExtractConfig[nestedConfig](v, "server")
+			cfg, err := ExtractConfig[nestedConfig](v, validate, "server")
 			So(err, ShouldBeNil)
 			So(cfg, ShouldNotBeNil)
 			So(cfg.Inner.Enabled, ShouldBeTrue)
@@ -363,7 +337,7 @@ func TestExtractConfig(t *testing.T) {
 		Convey("当配置不满足验证规则时应返回错误", func() {
 			v := viper.New()
 
-			cfg, err := ExtractConfig[requiredConfig](v, "app")
+			cfg, err := ExtractConfig[requiredConfig](v, validate, "app")
 			So(err, ShouldNotBeNil)
 			So(cfg, ShouldBeNil)
 		})
@@ -498,7 +472,7 @@ func TestDescribeConfig_EdgeCases(t *testing.T) {
 
 // TestExtractConfig_EdgeCases 测试 ExtractConfig 边界情况
 func TestExtractConfig_EdgeCases(t *testing.T) {
-	setupTestValidator()
+	validate := validator.New()
 
 	Convey("测试 ExtractConfig 边界情况", t, func() {
 		Convey("全部使用默认值应成功", func() {
@@ -506,7 +480,7 @@ func TestExtractConfig_EdgeCases(t *testing.T) {
 			v.Set("app.host", "localhost")
 			v.Set("app.port", 8080)
 
-			cfg, err := ExtractConfig[simpleConfig](v, "app")
+			cfg, err := ExtractConfig[simpleConfig](v, validate, "app")
 			So(err, ShouldBeNil)
 			So(cfg.Host, ShouldEqual, "localhost")
 			So(cfg.Port, ShouldEqual, 8080)
@@ -516,7 +490,7 @@ func TestExtractConfig_EdgeCases(t *testing.T) {
 			v := viper.New()
 			v.Set("app.host", "custom-host")
 
-			cfg, err := ExtractConfig[simpleConfig](v, "app")
+			cfg, err := ExtractConfig[simpleConfig](v, validate, "app")
 			So(err, ShouldBeNil)
 			So(cfg.Host, ShouldEqual, "custom-host")
 			So(cfg.Port, ShouldEqual, 8080)
@@ -524,7 +498,7 @@ func TestExtractConfig_EdgeCases(t *testing.T) {
 
 		Convey("空 viper 实例对无验证的结构体应返回前缀不存在的错误", func() {
 			v := viper.New()
-			cfg, err := ExtractConfig[simpleConfig](v, "")
+			cfg, err := ExtractConfig[simpleConfig](v, validate, "")
 			So(err, ShouldNotBeNil)
 			So(cfg, ShouldBeNil)
 		})
@@ -550,7 +524,7 @@ func TestConfigDescriptions_Integration(t *testing.T) {
 		Convey("合并后的配置描述应能正常输出到表格", func() {
 			descs := DescribeConfig[simpleConfig]("app")
 			descs.Join(DescribeConfig[nestedConfig]("server"))
-			err := descs.Describe()
+			err := descs.Describe(nil)
 			So(err, ShouldBeNil)
 		})
 	})

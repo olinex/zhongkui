@@ -1,5 +1,6 @@
-// Package pipeline 提供基于 asynq 的任务队列和调度器功能测试。
-// 此文件包含 pipeline 包中检查器创建和类型验证的单元测试。
+// Package queue 提供基于 asynq 的任务队列和调度器功能测试。
+// 此文件包含 queue 包中检查器创建和类型验证的单元测试。
+
 package pipeline
 
 import (
@@ -7,7 +8,7 @@ import (
 
 	"github.com/hibiken/asynq"
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/redis"
+	"zhongkuisec.com/zhongkui/internal/pkg/redis"
 )
 
 // TestInspectorTypeAlias 测试 Inspector 类型别名是否正确工作。

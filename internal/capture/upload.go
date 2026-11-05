@@ -3,15 +3,14 @@ package capture
 import (
 	"context"
 	"os"
-	"time"
 
 	"github.com/minio/minio-go/v7"
-	"zhongkui.com/zhongkui/internal/capture/totel"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/capture/totel"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/combine"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
-func (c *capturer) uploadOne(ctx context.Context, objectKey, filePath string) (err error) {
+func (c *capturer) uploadOne(ctx context.Context, objectKey, filePath string, n notice) (err error) {
 	ctx, span := totel.StartUploadOneSpan(ctx, objectKey)
 	var uploadedSize int64
 	defer func() {
@@ -29,19 +28,26 @@ func (c *capturer) uploadOne(ctx context.Context, objectKey, filePath string) (e
 			c.logger.Ctx(ctx).Errorf(`remove file %s error: %v`, filePath, e)
 		} else {
 			c.logger.Ctx(ctx).Infof(`remove file %s success`, filePath)
+			if c.untrackFile != nil {
+				c.untrackFile(filePath)
+			}
 		}
 	}()
 
-	// 调用S3客户端上传文件
-	// 设置文件内容类型、自动校验和和过期时间
-	info, err := c.s3.FPutObject(
+	// 调用 S3 客户端上传文件
+	// SendContentMd5 使 SDK 自动计算文件 MD5 并通过 Content-MD5 头发送，
+	// 服务端校验通过后将 MD5 作为 ETag 返回。此机制在所有 S3 兼容存储上通用。
+	// 下载侧可通过 StatObject 获取 ETag 并计算下载数据 MD5 进行一致性比对。
+	// 注意：对象过期策略统一由 `zki s3 lifecycle` 工具按桶生命周期规则管理，
+	// 代码层不再设置对象级 Expires。
+	var info minio.UploadInfo
+	info, err = c.s3.FPutObject(
 		ctx,
 		objectKey,
 		filePath,
 		minio.PutObjectOptions{
-			ContentType:  combine.COMPRESS_CONTENT_TYPE,
-			AutoChecksum: minio.ChecksumSHA256,
-			Expires:      time.Now().Add(c.uploadCfg.ExpireAge),
+			ContentType:    combine.CompressContentType,
+			SendContentMd5: true,
 		},
 	)
 	if err != nil {
@@ -49,9 +55,12 @@ func (c *capturer) uploadOne(ctx context.Context, objectKey, filePath string) (e
 	}
 	uploadedSize = info.Size
 
-	// 记录上传成功的详细日志
-	// 包含对象键名、文件大小和SHA256校验和
-	c.logger.Ctx(ctx).Infof(`upload file %s to s3, size: %d, checksum: %s`, objectKey, info.Size, info.ChecksumSHA256)
+	// 记录上传成功日志
+	// ETag 在单次上传中等于文件内容的 MD5 哈希，下载侧可据此校验完整性
+	c.logger.Ctx(ctx).Infof(
+		`upload file %s to s3, size: %d, packets: %d, bytes: %d, etag: %s`,
+		objectKey, info.Size, n.packetCount, n.byteCount, info.ETag,
+	)
 	return nil
 }
 
@@ -65,7 +74,7 @@ func (c *capturer) upload(ctx context.Context, sourceChan <-chan notice, notifyC
 		case n := <-sourceChan:
 			filePath := c.filePath(n.ts)
 			objectKey := c.objectKey(n.ts)
-			e := c.uploadOne(ctx, objectKey, filePath)
+			e := c.uploadOne(ctx, objectKey, filePath, n)
 			if e != nil {
 				err = e
 				return errors.WithStack(e)

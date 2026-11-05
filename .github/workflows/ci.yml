@@ -1,0 +1,28 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    env:
+      # CI 必须强制检查 Web 生产依赖的许可证
+      LICENSE_CHECK_REQUIRE_WEB: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      # 采集侧使用 cgo 链接 libpcap，构建前安装系统依赖
+      - run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+      # 所有检查统一收敛到 make ci，工作流只做薄封装
+      - run: make ci

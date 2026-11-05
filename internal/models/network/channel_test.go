@@ -55,7 +55,7 @@ func TestGRERouting(t *testing.T) {
 	Convey("Test GRERouting functions", t, func() {
 		Convey("NewGRERouting should create valid GRERouting", func() {
 			rawRouting := &layers.GRERouting{
-				AddressFamily:      2, // IPv4
+				AddressFamily:      2, // IPv4 地址族
 				SRELength:          4,
 				RoutingInformation: []byte{192, 168, 1, 1, 192, 168, 1, 2},
 				Next: &layers.GRERouting{
@@ -114,7 +114,7 @@ func TestGRERouting(t *testing.T) {
 		})
 
 		Convey("GRERouting Scan should deserialize from string", func() {
-			jsonData := `{"address_family":2,"sre_length":4,"routing_information":"wKgB","next":null}`
+			jsonData := `{"addressFamily":2,"sreLength":4,"routingInformation":"wKgB","next":null}`
 			var routing GRERouting
 
 			err := routing.Scan(jsonData)
@@ -124,7 +124,7 @@ func TestGRERouting(t *testing.T) {
 		})
 
 		Convey("GRERouting Scan should deserialize from []byte", func() {
-			jsonData := []byte(`{"address_family":2,"sre_length":4,"routing_information":"wKgB","next":null}`)
+			jsonData := []byte(`{"addressFamily":2,"sreLength":4,"routingInformation":"wKgB","next":null}`)
 			var routing GRERouting
 
 			err := routing.Scan(jsonData)
@@ -145,6 +145,22 @@ func TestGRERouting(t *testing.T) {
 			err := routing.Scan(123)
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "Routing scan failed")
+		})
+
+		Convey("GRERouting Scan should handle empty string", func() {
+			var routing GRERouting
+			err := routing.Scan("")
+			So(err, ShouldBeNil)
+			// 空值扫描后结构体应为零值
+			So(routing.AddressFamily, ShouldEqual, 0)
+		})
+
+		Convey("GRERouting Scan should handle empty bytes", func() {
+			var routing GRERouting
+			err := routing.Scan([]byte{})
+			So(err, ShouldBeNil)
+			// 空值扫描后结构体应为零值
+			So(routing.AddressFamily, ShouldEqual, 0)
 		})
 	})
 }

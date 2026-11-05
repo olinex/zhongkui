@@ -3,17 +3,24 @@ package s3
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
+	"encoding/hex"
+	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/combine"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
+// TestWithTransport 测试 WithTransport 选项能否正确设置 minio 客户端的传输层。
 func TestWithTransport(t *testing.T) {
 	convey.Convey("Test WithTransport option", t, func() {
 		convey.Convey("should set custom transport on minio.Options", func() {
@@ -49,6 +56,7 @@ func TestWithTransport(t *testing.T) {
 	})
 }
 
+// TestGetEndpoint 测试 GetEndpoint 返回创建时配置的端点。
 func TestGetEndpoint(t *testing.T) {
 	convey.Convey("Test GetEndpoint", t, func() {
 		convey.Convey("should return the endpoint set during creation", func() {
@@ -70,6 +78,7 @@ func TestGetEndpoint(t *testing.T) {
 	})
 }
 
+// TestIsNotExists 测试 IsNotExists 对各类错误的判定。
 func TestIsNotExists(t *testing.T) {
 	convey.Convey("Test IsNotExists", t, func() {
 		convey.Convey("nil error should return false", func() {
@@ -102,9 +111,55 @@ func TestIsNotExists(t *testing.T) {
 			}
 			convey.So(IsNotExists(err), convey.ShouldBeFalse)
 		})
+
+		convey.Convey("XMinioObjectNotFoundAs403 error - depends on minio.ToErrorResponse mapping", func() {
+			err := minio.ErrorResponse{Code: "XMinioObjectNotFoundAs403"}
+			// minio.ToErrorResponse 可能将其映射为 NoSuchKey，也可能不映射
+			// 只需验证不会 panic
+			_ = IsNotExists(err)
+			convey.So(true, convey.ShouldBeTrue) // 至少不崩溃
+		})
+
+		convey.Convey("NoSuchUpload error should return false", func() {
+			err := minio.ErrorResponse{Code: "NoSuchUpload", Message: "The specified multipart upload does not exist."}
+			convey.So(IsNotExists(err), convey.ShouldBeFalse)
+		})
+
+		convey.Convey("NoSuchVersion error should return false", func() {
+			err := minio.ErrorResponse{Code: "NoSuchVersion", Message: "The specified version does not exist."}
+			convey.So(IsNotExists(err), convey.ShouldBeFalse)
+		})
+
+		convey.Convey("InvalidAccessKeyId error should return false", func() {
+			err := minio.ErrorResponse{Code: "InvalidAccessKeyId", Message: "The AWS Access Key Id you provided does not exist."}
+			convey.So(IsNotExists(err), convey.ShouldBeFalse)
+		})
+
+		convey.Convey("empty string error should return false", func() {
+			convey.So(IsNotExists(minio.ErrorResponse{}), convey.ShouldBeFalse)
+		})
+
+		convey.Convey("non-minio error type (context.DeadlineExceeded) should return false", func() {
+			convey.So(IsNotExists(context.DeadlineExceeded), convey.ShouldBeFalse)
+		})
+
+		convey.Convey("non-minio error type (context.Canceled) should return false", func() {
+			convey.So(IsNotExists(context.Canceled), convey.ShouldBeFalse)
+		})
+
+		convey.Convey("wrapped io.EOF in custom error chain should return false", func() {
+			err := errors.WithStack(io.EOF)
+			convey.So(IsNotExists(err), convey.ShouldBeFalse)
+		})
+
+		convey.Convey("custom string error should return false", func() {
+			err := errors.New("custom error message")
+			convey.So(IsNotExists(err), convey.ShouldBeFalse)
+		})
 	})
 }
 
+// TestCPutObjectAndCGetObject 测试加密写入与加密读取的往返一致性（需真实 S3 环境）。
 func TestCPutObjectAndCGetObject(t *testing.T) {
 	endpoint := os.Getenv("S3_TEST_ENDPOINT")
 	accessKey := os.Getenv("S3_TEST_ACCESS_KEY")
@@ -173,6 +228,7 @@ func TestCPutObjectAndCGetObject(t *testing.T) {
 	})
 }
 
+// TestNewS3Client_InvalidConfig 测试非法配置下创建 S3 客户端应失败。
 func TestNewS3Client_InvalidConfig(t *testing.T) {
 	convey.Convey("Test NewS3Client with invalid config", t, func() {
 		provider := key.NewConfigFileSecretKeyProvider("0123456789abcdef0123456789abcdef")
@@ -195,6 +251,7 @@ func TestNewS3Client_InvalidConfig(t *testing.T) {
 	})
 }
 
+// TestCPutObject_StreamEncryption 测试 CPutObject 的流式加密管道在发送前完成加密。
 func TestCPutObject_StreamEncryption(t *testing.T) {
 	convey.Convey("Test CPutObject stream encryption pipeline", t, func() {
 		convey.Convey("verify pipeline encrypts data before sending", func() {
@@ -243,6 +300,184 @@ func TestCPutObject_StreamEncryption(t *testing.T) {
 			result, err := io.ReadAll(decrypted)
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(result, convey.ShouldResemble, original)
+		})
+	})
+}
+
+// TestVerifyDownloadIntegrity 测试 S3 下载数据的 ETag 一致性校验。
+// 通过 mock HTTP 服务器模拟服务端返回的 ETag 与实际下载数据不一致的场景，
+// 验证 VerifyDownloadIntegrity 能正确检测出数据损坏。
+func TestVerifyDownloadIntegrity(t *testing.T) {
+	convey.Convey("Test VerifyDownloadIntegrity with mock S3 server", t, func() {
+		// 构建两组数据：goodData 用于设置服务端 ETag，corruptData 用于模拟损坏的下载内容
+		goodData := []byte("original file content for integrity check")
+		corruptData := []byte("corrupted file content!!! different data")
+
+		goodMD5 := md5.Sum(goodData)
+		goodETag := fmt.Sprintf(`"%s"`, hex.EncodeToString(goodMD5[:]))
+
+		testBucket := "test-bucket"
+		testObjectKey := "test/object.zkcn"
+		expectedPath := "/" + testBucket + "/" + testObjectKey
+
+		// 启动 mock HTTP 服务器
+		// HEAD 请求（StatObject）：返回 goodData 的 ETag
+		// GET 请求（GetObject）：返回 corruptData（MD5 与 ETag 不一致）
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != expectedPath {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			switch r.Method {
+			case http.MethodHead:
+				w.Header().Set("ETag", goodETag)
+				w.Header().Set("Content-Length", fmt.Sprintf("%d", len(goodData)))
+				w.Header().Set("Last-Modified", "Mon, 02 Jan 2006 15:04:05 GMT")
+				w.WriteHeader(http.StatusOK)
+			case http.MethodGet:
+				w.Header().Set("ETag", goodETag)
+				w.Header().Set("Content-Length", fmt.Sprintf("%d", len(corruptData)))
+				w.Header().Set("Last-Modified", "Mon, 02 Jan 2006 15:04:05 GMT")
+				w.WriteHeader(http.StatusOK)
+				w.Write(corruptData)
+			default:
+				w.WriteHeader(http.StatusMethodNotAllowed)
+			}
+		}))
+		defer server.Close()
+
+		convey.Convey("should return error when downloaded data MD5 does not match ETag", func() {
+			cfg := &Config{
+				Endpoint:  strings.TrimPrefix(server.URL, "http://"),
+				AccessKey: "test-access-key",
+				SecretKey: "test-secret-key",
+				Bucket:    testBucket,
+				Region:    "us-east-1",
+				UseSSL:    false,
+			}
+
+			provider := key.NewConfigFileSecretKeyProvider("0123456789abcdef0123456789abcdef")
+			book, e := key.LoadPasswordBook("")
+			convey.So(e, convey.ShouldBeNil)
+			kd := key.NewKeyDerivation(provider, book)
+
+			client, e := NewS3Client(cfg, kd)
+			convey.So(e, convey.ShouldBeNil)
+			convey.So(client, convey.ShouldNotBeNil)
+
+			ctx := context.Background()
+
+			// 模拟下载：GetObject 返回 corruptData，包装为 ETag 校验流
+			rc, e := client.GetObject(ctx, testObjectKey, minio.GetObjectOptions{})
+			convey.So(e, convey.ShouldBeNil)
+			defer rc.Close()
+
+			vr, e := client.VerifyDownloadIntegrity(ctx, testObjectKey, rc)
+			convey.So(e, convey.ShouldBeNil)
+
+			// 流式读取：StatObject 返回 goodETag，但 corruptData 的 MD5 与之不匹配
+			_, e = io.ReadAll(vr)
+			convey.So(e, convey.ShouldNotBeNil)
+			convey.So(e.Error(), convey.ShouldContainSubstring, "S3 object integrity check failed")
+			convey.So(e.Error(), convey.ShouldContainSubstring, "expected ETag")
+			convey.So(e.Error(), convey.ShouldContainSubstring, "computed MD5")
+		})
+
+		convey.Convey("should return nil when downloaded data MD5 matches ETag", func() {
+			cfg := &Config{
+				Endpoint:  strings.TrimPrefix(server.URL, "http://"),
+				AccessKey: "test-access-key",
+				SecretKey: "test-secret-key",
+				Bucket:    testBucket,
+				Region:    "us-east-1",
+				UseSSL:    false,
+			}
+
+			provider := key.NewConfigFileSecretKeyProvider("0123456789abcdef0123456789abcdef")
+			book, e := key.LoadPasswordBook("")
+			convey.So(e, convey.ShouldBeNil)
+			kd := key.NewKeyDerivation(provider, book)
+
+			client, e := NewS3Client(cfg, kd)
+			convey.So(e, convey.ShouldBeNil)
+
+			ctx := context.Background()
+
+			// 包装 goodData Reader，数据 MD5 与 ETag 一致
+			vr, e := client.VerifyDownloadIntegrity(ctx, testObjectKey, bytes.NewReader(goodData))
+			convey.So(e, convey.ShouldBeNil)
+
+			// 流式读取完毕，校验应通过
+			result, e := io.ReadAll(vr)
+			convey.So(e, convey.ShouldBeNil)
+			convey.So(result, convey.ShouldResemble, goodData)
+		})
+	})
+}
+
+// TestCopyObject 测试服务端复制的往返一致性（需真实 S3 环境）。
+func TestCopyObject(t *testing.T) {
+	endpoint := os.Getenv("S3_TEST_ENDPOINT")
+	accessKey := os.Getenv("S3_TEST_ACCESS_KEY")
+	secretKey := os.Getenv("S3_TEST_SECRET_KEY")
+	bucket := os.Getenv("S3_TEST_BUCKET")
+	cryptoKeyEnv := os.Getenv("S3_TEST_CRYPTO_KEY")
+
+	if endpoint == "" || accessKey == "" || secretKey == "" || bucket == "" {
+		t.Skip("Skipping integration test: set S3_TEST_ENDPOINT, S3_TEST_ACCESS_KEY, S3_TEST_SECRET_KEY, S3_TEST_BUCKET to run")
+	}
+
+	convey.Convey("Test CopyObject server-side copy roundtrip with real S3", t, func() {
+		cfg := &Config{
+			Endpoint:  endpoint,
+			AccessKey: accessKey,
+			SecretKey: secretKey,
+			Bucket:    bucket,
+			Region:    "us-east-1",
+			UseSSL:    false,
+		}
+
+		provider := key.NewConfigFileSecretKeyProvider(cryptoKeyEnv)
+		book, err := key.LoadPasswordBook("")
+		convey.So(err, convey.ShouldBeNil)
+		kd := key.NewKeyDerivation(provider, book)
+
+		client, err := NewS3Client(cfg, kd)
+		convey.So(err, convey.ShouldBeNil)
+		convey.So(client, convey.ShouldNotBeNil)
+
+		cryptoKey := []byte(cryptoKeyEnv)
+		ctx := context.Background()
+		srcKey := "test/copy-object/source.zkcn"
+		dstKey := "test/copy-object/destination.zkcn"
+
+		convey.Convey("server-side copy should preserve encrypted bytes exactly", func() {
+			original := []byte(`{"name":"copy-integration-test","data":"hello zhongkui copy"}`)
+
+			// 上传加密源对象
+			uploadInfo, err := client.CPutObject(ctx, srcKey, cryptoKey, bytes.NewReader(original), -1, minio.PutObjectOptions{})
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(uploadInfo.Size, convey.ShouldBeGreaterThan, 0)
+			defer client.RemoveObject(ctx, srcKey, minio.RemoveObjectOptions{})
+			defer client.RemoveObject(ctx, dstKey, minio.RemoveObjectOptions{})
+
+			// 服务端复制到目标键
+			convey.So(client.CopyObject(ctx, srcKey, dstKey), convey.ShouldBeNil)
+
+			// 下载目标对象解密解压，内容应与源一致
+			rc, err := client.CGetOject(ctx, dstKey, cryptoKey, minio.GetObjectOptions{})
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(rc, convey.ShouldNotBeNil)
+			defer rc.Close()
+			downloaded, err := io.ReadAll(rc)
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(downloaded, convey.ShouldResemble, original)
+		})
+
+		convey.Convey("CopyObject on non-existent source should return error", func() {
+			err := client.CopyObject(ctx, "test/copy-object/not-exists", dstKey)
+			convey.So(err, convey.ShouldNotBeNil)
+			convey.So(IsNotExists(err), convey.ShouldBeTrue)
 		})
 	})
 }

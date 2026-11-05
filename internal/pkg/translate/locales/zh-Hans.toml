@@ -76,10 +76,2692 @@
 1101 = "用户旧密码验证失败"
 1102 = "用户名或邮箱已存在"
 1103 = "过多的访问密钥"
+1104 = "重置密码功能不可用，请联系管理员或稍后再试"
+1105 = "重置密码链接无效或已过期，请重新申请"
+1106 = "请求过于频繁，请稍后再试"
+1107 = "访问密钥无效或已过期"
+1200 = "标签规则校验失败"
+1201 = "标签事件规则校验失败"
+1202 = "标签规则运行期校验失败"
+1203 = "标签规则目标模型未注册"
+1204 = "标签规则样例输入无法反序列化为目标模型"
+1300 = "待审批的接口调用已不存在，请重新发起提问"
+1301 = "该接口调用已被处理，请勿重复提交"
+1302 = "该会话没有在途运行"
+1303 = "该会话的驻留运行已过期"
+1304 = "无权访问该会话的在途运行"
+1305 = "会话已达轮次上限，请回滚后再试"
+1306 = "当前会话状态不允许该操作，请稍后再试"
+1400 = "前端配置已被其他浏览器更新，请刷新后重试"
+1401 = "前端配置同步未开启"
+1402 = "通知发送失败"
+1403 = "定时任务配置非法"
+1404 = "档位绑定与系统当前配置不兼容，请按错误详情调整后重试"
+1405 = "内置系统命名空间受保护，禁止删除"
 
 [error]
 emptyUrlParam = "URL参数`%s`不应为空"
 badUrlParam = "URL 参数`%s`不合法: %s"
+schedulerScheduleConflict = "cronSpec 与 interval 不能同时设置，请二选一"
+schedulerScheduleEmpty = "cronSpec 与 interval 至少需设置一个"
+schedulerTaskCreateExist = "定时任务类型 %s 已存在"
+schedulerTaskUpdateNotExist = "定时任务类型 %s 不存在"
+llmBindingModelIDInvalid = "modelId 必须为正整数"
+llmBindingModelDisabled = "模型 %s 已停用，无法绑定到档位"
+llmBindingKindMismatch = "模型 %s 是 %s 模型，无法绑定到 %s 档位（该档位需要 %s 模型）"
+llmBindingIncompatibleDimension = "embedding 模型 %s 与知识库索引维度 %d 不兼容（该模型实际返回 %d 维）；请先解绑 embedding 档位（若已绑定），执行 `sync embedding-dimensions --dimensions %d` 重建索引后再绑定"
+enumUnknownType = "未知的枚举类 `%s`"
+aiFeatureDisabled = "AI 功能未启用，请先在档位绑定中启用所需模型"
+aiSkillUnavailable = "技能不存在或已停用"
+aiSkillNameExists = "同名技能已存在"
+aiSkillBuiltinReadonly = "内置技能由代码维护，不可编辑或删除"
+aiSkillInvalidFields = "技能输入字段或固定参数不合法：%v"
+aiSkillPeriodicNowTimeRequired = "可周期执行的技能必须包含 name=nowTime、类型为 date 的输入字段"
+periodicReportSkillNotEligible = "所选技能不可用于周期性报告，请选择可周期执行、固定参数含合法时间窗口且包含 nowTime 输入字段的技能"
+periodicReportScheduleInvalid = "cron 表达式非法"
+periodicReportInputMissing = "技能必填输入未填写"
+periodicReportInputInvalid = "技能输入参数不合法：键必须属于技能固定参数或输入字段，值的类型须与原字段一致，且不能覆盖 nowTime 或提供非法时间窗口"
+periodicReportPlanExpired = "报告计划已到期，不能立即执行"
+periodicReportRunObjectMissing = "报告正文不存在或已被清理"
+knowledgeImportedContentReadOnly = "导入文档的正文为只读内容，请重新解析文档以刷新"
+knowledgeDocumentParsing = "文档正在解析中，请等待解析完成后再重新索引"
+knowledgeDocumentNotFound = "知识库文档 %d 不存在"
+knowledgeUploadTooLarge = "请求体超过最大上传大小 %d 字节"
+knowledgeUploadFileRequired = "缺少 multipart 字段 `file`"
+knowledgeUnsupportedFormat = "不支持的文档格式 `%s`（仅支持 .md/.markdown/.txt/.pdf/.docx）"
+datasourceSqliteFileRequired = "创建 sqlite 数据源需要上传 .db 文件"
+datasourceSqliteS3Required = "sqlite 数据源需要启用 S3 对象存储"
+llmToolBuiltinUndeletable = "该批次包含 %d 个内置工具，无法删除"
+llmParamItemsEmpty = "items 不能为空"
+llmParamNotDeclared = "参数 `%q` 未在注册表中声明"
+llmParamGroupNotDeclared = "参数分组 `%q` 未在注册表中声明"
+llmParamKeysOrGroup = "必须提供 keys 或 group 之一"
+llmParamValueTypeInvalid = "参数 `%q` 的值类型应为 %s，请检查输入"
+llmParamValueNotAllowed = "参数 `%q` 的取值必须为 %s 之一，实际为 `%q`"
+llmModelNameEmpty = "模型名称不能为空"
+llmModelNameExists = "模型名称 `%q` 已存在"
+llmModelContextTokensInvalid = "上下文容量必须是正整数（对话模型必填）"
+apiModeInvalid = "接口形态必须是 chat 或 responses；responses 仅对话模型可用"
+llmModelBound = "模型 `%q` 已绑定到档位，请先解绑再删除"
+extraBodyInvalid = "高级请求配置须为合法的 JSON 对象"
+thinkingValueInvalid = "思考开/关取值须为合法 JSON"
+mcpServerNameExists = "MCP 服务器名称 `%q` 已存在"
+mcpToolEmptyName = "远端返回的工具存在空名称，无法同步"
+mcpToolNameTaken = "工具名称 `%q` 已被工具 #%d 占用，无法从 MCP 服务器 `%q` 同步"
+mcpHeadersInvalid = "请求头不是合法的 JSON 对象"
+llmKnowledgeIndexUnavailable = "知识库索引列尚不可用，请先执行 migrate up 再绑定 embedding 模型"
+plaintextModelNotRegistered = "明文解析：模型 `%q` 未注册"
+notificationTargetDisabled = "通知目标或其所属渠道已被禁用"
+notificationChannelBuiltin = "渠道 `%q` 为内置占位渠道，无法删除"
+notificationGroupTargetInvalid = "通知组绑定的目标不属于当前命名空间"
+notificationTemplateUnknownEvent = "通知模板：未知事件 `%q`"
+notificationTemplateUnsupportedChannel = "通知模板：不支持的渠道类型 `%q`"
+notificationTemplateUnsupportedLanguage = "通知模板：不支持的语言 `%q`"
+notificationTemplateInvalidTitle = "通知模板标题的模板语法非法：%s"
+notificationTemplateInvalidContent = "通知模板正文的模板语法非法：%s"
+notificationTemplateExists = "事件 `%q`、渠道 `%q`、语言 `%q` 的通知模板已存在"
+notificationTemplateTitleRequired = "通知模板标题不能为空"
+notificationTemplateContentRequired = "通知模板正文不能为空"
+multipartFieldTooLarge = "multipart 字段 `%q` 超过最大大小 %d 字节"
+sampleFieldNotString = "样例：模型 `%q` 的字段 `%q` 不是字符串"
+tagEventRuleNotifyMutuallyExclusive = "通知组与通知目标互斥，二者至多设置一个"
+tagEventRuleNotifyGroupNotFound = "通知组 %d 在命名空间 %s 中不存在"
+tagEventRuleNotifyTargetNotFound = "通知目标 %d 在命名空间 %s 中不存在"
 
 [validator]
 strongPassword = "字段须为强密码（至少各包含一个小写字母/大写字母/数字/特殊字符@$!%*?&）"
+windowsFileName = "字段须为合法的 Windows 文件名（不能为系统保留名，不能包含非法字符，不能以空格或点结尾）"
+unixFileName = "字段须为合法的 Unix 文件名（不能以点开头，不能包含斜杠或空字符）"
+fileName = "字段须为合法的文件名"
+strictFileName = "字段须为严格合法的文件名（不能以连字符开头，不能包含空格或控制字符）"
+dirpath = "字段须为合法的目录路径"
+alphanumspecial = "字段只能包含字母、数字与指定的特殊字符"
+enum = "字段取值不在允许范围内"
+httpUrl = "字段须为绝对的 http 或 https 地址"
+jsonObject = "字段须为 JSON 对象文本，且所有取值均为字符串"
+trimmed = "字段首尾不能包含空白字符"
+notBlank = "字段不能为空白字符"
+gtCurrentTime = "字段必须晚于当前时间"
+ltCurrentTime = "字段必须早于当前时间"
+cron = "字段须为合法的 cron 表达式（支持 5 段标准 cron 或 @daily 等描述符）"
+
+# =============================================================================
+# Interactive prompt texts (cliinput) - Key layout: cli.input.prompt.<Struct>.<Field>
+# 中文为默认文案；English lives in en.toml
+# =============================================================================
+
+["cli.input.prompt.UserProfileChangeIn.NickleName"]
+other = "请输入昵称"
+
+["cli.input.prompt.UserProfileChangeIn.Email"]
+other = "请输入用户邮箱"
+
+["cli.input.prompt.UserPasswordLoginIn.Username"]
+other = "请输入用户名"
+
+["cli.input.prompt.UserPasswordLoginIn.Password"]
+other = "请输入密码"
+
+["cli.input.prompt.CapturerConfigIn.Device"]
+other = "请输入网络设备名称（如 eth0）"
+
+["cli.input.prompt.CapturerConfigIn.SnapLen"]
+other = "请输入抓包长度（字节）"
+
+["cli.input.prompt.CapturerConfigIn.Promisc"]
+other = "是否启用混杂模式？"
+
+["cli.input.prompt.CapturerConfigIn.Timeout"]
+other = "请输入读超时时间（如 5s、1m30s）"
+
+["cli.input.prompt.CapturerConfigIn.BpfExpr"]
+other = "请输入 BPF 过滤表达式（如 tcp port 80）"
+
+["cli.input.prompt.CapturerConfigIn.Enabled"]
+other = "是否启用该抓包器？"
+
+["cli.input.prompt.CapturerCreateIn.Namespace"]
+other = "请输入命名空间"
+
+["cli.input.prompt.CapturerCreateIn.Name"]
+other = "请输入抓包器名称"
+
+["cli.input.prompt.CapturerCreateIn.Version"]
+other = "请输入版本号"
+
+["cli.input.prompt.TLSInputs.Name"]
+other = "请输入 TLS 名称"
+
+["cli.input.prompt.TLSInputs.DirPath"]
+other = "请输入目录路径"
+
+["cli.input.prompt.TLSInputs.TTL"]
+other = "请输入有效期 TTL（例如 8760h 表示 1 年）"
+
+["cli.input.prompt.TLSInputs.DNSNames"]
+other = "请输入 DNS 域名列表"
+
+["cli.input.prompt.createAccessKeyInput.Username"]
+other = "请输入用户名"
+
+["cli.input.prompt.createAccessKeyInput.Description"]
+other = "请输入描述"
+
+["cli.input.prompt.createAccessKeyInput.Enabled"]
+other = "是否启用该访问密钥？"
+
+["cli.input.prompt.createAccessKeyInput.TTL"]
+other = "请输入有效期 TTL（如 8760h，0 表示永不过期）"
+
+["cli.input.prompt.createUserInput.Superuser"]
+other = "是否为超级管理员？"
+
+["cli.input.prompt.confirm-suffix"]
+other = "（再次输入确认）"
+
+["cli.input.prompt.comma-separated-suffix"]
+other = "（逗号分隔）"
+
+["cli.input.mismatch"]
+other = "两次输入不一致，请重新输入！"
+
+# =============================================================================
+# CLI print messages (pterm output) - Key layout: cli.<topic>.<message>
+# 中文为默认文案；English lives in en.toml
+# =============================================================================
+
+[cli.confirm.enter]
+other = "请输入 `[[.Input]]` 以确认"
+
+[cli.confirm.reenter]
+other = "请再次输入 `[[.Input]]` 以确认"
+
+[cli.etcd.select-keys]
+other = "输入要删除的键编号（如 1,3,5-[[.Total]]）或输入 'all' 删除全部 [[.Total]] 个键"
+
+[cli.etcd.no-keys]
+other = "未选择任何键，无需删除"
+
+[cli.etcd.invalid-range]
+other = "无效的范围：[[.Range]]"
+
+[cli.etcd.invalid-number]
+other = "无效的键编号：[[.Number]]"
+
+[cli.etcd.delete-count]
+other = "即将删除 [[.Count]] 个键："
+
+[cli.etcd.delete-item]
+other = "  - [[.Key]]"
+
+[cli.base.pterm-debug]
+other = "pterm 调试已启用"
+
+[cli.root.process-exit]
+other = "zhongkui 服务进程已退出"
+
+[cli.clear.rolling-back]
+other = "正在回滚所有迁移..."
+
+[cli.clear.connect-failed]
+other = "连接 [[.DB]] 数据库失败：[[.Err]]"
+
+[cli.clear.rolling-back-db]
+other = "正在回滚 [[.DB]]..."
+
+[cli.clear.rollback-failed]
+other = "[[.DB]] 回滚失败：[[.Err]]"
+
+[cli.clear.database-complete]
+other = "数据库清空完成"
+
+[cli.etcd.get-keys-failed]
+other = "获取 [[.Category]] 键失败：[[.Err]]"
+
+[cli.etcd.no-keys-found]
+other = "未找到任何 etcd 缓存键"
+
+[cli.etcd.keys-header]
+other = "=== etcd 缓存键 ==="
+
+[cli.etcd.delete-failed]
+other = "删除 [[.Key]] 失败：[[.Err]]"
+
+[cli.etcd.deleted]
+other = "已删除 [[.Key]]"
+
+[cli.etcd.clear-complete]
+other = "etcd 缓存清除完成"
+
+[cli.capture.stats]
+other = "[抓包统计] [[.Stats]]"
+
+[cli.config.col-path]
+other = "路径"
+
+[cli.config.col-kind]
+other = "类型"
+
+[cli.config.col-default]
+other = "默认值"
+
+[cli.config.col-comment]
+other = "说明"
+
+[cli.migrate.create-failed]
+other = "[[.DB]]：[[.Err]]"
+
+[cli.migrate.created]
+other = "已创建 [[.Path]]"
+
+[cli.migrate.section]
+other = "[[.Action]]（[[.DB]]）"
+
+[cli.migrate.action-failed]
+other = "[[.DB]] [[.Action]] 失败：[[.Err]]"
+
+[cli.migrate.completed]
+other = "迁移全部执行成功"
+
+[cli.migrate.dry-run-section]
+other = "试运行（dry-run）[[.DB]]"
+
+[cli.migrate.dry-run-db-failed]
+other = "dry-run [[.DB]]：[[.Err]]"
+
+[cli.migrate.dry-run-succeeded]
+other = "dry-run 执行成功"
+
+[cli.migrate.dry-run-failed]
+other = "dry-run 失败：[[.Err]]"
+
+[cli.migrate.diff-section]
+other = "结构对比（diff）[[.DB]]"
+
+[cli.migrate.diff-failed]
+other = "diff [[.DB]]：[[.Err]]"
+
+[cli.migrate.check-section]
+other = "结构检查（check）[[.DB]]"
+
+[cli.migrate.check-failed]
+other = "check [[.DB]]：[[.Err]]"
+
+[cli.migrate.up]
+other = "在 [[.DB]] 上运行 goose up 迁移"
+
+[cli.migrate.up-to]
+other = "在 [[.DB]] 上执行 goose up-to 迁移至版本 [[.Version]]"
+
+[cli.migrate.down]
+other = "在 [[.DB]] 上回滚 goose down 迁移"
+
+[cli.migrate.down-to]
+other = "在 [[.DB]] 上执行 goose down-to 回滚至版本 [[.Version]]"
+
+[cli.migrate.down-no-current-version]
+other = "[[.DB]] 没有已应用的迁移，无需回滚"
+
+[cli.migrate.down-to-no-current-version]
+other = "[[.DB]] 没有已应用的迁移，无需回滚"
+
+[cli.migrate.goose-migrated]
+other = "数据库已成功迁移至版本 [[.Version]]"
+
+[cli.migrate.goose-no-migrations]
+other = "没有需要执行的迁移，当前版本 [[.Version]]"
+
+[cli.migrate.goose-up-to]
+other = "已迁移至版本 [[.Version]]"
+
+[cli.migrate.goose-down-to]
+other = "已回滚至版本 [[.Version]]"
+
+[cli.migrate.goose-file-not-found]
+other = "未找到当前版本（[[.Version]]）的迁移文件：[[.Err]]"
+
+[cli.migrate.goose-ok]
+other = "OK   [[.Source]]（[[.Duration]]）"
+
+[cli.migrate.goose-empty]
+other = "EMPTY [[.Source]]（[[.Duration]]）"
+
+[cli.migrate.col-version]
+other = "版本"
+
+[cli.migrate.col-migration]
+other = "迁移"
+
+[cli.migrate.col-status]
+other = "状态"
+
+[cli.migrate.col-applied-at]
+other = "应用时间"
+
+[cli.migrate.status-pending]
+other = "待执行"
+
+[cli.migrate.status-applied]
+other = "已应用"
+
+[cli.migrate.no-file]
+other = "未找到迁移文件"
+
+[cli.migrate.dry-run-creating]
+other = "正在为 dry-run 创建临时数据库..."
+
+[cli.migrate.dry-run-running]
+other = "正在临时数据库 [[.DB]] 上执行迁移..."
+
+[cli.migrate.dry-run-migration-failed]
+other = "dry-run 迁移失败：[[.Err]]"
+
+[cli.migrate.dry-run-completed]
+other = "dry-run 迁移已在 [[.DB]] 上成功完成"
+
+[cli.migrate.dry-run-cleanup]
+other = "正在清理临时数据库 [[.DB]]..."
+
+[cli.migrate.dry-run-drop-failed]
+other = "警告：删除临时数据库 [[.DB]] 失败：[[.Err]]"
+
+[cli.migrate.dry-run-preserved]
+other = "临时数据库 [[.DB]] 已保留（--keep-temp）"
+
+[cli.migrate.check-creating]
+other = "正在为结构检查创建临时数据库..."
+
+[cli.migrate.check-running]
+other = "正在临时数据库 [[.DB]] 上执行迁移..."
+
+[cli.migrate.check-comparing]
+other = "正在对比模型定义与数据库结构..."
+
+[cli.migrate.check-cleanup]
+other = "正在清理临时数据库 [[.DB]]..."
+
+[cli.migrate.check-drop-failed]
+other = "警告：删除临时数据库 [[.DB]] 失败：[[.Err]]"
+
+[cli.migrate.check-preserved]
+other = "临时数据库 [[.DB]] 已保留（--keep-temp）"
+
+[cli.migrate.check-ok]
+other = "所有模型均与数据库结构一致，未发现问题"
+
+[cli.migrate.issue-missing-table]
+other = "缺少表"
+
+[cli.migrate.issue-extra-table]
+other = "多余表"
+
+[cli.migrate.issue-missing-column]
+other = "缺少列"
+
+[cli.migrate.issue-extra-column]
+other = "多余列"
+
+[cli.migrate.issue-mismatch]
+other = "不匹配"
+
+[cli.migrate.col-issue]
+other = "问题"
+
+[cli.migrate.col-table]
+other = "表"
+
+[cli.migrate.col-column]
+other = "列"
+
+[cli.migrate.col-expected-type]
+other = "预期类型"
+
+[cli.migrate.col-actual-type]
+other = "实际类型"
+
+[cli.migrate.issues-table-error]
+other = "渲染问题表格失败：[[.Err]]"
+
+[cli.migrate.diff-identical]
+other = "数据库结构已是最新，无待变更"
+
+[cli.migrate.col-change]
+other = "变更"
+
+[cli.migrate.col-detail]
+other = "详情"
+
+[cli.migrate.diff-new-table]
+other = "新增表"
+
+[cli.migrate.diff-dropped-table]
+other = "删除表"
+
+[cli.migrate.diff-new-column]
+other = "新增列"
+
+[cli.migrate.diff-dropped-column]
+other = "删除列"
+
+[cli.migrate.diff-modified]
+other = "已修改"
+
+[cli.user.create-success]
+other = "创建用户 [[.Username]] 成功"
+
+[cli.user.reset-password-success]
+other = "重置用户 [[.Username]] 的密码成功"
+
+[cli.user.extract-config-failed]
+other = "无法提取配置：[[.Err]]"
+
+[cli.user.not-found]
+other = "找不到用户 [[.Username]]：[[.Err]]"
+
+[cli.user.access-key-create-failed]
+other = "无法创建访问密钥：[[.Err]]"
+
+[cli.user.access-key-max]
+other = "用户 [[.Username]] 已有 [[.Max]] 个访问密钥（上限：[[.Max]]）"
+
+[cli.user.access-key-created]
+other = "已为用户 [[.Username]] 创建访问密钥"
+
+[cli.user.access-key-id]
+other = "  AccessKeyID:     [[.Value]]"
+
+[cli.user.access-key-secret]
+other = "  AccessKeySecret: [[.Value]]"
+
+[cli.user.access-key-description]
+other = "  Description:     [[.Value]]"
+
+[cli.user.access-key-enabled]
+other = "  Enabled:         [[.Value]]"
+
+[cli.user.access-key-expired-at]
+other = "  ExpiredAt:       [[.Value]]"
+
+[cli.user.access-key-never-expires]
+other = "  ExpiredAt:       never"
+
+[cli.tls.key-created]
+other = "TLS 密钥文件 [[.Path]] 已创建"
+
+[cli.tls.cert-created]
+other = "TLS 证书文件 [[.Path]] 已创建"
+
+[cli.testcase.generated]
+other = "测试用例已生成到 [[.Dir]]"
+
+[cli.testcase.no-http]
+other = "pcap 文件中未发现 HTTP 流量"
+
+[cli.testcase.found-streams]
+other = "发现 [[.Count]] 条 HTTP 流"
+
+[cli.testcase.processing-stream]
+other = "正在处理 TCP 流 [[.Stream]]..."
+
+[cli.testcase.process-failed]
+other = "处理流 [[.Stream]] 失败：[[.Err]]，跳过"
+
+[cli.testcase.generated-file]
+other = "  已生成 [[.Path]]"
+
+[cli.testcase.total]
+other = "共 [[.Tx]] 个 HTTP 事务，跨 [[.Streams]] 条流"
+
+[cli.testcase.parse-request-failed]
+other = "  流 [[.Stream]]：解析第 [[.Tx]] 个 HTTP 请求失败：[[.Err]]"
+
+[cli.testcase.response-missing]
+other = "  流 [[.Stream]] 事务 [[.Tx]]：HTTP 响应缺失或不完整：[[.Err]]"
+
+[cli.testcase.parse-response-failed]
+other = "  流 [[.Stream]] 事务 [[.Tx]]：解析 HTTP 响应失败：[[.Err]]"
+
+[cli.docs.generated]
+other = "文档已生成至 [[.Dir]]"
+
+[cli.docs.check-ok]
+other = "文档生成物与代码声明一致"
+
+[flag.create.docs.check]
+other = "只校验生成物是否与代码声明一致，不写盘（用于 CI）"
+
+[cli.sync.docs.disabled]
+other = "AI 能力未启用，无法同步注释生成文档"
+
+[cli.sync.docs.done]
+other = "已为命名空间 [[.Namespace]] 同步叙述页 [[.Narratives]] 条"
+
+[cli.sync.docs.failed]
+other = "同步注释生成文档失败：[[.Err]]"
+
+[cli.sync.apis.disabled]
+other = "AI 能力未启用，无法同步原生接口知识"
+
+[cli.sync.apis.done]
+other = "已为命名空间 [[.Namespace]] 同步原生接口 [[.Apis]] 条"
+
+[cli.sync.apis.failed]
+other = "同步原生接口知识失败：[[.Err]]"
+
+[cli.sync.schema.disabled]
+other = "AI 能力未启用，无法同步数据表知识"
+
+[cli.sync.schema.done]
+other = "已为命名空间 [[.Namespace]] 同步数据表 [[.Tables]] 张"
+
+[cli.sync.schema.failed]
+other = "同步数据表知识失败：[[.Err]]"
+
+[cli.sync.capabilities.disabled]
+other = "AI 能力未启用，无法同步平台能力知识"
+
+[cli.sync.capabilities.done]
+other = "已为命名空间 [[.Namespace]] 同步能力 [[.Capabilities]] 条"
+
+[cli.sync.capabilities.failed]
+other = "同步平台能力知识失败：[[.Err]]"
+
+[cli.sync.embeddings.no-namespace]
+other = "缺少 --namespace：请指定目标命名空间"
+
+[cli.sync.embeddings.disabled]
+other = "AI 能力未启用，无法重算向量表示"
+
+[cli.sync.embeddings.done]
+other = "已为命名空间 [[.Namespace]] 重算知识文档 [[.Documents]] 篇、长期记忆 [[.Memories]] 条"
+
+[cli.sync.embeddings.failed]
+other = "重算向量表示失败：[[.Err]]"
+
+[cli.sync.progress.header]
+other = "命名空间 [[.Namespace]] · 模型 [[.Model]] · 待处理 [[.Total]] 项"
+
+[cli.sync.progress.rate-title]
+other = "速度 [[.Rate]] 项/秒 · 预计剩余 [[.Eta]] · 已完成 [[.Done]]/[[.Total]]"
+
+[cli.sync.progress.empty]
+other = "内容已是最新，无需处理"
+
+[cli.sync.progress.total-row]
+other = "合计"
+
+[cli.sync.progress.count]
+other = "[[.Count]] 项"
+
+[cli.sync.progress.memory-item]
+other = "长期记忆（[[.Count]] 条）"
+
+[cli.sync.progress.col.item]
+other = "条目"
+
+[cli.sync.progress.col.action]
+other = "动作"
+
+[cli.sync.progress.col.elapsed]
+other = "耗时"
+
+[cli.sync.progress.col.prompt]
+other = "输入 Token"
+
+[cli.sync.progress.col.completion]
+other = "输出 Token"
+
+[cli.sync.progress.action.create]
+other = "新增"
+
+[cli.sync.progress.action.update]
+other = "更新"
+
+[cli.sync.progress.action.delete]
+other = "删除"
+
+[cli.sync.progress.action.reindex]
+other = "重建"
+
+[cli.sync.progress.action.memory]
+other = "记忆"
+
+[cli.sync.embedding-dimensions-section]
+other = "正在校准 [[.DB]] 库的 embedding 列维度"
+
+[cli.sync.embedding-dimensions-failed]
+other = "校准 [[.DB]] 库 embedding 列维度失败：[[.Err]]"
+
+[cli.sync.embedding-dimensions-flag-required]
+other = "必须通过 --dimensions 指定目标维度，且须为正整数"
+
+[cli.sync.embedding-dimensions-slot-bound]
+other = "embedding 档位已绑定模型 \"[[.Name]]\"（[[.Dimensions]] 维），请先解绑再重建索引为 [[.Target]] 维"
+
+[cli.sync.embedding-dimensions-reconciled]
+other = "已将 embedding 列维度校准为 [[.Dimensions]]，请重新索引知识库文档"
+
+[cli.sync.embedding-dimensions-in-sync]
+other = "embedding 列维度与指定维度一致，无需重建"
+
+[cli.s3.lifecycle.applied]
+other = "已应用 [[.Count]] 条生命周期规则到存储桶 [[.Bucket]]"
+
+[cli.s3.lifecycle.removed]
+other = "已移除存储桶 [[.Bucket]] 的全部生命周期规则"
+
+[cli.s3.lifecycle.no-rules]
+other = "存储桶 [[.Bucket]] 当前未配置生命周期规则"
+
+[cli.s3.lifecycle.rule-preview]
+other = "即将应用到存储桶 [[.Bucket]] 的 [[.Count]] 条生命周期规则："
+
+[cli.s3.lifecycle.prompt-prefix]
+other = "请选择要配置过期策略的对象路径前缀"
+
+[cli.s3.lifecycle.action-save]
+other = "保存并应用"
+
+[cli.s3.lifecycle.action-exit]
+other = "退出"
+
+[cli.s3.lifecycle.prompt-expire-days]
+other = "请输入对象创建后的过期天数（正整数，到期自动删除）"
+
+[cli.s3.lifecycle.prompt-confirm-apply]
+other = "确认将以上 [[.Count]] 条规则应用到存储桶 [[.Bucket]]？此操作将全量替换既有规则"
+
+[cli.s3.lifecycle.duplicate-prefix]
+other = "前缀 [[.Prefix]] 已添加过规则，请选择其他前缀"
+
+[cli.s3.lifecycle.invalid-days]
+other = "过期天数必须为正整数，请重新输入"
+
+[cli.s3.lifecycle.no-rules-selected]
+other = "未选择任何生命周期规则，已中止"
+
+[cli.s3.lifecycle.cancelled]
+other = "已取消，未做任何修改"
+
+[cli.s3.lifecycle.table-id]
+other = "ID"
+
+[cli.s3.lifecycle.table-status]
+other = "STATUS"
+
+[cli.s3.lifecycle.table-prefix]
+other = "PREFIX"
+
+[cli.s3.lifecycle.table-expire-days]
+other = "EXPIRE DAYS"
+
+[cli.run.capture-stats-enabled]
+other = "已启用抓包统计，每 [[.Interval]] 输出到标准输出"
+
+[cli.run.processor-create-failed]
+other = "创建处理器 [[.Name]] 失败：[[.Err]]"
+
+[cli.scheduler.none-found]
+other = "etcd 中未找到任何定时任务配置"
+
+[cli.scheduler.not-found]
+other = "未找到定时任务配置：[[.Name]]"
+
+[cli.scheduler.col-name]
+other = "name"
+
+[cli.scheduler.col-cronspec]
+other = "cronSpec"
+
+[cli.scheduler.col-interval]
+other = "interval"
+
+[cli.scheduler.col-queue]
+other = "queue"
+
+[cli.scheduler.col-timeout]
+other = "timeout"
+
+[cli.scheduler.col-maxretry]
+other = "maxRetry"
+
+[cli.scheduler.col-enabled]
+other = "enabled"
+
+[cli.deps.col-name]
+other = "名称"
+
+[cli.deps.col-category]
+other = "类别"
+
+[cli.deps.col-configured]
+other = "已配置"
+
+[cli.deps.col-state]
+other = "状态"
+
+[cli.deps.col-latency]
+other = "耗时"
+
+[cli.deps.col-message]
+other = "说明"
+
+[cli.deps.value.ok]
+other = "正常"
+
+[cli.deps.value.unreachable]
+other = "不可达"
+
+[cli.deps.value.disabled]
+other = "未配置"
+
+[cli.crypto.book-generated-file]
+other = "密码本文件已生成：[[.Path]]（[[.Bytes]] 字节）"
+
+[cli.crypto.book-generated-stdout]
+other = "密码本已生成（[[.Bytes]] 字节）。使用 --output 保存到文件。"
+
+[cli.crypto.parent-secret-key-warning]
+other = "警告：正在使用配置文件中的父密钥，这不适用于生产环境，请尽快切换到 KMS。"
+
+[cli.crypto.password-book-warning]
+other = "警告：正在使用内置默认密码本，这不适用于生产环境，请运行 'zki create password-book' 生成自己的密码本文件。"
+
+[cli.capturer.create-failed]
+other = "无法创建抓包器：[[.Err]]"
+
+[cli.capturer.created]
+other = "抓包器 [[.Namespace]]/[[.Name]]（[[.Version]]）创建成功"
+
+[cli.pcap.nil-model]
+other = "[nil 模型] level=[[.Level]] stack_len=[[.Len]]"
+
+[cli.pcap.nil-model-stack]
+other = "[nil 模型]   stack[[[.Index]]] level=[[.Level]] proto=[[.Proto]] headers=[[.Headers]]"
+
+[cli.pcap.import-stats]
+other = "[pcap 导入统计] [[.Stats]]"
+
+[cli.tracer.report-title]
+other = "阶段耗时统计报告"
+
+[cli.tracer.no-data]
+other = "无数据"
+
+[cli.tracer.col-stage]
+other = "阶段"
+
+[cli.tracer.col-calls]
+other = "调用次数"
+
+[cli.tracer.col-total]
+other = "总计"
+
+[cli.tracer.col-avg]
+other = "平均"
+
+[cli.tracer.col-min]
+other = "最小"
+
+[cli.tracer.col-max]
+other = "最大"
+
+[cli.tracer.col-ratio]
+other = "占比"
+
+[cli.tracer.render-error]
+other = "渲染报告表格失败：[[.Err]]"
+
+[cli.tracer.total-records]
+other = "记录总数：[[.Count]]"
+
+[cli.bench.col-name]
+other = "基准测试"
+
+[cli.bench.col-sent]
+other = "已发送"
+
+[cli.bench.col-captured]
+other = "已捕获"
+
+[cli.bench.col-lost]
+other = "已丢失"
+
+[cli.bench.col-loss-rate]
+other = "丢包率"
+
+[cli.bench.col-pps]
+other = "PPS"
+
+[cli.bench.col-bps]
+other = "BPS"
+
+[cli.bench.col-duration]
+other = "时长"
+
+[cli.bench.report-save-failed]
+other = "警告：保存基准测试报告失败：[[.Err]]"
+
+[cli.bench.report-saved]
+other = "基准测试报告已保存：[[.Path]]"
+
+# =============================================================================
+# Tag rule Rego error/lint messages - Key layout: tagrule.*
+# 标签规则 Rego 校验错误与字段 lint 告警文案，供接口层按请求语言翻译
+# =============================================================================
+
+[tagrule]
+rego-invalid = "规则源码不符合标签识别契约，应为 package zki 且包含 tags 规则"
+lint-field-not-exist = "字段 %s 不存在于该模型的输入文档中，请检查拼写"
+lint-field-hint = "请从输入字段面板或补全列表中选择合法字段"
+
+[tagrule.hint]
+parse-unexpected = "语法错误：出现意外的符号或关键字，请检查拼写与括号/引号是否成对"
+parse-package = "语法错误：package 声明写法不正确，应为 package zki"
+parse-if = "缺少 if 关键字：规则体写法应为 tags contains <值> if { ... }"
+parse-contains = "缺少 contains 关键字：标签规则应使用 tags contains <值> 形式产出"
+parse-empty = "模块为空：请至少编写一条规则"
+parse-illegal = "语法错误：非法表达式，请检查该位置附近的写法"
+parse-builtin-conflict = "内置函数名不能作为裸调用：请用变量接收返回值，例如 x := sqlite.query(\"SELECT 1 AS x\", [])"
+parse-fallback = "Rego 语法错误：请检查该位置附近的书写是否符合 Rego 语法"
+compile-shadow = "规则名冲突：规则名不能与其他规则或关键字重名，请换一个规则名"
+compile-import-shadow = "import 冲突：导入的包名与其他符号重名，请调整导入"
+compile-var-shadow = "变量名冲突：变量名不能与关键字或其他绑定重名，请换一个变量名"
+compile-fallback = "Rego 编译错误：规则定义存在冲突或非法，请检查规则名与赋值方式"
+type-undefined-function = "类型错误：调用了未定义的函数，请检查函数名拼写"
+type-undefined-ref = "类型错误：引用了不存在的路径，请检查字段名拼写"
+type-conflicting-rules = "类型错误：同名规则的定义方式相互冲突（如同时整体赋值与 contains），请统一写法"
+type-match-error = "类型错误：表达式两侧类型不匹配，请检查字段类型"
+type-function = "类型错误：函数调用方式不正确（参数个数或写法），请检查调用"
+type-fallback = "类型错误：表达式操作数类型不匹配，请检查字段类型与函数参数"
+unsafe-var = "未定义变量：表达式中引用了未绑定的变量，请检查变量名拼写或在 some 中声明"
+recursion = "递归错误：规则定义存在递归引用，请检查规则间的循环依赖"
+
+# =============================================================================
+# Input document field descriptions (input.<typeKey>.<field>)
+# 输入文档字段描述：注册为可打标目标模型（tagengine 注册表）的类型，
+# 必须为每个输入字段提供中英文描述；tagengine 推导 i18n 消息键并交由
+# 接口层按请求语言翻译（InputFieldMeta.Description）
+# =============================================================================
+
+# ---- BaseMeta ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.namespace"]
+other = "所属命名空间"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.capture"]
+other = "捕获器名称"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.version"]
+other = "数据版本"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.session_id"]
+other = "会话 ID"
+
+# ---- TimestampMeta ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.timestamp"]
+other = "数据包捕获时间戳"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.created_at"]
+other = "记录创建时间"
+
+# ---- TraceMeta ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.trace_id"]
+other = "链路追踪 ID"
+
+# ---- HttpBase ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_ip"]
+other = "客户端 IP 地址"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_port"]
+other = "客户端端口号"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_isn"]
+other = "客户端 ISN"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_ip"]
+other = "服务器 IP 地址"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_port"]
+other = "服务器端口号"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_isn"]
+other = "服务器 ISN"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.ip_version"]
+other = "IP 协议版本"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.http_version"]
+other = "HTTP 协议版本"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.stream_index"]
+other = "流索引"
+
+# ---- TcpFingerprint ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_client_os"]
+other = "客户端操作系统（TCP 指纹）"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_client_os_quality"]
+other = "客户端操作系统识别置信度"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fpTcpClientSig"]
+other = "客户端 TCP 签名"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_os"]
+other = "服务端操作系统（TCP 指纹）"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_os_quality"]
+other = "服务端操作系统识别置信度"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fpTcpServerSig"]
+other = "服务端 TCP 签名"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_mtu"]
+other = "TCP MTU 值"
+
+# ---- HttpURI ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.url"]
+other = "完整请求 URL"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.scheme"]
+other = "协议方案"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.host"]
+other = "主机名或 IP 地址"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.path"]
+other = "请求路径"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.file_ext"]
+other = "文件扩展名"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.queries"]
+other = "查询参数"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fragment"]
+other = "片段标识符"
+
+# ---- HttpRequestBody ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.method"]
+other = "HTTP 请求方法"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_body"]
+other = "请求主体内容"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_body_hash"]
+other = "请求主体 SHA-256 摘要"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_body_length"]
+other = "请求主体字节长度"
+
+# ---- HttpRequestHeaders ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_authorization"]
+other = "认证凭据"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_proxy_authorization"]
+other = "代理认证凭据"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_cache_control"]
+other = "缓存控制指令"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_match"]
+other = "条件匹配 ETag"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_none_match"]
+other = "条件不匹配 ETag"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_modified_since"]
+other = "条件修改时间"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_unmodified_since"]
+other = "条件未修改时间"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_range"]
+other = "条件范围请求"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_connection"]
+other = "连接控制"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_keep_alive"]
+other = "持久连接控制"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_accept"]
+other = "可接受的响应内容类型"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_accept_encoding"]
+other = "可接受的内容编码"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_accept_language"]
+other = "可接受的自然语言"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_expect"]
+other = "期望条件"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_max_forwards"]
+other = "最大转发跳数"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_cookie"]
+other = "HTTP Cookie"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_origin"]
+other = "请求源"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_access_control_request_headers"]
+other = "CORS 预检请求头"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_access_control_request_method"]
+other = "CORS 预检方法"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_type"]
+other = "请求内容类型"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_length"]
+other = "请求内容长度"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_encoding"]
+other = "请求内容编码"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_language"]
+other = "请求内容语言"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_forwarded"]
+other = "转发信息"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_via"]
+other = "代理链信息"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_range"]
+other = "范围请求"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_from"]
+other = "发送者邮箱"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_host"]
+other = "目标主机"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_referer"]
+other = "引用来源"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_referrer_policy"]
+other = "引用策略"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_user_agent"]
+other = "用户代理字符串"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_te"]
+other = "传输编码接受"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_transfer_encoding"]
+other = "传输编码"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_trailer"]
+other = "尾部字段声明"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_key"]
+other = "WebSocket 握手密钥"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_version"]
+other = "WebSocket 协议版本"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_protocol"]
+other = "WebSocket 子协议"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_extensions"]
+other = "WebSocket 扩展"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_site"]
+other = "Fetch 源关系"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_mode"]
+other = "Fetch 请求模式"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_user"]
+other = "Fetch 用户激活"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_dest"]
+other = "Fetch 请求目标"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_purpose"]
+other = "请求目的"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_service_worker_navigation_preload"]
+other = "SW 导航预加载"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua"]
+other = "用户代理品牌与版本"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_arch"]
+other = "用户代理 CPU 架构"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_bitness"]
+other = "用户代理 CPU 位数"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_full_version"]
+other = "用户代理完整版本"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_full_version_list"]
+other = "用户代理品牌完整版本列表"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_mobile"]
+other = "移动设备标记"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_model"]
+other = "设备型号"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_platform"]
+other = "底层平台"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_platform_version"]
+other = "平台版本"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_wow64"]
+other = "WoW64 运行标记"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_prefers_color_scheme"]
+other = "深色/浅色模式偏好"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_prefers_reduced_motion"]
+other = "减少动画偏好"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_prefers_reduced_transparency"]
+other = "降低透明度偏好"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_want_content_digest"]
+other = "期望内容摘要"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_want_repr_digest"]
+other = "期望表示摘要"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_upgrade_insecure_requests"]
+other = "升级不安全请求"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_date"]
+other = "请求日期"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_link"]
+other = "链接关系"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_upgrade"]
+other = "协议升级"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_priority"]
+other = "资源优先级"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_alt_used"]
+other = "使用的替代服务"
+
+# ---- HttpResponseBody ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_body"]
+other = "响应主体内容"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_body_hash"]
+other = "响应主体 SHA-256 摘要"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_body_length"]
+other = "响应主体字节长度"
+
+# ---- HttpResponseHeaders ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_www_authenticate"]
+other = "认证质询"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_proxy_authenticate"]
+other = "代理认证质询"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_age"]
+other = "缓存年龄"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cache_control"]
+other = "缓存控制指令"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_clear_site_data"]
+other = "清除站点数据"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_expires"]
+other = "过期时间"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_no_vary_search"]
+other = "无变化搜索"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_last_modified"]
+other = "最后修改时间"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_etag"]
+other = "实体标签"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_vary"]
+other = "响应变化依据"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_connection"]
+other = "连接控制"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_keep_alive"]
+other = "持久连接控制"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_patch"]
+other = "可接受的 PATCH 媒体类型"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_post"]
+other = "可接受的 POST 媒体类型"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_set_cookie"]
+other = "设置 Cookie"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_credentials"]
+other = "CORS 允许凭据"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_headers"]
+other = "CORS 允许标头"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_methods"]
+other = "CORS 允许方法"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_origin"]
+other = "CORS 允许源"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_expose_headers"]
+other = "CORS 暴露标头"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_max_age"]
+other = "CORS 最大缓存时间"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_timing_allow_origin"]
+other = "时间允许源"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_disposition"]
+other = "内容处置"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_digest"]
+other = "内容摘要"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_repr_digest"]
+other = "表示摘要"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_type"]
+other = "响应内容类型"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_length"]
+other = "响应内容长度"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_encoding"]
+other = "响应内容编码"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_language"]
+other = "响应内容语言"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_location"]
+other = "内容位置"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_forwarded"]
+other = "转发信息"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_via"]
+other = "代理链信息"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_ranges"]
+other = "接受范围请求"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_range"]
+other = "内容范围"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_location"]
+other = "重定向位置"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_refresh"]
+other = "刷新/重定向"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_allow"]
+other = "允许的方法"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_server"]
+other = "服务器标识"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cross_origin_embedder_policy"]
+other = "跨源嵌入器策略"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cross_origin_opener_policy"]
+other = "跨源打开器策略"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cross_origin_resource_policy"]
+other = "跨源资源策略"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_security_policy"]
+other = "内容安全策略"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_security_policy_report_only"]
+other = "CSP 仅报告模式"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_expect_ct"]
+other = "证书透明度期望"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_permissions_policy"]
+other = "权限策略"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_strict_transport_security"]
+other = "严格传输安全"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_content_type_options"]
+other = "内容类型选项"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_frame_options"]
+other = "框架选项"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_permitted_cross_domain_policies"]
+other = "允许的跨域策略"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_powered_by"]
+other = "技术引擎标识"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_xss_protection"]
+other = "XSS 保护"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_reporting_endpoints"]
+other = "报告端点"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_report_to"]
+other = "报告目标"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_transfer_encoding"]
+other = "传输编码"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_trailer"]
+other = "尾部字段声明"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_sec_websocket_accept"]
+other = "WebSocket 握手接受"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_sec_websocket_protocol"]
+other = "WebSocket 子协议"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_sec_websocket_extensions"]
+other = "WebSocket 扩展"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_ch"]
+other = "接受客户端提示"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_critical_ch"]
+other = "关键客户端提示"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_attribution_reporting_eligible"]
+other = "归因报告资格"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_attribution_reporting_register_source"]
+other = "归因报告注册来源"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_attribution_reporting_register_trigger"]
+other = "归因报告注册触发器"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_date"]
+other = "响应日期"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_link"]
+other = "链接关系"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_retry_after"]
+other = "重试时间"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_server_timing"]
+other = "服务器时间"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_service_worker"]
+other = "Service Worker 标识"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_service_worker_allowed"]
+other = "SW 允许路径"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_source_map"]
+other = "源代码映射"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_upgrade"]
+other = "协议升级"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_alt_svc"]
+other = "替代服务"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_priority"]
+other = "资源优先级"
+
+# ---- HttpFingerprint ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_http_browser"]
+other = "浏览器识别"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_http_browser_quality"]
+other = "浏览器识别置信度"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_http_server"]
+other = "服务端识别"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_http_server_quality"]
+other = "服务端识别置信度"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_http_language"]
+other = "语言识别"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_device_guess"]
+other = "设备类别猜测"
+
+# ---- AppTailer ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_consumed"]
+other = "客户端已消耗字节数"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_start_payload_offset"]
+other = "客户端起始载荷偏移"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_end_payload_offset"]
+other = "客户端结束载荷偏移"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_start_timestamp"]
+other = "客户端起始时间戳"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_end_timestamp"]
+other = "客户端结束时间戳"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_consumed"]
+other = "服务端已消耗字节数"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_start_payload_offset"]
+other = "服务端起始载荷偏移"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_end_payload_offset"]
+other = "服务端结束载荷偏移"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_start_timestamp"]
+other = "服务端起始时间戳"
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_end_timestamp"]
+other = "服务端结束时间戳"
+
+# ---- TagsMeta ----
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.tags"]
+other = "风险标签组合"
+
+# =============================================================================
+# CLI 命令描述与标志说明 - Key 布局：cmd.<path>.short/long、flag.<path>.<name>
+# 命令树字段（Short/Long/Example）与标志 usage 存储的即翻译键本身，经 translate.T
+# 解析后渲染；zh-Hans 为指定回退语言，必须覆盖全部 cmd.*/flag.* 键，缺失时返回 key
+# =============================================================================
+
+[cmd.short]
+other = "zhongkui 根命令"
+
+[cmd.help.short]
+other = "显示任意命令的帮助信息"
+
+[cmd.help.long]
+other = "帮助命令用于显示应用程序中任意命令的帮助信息。\n直接输入 zhongkui help [命令路径] 即可查看完整帮助。"
+
+[cmd.completion.short]
+other = "生成指定 shell 的自动补全脚本"
+
+[cmd.completion.long]
+other = "生成 zhongkui 在指定 shell 下的自动补全脚本。\n\n各子命令的帮助信息中说明了生成脚本的使用方法。"
+
+[cmd.completion.bash.short]
+other = "生成 bash shell 的自动补全脚本"
+
+[cmd.completion.bash.long]
+other = "生成 bash shell 的自动补全脚本。\n\n该脚本依赖 'bash-completion' 软件包。\n如果尚未安装，可以通过操作系统自带的包管理器进行安装。\n\n要在当前 shell 会话中加载补全：\n\n\tsource <(zhongkui completion bash)\n\n要为每个新的会话加载补全，请执行一次：\n\n#### Linux:\n\n\tzhongkui completion bash > /etc/bash_completion.d/zhongkui\n\n#### macOS:\n\n\tzhongkui completion bash > $(brew --prefix)/etc/bash_completion.d/zhongkui\n\n重启 shell 后配置生效。"
+
+[cmd.completion.zsh.short]
+other = "生成 zsh shell 的自动补全脚本"
+
+[cmd.completion.zsh.long]
+other = "生成 zsh shell 的自动补全脚本。\n\n如果当前环境尚未启用 shell 补全，需要先执行一次：\n\n\techo \"autoload -U compinit; compinit\" >> ~/.zshrc\n\n要在当前 shell 会话中加载补全：\n\n\tsource <(zhongkui completion zsh)\n\n要为每个新的会话加载补全，请执行一次：\n\n#### Linux:\n\n\tzhongkui completion zsh > \"${fpath[1]}/_zhongkui\"\n\n#### macOS:\n\n\tzhongkui completion zsh > $(brew --prefix)/share/zsh/site-functions/_zhongkui\n\n重启 shell 后配置生效。"
+
+[cmd.completion.fish.short]
+other = "生成 fish shell 的自动补全脚本"
+
+[cmd.completion.fish.long]
+other = "生成 fish shell 的自动补全脚本。\n\n要在当前 shell 会话中加载补全：\n\n\tzhongkui completion fish | source\n\n要为每个新的会话加载补全，请执行一次：\n\n\tzhongkui completion fish > ~/.config/fish/completions/zhongkui.fish\n\n重启 shell 后配置生效。"
+
+[cmd.completion.powershell.short]
+other = "生成 PowerShell 的自动补全脚本"
+
+[cmd.completion.powershell.long]
+other = "生成 PowerShell 的自动补全脚本。\n\n要在当前 shell 会话中加载补全：\n\n\tzhongkui completion powershell | Out-String | Invoke-Expression\n\n要为每个新的会话加载补全，请将上述命令的输出添加到 PowerShell 配置文件中。"
+
+[cmd.version.short]
+other = "显示版本信息"
+
+[cmd.version.long]
+other = "显示版本信息，默认输出语义化版本号，使用 --verbose 输出完整信息"
+
+[cmd.describe.short]
+other = "显示配置详情"
+
+[cmd.describe.config.short]
+other = "显示默认配置项说明"
+
+[cmd.describe.scheduler.short]
+other = "从 etcd 打印定时任务配置"
+
+[cmd.describe.scheduler.long]
+other = "从 etcd 打印定时任务的配置。\n使用 --name 指定一个或多个任务类型。未提供 --name 时，列出所有任务。\n\n示例：\n  zhongkui describe scheduler\n  zhongkui describe scheduler --name network:periodic:ipv4reassemble\n  zhongkui describe scheduler --name network:periodic:ipv4reassemble --name network:periodic:ipv6reassemble"
+
+[cmd.describe.deps.short]
+other = "查看外部依赖状态"
+
+[cmd.run.short]
+other = "运行 zhongkui 服务进程"
+
+[cmd.run.web.short]
+other = "运行 zhongkui HTTP Web API 进程"
+
+[cmd.run.grpc.short]
+other = "运行 zhongkui gRPC API 进程"
+
+[cmd.run.worker.short]
+other = "运行 zhongkui 工作节点进程"
+
+[cmd.run.capture.short]
+other = "运行 zhongkui 抓包进程"
+
+[cmd.clear.short]
+other = "清除 zhongkui 数据"
+
+[cmd.clear.database.short]
+other = "清空所有数据库表（回滚所有迁移）"
+
+[cmd.clear.etcd.short]
+other = "清除 etcd 缓存（抓包器配置、水印、调度器配置）"
+
+[cmd.migrate.short]
+other = "数据库迁移管理"
+
+[cmd.migrate.up.short]
+other = "应用所有待执行的迁移"
+
+[cmd.migrate.down.short]
+other = "回滚所有已应用的迁移"
+
+[cmd.migrate.up-to.short]
+other = "迁移到指定版本"
+
+[cmd.migrate.down-to.short]
+other = "回滚到指定版本"
+
+[cmd.migrate.status.short]
+other = "显示迁移状态"
+
+[cmd.migrate.dry-run.short]
+other = "在临时数据库上试运行迁移"
+
+[cmd.migrate.diff.short]
+other = "比较数据库结构差异"
+
+[cmd.migrate.check.short]
+other = "检查模型定义与数据库结构是否一致"
+
+[cmd.migrate.create.short]
+other = "在迁移目录中创建 SQL 迁移文件"
+
+[cmd.create.short]
+other = "创建资源（用户、TLS 证书、访问密钥）"
+
+[cmd.create.user.short]
+other = "通过命令行创建用户"
+
+[cmd.create.user.long]
+other = "创建一个新用户。参数可以通过命令行标志提供，缺失的参数将交互式提示输入。"
+
+[cmd.create.tls.short]
+other = "创建自签名 TLS 证书"
+
+[cmd.create.tls.long]
+other = "生成自签名 TLS 证书和密钥对。参数可以通过命令行标志提供，也可以通过交互式提示输入。"
+
+[cmd.create.access-key.short]
+other = "为用户创建访问密钥"
+
+[cmd.create.access-key.long]
+other = "为已有用户创建 API 访问密钥。参数可以通过命令行标志提供，也可以通过交互式提示输入。"
+
+[cmd.create.capturer.short]
+other = "创建网络抓包器"
+
+[cmd.create.capturer.long]
+other = "创建带有设备配置的新的网络抓包器。参数可以通过命令行参数提供，或通过交互式提示输入。"
+
+[cmd.create.password-book.short]
+other = "生成用于密钥派生的密码本文件"
+
+[cmd.create.password-book.long]
+other = "生成一个加密安全的随机密码本文件（65536 字节），用于子密钥派生。"
+
+[cmd.create.testcase.short]
+other = "从 pcap 文件中提取 HTTP 测试用例"
+
+[cmd.create.testcase.long]
+other = "使用 tshark 从 pcap 文件中提取 HTTP 请求/响应数据，\n并生成 JSON 测试用例文件，用于验证 TCP 重组和 HTTP 协议识别逻辑。\n\n每个 HTTP 事务（请求-响应对）生成一个 JSON 文件。\n支持 HTTP/1.1 keep-alive 连接中每个 TCP 流包含多个事务的情况。"
+
+[cmd.create.docs.short]
+other = "从代码注释生成 Diátaxis 分类文档"
+
+[cmd.create.docs.long]
+other = "扫描文档注册表，调用 gomarkdoc 将各功能包的注释导出为 Markdown（教程/操作指南/参考/解释），并生成项目根 README.md（封面 + 目录）作为文档入口。"
+
+[cmd.sync.short]
+other = "同步注释生成文档与 embedding 向量，并对齐 embedding 列维度"
+
+[cmd.sync.docs.short]
+other = "同步注释生成文档到 RAG"
+
+[cmd.sync.docs.long]
+other = "抽取源码注释并生成叙述页文档，按内容 hash 差异计划幂等同步到内置系统命名空间（system）的 RAG（format=generated），对所有命名空间的检索可见；新增/更新/删除按差异收敛，内容未变则零写入，只读写该分区、不触碰人工文档，只入 RAG 不落盘。"
+
+[cmd.sync.apis.short]
+other = "同步原生接口知识到 RAG"
+
+[cmd.sync.apis.long]
+other = "装配视图层注册期声明的原生接口目录（含用途与入参出参元信息），按内容 hash 差异计划幂等同步到内置系统命名空间（system）的 RAG（format=native_api），对所有命名空间的检索可见；新增/更新/删除按差异收敛，内容未变则零写入，只读写该分区、不触碰叙述页与人工文档，只入 RAG 不落盘。"
+
+[cmd.sync.schema.short]
+other = "同步数据表知识到 RAG"
+
+[cmd.sync.schema.long]
+other = "解析模型声明与迁移脚本，按已迁移表逐张生成知识文档（字段、可空性、索引与外键），按内容 hash 差异计划幂等同步到内置系统命名空间（system）的 RAG（format=schema）；内容未变则零写入，只读写该分区、不触碰接口、能力、叙述页与人工文档，只入 RAG 不落盘。"
+
+[cmd.sync.capabilities.short]
+other = "同步平台能力知识到 RAG"
+
+[cmd.sync.capabilities.long]
+other = "由视图层能力声明生成一篇整体能力地图与每条能力一篇明细，按内容 hash 差异计划幂等同步到内置系统命名空间（system）的 RAG（format=capability）；内容未变则零写入，只读写该分区、不触碰接口、数据表、叙述页与人工文档，只入 RAG 不落盘。"
+
+[cmd.sync.embeddings.short]
+other = "以当前 embedding 模型重算命名空间下的向量表示"
+
+[cmd.sync.embeddings.long]
+other = "以当前 embedding 模型为准，重算指定命名空间下的向量表示：知识库文档重新切片并重建分块向量（knowledge_chunks），长期记忆重算 embedding 列（agent_memories）。用于更换 embedding 模型（维度或语义变化）后让既有内容与当前模型对齐；不改正文与全文检索列，不影响其它命名空间。列维度变更请先执行 sync embedding-dimensions。"
+
+[cmd.sync.embedding-dimensions.short]
+other = "按显式指定的维度重建 embedding 列与 HNSW 索引"
+
+[cmd.sync.embedding-dimensions.long]
+other = "按运维显式指定的目标维度重建 core 库的 knowledge_chunks.embedding 与 agent_memories.embedding 两列及其 HNSW 索引：须经 --dimensions 指定目标维度，执行前须先解绑 embedding 档位；命令会删除旧索引与全部向量、执行 ALTER TYPE、重建 HNSW 索引，完成后需重新索引知识库文档（执行 sync embeddings）。它与 sync embeddings 是同一命令组内的并列两条：本命令只改 schema（列维度），sync embeddings 只改内容（重嵌入向量），二者互不替代。"
+
+[cmd.force-reset-password.short]
+other = "通过命令行强制重置用户密码"
+
+[cmd.s3.short]
+other = "S3 对象存储管理"
+
+[cmd.s3.long]
+other = "S3 对象存储管理命令，包含存储桶生命周期规则管理等能力"
+
+[cmd.s3.lifecycle.short]
+other = "生命周期规则管理"
+
+[cmd.s3.lifecycle.long]
+other = "查看、应用与移除默认存储桶的生命周期规则；规则由 S3 平台侧统一执行"
+
+[cmd.s3.lifecycle.apply.short]
+other = "应用生命周期规则"
+
+[cmd.s3.lifecycle.apply.long]
+other = "交互式采集生命周期规则，并整体应用到默认存储桶（全量替换平台既有规则）。\n\n交互流程：从内置对象路径前缀枚举中选择目标前缀，输入对象过期天数，可继续添加多条规则；采集完成后预览确认再应用。"
+
+[cmd.s3.lifecycle.apply.example]
+other = "  zki s3 lifecycle apply"
+
+[cmd.s3.lifecycle.status.short]
+other = "查看生命周期规则"
+
+[cmd.s3.lifecycle.status.long]
+other = "查看默认存储桶当前配置的生命周期规则，未配置时输出提示"
+
+[cmd.s3.lifecycle.remove.short]
+other = "移除生命周期规则"
+
+[cmd.s3.lifecycle.remove.long]
+other = "移除默认存储桶的全部生命周期规则，恢复为不自动过期"
+
+[flag.config]
+other = "配置文件路径（如 /etc/zhongkui/config.toml）"
+
+[flag.help]
+other = "显示帮助信息"
+
+[flag.version.verbose]
+other = "输出详细的构建信息"
+
+[flag.describe.scheduler.name]
+other = "要打印的任务类型名称（可多次指定）"
+
+[flag.migrate.db]
+other = "目标数据库：core、raw、all"
+
+[flag.migrate.verbose]
+other = "打印迁移 SQL"
+
+[flag.migrate.timeout]
+other = "迁移超时时间（0 表示不超时）"
+
+[flag.migrate.force]
+other = "跳过确认"
+
+[flag.migrate.keep-temp]
+other = "保留临时数据库"
+
+[flag.run.capture.stats-print]
+other = "启用周期性抓包统计输出到标准输出"
+
+[flag.run.capture.stats-interval]
+other = "统计输出的时间间隔（如 5s、10s、1m）"
+
+[flag.clear.database.timeout]
+other = "清空数据库的超时时间"
+
+[flag.clear.etcd.timeout]
+other = "清空 etcd 缓存的超时时间"
+
+[flag.create.user.username]
+other = "新用户的用户名（至少 6 个字符）"
+
+[flag.create.user.password]
+other = "新用户的密码（至少 8 个字符）"
+
+[flag.create.user.nicklename]
+other = "新用户的昵称（至少 6 个字符）"
+
+[flag.create.user.email]
+other = "新用户的邮箱"
+
+[flag.create.user.timeout]
+other = "向数据库写入数据的超时时间"
+
+[flag.force-reset-password.username]
+other = "要重置密码的用户名"
+
+[flag.force-reset-password.password]
+other = "用户的新密码"
+
+[flag.force-reset-password.timeout]
+other = "向数据库写入数据的超时时间"
+
+[flag.create.access-key.username]
+other = "要创建访问密钥的用户名"
+
+[flag.create.access-key.description]
+other = "访问密钥的描述"
+
+[flag.create.access-key.enabled]
+other = "访问密钥是否启用"
+
+[flag.create.access-key.ttl]
+other = "访问密钥自当前时刻起的有效期（0 表示永不过期）"
+
+[flag.create.access-key.timeout]
+other = "数据库操作超时时间"
+
+[flag.create.tls.name]
+other = "TLS 文件名称"
+
+[flag.create.tls.dir-path]
+other = "TLS 文件存储目录路径"
+
+[flag.create.tls.ttl]
+other = "TLS 文件自当前时刻起的有效期（如 8760h）"
+
+[flag.create.tls.dns-names]
+other = "TLS 文件的域名列表（逗号分隔）"
+
+[flag.create.password-book.output]
+other = "输出文件路径（未指定时输出到标准输出）"
+
+[flag.create.capturer.namespace]
+other = "抓包器所属命名空间"
+
+[flag.create.capturer.name]
+other = "抓包器名称"
+
+[flag.create.capturer.version]
+other = "抓包器版本"
+
+[flag.create.capturer.device]
+other = "网络设备名称（如 eth0）"
+
+[flag.create.capturer.snap-len]
+other = "抓包长度（字节）"
+
+[flag.create.capturer.promisc]
+other = "启用混杂模式"
+
+[flag.create.capturer.read-timeout]
+other = "读取超时时间（毫秒）"
+
+[flag.create.capturer.bpf-expr]
+other = "BPF 过滤表达式（如 tcp port 80）"
+
+[flag.create.capturer.enabled]
+other = "启用该抓包器"
+
+[flag.create.capturer.timeout]
+other = "数据库操作超时时间"
+
+[flag.sync.namespace]
+other = "目标命名空间（必填）"
+
+[flag.sync.embedding-dimensions.dimensions]
+other = "目标向量维度（运维显式指定，须为正整数；调整会清空全部知识库向量并要求重新索引）"
+
+[flag.create.testcase.pcap]
+other = "pcap 文件路径（必填）"
+
+[flag.create.testcase.output]
+other = "测试用例文件的输出目录"
+
+[flag.completion.bash.no-descriptions]
+other = "禁用补全描述"
+
+[flag.completion.zsh.no-descriptions]
+other = "禁用补全描述"
+
+[flag.completion.fish.no-descriptions]
+other = "禁用补全描述"
+
+[flag.completion.powershell.no-descriptions]
+other = "禁用补全描述"
+
+# notify.* 默认标题/正文：正文经 text/template 渲染（含 go-i18n 不负责的 {{...}} 动作），
+# translate 已全局注入 [[ / ]] 数据定界符（dataDelimParser），这些源串不含 [[ 会触发
+# go-i18n fast-path 原样返回，再交给 text/template 渲染。
+# title = "@xx" 经 resolveExternalLocales 展开为 other 的外链文件正文。
+[notify.password.reset.title]
+other = "重置账户密码"
+
+[notify.password.reset.content]
+other = "@emails/password-reset-content.zh-Hans.html"
+
+[notify.tag_event.alert.title]
+other = "标签事件告警: {{.RuleName}}"
+
+[notify.tag_event.alert.content]
+other = "@notify/tag-event-alert-content.zh-Hans.txt"
+
+# =============================================================================
+# 枚举 label 键（后端单源，前端消费）
+# 统一为 enum.<类名>.<key>：label 按 key 翻译，value（数据库存储值）不作为键组成部分；
+# 旧键 model.<实体>.option.<字段>.<值> 中「同值多实体重复」的条目已合并到同一 enum 类。
+# 类名与 key 由类所属的包定义：取值空间固定的类由其取值空间的归属包就地声明并注册，
+# 业务注册表来源的类由所属业务包（message / notify / vtab / tagengine，经
+# enum.RegisterSource 注册）声明；
+# 通知默认模板经模板函数 t 按此渲染可读 label，前端枚举 label
+# 经统一枚举接口 /admin/enum/get|list 按请求语言从本节下发（entry.key + label）。
+# =============================================================================
+
+# 通知渠道类型（枚举类 channelType，来源 message.Types() 注册表）
+[enum.channelType.email]
+other = "邮件"
+
+[enum.channelType.webhook]
+other = "Webhook"
+
+# 通知事件（枚举类 notificationEvent，来源 notify.TemplateSpecs() 注册表）
+[enum.notificationEvent.tag_event_record]
+other = "标签事件告警"
+
+# 数据源类型（枚举类 datasourceType，来源 sqlitevtab vtab 常量）
+[enum.datasourceType.mysql]
+other = "MySQL"
+
+[enum.datasourceType.postgres]
+other = "PostgreSQL"
+
+[enum.datasourceType.clickhouse]
+other = "ClickHouse"
+
+[enum.datasourceType.sqlite_file]
+other = "SQLite 文件"
+
+[enum.datasourceType.etcd]
+other = "etcd"
+
+[enum.datasourceType.mongo]
+other = "MongoDB"
+
+[enum.datasourceType.redis]
+other = "Redis"
+
+# 数据源结构（枚举类 datasourceStruct）
+[enum.datasourceStruct.hash]
+other = "哈希"
+
+[enum.datasourceStruct.list]
+other = "列表"
+
+[enum.datasourceStruct.set]
+other = "集合"
+
+[enum.datasourceStruct.string]
+other = "字符串"
+
+[enum.datasourceStruct.zset]
+other = "有序集合"
+
+# 策略效果（枚举类 policyEffect）
+[enum.policyEffect.allow]
+other = "允许"
+
+[enum.policyEffect.deny]
+other = "禁止"
+
+# 标签规则目标模型（枚举类 tagRuleModel，Key 为 tagengine.ModelKey 短展示键）
+[enum.tagRuleModel.httpTransport]
+other = "HTTP 传输"
+
+# 标签事件维度（枚举类 tagEventDimension，来源 tagengine 各模型登记的合法维度取值）
+[enum.tagEventDimension.fpTcpClientSig]
+other = "客户端指纹签名"
+
+[enum.tagEventDimension.fpTcpServerSig]
+other = "服务端指纹签名"
+
+# 通知模板来源（枚举类 notificationSource）
+[enum.notificationSource.default]
+other = "默认"
+
+[enum.notificationSource.override]
+other = "覆盖"
+
+# 通知记录状态（枚举类 notificationRecordStatus）
+[enum.notificationRecordStatus.failed]
+other = "失败"
+
+[enum.notificationRecordStatus.pending]
+other = "待发送"
+
+[enum.notificationRecordStatus.success]
+other = "成功"
+
+# 标签事件告警状态（枚举类 tagAlertStatus）
+[enum.tagAlertStatus.alerting]
+other = "告警中"
+
+[enum.tagAlertStatus.closed]
+other = "已关闭"
+
+[enum.tagAlertStatus.pending]
+other = "待处理"
+
+[enum.tagAlertStatus.suppressed]
+other = "已抑制"
+
+# 语言（枚举类 language）
+[enum.language.en]
+other = "英文"
+
+[enum.language.zh-Hans]
+other = "简体中文"
+
+# HTTP 方法（枚举类 httpMethod，label 与 key 相同）
+[enum.httpMethod.CONNECT]
+other = "CONNECT"
+
+[enum.httpMethod.DELETE]
+other = "DELETE"
+
+[enum.httpMethod.GET]
+other = "GET"
+
+[enum.httpMethod.HEAD]
+other = "HEAD"
+
+[enum.httpMethod.OPTIONS]
+other = "OPTIONS"
+
+[enum.httpMethod.PATCH]
+other = "PATCH"
+
+[enum.httpMethod.POST]
+other = "POST"
+
+[enum.httpMethod.PUT]
+other = "PUT"
+
+[enum.httpMethod.TRACE]
+other = "TRACE"
+
+# HTTP 版本（枚举类 httpVersion，label 与 key 相同；键含 /，须用引号形式）
+[enum.httpVersion."HTTP/1.0"]
+other = "HTTP/1.0"
+
+[enum.httpVersion."HTTP/1.1"]
+other = "HTTP/1.1"
+
+[enum.httpVersion."HTTP/2"]
+other = "HTTP/2"
+
+[enum.httpVersion."HTTP/3"]
+other = "HTTP/3"
+
+# LLM 模型类型（枚举类 llmModelKind）
+[enum.llmModelKind.chat]
+other = "对话模型"
+
+[enum.llmModelKind.embedding]
+other = "向量模型"
+
+# LLM 档位槽位（枚举类 llmSlot）
+[enum.llmSlot.embedding]
+other = "向量槽位"
+
+[enum.llmSlot.flash]
+other = "轻量档"
+
+[enum.llmSlot.standard]
+other = "标准档"
+
+[enum.llmSlot.advanced]
+other = "高级档"
+
+# 工具来源（枚举类 llmToolSource）
+[enum.llmToolSource.builtin]
+other = "内置工具"
+
+[enum.llmToolSource.mcp]
+other = "MCP 工具"
+
+[enum.llmToolSource.client]
+other = "客户端工具"
+
+# 技能来源（枚举类 agentSkillSource）
+[enum.agentSkillSource.custom]
+other = "自定义技能"
+
+[enum.agentSkillSource.builtin]
+other = "内置技能"
+
+# 报告运行状态（枚举类 periodicReportRunStatus）
+[enum.periodicReportRunStatus.running]
+other = "运行中"
+
+[enum.periodicReportRunStatus.success]
+other = "成功"
+
+[enum.periodicReportRunStatus.failed]
+other = "失败"
+
+# Agent 类型（枚举类 agentKind）
+[enum.agentKind.general]
+other = "通用助手"
+
+[enum.agentKind.knowledge]
+other = "知识检索"
+
+[enum.agentKind.rego]
+other = "Rego 规则生成"
+
+# 对话模型接口形态（枚举类 llmAPIMode）
+[enum.llmAPIMode.chat]
+other = "Chat Completions"
+
+[enum.llmAPIMode.responses]
+other = "Response API"
+
+# 长期记忆类别（枚举类 memoryKind）
+[enum.memoryKind.fact]
+other = "事实"
+
+[enum.memoryKind.preference]
+other = "偏好"
+
+[enum.memoryKind.decision]
+other = "决策"
+
+[enum.memoryKind.artifact]
+other = "产物"
+
+# 长期记忆状态（枚举类 memoryStatus）
+[enum.memoryStatus.active]
+other = "生效"
+
+[enum.memoryStatus.archived]
+other = "归档"
+
+# Agent 运行现场状态（枚举类 agentRunStatus）
+[enum.agentRunStatus.pending]
+other = "待恢复"
+
+[enum.agentRunStatus.consumed]
+other = "已消费"
+
+[enum.agentRunStatus.expired]
+other = "已过期"
+
+# 驻留运行生命周期阶段（枚举类 agentRunPhase）
+[enum.agentRunPhase.running]
+other = "运行中"
+
+[enum.agentRunPhase.done]
+other = "已完成"
+
+[enum.agentRunPhase.failed]
+other = "已失败"
+
+[enum.agentRunPhase.cancelled]
+other = "已取消"
+
+[enum.agentRunPhase.suspended]
+other = "待审批"
+
+# 会话交互状态（枚举类 agentInteractionState）
+[enum.agentInteractionState.waiting]
+other = "等待中"
+
+[enum.agentInteractionState.running]
+other = "运行中"
+
+[enum.agentInteractionState.paused]
+other = "暂停"
+
+[enum.agentInteractionState.locked]
+other = "已锁定"
+
+# 会话交互子状态（枚举类 agentInteractionSubstate）
+[enum.agentInteractionSubstate.approval]
+other = "等待授权"
+
+[enum.agentInteractionSubstate.answer]
+other = "等待回答"
+
+[enum.agentInteractionSubstate.generating]
+other = "正文生成中"
+
+[enum.agentInteractionSubstate.thinking]
+other = "思考中"
+
+[enum.agentInteractionSubstate.tool_calling]
+other = "工具调用中"
+
+[enum.agentInteractionSubstate.compacting]
+other = "上下文压缩中"
+
+[enum.agentInteractionSubstate.success]
+other = "成功"
+
+[enum.agentInteractionSubstate.failed]
+other = "失败"
+
+[enum.agentInteractionSubstate.aborted]
+other = "用户中止"
+
+# MCP 远端传输方式（枚举类 mcpTransport）
+[enum.mcpTransport.sse]
+other = "SSE"
+
+[enum.mcpTransport.streamable_http]
+other = "可流式 HTTP"
+
+# =============================================================================
+# Dry-run 评估阶段、阶段状态与改进建议归类（枚举类 evalStage / evalStageStatus /
+# diagnosisCategory，归属包 internal/ai）。助手页的工具调用阶段与知识库页阶段同属 evalStage。
+# =============================================================================
+
+[enum.evalStage.retrieve]
+other = "混合检索"
+
+[enum.evalStage.answer]
+other = "生成回答"
+
+[enum.evalStage.chunkRelevance]
+other = "分块相关性判断"
+
+[enum.evalStage.claims]
+other = "声明忠实度判断"
+
+[enum.evalStage.reverseQuestions]
+other = "反推问题生成"
+
+[enum.evalStage.suggestions]
+other = "改进建议生成"
+
+[enum.evalStage.toolCall]
+other = "调用工具"
+
+[enum.evalStage.toolResult]
+other = "工具结果"
+
+[enum.evalStageStatus.start]
+other = "进行中"
+
+[enum.evalStageStatus.done]
+other = "已完成"
+
+[enum.evalStageStatus.failed]
+other = "失败"
+
+[enum.diagnosisCategory.coverage]
+other = "知识覆盖不足"
+
+[enum.diagnosisCategory.ranking]
+other = "检索排序需调参"
+
+[enum.diagnosisCategory.generation]
+other = "生成质量待改进"
+
+[enum.diagnosisCategory.context]
+other = "上下文利用不足"
+
+[enum.diagnosisCategory.other]
+other = "其他"
+
+[enum.chunkUnitKind.paragraph]
+other = "正文段落"
+
+[enum.chunkUnitKind.code]
+other = "代码块"
+
+[enum.chunkUnitKind.table]
+other = "表格"
+
+[enum.chunkUnitKind.list]
+other = "列表"
+
+[enum.chunkUnitKind.quote]
+other = "引用"
+
+# =============================================================================
+# 知识库文档格式与导入处理状态（枚举类 documentFormat / knowledgeDocStatus，
+# 归属包 internal/pkg/docconv 与 internal/models/ai）。documentFormat 对应常见文档
+# 格式导入知识库时的来源格式，knowledgeDocStatus 对应导入文档的解析流转状态。
+# =============================================================================
+
+[enum.documentFormat.markdown]
+other = "Markdown"
+
+[enum.documentFormat.txt]
+other = "纯文本"
+
+[enum.documentFormat.pdf]
+other = "PDF"
+
+[enum.documentFormat.docx]
+other = "Word 文档"
+
+[enum.documentFormat.generated]
+other = "生成文档"
+
+[enum.documentFormat.native_api]
+other = "原生接口"
+
+[enum.documentFormat.schema]
+other = "数据表"
+
+[enum.documentFormat.capability]
+other = "平台能力"
+
+[enum.knowledgeDocStatus.pending]
+other = "待解析"
+
+[enum.knowledgeDocStatus.parsing]
+other = "解析中"
+
+[enum.knowledgeDocStatus.ready]
+other = "就绪"
+
+[enum.knowledgeDocStatus.failed]
+other = "解析失败"
+
+# =============================================================================
+# 客户端工具调用的审核重要级与会话级审核阀门（枚举类 auditLevel / reviewValve，
+# 归属包 internal/ai 与 internal/models/ai）。auditLevel 为后端评估产出的四档重要级，
+# reviewValve 为前端为用户提供的会话级三档阀门，二者合成决定调用是否需人工审核。
+# =============================================================================
+
+[enum.auditLevel.must]
+other = "必须审核"
+
+[enum.auditLevel.suggest]
+other = "建议审核"
+
+[enum.auditLevel.auto]
+other = "可自动审核"
+
+[enum.auditLevel.none]
+other = "无需审核"
+
+[enum.reviewValve.each]
+other = "逐一审核"
+
+[enum.reviewValve.auto]
+other = "自动审核"
+
+[enum.reviewValve.none]
+other = "无需审核"
+
+# =============================================================================
+# AI capability disabled reasons (ai.disabled.*)
+# 「AI 能力为何不可用」的运维说明文案：由 internal/ai 的运行时快照判定，
+# 接口层按请求语言翻译后随状态接口与档位绑定接口返回。
+# 键与数据占位符（统一使用 [[.X]] 定界符）：
+#   not-assembled  : 运行时尚未完成首次装配（无数据占位符）
+#   slot-unbound   : 必需档位没有绑定记录（[[.Slot]]）
+#   model-disabled : 绑定模型被禁用（[[.Slot]] / [[.Model]]）
+#   kind-mismatch  : 绑定模型类型与档位不符（[[.Slot]] / [[.Model]] / [[.Want]]）
+#   separator      : 多条原因之间的连接符
+# =============================================================================
+
+[ai.disabled.not-assembled]
+other = "运行时快照尚未完成首次装配"
+
+[ai.disabled.slot-unbound]
+other = "[[.Slot]] 档位没有绑定模型"
+
+[ai.disabled.model-disabled]
+other = "绑定到 [[.Slot]] 档位的模型 [[.Model]] 已被禁用"
+
+[ai.disabled.kind-mismatch]
+other = "绑定到 [[.Slot]] 档位的模型 [[.Model]] 不是 [[.Want]] 模型"
+
+[ai.disabled.separator]
+other = "；"
+
+# =============================================================================
+# Agent tunable parameter metadata (param.<Key>.label|comment)
+# 参数键与 internal/ai 注册表（Specs）一一对应且全局唯一，故直接复用为文案键：
+# label 为参数展示名，comment 为参数说明；接口层按请求语言翻译后随 param/list 一并返回。
+# 本文件是这些文案的唯一来源（注册表不持有副本），未命中时 label 回退参数短名
+# （键最后一段）、comment 回退键本身，并由 param_i18n_test.go 的键完整性测试兜底。
+# =============================================================================
+
+# ---- agent：Agent 对话的提示词、消息分节标题与上下文截断 ----
+[param.agent.systemPrompt.label]
+other = "系统提示词"
+
+[param.agent.systemPrompt.comment]
+other = "Agent 对话的系统提示词，要求模型输出 {\"content\":..., \"draft\":{...}} 形状的 JSON"
+
+[param.agent.generalSystemPrompt.label]
+other = "通用对话系统提示词"
+
+[param.agent.generalSystemPrompt.comment]
+other = "通用对话 Agent（general 类型）的系统提示词，要求直接输出 Markdown 正文"
+
+[param.agent.auditLevelSystemPrompt.label]
+other = "审核重要级评估提示词"
+
+[param.agent.auditLevelSystemPrompt.comment]
+other = "client 工具挂起前对本次全部待执行调用做一次批量分类的系统提示词，要求仅输出按 callID 对齐四档重要级（must/suggest/auto/none）的 JSON"
+
+[param.agent.promptOptimizeSystemPrompt.label]
+other = "提问优化提示词"
+
+[param.agent.promptOptimizeSystemPrompt.comment]
+other = "把用户原始诉求改写为更清晰、更具体、更易被正确理解的提问的系统提示词，要求仅输出改写后的提问正文本身"
+
+[param.agent.nextStepsSystemPrompt.label]
+other = "推荐下一步提示词"
+
+[param.agent.nextStepsSystemPrompt.comment]
+other = "回答完成后基于会话上下文生成 1-3 条下一步推荐（第一条最推荐）的系统提示词，要求仅输出 JSON"
+
+[param.agent.nextStepsEnabled.label]
+other = "推荐下一步"
+
+[param.agent.nextStepsEnabled.comment]
+other = "是否在每条助手回答完成后自动生成「推荐的下一步」；关闭后不生成、不展示"
+
+[param.agent.retrievedDocSnippetLimit.label]
+other = "知识检索片段截断长度"
+
+[param.agent.retrievedDocSnippetLimit.comment]
+other = "knowledge_search 单条命中内容的截断长度（字符），控制工具结果对模型上下文的占用"
+
+[param.agent.defaultSlot.label]
+other = "默认档位"
+
+[param.agent.defaultSlot.comment]
+other = "未显式指定档位且调用点未声明建议档位时使用的默认档位（flash/standard/advanced）"
+
+[param.agent.maxToolRounds.label]
+other = "工具调用轮数上限"
+
+[param.agent.maxToolRounds.comment]
+other = "单次自主工具循环的最大轮数（人工审批 / 问卷续跑重新计数），达到上限仍存在工具调用时以该轮文本作为答案"
+
+[param.agent.maxToolResultBytes.label]
+other = "工具结果字节上限"
+
+[param.agent.maxToolResultBytes.comment]
+other = "单个工具返回结果注入模型上下文前的字节上限，超出部分被截断"
+
+[param.agent.runDetachGraceSeconds.label]
+other = "退订宽限秒数"
+
+[param.agent.runDetachGraceSeconds.comment]
+other = "驻留运行最后一名订阅者退订后，超过该秒数仍无订阅者则自动取消运行；<=0 表示关闭自动取消"
+
+[param.agent.llmTimeoutRetryEnabled.label]
+other = "超时自动重试"
+
+[param.agent.llmTimeoutRetryEnabled.comment]
+other = "非流式模型调用（记忆抽取、审核分级、检索重排等）超时后是否自动重试；流式对话不受影响"
+
+[param.agent.llmTimeoutRetryMaxRetries.label]
+other = "超时重试次数"
+
+[param.agent.llmTimeoutRetryMaxRetries.comment]
+other = "超时后最多重试几次（不含首次请求）；0 表示不重试"
+
+[param.agent.llmTimeoutRetryMultiplier.label]
+other = "超时放大倍数"
+
+[param.agent.llmTimeoutRetryMultiplier.comment]
+other = "每次重试把单次请求超时乘以该倍数；例如基础 60 秒、倍数 2 时依次为 120、240、480 秒"
+
+# ---- retrieval：混合检索融合与 LLM 重排 ----
+[param.retrieval.topK.label]
+other = "最终引用条数"
+
+[param.retrieval.topK.comment]
+other = "LLM 重排后保留的最终引用条数"
+
+[param.retrieval.candidates.label]
+other = "重排候选条数"
+
+[param.retrieval.candidates.comment]
+other = "融合后送入 LLM 重排的候选条数（每条检索路各取该条数）"
+
+[param.retrieval.expandDocLimit.label]
+other = "整篇展开预算"
+
+[param.retrieval.expandDocLimit.comment]
+other = "一次检索中整篇展开的累计长度上限（字符数）：按结果顺序逐篇展开，单篇超过该值或展开后累计超过该值的文档降级保持原分块且不再截断整篇；非正数表示关闭整篇展开"
+
+[param.retrieval.fusion.label]
+other = "融合策略"
+
+[param.retrieval.fusion.comment]
+other = "两路检索融合策略：rrf 或 weighted"
+
+[param.retrieval.weightVector.label]
+other = "向量路权重"
+
+[param.retrieval.weightVector.comment]
+other = "weighted 融合时向量检索路的权重"
+
+[param.retrieval.weightKeyword.label]
+other = "关键词路权重"
+
+[param.retrieval.weightKeyword.comment]
+other = "weighted 融合时关键词检索路的权重"
+
+[param.retrieval.rerankSystemPrompt.label]
+other = "重排系统提示词"
+
+[param.retrieval.rerankSystemPrompt.comment]
+other = "LLM 重排的系统提示词，要求仅返回候选序号的 JSON 数组"
+
+[param.retrieval.rerankSnippetLimit.label]
+other = "重排片段截断长度"
+
+[param.retrieval.rerankSnippetLimit.comment]
+other = "重排请求中单个候选片段截断长度（字符），控制 prompt 体积"
+
+[param.retrieval.rerankTemperature.label]
+other = "重排温度"
+
+[param.retrieval.rerankTemperature.comment]
+other = "LLM 重排调用使用的生成温度，越低排序越确定"
+
+# ---- session：会话上下文注入上限 ----
+[param.session.maxContextMessages.label]
+other = "上下文消息条数上限"
+
+[param.session.maxContextMessages.comment]
+other = "注入 LLM 上下文的历史消息条数上限"
+
+[param.session.maxContextBytes.label]
+other = "业务数据注入上限"
+
+[param.session.maxContextBytes.comment]
+other = "前端透传 businessData 单次注入的总大小上限（字节）"
+
+[param.session.compactThresholdRatio.label]
+other = "自动压缩阈值"
+
+[param.session.compactThresholdRatio.comment]
+other = "触发自动压缩的占用比例阈值（占用 token / 档位容量）"
+
+[param.session.maxUserTurns.label]
+other = "会话轮次上限"
+
+[param.session.maxUserTurns.comment]
+other = "有效轮次的会话上限（会话内当前存在的用户提问条数）；达到即自动锁定并拒绝新提问，回滚使轮次降到上限以下即自动解锁"
+
+[param.session.topicSystemPrompt.label]
+other = "会话主题提示词"
+
+[param.session.topicSystemPrompt.comment]
+other = "据会话首条用户消息生成会话短主题的系统提示词"
+
+# ---- memory：长期记忆与会话摘要 ----
+[param.memory.enabled.label]
+other = "长期记忆开关"
+
+[param.memory.enabled.comment]
+other = "长期记忆总开关，关闭时生成请求跳过记忆检索与注入且不报错"
+
+[param.memory.topK.label]
+other = "记忆注入条数"
+
+[param.memory.topK.comment]
+other = "检索后注入提示词的长期记忆条数"
+
+[param.memory.candidates.label]
+other = "记忆候选条数"
+
+[param.memory.candidates.comment]
+other = "向量路与关键词路各自召回的候选记忆条数"
+
+[param.memory.maxItems.label]
+other = "记忆注入硬上限"
+
+[param.memory.maxItems.comment]
+other = "单次注入长期记忆条数的硬上限，非正数表示不限制"
+
+[param.memory.maxItemBytes.label]
+other = "单条记忆字节上限"
+
+[param.memory.maxItemBytes.comment]
+other = "单条长期记忆注入提示词前的字节上限，超出部分被截断"
+
+[param.memory.dedupeThreshold.label]
+other = "记忆去重阈值"
+
+[param.memory.dedupeThreshold.comment]
+other = "写入记忆时的语义去重/合并阈值（余弦相似度）"
+
+[param.memory.summarySystemPrompt.label]
+other = "会话摘要提示词"
+
+[param.memory.summarySystemPrompt.comment]
+other = "滚动摘要会话历史时使用的系统提示词"
+
+[param.memory.summaryMinEvictedMessages.label]
+other = "摘要触发条数"
+
+[param.memory.summaryMinEvictedMessages.comment]
+other = "窗口外未摘要消息达到该条数时触发滚动摘要"
+
+[param.memory.evictedMessageByteLimit.label]
+other = "摘要单条消息字节上限"
+
+[param.memory.evictedMessageByteLimit.comment]
+other = "滚动摘要与记忆抽取提示词中单条被折叠消息正文的字节上限，超出部分按 UTF-8 边界截断；调大更利于摘要完整性，代价是更多输入 token。"
+
+[param.memory.extractSystemPrompt.label]
+other = "记忆抽取提示词"
+
+[param.memory.extractSystemPrompt.comment]
+other = "会话压缩时抽取长期记忆的系统提示词"
+
+[param.memory.extractMaxItems.label]
+other = "单次抽取条数"
+
+[param.memory.extractMaxItems.comment]
+other = "单次会话压缩最多抽取的长期记忆条数"
+
+# ---- chunking：Markdown 结构感知切片 ----
+[param.chunking.size.label]
+other = "切片目标长度"
+
+[param.chunking.size.comment]
+other = "切片亲和目标长度（字符），结构原子单元内尽量靠近"
+
+[param.chunking.overlap.label]
+other = "切片重叠长度"
+
+[param.chunking.overlap.comment]
+other = "相邻切块的重叠衔接长度（字符）"
+
+# ---- eval：RAG 评估 judge 提示词与参数 ----
+[param.eval.answerSystemPrompt.label]
+other = "回答生成提示词"
+
+[param.eval.answerSystemPrompt.comment]
+other = "评估中「基于检索上下文生成回答」judge 的系统提示词"
+
+[param.eval.chunkRelevanceSystemPrompt.label]
+other = "分块相关性提示词"
+
+[param.eval.chunkRelevanceSystemPrompt.comment]
+other = "评估中「分块相关性判定」judge 的系统提示词"
+
+[param.eval.claimsSystemPrompt.label]
+other = "声明抽取提示词"
+
+[param.eval.claimsSystemPrompt.comment]
+other = "评估中「答案声明抽取与支撑判定」judge 的系统提示词"
+
+[param.eval.reverseQuestionsSystemPrompt.label]
+other = "反推问题提示词"
+
+[param.eval.reverseQuestionsSystemPrompt.comment]
+other = "评估中「反推问题生成」judge 的系统提示词"
+
+[param.eval.suggestionsSystemPrompt.label]
+other = "改进建议生成提示词"
+
+[param.eval.suggestionsSystemPrompt.comment]
+other = "检索试运行中「改进建议生成」judge 的系统提示词，按知识覆盖/检索排序/生成质量等类别提出建议"
+
+[param.eval.reverseQuestionCount.label]
+other = "反推问题条数"
+
+[param.eval.reverseQuestionCount.comment]
+other = "反推问题最多保留条数，非正数表示不限制"
+
+[param.eval.snippetLimit.label]
+other = "评估片段截断长度"
+
+[param.eval.snippetLimit.comment]
+other = "评估请求中单个检索片段截断长度（字符），控制 prompt 体积"
+
+# ---- sanitize：业务数据注入前的清洗限界 ----
+[param.sanitize.maxItems.label]
+other = "业务数据条目数上限"
+
+[param.sanitize.maxItems.comment]
+other = "业务数据顶层条目数上限，非正数表示不限制（仅按字节上限截断）"
+
+[param.sanitize.maxBytes.label]
+other = "业务数据字节上限"
+
+[param.sanitize.maxBytes.comment]
+other = "业务数据紧凑 JSON 序列化字节上限，非正数表示不限制（仅执行清洗）"
+
+# ---- tools：内置工具展示文案 ----
+[tool.memory_write.label]
+other = "长期记忆写入"
+
+[tool.memory_write.comment]
+other = "Agent 自主调用，将可复用的结论、偏好或事实写入命名空间级长期记忆"
+
+[tool.knowledge_search.label]
+other = "知识库检索"
+
+[tool.knowledge_search.comment]
+other = "Agent 按需检索当前命名空间的知识库，可自行决定检索时机与查询语句并多次调用"
+
+[tool.ask_user.label]
+other = "向用户提问"
+
+[tool.ask_user.comment]
+other = "模型在信息不足或需用户在多个方案间抉择时向用户提问；由前端呈现问卷、用户作答后回传结果，可一次提多个问题，每题提供候选答案"
+
+[tool.api_invoke.label]
+other = "调用平台能力"
+
+[tool.api_invoke.comment]
+other = "在用户自身凭据下调用经后端白名单校验的只读或写入能力；需用户人工审批后由前端执行，只返回接口响应"
+
+[tool.math_eval.label]
+other = "表达式求值"
+
+[tool.math_eval.comment]
+other = "对单个算术或逻辑表达式精确求值，避免模型心算失误；支持四则运算、幂、比较与逻辑运算符"
+
+[tool.unit_convert.label]
+other = "单位换算"
+
+[tool.unit_convert.comment]
+other = "在同一物理量的不同单位之间换算，覆盖长度、质量、时间、面积、体积、数据量、速度、温度等类别"
+
+[tool.base_convert.label]
+other = "进制转换"
+
+[tool.base_convert.comment]
+other = "在 2~36 进制之间进行任意精度整数转换"
+
+[tool.datetime_calc.label]
+other = "日期时间运算"
+
+[tool.datetime_calc.comment]
+other = "获取当前时刻、换算时区、做日期时间的加减与差值计算，支持 IANA 时区"
+
+[tool.regex.label]
+other = "正则测试与替换"
+
+[tool.regex.comment]
+other = "按 Go（RE2）语法测试文本是否匹配或执行替换，返回命中详情或替换结果"
+
+[tool.json_diff.label]
+other = "JSON 差异比较"
+
+[tool.json_diff.comment]
+other = "递归比较两段 JSON，按路径列出新增、删除与变更的字段"
+
+[tool.text_stats.label]
+other = "文本统计"
+
+[tool.text_stats.comment]
+other = "统计文本的字符数、字节数、词数、行数与段落数"
+
+[tool.hash.label]
+other = "哈希摘要"
+
+[tool.hash.comment]
+other = "对文本计算 MD5、SHA-1、SHA-256 或 SHA-512 摘要，同时给出十六进制与 Base64 表示"
+
+[tool.encode_convert.label]
+other = "编码转换"
+
+[tool.encode_convert.comment]
+other = "在 Base64、Base64URL、Hex、URL 与 HTML 编码之间进行编码或解码"
+
+[tool.uuid.label]
+other = "UUID 生成"
+
+[tool.uuid.comment]
+other = "生成指定版本（v4 或 v7）的 UUID，可一次批量生成"
+
+[tool.json.label]
+other = "JSON 处理"
+
+[tool.json.comment]
+other = "对 JSON 文本做合法性校验、缩进格式化、压缩，以及按路径取值"
+
+[tool.csv_parse.label]
+other = "CSV 解析"
+
+[tool.csv_parse.comment]
+other = "把 CSV 文本解析为表头与数据行，支持自定义分隔符与是否含表头"
+
+[tool.url_parse.label]
+other = "URL 解析"
+
+[tool.url_parse.comment]
+other = "解析 URL 的协议、用户、主机、端口、路径、查询参数与片段等分量"
+
+[tool.mermaid_check.label]
+other = "Mermaid 图表校验"
+
+[tool.mermaid_check.comment]
+other = "在输出图表前校验 mermaid 源码合法性，按行号返回问题与修改建议，供 Agent 自行整改；覆盖流程图语法、连线写法与样式类引用"
+
+[tool.poly_solve.label]
+other = "多项式求根"
+
+[tool.poly_solve.comment]
+other = "求一元高次多项式的全部根，优先精确给出有理根，其余以复数数值近似，并标注重数"
+
+[tool.linear_solve.label]
+other = "线性方程组求解"
+
+[tool.linear_solve.comment]
+other = "求解线性方程组 Ax=b，判定唯一解 / 无穷多解 / 无解，并在无穷多解时给出特解与零空间基"
+
+[tool.root_find.label]
+other = "方程数值求根"
+
+[tool.root_find.comment]
+other = "求一元方程 f(x)=0 的实根，可按区间扫描全部根，也可由初值用牛顿法迭代定位"
+
+[tool.nonlinear_solve.label]
+other = "非线性方程组求解"
+
+[tool.nonlinear_solve.comment]
+other = "用牛顿-拉夫逊法求解非线性方程组，给出解向量、残余与迭代次数"
+
+# =============================================================================
+# Custom OPA builtins metadata (tagengine.custom-functions.<name>.description)
+# 自定义 OPA 内置函数说明：接口层按请求语言翻译后随函数元信息返回，
+# 供前端 Rego 编辑器悬停提示与补全展示
+# =============================================================================
+
+[tagengine.custom-functions.sqlite.query.description]
+other = "查询第三方数据源：对注册为 sqlite vtable 的第三方数据源执行 SELECT 语句并返回行对象数组。\n参数：第一参数为查询语句（支持 ? 占位符），第二参数为按顺序绑定到占位符的参数数组。\n返回值：每行是以列名为键的对象，经下标加列名访问（如 rows[0].value）；无匹配行时返回空数组，下标访问会使规则体不满足，可先用 count(rows) > 0 判断"
+
+# 任务类型（枚举类 taskType，来源 worker 的任务处理器注册表 TaskTypes()）
+[enum.taskType."network:pcapimport"]
+other = "PCAP 抓包文件导入"
+
+[enum.taskType."tag:event:detect"]
+other = "标签事件检测"
+
+[enum.taskType."tag:event:suppress"]
+other = "标签事件抑制评估"
+
+[enum.taskType."tag:event:cleanup"]
+other = "标签事件无效记录清理"
+
+[enum.taskType."mail:send"]
+other = "系统级邮件直发"
+
+[enum.taskType."notify:send:group"]
+other = "通知组发送"
+
+[enum.taskType."notify:send:target"]
+other = "通知单目标直投"
+
+[enum.taskType."ai:doc:parse"]
+other = "知识文档导入解析"
+
+[enum.taskType."periodic-report:plan:dispatch"]
+other = "周期性报告计划分发"
+
+[enum.taskType."periodic-report:plan:run"]
+other = "周期性报告生成"
+
+[enum.taskType."periodic-report:run:cleanup"]
+other = "周期性报告生命周期清理"

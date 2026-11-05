@@ -1,0 +1,24 @@
+────────────────────────────────────────
+             ✦ 标签事件告警 ✦
+────────────────────────────────────────
+
+事件规则 : {{.RuleName}}
+命名空间 : {{.Namespace}}
+检测时间 : {{if .DetectedAtFmt}}{{.DetectedAtFmt}}{{else}}{{.DetectedAt}}{{end}}
+
+命中明细 (共 {{if .Hits}}{{len .Hits}}{{else}}0{{end}} 条):
+{{- range .Hits}}
+
+  ▸ 条件「{{.ConditionName}}」
+      维度/项 : {{ TenumValue "tagEventDimension" .Dimension }} / {{.Item}}
+      命中数   : {{.Count}}（阈值 {{.Threshold}}）
+      {{- if .Model}}
+      目标模型 : {{ TenumValue "tagRuleModel" .Model }}
+      {{- end}}
+      {{- if .Window}}
+      时间窗口 : {{.Window}}
+      {{- end}}
+      {{- if .RecordCount}}
+      涉及记录 : {{.RecordCount}} 条
+      {{- end}}
+{{- end}}

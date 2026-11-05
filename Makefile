@@ -1,65 +1,151 @@
-# Detect OS platform: Darwin (macOS), Linux, or Windows (MINGW/MSYS/CYGWIN)
+# 检测操作系统平台: Darwin (macOS), Linux, 或 Windows (MINGW/MSYS/CYGWIN)
 UNAME_S := $(shell uname -s)
 GOBIN := $(shell go env GOBIN)
 ifeq ($(UNAME_S),Darwin)
+# macOS: 从 en0 网卡获取局域网 IP，失败时回退到 localhost
 LAN_IP := $(shell ipconfig getifaddr en0 2>/dev/null || echo localhost)
+# gopacket/pcap (cgo) 在 macOS 上会重复链接 -lpcap，抑制 ld 警告
 CGO_LDFLAGS += -Wl,-no_warn_duplicate_libraries
 export CGO_LDFLAGS
 else ifeq ($(UNAME_S),Linux)
+# Linux: 取主机名解析出的第一个 IP，失败时回退到 localhost
 LAN_IP := $(shell hostname -I 2>/dev/null | awk '{print $$1}' || echo localhost)
 else
 LAN_IP := localhost
 endif
 
-# 需要 sudo 才能抓包的平台（可通过 SUDO= make ... 跳过）
-ifeq ($(UNAME_S),Linux)
-SUDO := sudo
-else
-SUDO := sudo
-endif
+# 抓包基准测试需要 root 权限，默认使用 sudo；可通过 SUDO= make bench-slow 显式跳过
+SUDO ?= sudo
 
-.PHONY:
-	run-dev-deps
-	stop-dev-deps
-	remove-dev-deps
-	dev-tools
-	protobuf-tools
-	ts-tools
-	pcap-tools
-	build
-	clean
-	bench-prepare
-	bench-smoke
-	bench-slow
-	bench-fast
-	bench-raw
-	uptrace-install
-	uptrace-config
-	uptrace-init
-	uptrace-start
-	uptrace-stop
-	uptrace-clear
-	uptrace-uninstall
-	uptrace-cli-help
+.PHONY: bench-fast
+.PHONY: bench-prepare
+.PHONY: bench-probe
+.PHONY: bench-raw
+.PHONY: bench-slow
+.PHONY: bench-smoke
+.PHONY: bench-xdp-phys
+.PHONY: bench-xdp-phys-raw
+.PHONY: build
+.PHONY: build-check
+.PHONY: build-release
+.PHONY: ci
+.PHONY: clean
+.PHONY: create-test-dbs
+.PHONY: dev-tools
+.PHONY: docs
+.PHONY: docs-build
+.PHONY: docs-check
+.PHONY: docs-dev
+.PHONY: docs-install
+.PHONY: docs-preview
+.PHONY: fmt-check
+.PHONY: license-check
+.PHONY: lint
+.PHONY: p0f-update
+.PHONY: pcap-tools
+.PHONY: release
+.PHONY: protobuf-tools
+.PHONY: pull-dev-deps
+.PHONY: remove-dev-deps
+.PHONY: run
+.PHONY: run-dev-deps
+.PHONY: stop-dev-deps
+.PHONY: test
+.PHONY: ts-tools
+.PHONY: uptrace-clear
+.PHONY: uptrace-cli-help
+.PHONY: uptrace-config
+.PHONY: uptrace-init
+.PHONY: uptrace-install
+.PHONY: uptrace-start
+.PHONY: uptrace-stop
+.PHONY: uptrace-uninstall
+.PHONY: vet
+
+# ============================================================
+# 依赖工具构建
+# ============================================================
+
+# create-test-dbs - 在 dev-deps (postgres/clickhouse) 内创建测试库 core_test / raw_test（幂等）
+# 用法: make create-test-dbs
+create-test-dbs:
+	@echo "创建测试数据库 core_test (postgres) 与 raw_test (clickhouse)..."
+	@case "$(UNAME_S)" in \
+		Darwin|MINGW*|MSYS*|CYGWIN*) \
+			cmd=docker; \
+			clickhouse_cli="$$cmd exec clickhouse-server clickhouse-client"; \
+			psql_cli="PGPASSWORD=root_password $$cmd exec postgres psql -U postgres";; \
+		Linux) \
+			cmd=nerdctl; \
+			clickhouse_cli="$$cmd exec clickhouse-server clickhouse-client"; \
+			psql_cli="PGPASSWORD=root_password $$cmd exec postgres psql -U postgres";; \
+		*) \
+			echo "警告: 不支持的操作系统 '$(UNAME_S)'，请手动执行 psql/clickhouse-client 创建测试库。"; \
+			exit 1 ;; \
+	esac; \
+	$$psql_cli -tAc "SELECT 1 FROM pg_database WHERE datname='core_test'" | grep -q 1 \
+		&& echo "  core_test 已存在" \
+		|| $$psql_cli -c "CREATE DATABASE core_test"; \
+	$$clickhouse_cli -q "CREATE DATABASE IF NOT EXISTS raw_test"; \
+	echo "测试库就绪 (core_test@postgres, raw_test@clickhouse)"
+
+# pull-dev-deps - 按本机 CPU 架构重新拉取开发依赖镜像 (解决 platform 不匹配 warning)
+# 通过 uname -m 探测宿主架构并显式指定 --platform，避免拉取到架构不匹配的镜像
+# 用法: make pull-dev-deps
+pull-dev-deps:
+	@case "$(UNAME_S)" in \
+		Darwin|MINGW*|MSYS*|CYGWIN*) \
+			cmd=docker ;; \
+		Linux) \
+			cmd=nerdctl ;; \
+		*) \
+			echo "警告: 不支持的操作系统 '$(UNAME_S)'。" ; \
+			exit 1 ;; \
+	esac; \
+	arch=$$(uname -m); \
+	case "$$arch" in \
+		arm64|aarch64) \
+			platform=linux/arm64 ;; \
+		x86_64|amd64) \
+			platform=linux/amd64 ;; \
+		*) \
+			echo "警告: 无法识别的架构 '$$arch'，缺省使用 linux/amd64"; \
+			platform=linux/amd64 ;; \
+	esac; \
+	echo "检测到宿主架构: $$arch，拉取平台: $$platform"; \
+	for item in \
+		"redis redis:8.2.1" \
+		"etcd quay.io/coreos/etcd:v3.6.5" \
+		"clickhouse clickhouse:25.3.3" \
+		"postgres pgvector/pgvector:pg17" \
+		"rustfs rustfs/rustfs:latest"; \
+	do \
+		set -- $$item; \
+		name=$$1; img=$$2; \
+		echo "=== 拉取 $$name ($$platform) ==="; \
+		$$cmd pull --platform "$$platform" "$$img" || echo "  !! 拉取 $$name 失败，镜像可能不提供 $$platform 架构"; \
+	done
 
 # run-dev-deps - 启动开发依赖容器 (redis, etcd, clickhouse, postgres, rustfs)
 # 用法: make run-dev-deps
 run-dev-deps:
 	@case "$(UNAME_S)" in \
-		Darwin) \
-			echo "Starting dependencies with Orbstack (docker)..."; \
+		Darwin|MINGW*|MSYS*|CYGWIN*) \
+			echo "使用 docker 启动依赖容器..."; \
 			docker run -itd --restart unless-stopped --name redis --network host \
 				redis:8.2.1; \
 			docker run -itd --restart unless-stopped --name etcd --network host \
 				quay.io/coreos/etcd:v3.6.5; \
 			docker run -itd --restart unless-stopped --name clickhouse-server --network host \
 				--ulimit nofile=262144:262144 \
+				-v "$(CURDIR)/config/clickhouse/config.d:/etc/clickhouse-server/config.d:ro" \
+				-e CLICKHOUSE_PASSWORD=root_password \
 				clickhouse:25.3.3; \
 			docker run -itd --restart unless-stopped --name postgres --network host \
 				-e POSTGRES_PASSWORD=root_password \
 				-e POSTGRES_USER=postgres \
 				-e POSTGRES_DB=default \
-				postgres:16-alpine3.22; \
+				pgvector/pgvector:pg17; \
 			docker run -itd --restart unless-stopped --name rustfs --network host \
 				-e RUSTFS_ADDRESS=localhost:9002 \
 				-e RUSTFS_CONSOLE_ENABLE=true \
@@ -67,91 +153,73 @@ run-dev-deps:
 				-e RUSTFS_SECRET_KEY=rustfsadmin \
 				rustfs/rustfs:latest ;; \
 		Linux) \
-			echo "Starting dependencies with nerdctl..."; \
+			echo "使用 nerdctl 启动依赖容器..."; \
 			nerdctl run -td --restart=always --name redis --net=host \
 				redis:8.2.1; \
 			nerdctl run -td --restart=always --name etcd --net=host \
 				quay.io/coreos/etcd:v3.6.5; \
 			nerdctl run -td --restart=always --name clickhouse-server --net=host \
 				--ulimit nofile=262144:262144 \
+				-v "$(CURDIR)/config/clickhouse/config.d:/etc/clickhouse-server/config.d:ro" \
+				-e CLICKHOUSE_PASSWORD=root_password \
 				clickhouse:25.3.3; \
 			nerdctl run -td --restart=always --name postgres --net=host \
 				-e POSTGRES_PASSWORD=root_password \
 				-e POSTGRES_USER=postgres \
 				-e POSTGRES_DB=default \
-				postgres:16-alpine3.22; \
+				pgvector/pgvector:pg17; \
 			nerdctl run -td --restart=always --name rustfs --net=host \
 				-e RUSTFS_ADDRESS=localhost:9002 \
 				-e RUSTFS_CONSOLE_ENABLE=true \
 				-e RUSTFS_ACCESS_KEY=rustfsadmin \
 				-e RUSTFS_SECRET_KEY=rustfsadmin \
 				rustfs/rustfs:latest ;; \
-		MINGW*|MSYS*|CYGWIN*) \
-			echo "Starting dependencies with Docker Desktop..."; \
-			docker run -itd --restart unless-stopped --name redis --network host \
-				redis:8.2.1; \
-			docker run -itd --restart unless-stopped --name etcd --network host \
-				quay.io/coreos/etcd:v3.6.5; \
-			docker run -itd --restart unless-stopped --name clickhouse-server --network host \
-				--ulimit nofile=262144:262144 \
-				clickhouse:25.3.3; \
-			docker run -itd --restart unless-stopped --name postgres --network host \
-				-e POSTGRES_PASSWORD=root_password \
-				-e POSTGRES_USER=postgres \
-				-e POSTGRES_DB=default \
-				postgres:16-alpine3.22; \
-			docker run -itd --restart unless-stopped --name rustfs --network host \
-				-e RUSTFS_ADDRESS=localhost:9002 \
-				-e RUSTFS_CONSOLE_ENABLE=true \
-				-e RUSTFS_ACCESS_KEY=rustfsadmin \
-				-e RUSTFS_SECRET_KEY=rustfsadmin \
-				rustfs/rustfs:latest ;; \
 		*) \
-			echo "Warning: Unsupported OS '$(UNAME_S)'. Please start dependencies manually."; \
+			echo "警告: 不支持的操作系统 '$(UNAME_S)'，请手动启动依赖服务。"; \
 			exit 1 ;; \
 	esac
 
 # stop-dev-deps - 停止所有开发依赖容器 (不删除容器，保留数据)
 # 用法: make stop-dev-deps
 stop-dev-deps:
-	@echo "Stopping development dependencies..."
+	@echo "停止开发依赖容器..."
 	@case "$(UNAME_S)" in \
 		Darwin|MINGW*|MSYS*|CYGWIN*) \
 			cmd=docker ;; \
 		Linux) \
 			cmd=nerdctl ;; \
 		*) \
-			echo "Warning: Unsupported OS '$(UNAME_S)'."; \
+			echo "警告: 不支持的操作系统 '$(UNAME_S)'。"; \
 			exit 1 ;; \
 	esac; \
 	for container in redis etcd clickhouse-server postgres rustfs; do \
 		if $$cmd ps --format '{{.Names}}' | grep -q "^$$container$$" 2>/dev/null; then \
-			echo "  Stopping $$container..."; \
+			echo "  正在停止 $$container..."; \
 			$$cmd stop $$container; \
 		else \
-			echo "  $$container not running, skipping"; \
+			echo "  $$container 未在运行，跳过"; \
 		fi \
 	done
 
 # remove-dev-deps - 停止并删除所有开发依赖容器 (数据将丢失)
 # 用法: make remove-dev-deps
 remove-dev-deps: stop-dev-deps
-	@echo "Removing development dependencies..."
+	@echo "删除开发依赖容器..."
 	@case "$(UNAME_S)" in \
 		Darwin|MINGW*|MSYS*|CYGWIN*) \
 			cmd=docker ;; \
 		Linux) \
 			cmd=nerdctl ;; \
 		*) \
-			echo "Warning: Unsupported OS '$(UNAME_S)'."; \
+			echo "警告: 不支持的操作系统 '$(UNAME_S)'。"; \
 			exit 1 ;; \
 	esac; \
 	for container in redis etcd clickhouse-server postgres rustfs; do \
 		if $$cmd ps -a --format '{{.Names}}' | grep -q "^$$container$$" 2>/dev/null; then \
-			echo "  Removing $$container..."; \
+			echo "  正在删除 $$container..."; \
 			$$cmd rm -f $$container; \
 		else \
-			echo "  $$container not found, skipping"; \
+			echo "  $$container 不存在，跳过"; \
 		fi \
 	done
 
@@ -171,9 +239,9 @@ protobuf-tools:
 		Linux) \
 			apt install -y protobuf-compiler ;; \
 		MINGW*|MSYS*|CYGWIN*) \
-			echo "Please install protobuf manually from https://github.com/protocolbuffers/protobuf/releases" ;; \
+			echo "请从 https://github.com/protocolbuffers/protobuf/releases 手动安装 protobuf" ;; \
 		*) \
-			echo "Warning: Unsupported OS '$(UNAME_S)'. Please install protobuf manually." ;; \
+			echo "警告: 不支持的操作系统 '$(UNAME_S)'，请手动安装 protobuf。" ;; \
 	esac
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
@@ -194,22 +262,22 @@ ts-tools:
 			if ! command -v node >/dev/null 2>&1; then \
 				HOMEBREW_NO_AUTO_UPDATE=1 brew install node; \
 			else \
-				echo "node already installed, skipping"; \
+				echo "node 已安装，跳过"; \
 			fi ;; \
 		Linux) \
 			if ! command -v node >/dev/null 2>&1; then \
 				curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt install -y nodejs; \
 			else \
-				echo "node already installed, skipping"; \
+				echo "node 已安装，跳过"; \
 			fi ;; \
 		MINGW*|MSYS*|CYGWIN*) \
 			if ! command -v node >/dev/null 2>&1; then \
-				echo "Please install Node.js from https://nodejs.org and re-run this target"; \
+				echo "请从 https://nodejs.org 安装 Node.js 后重新执行该目标"; \
 				exit 1; \
 			fi ;; \
 		*) \
 			if ! command -v node >/dev/null 2>&1; then \
-				echo "Warning: Unsupported OS '$(UNAME_S)'. Please install Node.js manually from https://nodejs.org"; \
+				echo "警告: 不支持的操作系统 '$(UNAME_S)'，请从 https://nodejs.org 手动安装 Node.js"; \
 				exit 1; \
 			fi ;; \
 	esac
@@ -224,41 +292,23 @@ pcap-tools:
 	@case "$(UNAME_S)" in \
 		Darwin) \
 			xcode-select -p >/dev/null 2>&1 || xcode-select --install; \
-			echo "libpcap is included with macOS Xcode Command Line Tools" ;; \
+			echo "libpcap 已包含在 macOS Xcode Command Line Tools 中" ;; \
 		Linux) \
 			apt install -y libpcap-dev ;; \
 		MINGW*|MSYS*|CYGWIN*) \
-			echo "Please install Npcap SDK from https://npcap.com/dist/" ;; \
+			echo "请从 https://npcap.com/dist/ 安装 Npcap SDK" ;; \
 		*) \
-			echo "Warning: Unsupported OS '$(UNAME_S)'. Please install libpcap manually." ;; \
+			echo "警告: 不支持的操作系统 '$(UNAME_S)'，请手动安装 libpcap。" ;; \
 	esac
-
-# clean - 删除自动生成的 protobuf 代码
-# 用法: make clean
-clean:
-	rm -rf internal/pkg/protobuf/reporter/v1/reporter.pb.go
-	rm -rf internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go
-
-internal/pkg/protobuf/reporter/v1/reporter.pb.go: api/reporter.proto
-	PATH="$(GOBIN):$$PATH" protoc --go_out=internal/pkg/protobuf/reporter/v1 api/reporter.proto
-
-internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go: api/reporter.proto
-	PATH="$(GOBIN):$$PATH" protoc --go-grpc_out=internal/pkg/protobuf/reporter/v1 api/reporter.proto
-
-internal/manager/routes/search.go: cmd/template/main.go cmd/template/base.tmpl internal/manager/routes/search.toml
-	go run cmd/template/main.go search-generate \
-		--packageName="routes" \
-		--templatePath="cmd/template/base.tmpl" \
-		--configPath="internal/manager/routes/search.toml" \
-		--outputPath="internal/manager/routes/search.go"
 
 # ============================================================
 # 构建与版本管理
 # ============================================================
 #
 # 版本号规则:
-#   - 开发构建: 版本号 = git describe --tags --always --dirty，如 "c2d4d21-dirty"
-#   - Release 构建: 版本号 = 语义化版本，如 "v1.2.3"，通过 make build-release VERSION=v1.2.3 设置
+#   - 版本号唯一来源是 annotated tag `vX.Y.Z`，由 `make release` 创建
+#   - 开发构建不注入 SemVer，版本显示回落为 commit hash，如 "c2d4d21"
+#   - Release 构建必须显式指定 VERSION，如 `make build-release VERSION=v1.2.3`
 #
 # 编译时版本信息通过 -ldflags 注入到二进制，运行时可通过以下命令查看:
 #   ./bin/zki version          # 精简输出，如 c2d4d21 或 v1.2.3
@@ -266,40 +316,213 @@ internal/manager/routes/search.go: cmd/template/main.go cmd/template/base.tmpl i
 #   go run cmd/zki/main.go version  # 开发时无需预编译，直接查看 commit hash
 #
 # 版本变量说明:
-#   VERSION     - 语义化版本号 / git describe 结果，优先显示
+#   VERSION     - 语义化版本号，仅 release 构建使用
 #   COMMIT      - git commit hash (短格式)
 #   BUILD_TIME  - 构建时间 (ISO8601 UTC)
 #   BUILDER     - 构建者用户名
 #
 
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "unknown")
+VERSION ?=
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_TIME ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILDER  ?= $(shell whoami)
 
-LDFLAGS = -X zhongkui.com/zhongkui/internal/pkg/version.SemVer=$(VERSION) \
-          -X zhongkui.com/zhongkui/internal/pkg/version.Commit=$(COMMIT) \
-          -X zhongkui.com/zhongkui/internal/pkg/version.BuildTime=$(BUILD_TIME) \
-          -X zhongkui.com/zhongkui/internal/pkg/version.Builder=$(BUILDER)
+# 语义化版本（SemVer 2.0.0）：vX.Y.Z，可带预发布与构建元数据
+SEMVER_PATTERN := ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?(\+([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$$
 
-# build - 编译 zki 二进制 (开发版本，版本号自动取 git commit)
+# 开发构建只注入 commit 等信息，SemVer 留空，避免把 git describe 的非语义化结果当成版本号
+DEV_LDFLAGS = -X zhongkuisec.com/zhongkui/internal/pkg/version.Commit=$(COMMIT) \
+              -X zhongkuisec.com/zhongkui/internal/pkg/version.BuildTime=$(BUILD_TIME) \
+              -X zhongkuisec.com/zhongkui/internal/pkg/version.Builder=$(BUILDER)
+
+# Release 构建额外注入语义化版本号
+RELEASE_LDFLAGS = $(DEV_LDFLAGS) \
+                  -X zhongkuisec.com/zhongkui/internal/pkg/version.SemVer=$(VERSION)
+
+# p0f 指纹签名库（随 Go 包内嵌）：
+# p0f.fp 为上游基础库（可用 make p0f-update 刷新覆盖）；p0f.local.fp 为本地定制签名，
+# 不随上游更新，两者拼接后由 internal/network/huginn 内嵌加载（见 database.go 的 embed）
+P0F_FP := internal/network/huginn/p0f.fp
+
+# p0f 签名库上游源（社区维护的 p0f3 数据库；官方 p0f 已停更，此为最活跃的社区维护版）
+# 可通过 make p0f-update P0F_UPSTREAM_URL=<新地址> 覆盖
+P0F_UPSTREAM_URL ?= https://raw.githubusercontent.com/peace-maker/p0f3-database/main/p0f.fp
+
+internal/pkg/protobuf/reporter/v1/reporter.pb.go: api/reporter.proto
+	PATH="$(GOBIN):$$PATH" protoc --go_out=internal/pkg/protobuf/reporter/v1 api/reporter.proto
+
+internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go: api/reporter.proto
+	PATH="$(GOBIN):$$PATH" protoc --go-grpc_out=internal/pkg/protobuf/reporter/v1 api/reporter.proto
+
+internal/manager/views/search.go internal/manager/views/enum_bindings.go: cmd/template/main.go cmd/template/base.tmpl cmd/template/enum_bindings.tmpl internal/manager/views/search.toml
+	go run cmd/template/main.go search-generate \
+		--packageName="views" \
+		--templatePath="cmd/template/base.tmpl" \
+		--configPath="internal/manager/views/search.toml" \
+		--outputPath="internal/manager/views/search.go" \
+		--enumBindingsTemplatePath="cmd/template/enum_bindings.tmpl" \
+		--enumBindingsOutputPath="internal/manager/views/enum_bindings.go"
+	gofmt -w internal/manager/views/search.go internal/manager/views/enum_bindings.go
+
+# p0f-update - 从社区维护的 p0f3 签名库刷新内嵌的上游 p0f.fp，并运行指纹测试
+# 本地定制签名保存在 p0f.local.fp，不会被上游覆盖；刷新后若指纹基线变化，
+# 需人工确认 TestFingerprintFromPcap 的结果并更新 internal/network/detectors/fingerprint_pcap_test.go
+# 用法: make p0f-update
+# 自定义上游源: make p0f-update P0F_UPSTREAM_URL=<新地址>
+p0f-update:
+	@echo "=== 下载上游 p0f 签名库: $(P0F_UPSTREAM_URL) ==="
+	@curl -fsSL "$(P0F_UPSTREAM_URL)" -o "$(P0F_FP).tmp" || { echo "下载失败，请检查网络或 P0F_UPSTREAM_URL"; exit 1; }
+	@echo "=== 下载完成，校验格式（行数/首个 section）==="
+	@wc -l "$(P0F_FP).tmp"
+	@grep -m1 '^\[tcp:request\]' "$(P0F_FP).tmp" >/dev/null || { echo "校验失败：下载内容不含 [tcp:request] section，中止"; rm -f "$(P0F_FP).tmp"; exit 1; }
+	@mv "$(P0F_FP).tmp" "$(P0F_FP)"
+	@echo "=== 运行指纹测试验证 ==="
+	go test ./internal/network/detectors -run '^TestFingerprintFromPcap$$' -v
+
+# build - 编译 zki 二进制 (开发版本，版本显示回落为 commit hash)
 # 用法: make build
-build: internal/pkg/protobuf/reporter/v1/reporter.pb.go internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go internal/manager/routes/search.go
-	go build -ldflags "$(LDFLAGS)" -o bin/zki cmd/zki/main.go
+build: internal/pkg/protobuf/reporter/v1/reporter.pb.go internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go internal/manager/views/search.go internal/manager/views/enum_bindings.go
+	go build -ldflags "$(DEV_LDFLAGS)" -o bin/zki cmd/zki/main.go
 
-# build-release - 编译 release 版本 (需手动指定语义化版本号)
+# build-release - 编译 release 版本 (需手动指定并通过校验的语义化版本号)
 # 用法: make build-release VERSION=v1.2.3
 build-release:
-	@if [ -z "$(VERSION)" ] || [ "$(VERSION)" = "unknown" ]; then \
+	@if [ -z "$(VERSION)" ]; then \
 		echo "ERROR: 请设置 VERSION 为语义化版本号，例如: make build-release VERSION=v1.2.3"; \
 		exit 1; \
 	fi
-	go build -ldflags "$(LDFLAGS)" -o bin/zki cmd/zki/main.go
+	@echo '$(VERSION)' | grep -Eq '$(SEMVER_PATTERN)' || { \
+		echo "ERROR: VERSION '$(VERSION)' 不是合法的语义化版本号，示例: v1.2.3 或 v0.1.0-alpha.1"; \
+		exit 1; \
+	}
+	go build -ldflags "$(RELEASE_LDFLAGS)" -o bin/zki cmd/zki/main.go
+
+# release - 在 master 上创建发布标签 (要求 CHANGELOG 与 web/package.json 已对齐)
+# 用法: make release VERSION=v1.2.3
+# 前置: 当前分支为 master、工作区干净、CHANGELOG 存在对应版本段、版本标签未创建
+release:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "ERROR: 请设置 VERSION 为语义化版本号，例如: make release VERSION=v1.2.3"; \
+		exit 1; \
+	fi
+	@echo '$(VERSION)' | grep -Eq '$(SEMVER_PATTERN)' || { \
+		echo "ERROR: VERSION '$(VERSION)' 不是合法的语义化版本号"; \
+		exit 1; \
+	}
+	@if [ "$$(git rev-parse --abbrev-ref HEAD)" != "master" ]; then \
+		echo "ERROR: 发布必须在 master 分支上进行，当前为 $$(git rev-parse --abbrev-ref HEAD)"; \
+		exit 1; \
+	fi
+	@if [ -n "$$(git status --porcelain)" ]; then \
+		echo "ERROR: 工作区不干净，请先提交或清理改动"; \
+		exit 1; \
+	fi
+	@if git rev-parse -q --verify "refs/tags/$(VERSION)" >/dev/null 2>&1; then \
+		echo "ERROR: 标签 $(VERSION) 已存在"; \
+		exit 1; \
+	fi
+	@version_number=$$(echo '$(VERSION)' | sed 's/^v//'); \
+	grep -q "## [$$version_number] - " CHANGELOG.md || { \
+		echo "ERROR: CHANGELOG.md 缺少 '## [$$version_number] - YYYY-MM-DD' 版本段"; \
+		exit 1; \
+	}; \
+	grep -q "\"version\": \"$$version_number\"" web/package.json || { \
+		echo "ERROR: web/package.json 的 version 未对齐 $$version_number"; \
+		exit 1; \
+	}
+	$(MAKE) ci
+	git tag -a "$(VERSION)" -m "zhongkui $(VERSION)"
+	@echo "已创建标签 $(VERSION)；推送: git push origin master --follow-tags"
 
 # run - 使用 go run 直接运行 zki
 # 用法: make run ARGS="version" 或 make run ARGS="run web --config=config.toml"
 run:
 	go run cmd/zki/main.go $(ARGS)
+
+# clean - 删除自动生成的 protobuf 代码
+# 用法: make clean
+clean:
+	rm -f internal/pkg/protobuf/reporter/v1/reporter.pb.go
+	rm -f internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go
+
+# ============================================================
+# 代码检查
+# ============================================================
+
+# lint - 运行自建注释检查 analyzer (cmd/commentlint)，校验包注释与导出声明的注释完备性
+# 检查范围、豁免规则与口径见 AGENTS.md「Comments」，实现见 internal/lint/commentlint
+# 诊断输出到 stderr，发现缺口时退出码为 3 (make 因此失败)，可直接作为 CI/提交前检查
+# 用法: make lint
+lint:
+	go run cmd/commentlint/main.go ./...
+
+# fmt-check - 检查已跟踪的 Go 文件是否符合 gofmt
+# 用法: make fmt-check
+fmt-check:
+	@unformatted=$$(gofmt -l $$(git ls-files '*.go') $$(git ls-files --others --exclude-standard '*.go')); \
+	if [ -n "$$unformatted" ]; then \
+		echo "以下文件未通过 gofmt:"; \
+		echo "$$unformatted"; \
+		exit 1; \
+	fi
+
+# vet - 运行 go vet
+# 用法: make vet
+vet:
+	go vet ./...
+
+# test - 运行全部单元测试
+# 用法: make test
+test:
+	go test ./...
+
+# build-check - 编译全部包但不产出二进制，作为 CI 的构建门禁
+# 用法: make build-check
+build-check:
+	go build ./...
+
+# docs - 生成文档：叙述页、参考页、总目录与导航文件
+# 用法: make docs
+docs:
+	go run cmd/zki/main.go create docs
+
+# docs-check - 校验生成文档与代码声明一致，不写盘；CI 用它拦截文档漂移
+# 用法: make docs-check
+docs-check:
+	go run cmd/zki/main.go create docs --check
+
+# docs-install - 安装文档站点依赖（VitePress）
+# 用法: make docs-install
+docs-install:
+	cd docs && pnpm install
+
+# docs-dev - 本地启动文档站点（默认 http://localhost:5173）
+# 用法: make docs-dev
+docs-dev:
+	cd docs && pnpm dev
+
+# docs-build - 构建静态文档站点到 docs/.vitepress/dist
+# 部署到子路径时用 DOCS_BASE 覆盖，例如 DOCS_BASE=/zhongkui/ make docs-build
+# 用法: make docs-build
+docs-build:
+	cd docs && pnpm build
+
+# docs-preview - 预览已构建的文档站点
+# 用法: make docs-preview
+docs-preview:
+	cd docs && pnpm preview
+
+# license-check - 第三方依赖许可证门禁：拒绝 GPL/AGPL/LGPL/SSPL/非商业与未知许可证
+# Go 侧检查链接进 cmd/zki 的模块；Web 侧检查 pnpm 生产依赖（需要 pnpm）
+# CI 设置 LICENSE_CHECK_REQUIRE_WEB=1 强制要求 Web 检查
+# 用法: make license-check
+license-check:
+	go run cmd/licensecheck/main.go --root .
+
+# ci - 提交与 CI 的统一入口：格式、构建、vet、测试、注释检查、许可证与文档漂移检查
+# 用法: make ci
+ci: fmt-check build-check vet test lint license-check docs-check
+	@echo "CI 检查全部通过"
 
 # ============================================================
 # Wire 抓包实现基线测试
@@ -426,6 +649,13 @@ else
 UPTRACE_DOCKER_CMD := docker
 endif
 
+# sed 原地编辑参数（macOS 的 BSD sed 需要 -i '' 写法，Linux GNU sed 为 -i）
+ifeq ($(UNAME_S),Darwin)
+SED_I := sed -i ''
+else
+SED_I := sed -i
+endif
+
 # uptrace-install - 下载并安装 uptrace 二进制（已安装则跳过）
 # 用法: make uptrace-install
 uptrace-install:
@@ -474,24 +704,12 @@ uptrace-config:
 		echo "=== 生成配置文件 $(UPTRACE_CONFIG) ==="; \
 		mkdir -p $$(dirname $(UPTRACE_CONFIG)); \
 		$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) config create; \
-		case "$(UNAME_S)" in \
-			Darwin) \
-				sed -i '' '/^pg:/,/^[a-z]/{s/^  user: .*/  user: postgres/;s/^  password: .*/  password: root_password/;}' $(UPTRACE_CONFIG); \
-				sed -i '' '/^ch_cluster:/,/^[a-z]/{s/^          user: .*/          user: default/;s/^          password: .*/          password: ""/;}' $(UPTRACE_CONFIG); \
-				sed -i '' 's|^    addr: :80|    addr: :14318|' $(UPTRACE_CONFIG); \
-				sed -i '' 's|^  url: http://uptrace.local|  url: http://localhost:14318|' $(UPTRACE_CONFIG); \
-				sed -i '' 's|^  dsn: http://project1_secret@uptrace.local?grpc=4317|  dsn: http://project1_secret@localhost:14318?grpc=4317|' $(UPTRACE_CONFIG); \
-				sed -i '' '/^redis_cache:/,/^[a-z]/{s/^  password: .*/  password: ""/;}' $(UPTRACE_CONFIG); \
-				;; \
-			Linux) \
-				sed -i '/^pg:/,/^[a-z]/{s/^  user: .*/  user: postgres/;s/^  password: .*/  password: root_password/;}' $(UPTRACE_CONFIG); \
-				sed -i '/^ch_cluster:/,/^[a-z]/{s/^          user: .*/          user: default/;s/^          password: .*/          password: ""/;}' $(UPTRACE_CONFIG); \
-				sed -i 's|^    addr: :80|    addr: :14318|' $(UPTRACE_CONFIG); \
-				sed -i 's|^  url: http://uptrace.local|  url: http://localhost:14318|' $(UPTRACE_CONFIG); \
-				sed -i 's|^  dsn: http://project1_secret@uptrace.local?grpc=4317|  dsn: http://project1_secret@localhost:14318?grpc=4317|' $(UPTRACE_CONFIG); \
-				sed -i '/^redis_cache:/,/^[a-z]/{s/^  password: .*/  password: ""/;}' $(UPTRACE_CONFIG); \
-				;; \
-		esac; \
+		$(SED_I) '/^pg:/,/^[a-z]/{s/^  user: .*/  user: postgres/;s/^  password: .*/  password: root_password/;}' $(UPTRACE_CONFIG); \
+		$(SED_I) '/^ch_cluster:/,/^[a-z]/{s/^          user: .*/          user: default/;s/^          password: .*/          password: ""/;}' $(UPTRACE_CONFIG); \
+		$(SED_I) 's|^    addr: :80|    addr: :14318|' $(UPTRACE_CONFIG); \
+		$(SED_I) 's|^  url: http://uptrace.local|  url: http://localhost:14318|' $(UPTRACE_CONFIG); \
+		$(SED_I) 's|^  dsn: http://project1_secret@uptrace.local?grpc=4317|  dsn: http://project1_secret@localhost:14318?grpc=4317|' $(UPTRACE_CONFIG); \
+		$(SED_I) '/^redis_cache:/,/^[a-z]/{s/^  password: .*/  password: ""/;}' $(UPTRACE_CONFIG); \
 		echo "  配置文件已生成 ($(UPTRACE_CONFIG))"; \
 	fi
 
@@ -535,7 +753,7 @@ uptrace-init:
 	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) ch dist
 	@echo ""
 	@echo "=== 写入种子数据 ==="
-	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) db seed 2>/dev/null || echo "  (seed data will be loaded by serve on first start)"
+	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) db seed 2>/dev/null || echo "  (种子数据将在 serve 首次启动时加载)"
 	@echo ""
 	@echo "数据库初始化完成"
 

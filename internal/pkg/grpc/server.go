@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // Server 是gRPC服务器的包装器，提供统一的服务器管理接口
@@ -22,7 +22,7 @@ type Server struct {
 	hthName string
 	// hthSrv 是gRPC健康检查服务器实例
 	hthSrv *health.Server
-	// TODO: logger
+	// TODO: 日志记录器
 	// 未来可以添加日志记录器，用于记录服务器操作和错误
 }
 

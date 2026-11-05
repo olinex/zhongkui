@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"strings"
 
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 type dbDialect struct {
@@ -39,11 +39,17 @@ var (
 	}
 )
 
+// TempDB 表示一个已创建的临时数据库及其连接信息。
 type TempDB struct {
-	cfg     *Config
-	db      *sql.DB
-	dsn     string
-	name    string
+	// cfg 迁移配置。
+	cfg *Config
+	// db 临时数据库连接。
+	db *sql.DB
+	// dsn 临时数据库的 DSN。
+	dsn string
+	// name 临时数据库名。
+	name string
+	// dialect 数据库方言。
 	dialect dbDialect
 }
 
@@ -54,6 +60,41 @@ func sqlDriverName(gormDriver string) string {
 	default:
 		return gormDriver
 	}
+}
+
+// EnsureDatabase 确保目标数据库存在，不存在则创建。
+// 复用 tempdb 的 dialect 与 DSN 解析逻辑，供测试助手（internal/pkg/testdb）在连接测试库前调用。
+// PostgreSQL 的 CREATE DATABASE 不支持 IF NOT EXISTS，目标已存在时报错视为正常（幂等）。
+func EnsureDatabase(ctx context.Context, driver, dsn string) error {
+	d, err := dialectFor(driver)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	adminDSN, dbName, err := parseDSN(dsn, d)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	adminDB, err := sql.Open(sqlDriverName(driver), adminDSN)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer adminDB.Close()
+
+	if _, err := adminDB.ExecContext(ctx, d.createSQL(dbName)); err != nil {
+		if databaseAlreadyExists(err) {
+			return nil
+		}
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+// databaseAlreadyExists 判断数据库创建失败是否因目标已存在（幂等场景的预期情况）。
+func databaseAlreadyExists(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "already exists")
 }
 
 func dialectFor(driver string) (dbDialect, error) {
@@ -67,6 +108,7 @@ func dialectFor(driver string) (dbDialect, error) {
 	}
 }
 
+// CreateTempDB 按配置创建临时数据库并返回其连接句柄。
 func CreateTempDB(ctx context.Context, cfg *Config) (*TempDB, error) {
 	suffix, err := crypto.GenerateRandomString(8)
 	if err != nil {
@@ -75,7 +117,7 @@ func CreateTempDB(ctx context.Context, cfg *Config) (*TempDB, error) {
 
 	dialect, err := dialectFor(cfg.Driver)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return createTempDB(ctx, cfg, suffix, dialect)
@@ -84,7 +126,7 @@ func CreateTempDB(ctx context.Context, cfg *Config) (*TempDB, error) {
 func createTempDB(ctx context.Context, cfg *Config, suffix string, d dbDialect) (*TempDB, error) {
 	adminDSN, dbName, err := parseDSN(cfg.DSN, d)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	driver := sqlDriverName(cfg.Driver)
@@ -122,6 +164,7 @@ func createTempDB(ctx context.Context, cfg *Config, suffix string, d dbDialect) 
 	}, nil
 }
 
+// Close 关闭临时数据库连接，并在未设置保留时删除该临时数据库。
 func (t *TempDB) Close(ctx context.Context) error {
 	if t.db != nil {
 		t.db.Close()
@@ -137,7 +180,7 @@ func (t *TempDB) Close(ctx context.Context) error {
 func (t *TempDB) dropDB(ctx context.Context) error {
 	adminDSN, _, err := parseDSN(t.cfg.DSN, t.dialect)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	adminDB, err := sql.Open(sqlDriverName(t.cfg.Driver), adminDSN)

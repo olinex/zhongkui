@@ -3,9 +3,10 @@ package tcp
 import (
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/gopacket/gopacket/layers"
-	n "zhongkui.com/zhongkui/internal/models/network"
+	n "zhongkuisec.com/zhongkui/internal/models/network"
 )
 
 var (
@@ -24,6 +25,15 @@ type TCPPacket interface {
 	// 这些信息用于数据包溯源和系统级管理。
 	Meta() *n.BaseMeta
 
+	// Timestamp 返回数据包的时间戳。
+	// 时间戳用于记录数据包的捕获时间，用于后续的分析和处理。
+	CaptureTimestamp() time.Time
+
+	// IngestedAt 返回数据包的入库时间。
+	// 入库时间由 pcap 导入阶段在构建模型时写入，标识数据包写入数据库的时间，
+	// 用于分布式编排器按入库顺序推进消费水位，保证与查询过滤字段（created_at）一致。
+	IngestedAt() time.Time
+
 	// StreamID 返回TCP流的唯一标识符。
 	// 该标识符基于源IP、目的IP、源端口和目的端口计算得出，
 	// 用于将同一TCP连接的数据包关联起来进行流重组。
@@ -32,6 +42,11 @@ type TCPPacket interface {
 	// FrameInfo 返回数据包的帧信息。
 	// 包含时间戳和网络层堆栈信息，用于记录数据包的捕获上下文。
 	FrameInfo() *n.FrameInfo
+
+	// NetworkFrame 返回数据包展平后的网络层帧信息。
+	// 将网络层堆栈平铺为多条NetworkStack记录（同一TopProto，不同Proto/Level/Headers），
+	// 用于记录payload进入TCP缓冲区后的数据来源。
+	NetworkFrame() n.NetworkFrame
 
 	// SrcAddr 返回数据包的源IP地址。
 	// 支持IPv4和IPv6地址格式。
@@ -89,6 +104,11 @@ type TCPPacket interface {
 	// 可能包含HTTP、TLS、DNS等应用层协议数据。
 	// 返回字节切片，如果数据包没有载荷则返回空切片。
 	GetPayload() []byte
+
+	// TcpFingerprint 返回数据包携带的被动 TCP 指纹。
+	// 指纹由 pcap 导入阶段对 SYN / SYN-ACK 握手包识别并写入 tcp 包表，
+	// 组包阶段通过本方法透传给流重组器；无指纹时返回 nil。
+	TcpFingerprint() *n.PacketTCPFingerprint
 }
 
 // tcpPacketSeq 返回TCP数据包的序列信息字符串，用于调试和日志输出。
