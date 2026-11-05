@@ -10,6 +10,8 @@
 
 封闭首版本开发阶段（closed first-version development）：数据库 schema、项目架构等可自由重构，无需考虑向后兼容与既有数据迁移。
 
+- **版本管理**：SemVer + annotated tag `vX.Y.Z` 为唯一版本来源；`v1.0.0` 前允许破坏性变更（升 minor），`patch` 仅修复；开发构建只注入 Commit，release 构建经 `make build-release VERSION=vX.Y.Z` 注入 SemVer；发布流程见 CONTRIBUTING「版本与发布」。
+
 ---
 
 ## Go Backend Conventions

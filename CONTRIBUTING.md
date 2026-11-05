@@ -42,7 +42,27 @@ pnpm dev
 - 功能开发使用特性分支，合并前保持 `make ci` 通过。
 - 不要提交生成的二进制、覆盖率文件或本地配置。
 
-## 5. 测试与检查
+## 5. 版本与发布
+
+版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)，首个发布版本为 `v0.1.0`：
+
+- `v1.0.0` 之前允许破坏性变更，`minor` 承载功能与破坏性调整，`patch` 仅用于修复。
+- 版本号唯一来源是打在 `master` 发布提交上的 annotated tag `vX.Y.Z`，禁止在代码或配置中硬编码。
+- 分支流转：`feature/*` → `develop`；发布时从 `develop` 切出 `release/vX.Y.Z`，验证后合入 `master` 并打 tag，最后回合并 `develop`。
+- 发布前必须更新 `CHANGELOG.md` 的 `## [X.Y.Z] - YYYY-MM-DD` 段，并将 `web/package.json` 的 `version` 对齐到同一版本号。
+- 开发构建不注入 SemVer，`zki version` 回落显示 commit hash；只有 release 构建注入语义化版本。
+
+发布命令：
+
+```bash
+make build-release VERSION=v0.1.0   # 校验版本号并编译 release 二进制
+make release VERSION=v0.1.0         # 校验分支/工作区/CHANGELOG/前端版本，执行 make ci 后创建标签
+git push origin master --follow-tags
+```
+
+推送 tag 后，GitHub Actions 的 `release` 工作流会重新执行 `make ci`、构建 `linux/amd64` 制品并发布到 GitHub Release；Gitee 主仓的发布页需手工同步制品。
+
+## 6. 测试与检查
 
 提交前必须执行：
 
@@ -73,7 +93,7 @@ make ci
 
 `make license-check` 的 Web 侧需要 `pnpm`；只读 `web/pnpm-lock.yaml`，无需安装 `node_modules`。CI 通过 `LICENSE_CHECK_REQUIRE_WEB=1` 强制要求 Web 检查。
 
-## 6. 文档要求
+## 7. 文档要求
 
 文档按来源分两个目录，边界由生成器与守卫强制：
 
@@ -106,7 +126,7 @@ make docs-build     # 构建静态站点到 docs/.vitepress/dist
 DOCS_BASE=/zhongkui/ make docs-build
 ```
 
-## 7. Pull Request 检查清单
+## 8. Pull Request 检查清单
 
 - [ ] `make ci` 通过
 - [ ] 前端改动已通过 `pnpm lint`
@@ -118,6 +138,6 @@ DOCS_BASE=/zhongkui/ make docs-build
 - [ ] 没有复制字段表、枚举值或接口签名到策展文档
 - [ ] 没有提交密钥、凭据或本地配置
 
-## 8. 许可证
+## 9. 许可证
 
 贡献即表示你同意以 Apache-2.0 许可发布你的贡献。第三方代码必须兼容该许可证，并在 [NOTICE](NOTICE) 与 [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) 中登记来源、版本与许可证。
