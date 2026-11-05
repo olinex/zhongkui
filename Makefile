@@ -452,11 +452,11 @@ dist:
 	archive="zki_$${version_number}_$${os}_$${arch}.tar.gz"; \
 	mkdir -p dist; \
 	cp bin/zki LICENSE NOTICE THIRD_PARTY_LICENSES.md dist/; \
-	tar -C dist -czf "$$archive" zki LICENSE NOTICE THIRD_PARTY_LICENSES.md; \
+	tar -C dist -czf "dist/$$archive" zki LICENSE NOTICE THIRD_PARTY_LICENSES.md; \
 	if command -v sha256sum >/dev/null 2>&1; then \
-		sha256sum "$$archive" > "$$archive.sha256"; \
+		sha256sum "dist/$$archive" > "dist/$$archive.sha256"; \
 	else \
-		shasum -a 256 "$$archive" > "$$archive.sha256"; \
+		shasum -a 256 "dist/$$archive" > "dist/$$archive.sha256"; \
 	fi; \
 	echo "已生成 dist/$$archive 与 dist/$$archive.sha256"
 
