@@ -9,8 +9,9 @@ import (
 	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
-// testPGDSN 本地 dev-deps 的 postgres 连接串，用于驱动识别类用例。
-var testPGDSN = "host=localhost user=postgres password=root_password dbname=postgres sslmode=disable TimeZone=Asia/Shanghai"
+// testPGDSN 仅用于驱动识别类用例的 postgres 连接串。
+// 指向明显不可达的地址，配合 DisableAutomaticPing 使用，不依赖本地数据库服务。
+var testPGDSN = "host=127.0.0.1 port=1 user=postgres password=postgres dbname=postgres sslmode=disable connect_timeout=1 TimeZone=Asia/Shanghai"
 
 // TestNewDatabase_ValidConfig 测试 NewDatabase 函数使用有效配置时的行为
 func TestNewDatabase_ValidConfig(t *testing.T) {
@@ -18,6 +19,9 @@ func TestNewDatabase_ValidConfig(t *testing.T) {
 		cfg := &Config{
 			Driver: "postgres",
 			DSN:    testPGDSN,
+			Meta: MetaConfig{
+				DisableAutomaticPing: true,
+			},
 		}
 
 		// 创建一个简单的日志记录器
@@ -105,7 +109,10 @@ func TestNewDatabase_PostgresDriver(t *testing.T) {
 	Convey("当使用 PostgreSQL 驱动配置时", t, func() {
 		cfg := &Config{
 			Driver: "postgres",
-			DSN:    "host=localhost user=test dbname=test sslmode=disable", // 无效连接，但测试驱动识别
+			DSN:    "host=localhost user=test dbname=test sslmode=disable", // 仅用于驱动识别，不做真实连接
+			Meta: MetaConfig{
+				DisableAutomaticPing: true,
+			},
 		}
 
 		// 创建一个简单的日志记录器
@@ -118,9 +125,8 @@ func TestNewDatabase_PostgresDriver(t *testing.T) {
 		_, err := NewDatabase(cfg, logger)
 
 		Convey("应该识别 PostgreSQL 驱动", func() {
-			// 即使连接失败，也应该识别驱动类型
-			// 这里主要测试驱动选择逻辑
-			So(err, ShouldNotBeNil) // 连接会失败，但驱动识别应该成功
+			// 禁用自动 ping 后不会建立真实连接，驱动识别与对象创建应当成功
+			So(err, ShouldBeNil)
 		})
 	})
 }
@@ -130,7 +136,7 @@ func TestNewDatabase_ClickHouseDriver(t *testing.T) {
 	Convey("当使用 ClickHouse 驱动配置时", t, func() {
 		cfg := &Config{
 			Driver: "clickhouse",
-			DSN:    "tcp://localhost:9000?database=test", // 无效连接，但测试驱动识别
+			DSN:    "tcp://127.0.0.1:1?database=test&dial_timeout=1s", // 不可达地址，快速失败，仅测试驱动识别
 			Meta: MetaConfig{
 				DisableForeignKeyConstraintWhenMigrating: false,
 				IgnoreRelationshipsWhenMigrating:         false,
@@ -185,6 +191,9 @@ func TestNewDatabase_NilLogger(t *testing.T) {
 		cfg := &Config{
 			Driver: "postgres",
 			DSN:    testPGDSN,
+			Meta: MetaConfig{
+				DisableAutomaticPing: true,
+			},
 		}
 
 		db, err := NewDatabase(cfg, nil)
@@ -212,6 +221,9 @@ func TestNewDatabase_InvalidDSN(t *testing.T) {
 		cfg := &Config{
 			Driver: "postgres",
 			DSN:    "invalid://connection/string", // 明显无效的 DSN
+			Meta: MetaConfig{
+				DisableAutomaticPing: true,
+			},
 		}
 
 		// 创建一个简单的日志记录器
@@ -254,7 +266,7 @@ func TestNewDatabase_WithMetaConfig(t *testing.T) {
 				FullSaveAssociations:                     true,
 				DryRun:                                   false,
 				PrepareStmt:                              true,
-				DisableAutomaticPing:                     false,
+				DisableAutomaticPing:                     true,
 				DisableForeignKeyConstraintWhenMigrating: true,
 				IgnoreRelationshipsWhenMigrating:         true,
 				DisableNestedTransaction:                 false,
