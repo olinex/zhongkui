@@ -10,7 +10,14 @@
 
 封闭首版本开发阶段（closed first-version development）：数据库 schema、项目架构等可自由重构，无需考虑向后兼容与既有数据迁移。
 
-- **版本管理**：SemVer + annotated tag `vX.Y.Z` 为唯一版本来源；`v1.0.0` 前允许破坏性变更（升 minor），`patch` 仅修复；开发构建只注入 Commit，release 构建经 `make build-release VERSION=vX.Y.Z` 注入 SemVer；发布流程见 CONTRIBUTING「版本与发布」。
+- **版本管理**：SemVer 2.0.0 + annotated tag 为唯一版本来源；`v1.0.0` 前允许破坏性变更（升 minor），`patch` 仅修复；开发构建只注入 Commit，release 构建经 `make build-release VERSION=...` 注入 SemVer；发布流程见 CONTRIBUTING「版本与发布」。
+  - **正式版本**：`vX.Y.Z`，如 `v1.2.3`
+  - **预发布版本**：`vX.Y.Z-{label}.{n}`，label 取值及语义：
+    - `alpha`：内部测试，功能仍在迭代，API 可能随时变更；格式 `vX.Y.Z-alpha.1`、`vX.Y.Z-alpha.2` …
+    - `beta`：功能冻结，邀请外部用户试用，专注修复 bug；格式 `vX.Y.Z-beta.1`、`vX.Y.Z-beta.2` …
+    - `rc`（Release Candidate）：候选发布版，若测试通过即可作为正式版发布；格式 `vX.Y.Z-rc.1`、`vX.Y.Z-rc.2` …
+  - **版本号演进规则**：`v1.2.3-alpha.1` → `v1.2.3-alpha.2` → `v1.2.3-beta.1` → `v1.2.3-rc.1` → `v1.2.3`（预发布期修复 bug 不升 Y/Z，只递增 `.n`；功能变更或范围调整升 minor 或 patch 后从 alpha.1 重启）
+  - **预发布 tag 必须带预发布后缀**，正式发布时创建不带后缀的 tag；同一 X.Y.Z 的预发布 tag 与正式 tag 可以并存
 
 ---
 

@@ -314,9 +314,11 @@ pcap-tools:
 # ============================================================
 #
 # 版本号规则:
-#   - 版本号唯一来源是 annotated tag `vX.Y.Z`，由 `make release` 创建
+#   - 正式版本: vX.Y.Z（示例: v1.2.3）
+#   - 预发布版本: vX.Y.Z-{alpha|beta|rc}.n（示例: v1.2.3-alpha.1, v1.2.3-rc.2）
+#   - 版本号唯一来源是 annotated tag，由 make release 创建
 #   - 开发构建不注入 SemVer，版本显示回落为 commit hash，如 "c2d4d21"
-#   - Release 构建必须显式指定 VERSION，如 `make build-release VERSION=v1.2.3`
+#   - Release 构建必须显式指定 VERSION，如 make build-release VERSION=v1.2.3-rc.1
 #
 # 编译时版本信息通过 -ldflags 注入到二进制，运行时可通过以下命令查看:
 #   ./bin/zki version          # 精简输出，如 c2d4d21 或 v1.2.3
@@ -392,8 +394,8 @@ p0f-update:
 build: internal/pkg/protobuf/reporter/v1/reporter.pb.go internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go internal/manager/views/search.go internal/manager/views/enum_bindings.go
 	go build -ldflags "$(DEV_LDFLAGS)" -o bin/zki cmd/zki/main.go
 
-# build-release - 编译 release 版本 (需手动指定并通过校验的语义化版本号)
-# 用法: make build-release VERSION=v1.2.3
+# build-release - 编译 release 版本 (需手动指定并通过校验的语义化版本号，支持正式版和预发布版)
+# 用法: make build-release VERSION=v1.2.3  或  make build-release VERSION=v1.2.3-alpha.1
 build-release:
 	@if [ -z "$(VERSION)" ]; then \
 		echo "ERROR: 请设置 VERSION 为语义化版本号，例如: make build-release VERSION=v1.2.3"; \
@@ -406,7 +408,7 @@ build-release:
 	go build -ldflags "$(RELEASE_LDFLAGS)" -o bin/zki cmd/zki/main.go
 
 # release - 在 master 上创建发布标签 (要求 CHANGELOG 与 web/package.json 已对齐)
-# 用法: make release VERSION=v1.2.3
+# 用法: make release VERSION=v1.2.3  或  make release VERSION=v1.2.3-rc.1
 # 前置: 当前分支为 master、工作区干净、CHANGELOG 存在对应版本段、版本标签未创建
 release:
 	@if [ -z "$(VERSION)" ]; then \
@@ -443,7 +445,7 @@ release:
 	@echo "已创建标签 $(VERSION)；推送: git push origin master --follow-tags"
 
 # dist - 打包 release 制品与 sha256 校验和 (供 Gitee Release 上传)
-# 用法: make dist VERSION=v1.2.3
+# 用法: make dist VERSION=v1.2.3  或  make dist VERSION=v1.2.3-beta.1
 dist:
 	@if [ -z "$(VERSION)" ]; then \
 		echo "ERROR: 请设置 VERSION 为语义化版本号，例如: make dist VERSION=v1.2.3"; \
