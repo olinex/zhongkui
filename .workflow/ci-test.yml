@@ -105,8 +105,10 @@ triggers:
     branches:
       prefix: []
       precise:
-      - develop
-      include: []
+      - master
+      include:
+      - "^release/v(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-(?:alpha|beta|rc)\\\
+        .[1-9]\\d*)?$"
 notify: []
 strategy:
   blocking: true
