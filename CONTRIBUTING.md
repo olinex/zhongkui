@@ -147,6 +147,13 @@ make ci
 | `make license-check` | 第三方依赖许可证门禁（Go + Web 生产依赖） |
 | `make docs-check` | 文档生成物与代码声明一致性 |
 
+### 测试分层
+
+- `make test`、`make test-report`、`make ci` 默认不需要 PostgreSQL、ClickHouse、Redis、S3；依赖外部服务的用例会自动跳过（SKIP）。
+- 运行集成测试：先执行 `make run-dev-deps && make create-test-dbs`，再执行 `make test-integration`。
+- 也可自行提供 DSN：设置 `ZKI_TEST_INTEGRATION=1`，并配置 `ZKI_DATABASE_CORE_TEST_DSN`（PostgreSQL）/ `ZKI_DATABASE_RAW_TEST_DSN`（ClickHouse）；DSN 也可写在 `config.toml` 的 `[database.core_test]` / `[database.raw_test]` 中。
+- 开关取值为 `1` 才启用；未设置或为 `0` 时跳过。开启后若 DSN 缺失或连接失败，测试会直接失败而不是跳过。
+
 前端改动还需在 `web/` 下执行 `pnpm lint` 与 `pnpm type-check`（若脚本存在）。
 
 许可证门禁会拒绝 GPL/AGPL/LGPL/SSPL/非商业与未知许可证。新增依赖若使用未收录的许可证，需先人工核对，再按以下方式登记：

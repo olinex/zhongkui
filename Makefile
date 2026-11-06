@@ -58,6 +58,7 @@ GOLANG_REPORT_DIR ?= $(REPORT_ROOT)/golang-report
 .PHONY: run-dev-deps
 .PHONY: stop-dev-deps
 .PHONY: test
+.PHONY: test-integration
 .PHONY: test-report
 .PHONY: ts-tools
 .PHONY: uptrace-clear
@@ -507,6 +508,7 @@ vet:
 	go vet ./...
 
 # test - 运行全部单元测试（终端友好，失败即停）
+# 默认不依赖外部服务：PostgreSQL / ClickHouse 相关用例在未设置 ZKI_TEST_INTEGRATION=1 时自动 SKIP
 # 用法: make test
 test:
 	go test ./...
@@ -530,6 +532,12 @@ test-report:
 		tail -n 40 $(GOLANG_REPORT_DIR)/stderr.log || true; \
 	fi; \
 	exit $$status
+
+# test-integration - 运行依赖外部服务的集成测试（PostgreSQL / ClickHouse）
+# 前置条件：make run-dev-deps && make create-test-dbs，或提供 ZKI_DATABASE_CORE_TEST_DSN / ZKI_DATABASE_RAW_TEST_DSN
+# 用法: make test-integration
+test-integration:
+	ZKI_TEST_INTEGRATION=1 go test ./...
 
 # build-check - 编译全部包但不产出二进制，作为 CI 的构建门禁
 # 用法: make build-check
