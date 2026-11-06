@@ -133,7 +133,7 @@ var (
 ```
 
 <a name="GetLocalizer"></a>
-## func GetLocalizer
+## func [GetLocalizer](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/i18n.go#L39>)
 
 ```go
 func GetLocalizer(c *gin.Context) *i18n.Localizer
@@ -165,7 +165,7 @@ msg, _ := localizer.Localize(&i18n.LocalizeConfig{MessageID: "welcome"})
 ```
 
 <a name="GetTranslator"></a>
-## func GetTranslator
+## func [GetTranslator](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/i18n.go#L69>)
 
 ```go
 func GetTranslator(c *gin.Context) ut.Translator
@@ -199,7 +199,7 @@ msg := errs[0].Translate(translator)
 ```
 
 <a name="LocalizeDetail"></a>
-## func LocalizeDetail
+## func [LocalizeDetail](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L195>)
 
 ```go
 func LocalizeDetail(localizer *i18n.Localizer, msgID string, args ...any) string
@@ -218,7 +218,7 @@ LocalizeDetail 按 msgID 与参数在给定语言下渲染错误详情文案。 
 - string: 渲染后的本地化文案
 
 <a name="CodeError"></a>
-## type CodeError
+## type [CodeError](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L134-L146>)
 
 CodeError 是 API 统一错误响应的核心结构体 封装了 HTTP 响应所需的全部信息，支持国际化错误摘要和详情。 通过 ToGinH / ToGinW 方法将错误信息序列化为 JSON 格式， 通过 AbortWithGinH / AbortWithGinW 方法直接中断 Gin 请求上下文并返回错误响应。
 
@@ -249,7 +249,7 @@ type CodeError struct {
 ```
 
 <a name="CreateAccidentError"></a>
-### func CreateAccidentError
+### func [CreateAccidentError](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L403>)
 
 ```go
 func CreateAccidentError(err error) *CodeError
@@ -266,7 +266,7 @@ CreateAccidentError 创建一个意外内部错误的 CodeError 用于处理不�
 - \*CodeError: HTTP 状态码为 500，业务码为 CodeUnknown 的错误实例
 
 <a name="CreateBadBodyError"></a>
-### func CreateBadBodyError
+### func [CreateBadBodyError](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L259>)
 
 ```go
 func CreateBadBodyError(err error) *CodeError
@@ -288,7 +288,7 @@ CreateBadBodyError 创建一个请求体验证失败的错误 用于处理请求
 - \*CodeError: HTTP 状态码为 400，业务码为 CodeBadBody
 
 <a name="CreateBadBodyMessageError"></a>
-### func CreateBadBodyMessageError
+### func [CreateBadBodyMessageError](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L282>)
 
 ```go
 func CreateBadBodyMessageError(msgID string, args ...any) *CodeError
@@ -306,7 +306,7 @@ CreateBadBodyMessageError 创建一个请求体错误、详情为可本地化消
 - \*CodeError: HTTP 状态码为 400，业务码为 CodeBadBody 的错误实例
 
 <a name="CreateBadQueryError"></a>
-### func CreateBadQueryError
+### func [CreateBadQueryError](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L299>)
 
 ```go
 func CreateBadQueryError(msgID string, args ...any) *CodeError
@@ -324,7 +324,7 @@ CreateBadQueryError 创建一个查询参数错误的 CodeError 用于处理 URL
 - \*CodeError: HTTP 状态码为 400，业务码为 CodeBadQuery 的错误实例
 
 <a name="CreateBadUrlParamError"></a>
-### func CreateBadUrlParamError
+### func [CreateBadUrlParamError](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L387>)
 
 ```go
 func CreateBadUrlParamError(msgID string, args ...any) *CodeError
@@ -342,7 +342,7 @@ CreateBadUrlParamError 创建一个 URL 路径参数错误的 CodeError 用于�
 - \*CodeError: HTTP 状态码为 400，业务码为 CodeBadUrlParam 的错误实例
 
 <a name="CreateCodeError"></a>
-### func CreateCodeError
+### func [CreateCodeError](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L237>)
 
 ```go
 func CreateCodeError(statusCode, code int, details any) *CodeError
@@ -361,7 +361,7 @@ CreateCodeError 创建一个新的 CodeError 实例 这是所有错误构造的�
 - \*CodeError: 新创建的错误实例
 
 <a name="CreateLlmBindingIncompatibleError"></a>
-### func CreateLlmBindingIncompatibleError
+### func [CreateLlmBindingIncompatibleError](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L332>)
 
 ```go
 func CreateLlmBindingIncompatibleError(msgID string, args ...any) *CodeError
@@ -379,7 +379,7 @@ CreateLlmBindingIncompatibleError 创建一个档位绑定与系统配置不兼�
 - \*CodeError: HTTP 状态码为 400，业务码为 CodeLlmBindingIncompatible 的错误实例
 
 <a name="CreateNotificationSendFailedError"></a>
-### func CreateNotificationSendFailedError
+### func [CreateNotificationSendFailedError](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L351>)
 
 ```go
 func CreateNotificationSendFailedError(msgID string, args ...any) *CodeError
@@ -397,7 +397,7 @@ CreateNotificationSendFailedError 创建一个通知发送失败（业务拒绝�
 - \*CodeError: HTTP 状态码为 400，业务码为 CodeNotificationSendFailed 的错误实例
 
 <a name="CreateSchedulerTaskError"></a>
-### func CreateSchedulerTaskError
+### func [CreateSchedulerTaskError](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L312>)
 
 ```go
 func CreateSchedulerTaskError(msgID string, args ...any) *CodeError
@@ -408,7 +408,7 @@ CreateSchedulerTaskError 创建一个定时任务配置校验错误的 CodeError
 返回 HTTP 状态码 400、业务码 CodeSchedulerTaskInvalid 的错误实例。
 
 <a name="CreateTagRuleSampleInputError"></a>
-### func CreateTagRuleSampleInputError
+### func [CreateTagRuleSampleInputError](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L370>)
 
 ```go
 func CreateTagRuleSampleInputError(msgID string, args ...any) *CodeError
@@ -426,7 +426,7 @@ CreateTagRuleSampleInputError 创建一个标签规则样例输入非法的 Code
 - \*CodeError: HTTP 状态码为 400，业务码为 CodeTagRuleSampleInputInvalid 的错误实例
 
 <a name="CodeError.AbortWithGinH"></a>
-### func \(\*CodeError\) AbortWithGinH
+### func \(\*CodeError\) [AbortWithGinH](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L507>)
 
 ```go
 func (c *CodeError) AbortWithGinH(ctx *gin.Context)
@@ -448,7 +448,7 @@ if err != nil {
 - ctx: Gin 请求上下文，从中获取 Localizer 和 Translator
 
 <a name="CodeError.AbortWithGinW"></a>
-### func \(\*CodeError\) AbortWithGinW
+### func \(\*CodeError\) [AbortWithGinW](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L525>)
 
 ```go
 func (c *CodeError) AbortWithGinW(ctx *gin.Context, data any)
@@ -468,7 +468,7 @@ SimpleOK.AbortWithGinW(c, userData)
 - data: 需要包含在响应中的业务数据
 
 <a name="CodeError.Error"></a>
-### func \(\*CodeError\) Error
+### func \(\*CodeError\) [Error](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L535>)
 
 ```go
 func (c *CodeError) Error() string
@@ -477,7 +477,7 @@ func (c *CodeError) Error() string
 Error 实现 error 接口，返回可读的错误描述（业务码 \+ 详情）。 供批量操作等将 CodeError 作为失败原因（BatchFailureOut.Reason）使用的场景； 常规错误响应仍通过 AbortWithGinH / AbortWithGinW 输出本地化 JSON。
 
 <a name="CodeError.Summary"></a>
-### func \(\*CodeError\) Summary
+### func \(\*CodeError\) [Summary](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L415>)
 
 ```go
 func (c *CodeError) Summary(localizer *i18n.Localizer) string
@@ -494,7 +494,7 @@ Summary 返回错误码对应的本地化摘要信息 通过 i18n Localizer 从�
 - string: 翻译后的错误摘要文本
 
 <a name="CodeError.ToGinH"></a>
-### func \(\*CodeError\) ToGinH
+### func \(\*CodeError\) [ToGinH](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L432>)
 
 ```go
 func (c *CodeError) ToGinH(localizer *i18n.Localizer, translator ut.Translator) gin.H
@@ -517,7 +517,7 @@ ToGinH 将 CodeError 转换为 Gin 响应的 gin.H（即 map\[string\]any）格�
 - gin.H: 可直接作为 JSON 响应的 map
 
 <a name="CodeError.ToGinW"></a>
-### func \(\*CodeError\) ToGinW
+### func \(\*CodeError\) [ToGinW](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L487>)
 
 ```go
 func (c *CodeError) ToGinW(localizer *i18n.Localizer, translator ut.Translator, data any) gin.H
@@ -546,7 +546,7 @@ ToGinW 将 CodeError 转换为包含数据字段的 Gin 响应格式 在 ToGinH 
 - gin.H: 包含 code、summary 和 data 字段的 map
 
 <a name="DetailContext"></a>
-## type DetailContext
+## type [DetailContext](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L159-L164>)
 
 DetailContext 是 LocalizedError 接口的具体实现 用于描述需要国际化的错误详情，支持消息模板和参数替换。 消息 ID 会在翻译文件中以 "error.\{MsgID\}" 的格式查找对应的翻译模板， 模板中使用 fmt.Sprintf 的占位符语法（如 %s、%d）来替换参数。
 
@@ -568,7 +568,7 @@ type DetailContext struct {
 ```
 
 <a name="DetailContext.Localize"></a>
-### func \(\*DetailContext\) Localize
+### func \(\*DetailContext\) [Localize](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L171>)
 
 ```go
 func (d *DetailContext) Localize(localizer *i18n.Localizer) string
@@ -577,7 +577,7 @@ func (d *DetailContext) Localize(localizer *i18n.Localizer) string
 Localize 根据 Localizer 将 DetailContext 本地化为翻译后的字符串 先从翻译文件中查找 "error.\{MsgID\}" 对应的消息模板，再使用 args 参数格式化模板。 翻译缺失（键未登记或语言不支持）时不 panic，而是回退返回 MsgID 本身： 错误详情属于「展示给用户」的内容，缺键是登记疏漏而非请求异常，绝不能把 400 放大成 500； 由守卫测试（response\_i18n\_test.go）在构建阶段拦截漏登记的键，此处只作运行时兜底。
 
 <a name="LocalizedError"></a>
-## type LocalizedError
+## type [LocalizedError](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/response/response.go#L109-L112>)
 
 LocalizedError 定义可本地化错误的接口 实现该接口的错误详情能够根据请求的语言环境返回本地化的错误描述。 目前 DetailContext 是该接口的唯一实现，用于支持带参数的国际化消息模板。
 

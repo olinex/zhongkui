@@ -77,7 +77,7 @@ var (
 ```
 
 <a name="ComputeCronTriggers"></a>
-## func ComputeCronTriggers
+## func [ComputeCronTriggers](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/sched_cron.go#L79>)
 
 ```go
 func ComputeCronTriggers(last, now time.Time, schedule cron.Schedule, p BacklogPolicy) ([]time.Time, time.Time)
@@ -100,7 +100,7 @@ ComputeCronTriggers 根据上一次已投递触发点（stamp）与当前时间�
 - nextCursor: 应写回 etcd 的新 stamp，即最后一个触发点；无触发时返回原 last
 
 <a name="ComputeCursorTriggers"></a>
-## func ComputeCursorTriggers
+## func [ComputeCursorTriggers](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/cursor.go#L101>)
 
 ```go
 func ComputeCursorTriggers(last, now time.Time, interval time.Duration, p BacklogPolicy) ([]time.Time, time.Time)
@@ -124,7 +124,7 @@ ComputeCursorTriggers 根据上一次游标与当前时间计算需要触发的�
 - nextCursor: 应写回 etcd 的新游标，即最后一个触发时间点；无触发时为上一次游标
 
 <a name="DedupErrorMsg"></a>
-## func DedupErrorMsg
+## func [DedupErrorMsg](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/middleware.go#L99>)
 
 ```go
 func DedupErrorMsg(err error) string
@@ -148,7 +148,7 @@ DedupErrorMsg 对重复的错误信息进行去重聚合 GORM ClickHouse 驱动�
 - 输出: "err\_a \(x3\); err\_b \(x1\)"
 
 <a name="DeleteSchedulerTaskConfig"></a>
-## func DeleteSchedulerTaskConfig
+## func [DeleteSchedulerTaskConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/sched_manager.go#L47>)
 
 ```go
 func DeleteSchedulerTaskConfig(ctx context.Context, client *etcd.EtcdClient, taskType string) error
@@ -157,7 +157,7 @@ func DeleteSchedulerTaskConfig(ctx context.Context, client *etcd.EtcdClient, tas
 DeleteSchedulerTaskConfig 从 etcd 删除指定任务的配置。
 
 <a name="DescribeConfig"></a>
-## func DescribeConfig
+## func [DescribeConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/config.go#L210>)
 
 ```go
 func DescribeConfig() config.ConfigDescriptions
@@ -166,7 +166,7 @@ func DescribeConfig() config.ConfigDescriptions
 DescribeConfig 生成任务队列配置的描述信息 利用反射分析 Config 结构体的字段标签（mapstructure、default、comment）， 生成结构化的配置描述列表，供文档或 UI 动态展示配置项。
 
 <a name="EnqueueSchedulerTaskNow"></a>
-## func EnqueueSchedulerTaskNow
+## func [EnqueueSchedulerTaskNow](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/sched_manager.go#L57>)
 
 ```go
 func EnqueueSchedulerTaskNow(ctx context.Context, enq *Client, taskType string, cfg SchedulerTaskConfig) error
@@ -175,7 +175,7 @@ func EnqueueSchedulerTaskNow(ctx context.Context, enq *Client, taskType string, 
 EnqueueSchedulerTaskNow 立即投递一条签到当前时刻作为触发时间点的任务。 用于前端"立即执行"能力：以任务当前配置的队列/超时/重试参数将 config 中的 固定入参透传给处理器，触发时间点为调用时刻（time.Now），任务类型为配置键 taskType。
 
 <a name="LoadSchedulerTaskConfigs"></a>
-## func LoadSchedulerTaskConfigs
+## func [LoadSchedulerTaskConfigs](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/sched_manager.go#L26>)
 
 ```go
 func LoadSchedulerTaskConfigs(ctx context.Context, client *etcd.EtcdClient) (map[string]SchedulerTaskConfig, error)
@@ -184,7 +184,7 @@ func LoadSchedulerTaskConfigs(ctx context.Context, client *etcd.EtcdClient) (map
 LoadSchedulerTaskConfigs 从 etcd 读取全部定时任务配置并应用默认值。 返回以任务类型为键的配置映射，包含未启用的任务，由调用方按需过滤。
 
 <a name="NewElectionScheduler"></a>
-## func NewElectionScheduler
+## func [NewElectionScheduler](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/scheduler.go#L480-L486>)
 
 ```go
 func NewElectionScheduler(ctx context.Context, client *etcd.EtcdClient, redis *redis.Client, cfg *SchedulerConfig, logger *logging.Logger) *etcd.Election
@@ -207,7 +207,7 @@ NewElectionScheduler 创建并返回一个基于 etcd 选举的统一调度器�
 注意: 如果初始化过程中出现致命错误（如配置导入失败、时区解析失败等），函数会 panic。
 
 <a name="ParseCursorTaskPayload"></a>
-## func ParseCursorTaskPayload
+## func [ParseCursorTaskPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/cursor.go#L32>)
 
 ```go
 func ParseCursorTaskPayload(raw []byte) (triggerAt time.Time, payload map[string]any, err error)
@@ -216,7 +216,7 @@ func ParseCursorTaskPayload(raw []byte) (triggerAt time.Time, payload map[string
 ParseCursorTaskPayload 解析游标任务载荷，返回触发时间点与固定参数。
 
 <a name="RecoverWithStack"></a>
-## func RecoverWithStack
+## func [RecoverWithStack](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/middleware.go#L40>)
 
 ```go
 func RecoverWithStack(logger *logging.Logger) func(next asynq.Handler) asynq.Handler
@@ -241,7 +241,7 @@ func(next asynq.Handler) asynq.Handler - 中间件函数，接受下一个处理
 注意事项： 1. 该中间件应该在任务处理器链的最外层使用 2. 始终启用，确保生产环境也能捕获错误和 panic 3. panic 被捕获后，任务会正常结束，不会影响其他任务的执行 4. 返回给 asynq 的错误会包含完整堆栈，可通过 inspector 接口查看
 
 <a name="SaveSchedulerTaskConfig"></a>
-## func SaveSchedulerTaskConfig
+## func [SaveSchedulerTaskConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/sched_manager.go#L32>)
 
 ```go
 func SaveSchedulerTaskConfig(ctx context.Context, client *etcd.EtcdClient, taskType string, cfg SchedulerTaskConfig) error
@@ -250,7 +250,7 @@ func SaveSchedulerTaskConfig(ctx context.Context, client *etcd.EtcdClient, taskT
 SaveSchedulerTaskConfig 将单个任务配置写入 etcd，覆盖已存在的值。 写入前会补齐缺失字段的默认值（defaults.Set），保证写入的配置自洽。
 
 <a name="SchedulerTaskConfigKey"></a>
-## func SchedulerTaskConfigKey
+## func [SchedulerTaskConfigKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/sched_manager.go#L20>)
 
 ```go
 func SchedulerTaskConfigKey(taskType string) string
@@ -259,7 +259,7 @@ func SchedulerTaskConfigKey(taskType string) string
 SchedulerTaskConfigKey 返回任务配置在 etcd 中对应的键。 格式为 "\<SchedulerCfgEtcdPrefix\>\<taskType\>"，所有任务的配置都存储在此前缀下。
 
 <a name="BacklogPolicy"></a>
-## type BacklogPolicy
+## type [BacklogPolicy](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/sched_cron.go#L13-L20>)
 
 BacklogPolicy 定时任务积压（历史）触发点的补投控制策略。 用于限制长时间停机或游标异常导致的积压 \(last, now\] 一次性生成海量触发点。
 
@@ -275,7 +275,7 @@ type BacklogPolicy struct {
 ```
 
 <a name="Client"></a>
-## type Client
+## type [Client](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/client.go#L36-L39>)
 
 Client 任务队列客户端类型。 Client 提供了向任务队列提交任务、关闭连接等核心功能。 主要方法包括:
 
@@ -301,7 +301,7 @@ type Client struct {
 ```
 
 <a name="NewClient"></a>
-### func NewClient
+### func [NewClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/client.go#L78>)
 
 ```go
 func NewClient(cli *redis.Client) *Client
@@ -351,7 +351,7 @@ defer queueClient.Close()
 ```
 
 <a name="Client.Close"></a>
-### func \(\*Client\) Close
+### func \(\*Client\) [Close](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/client.go#L97>)
 
 ```go
 func (c *Client) Close() error
@@ -360,7 +360,7 @@ func (c *Client) Close() error
 Close 关闭客户端连接。
 
 <a name="Client.EnqueueContext"></a>
-### func \(\*Client\) EnqueueContext
+### func \(\*Client\) [EnqueueContext](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/client.go#L92>)
 
 ```go
 func (c *Client) EnqueueContext(ctx context.Context, task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error)
@@ -369,7 +369,7 @@ func (c *Client) EnqueueContext(ctx context.Context, task *asynq.Task, opts ...a
 EnqueueContext 在指定上下文中将任务添加到队列。
 
 <a name="Config"></a>
-## type Config
+## type [Config](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/config.go#L136-L174>)
 
 Config 配置结构，定义了任务队列服务的完整配置参数。 该结构包含并发控制、队列管理、监控指标和调度器配置等各个方面。
 
@@ -416,7 +416,7 @@ type Config struct {
 ```
 
 <a name="ExtractConfig"></a>
-### func ExtractConfig
+### func [ExtractConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/config.go#L218>)
 
 ```go
 func ExtractConfig(viper *viper.Viper, validate *validator.Validate) (*Config, error)
@@ -425,7 +425,7 @@ func ExtractConfig(viper *viper.Viper, validate *validator.Validate) (*Config, e
 ExtractConfig 从 Viper 配置中提取任务队列配置 以 Prefix（"pipeline"）为键前缀从 viper.Viper 实例中读取配置， 反序列化为 Config 结构体并应用 default 标签的默认值。 返回 \(\*Config, error\)：成功时返回已填充的配置指针，失败时返回错误。
 
 <a name="Config.ToAsynqConfig"></a>
-### func \(\*Config\) ToAsynqConfig
+### func \(\*Config\) [ToAsynqConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/config.go#L191-L194>)
 
 ```go
 func (c *Config) ToAsynqConfig(ctxFunc ContextFunc, logger *logging.Logger) asynq.Config
@@ -450,7 +450,7 @@ ToAsynqConfig 将任务队列配置转换为 asynq 原生配置。 此方法将 
 - 返回的配置包含了所有必要的队列管理、并发控制和监控设置
 
 <a name="ContextFunc"></a>
-## type ContextFunc
+## type [ContextFunc](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/config.go#L26>)
 
 ContextFunc 上下文函数类型，用于获取任务执行的上下文。 该函数在创建 asynq 配置时提供基础上下文，用于任务执行时的上下文传递。
 
@@ -459,7 +459,7 @@ type ContextFunc = func() context.Context
 ```
 
 <a name="CursorTaskPayload"></a>
-## type CursorTaskPayload
+## type [CursorTaskPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/cursor.go#L23-L29>)
 
 CursorTaskPayload 游标定时任务载荷结构。 调度器为每个触发时间点投递一个独立任务，载荷中携带该触发时间点（游标）与任务配置 中的固定参数。即使任务因积压或重试而延迟执行，其载荷中的游标也不会漂移， 处理器始终基于载荷中的触发时间点确定数据范围，保证结果一致且不遗漏。
 
@@ -474,7 +474,7 @@ type CursorTaskPayload struct {
 ```
 
 <a name="CustomConfig"></a>
-## type CustomConfig
+## type [CustomConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/config.go#L125-L132>)
 
 CustomConfig 自定义配置结构，定义任务和处理器配置映射。
 
@@ -490,7 +490,7 @@ type CustomConfig struct {
 ```
 
 <a name="Inspector"></a>
-## type Inspector
+## type [Inspector](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/inspector.go#L80>)
 
 Inspector 任务队列检查器类型别名。 这是 github.com/hibiken/asynq.Inspector 的类型别名，用于统一检查器类型。 Inspector 提供了监控和管理 asynq 任务队列状态的功能，包括：
 
@@ -571,7 +571,7 @@ type Inspector = asynq.Inspector
 ```
 
 <a name="NewInspector"></a>
-### func NewInspector
+### func [NewInspector](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/inspector.go#L135>)
 
 ```go
 func NewInspector(cli *redis.Client) *Inspector
@@ -638,7 +638,7 @@ for name, info := range queues {
 ```
 
 <a name="RawConfig"></a>
-## type RawConfig
+## type [RawConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/server.go#L39>)
 
 RawConfig 是 asynq.Config 的类型别名，表示 asynq 服务器的原始配置。 该配置包含任务队列服务器的各种参数，如并发数、重试策略、队列配置等。 详细配置选项请参考 asynq 官方文档：https://github.com/hibiken/asynq
 
@@ -668,7 +668,7 @@ type RawConfig = asynq.Config
 ```
 
 <a name="SchedulerConfig"></a>
-## type SchedulerConfig
+## type [SchedulerConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/config.go#L96-L122>)
 
 SchedulerConfig 调度器配置结构，定义了定时任务调度器的全局设置。 该结构包含多个定时任务的配置映射以及调度器的运行参数。
 
@@ -703,7 +703,7 @@ type SchedulerConfig struct {
 ```
 
 <a name="SchedulerTaskConfig"></a>
-## type SchedulerTaskConfig
+## type [SchedulerTaskConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/config.go#L30-L92>)
 
 SchedulerTaskConfig 定时任务配置结构，定义了单个定时任务的详细参数。 该结构用于配置通过 cron 表达式调度的周期性任务，包括执行时间、队列、重试策略等。
 
@@ -774,7 +774,7 @@ type SchedulerTaskConfig struct {
 ```
 
 <a name="SchedulerTaskConfig.ValidateSchedule"></a>
-### func \(SchedulerTaskConfig\) ValidateSchedule
+### func \(SchedulerTaskConfig\) [ValidateSchedule](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/sched_cron.go#L33>)
 
 ```go
 func (c SchedulerTaskConfig) ValidateSchedule() error
@@ -783,7 +783,7 @@ func (c SchedulerTaskConfig) ValidateSchedule() error
 ValidateSchedule 校验任务调度模式：cronSpec 与 interval 二选一（互斥）。 同时设置或同时为空均返回错误，保证每个定时任务只能采用一种触发方式。
 
 <a name="Server"></a>
-## type Server
+## type [Server](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/server.go#L53-L57>)
 
 Server 表示任务队列服务器，负责从 Redis 队列中获取任务并分发给对应的处理函数。 该结构体封装了 asynq 服务器的核心功能，提供启动、停止和任务处理能力。 它只负责事件驱动任务的消费，不管理分布式常驻处理器（Processor）。
 
@@ -805,7 +805,7 @@ type Server struct {
 ```
 
 <a name="NewServer"></a>
-### func NewServer
+### func [NewServer](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/server.go#L78>)
 
 ```go
 func NewServer(ctx context.Context, cli *redis.Client, cfg RawConfig, logger *logging.Logger, hFuncs etl.HandlerFuncs, mws ...asynq.MiddlewareFunc) *Server
@@ -834,7 +834,7 @@ NewServer 创建一个新的任务队列服务器实例。 该函数初始化服
 5. 返回配置完成的 Server 实例
 
 <a name="Server.Shutdown"></a>
-### func \(\*Server\) Shutdown
+### func \(\*Server\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/server.go#L158>)
 
 ```go
 func (s *Server) Shutdown()
@@ -858,7 +858,7 @@ Shutdown 优雅关闭任务队列服务器。 该方法会停止接收新任务�
 5. 关闭后服务器不能重新启动，需要创建新的实例
 
 <a name="Server.Start"></a>
-### func \(\*Server\) Start
+### func \(\*Server\) [Start](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/server.go#L130>)
 
 ```go
 func (s *Server) Start(ctx context.Context) error
@@ -886,7 +886,7 @@ Start 启动任务队列服务器，开始从 Redis 队列中获取并处理任�
 5. 所有错误都会通过 errors.WithStack 包装，便于调试
 
 <a name="UnifiedScheduler"></a>
-## type UnifiedScheduler
+## type [UnifiedScheduler](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/scheduler.go#L207-L228>)
 
 UnifiedScheduler 实现了 etcd.ElectionService 接口的统一定时任务调度器。 该结构体以单一调度循环统一承担 cron 表达式（cronSpec）与游标间隔（interval） 两种模式的触发点投递：每次运行读取 etcd 全部任务配置，
 
@@ -902,7 +902,7 @@ type UnifiedScheduler struct {
 ```
 
 <a name="UnifiedScheduler.CandidateID"></a>
-### func \(\*UnifiedScheduler\) CandidateID
+### func \(\*UnifiedScheduler\) [CandidateID](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/scheduler.go#L245>)
 
 ```go
 func (s *UnifiedScheduler) CandidateID() string
@@ -915,7 +915,7 @@ CandidateID 返回当前调度器实例的唯一候选者标识。 该方法实�
 - string: 唯一的候选者标识符
 
 <a name="UnifiedScheduler.Name"></a>
-### func \(\*UnifiedScheduler\) Name
+### func \(\*UnifiedScheduler\) [Name](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/scheduler.go#L235>)
 
 ```go
 func (s *UnifiedScheduler) Name() string
@@ -928,7 +928,7 @@ Name 返回调度器的名称。 该方法实现了 etcd.ElectionService 接口�
 - string: 调度器名称常量 "pipeline\-scheduler"
 
 <a name="UnifiedScheduler.Shutdown"></a>
-### func \(\*UnifiedScheduler\) Shutdown
+### func \(\*UnifiedScheduler\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/scheduler.go#L289>)
 
 ```go
 func (s *UnifiedScheduler) Shutdown(_ context.Context) error
@@ -941,7 +941,7 @@ Shutdown 停止统一调度循环。 该方法实现了 etcd.ElectionService 接
 - \_ context.Context: 上下文对象（虽然当前未使用，但保持接口一致性）
 
 <a name="UnifiedScheduler.Start"></a>
-### func \(\*UnifiedScheduler\) Start
+### func \(\*UnifiedScheduler\) [Start](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/pipeline/scheduler.go#L263>)
 
 ```go
 func (s *UnifiedScheduler) Start(ctx context.Context) error

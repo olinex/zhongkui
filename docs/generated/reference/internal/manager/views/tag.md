@@ -106,7 +106,7 @@ var SampleS3Fields = map[string][]string{
 ```
 
 <a name="CopySampleS3Objects"></a>
-## func CopySampleS3Objects
+## func [CopySampleS3Objects](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/s3_sample.go#L61>)
 
 ```go
 func CopySampleS3Objects(ctx context.Context, client *s3.S3Client, model string, input map[string]any, uid string) (cleanup func(), err error)
@@ -115,7 +115,7 @@ func CopySampleS3Objects(ctx context.Context, client *s3.S3Client, model string,
 CopySampleS3Objects 将 input 中目标模型引用到的 S3 body 对象复制为样例专属副本， 并将 input 中的对应字段原地改写为副本对象键。 源对象不存在（如已被生命周期过期删除）时返回错误，由调用方拒绝创建。 返回的 cleanup 用于复制中途失败或后续落库失败时回滚已生成的副本对象。
 
 <a name="DeleteSampleS3Objects"></a>
-## func DeleteSampleS3Objects
+## func [DeleteSampleS3Objects](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/s3_sample.go#L80>)
 
 ```go
 func DeleteSampleS3Objects(ctx context.Context, client *s3.S3Client, model string, input map[string]any) error
@@ -124,7 +124,7 @@ func DeleteSampleS3Objects(ctx context.Context, client *s3.S3Client, model strin
 DeleteSampleS3Objects 删除样例引用的全部 S3 body 对象（不区分前缀）。 封闭首版开发阶段不考虑历史样例遗留引用；样例副本均为样例独占，删除安全。
 
 <a name="RegisterRoutes"></a>
-## func RegisterRoutes
+## func [RegisterRoutes](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/register.go#L18>)
 
 ```go
 func RegisterRoutes(ctx *views.RegisterContext)
@@ -133,7 +133,7 @@ func RegisterRoutes(ctx *views.RegisterContext)
 RegisterRoutes 注册 /api/v1/tag\-event 标签事件接口路由。 标签事件分类下的规则管理，与流量审计同级的独立分类； 后续标签事件记录、告警配置、告警记录等功能均在此分类下扩展。 认证 / RBAC / raw 库（标签事件规则 dry\-run 查询 tag\_summings）/ S3 / 命名空间等公共中间件挂在父组上继承。
 
 <a name="SampleBodyObjectKeys"></a>
-## func SampleBodyObjectKeys
+## func [SampleBodyObjectKeys](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/s3_sample.go#L38>)
 
 ```go
 func SampleBodyObjectKeys(model string, input map[string]any) (map[string]string, error)
@@ -142,7 +142,7 @@ func SampleBodyObjectKeys(model string, input map[string]any) (map[string]string
 SampleBodyObjectKeys 提取 input 中目标模型各 S3 body 字段的对象键（field → key）。 字段缺失或值为空字符串时跳过（空 body 无对象，不参与复制/删除）； 字段值非字符串时返回错误。
 
 <a name="TagEventRecordBatchClose"></a>
-## func TagEventRecordBatchClose
+## func [TagEventRecordBatchClose](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_record.go#L329>)
 
 ```go
 func TagEventRecordBatchClose(c *gin.Context)
@@ -151,7 +151,7 @@ func TagEventRecordBatchClose(c *gin.Context)
 TagEventRecordBatchClose 批量关闭标签事件记录（置为 closed）。 仅关闭当前命名空间内未关闭（status \!= closed）的事件记录；不存在或已关闭的 ID 幂等跳过， 全部视为成功并返回 BatchResultOut 汇总（成功条数 = 请求 ID 数）。
 
 <a name="TagEventRecordDetailGet"></a>
-## func TagEventRecordDetailGet
+## func [TagEventRecordDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_record.go#L160>)
 
 ```go
 func TagEventRecordDetailGet(c *gin.Context)
@@ -160,7 +160,7 @@ func TagEventRecordDetailGet(c *gin.Context)
 TagEventRecordDetailGet 处理获取标签事件记录详情的请求。 仅允许访问当前命名空间内的记录；返回事件基础信息、命中明细（Hits） 以及该事件触发的关联通知发送记录（Sends，来自 notification\_records， 目标名/渠道名为尽力补全）。
 
 <a name="TagEventRecordHitRecordsGet"></a>
-## func TagEventRecordHitRecordsGet
+## func [TagEventRecordHitRecordsGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_record.go#L381>)
 
 ```go
 func TagEventRecordHitRecordsGet(c *gin.Context)
@@ -169,7 +169,7 @@ func TagEventRecordHitRecordsGet(c *gin.Context)
 TagEventRecordHitRecordsGet 处理标签事件记录命中条件原始数据反查的请求。 入参由前端从标签事件详情透传（详情接口已校验事件记录归属当前命名空间）， 后端不再回查 TagEventRecordHit 与 TagEventRecord，仅按模型与 ID 列表从 raw 库查询明细行。 查询附带 created\_at 范围预筛：http\_transports 按 toStartOfHour\(created\_at\) 分区， 时间范围限定后 ClickHouse 仅扫描命中分区，避免全表扫描。 未知/未注册模型的命中返回空列表（200，命中模型为历史快照，目标模型注册表可能已变更）。
 
 <a name="TagEventRecordListGet"></a>
-## func TagEventRecordListGet
+## func [TagEventRecordListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_record.go#L122>)
 
 ```go
 func TagEventRecordListGet(c *gin.Context)
@@ -178,7 +178,7 @@ func TagEventRecordListGet(c *gin.Context)
 TagEventRecordListGet 处理获取标签事件记录列表的请求。 支持分页、排序与过滤（时间/规则名/状态/是否全命中），仅返回当前命名空间内的记录。
 
 <a name="TagEventRuleBatchDelete"></a>
-## func TagEventRuleBatchDelete
+## func [TagEventRuleBatchDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L472>)
 
 ```go
 func TagEventRuleBatchDelete(c *gin.Context)
@@ -187,7 +187,7 @@ func TagEventRuleBatchDelete(c *gin.Context)
 TagEventRuleBatchDelete 批量删除标签事件规则。 逐条复用原 tagEventRuleDelete 的事务级联（条件 \+ 版本）语义； 规则不存在（或不属于当前命名空间）视为成功跳过（幂等）。
 
 <a name="TagEventRuleBatchSetEnabled"></a>
-## func TagEventRuleBatchSetEnabled
+## func [TagEventRuleBatchSetEnabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L515>)
 
 ```go
 func TagEventRuleBatchSetEnabled(enabled bool) gin.HandlerFunc
@@ -196,7 +196,7 @@ func TagEventRuleBatchSetEnabled(enabled bool) gin.HandlerFunc
 TagEventRuleBatchSetEnabled 批量启用/停用标签事件规则。 逐条复用原 tagEventRuleSetEnabled 语义：幂等短路（已处于目标状态直接成功）\+ Update； 规则不存在（或不属于当前命名空间）视为成功跳过（幂等）。 事件规则不涉及引擎编译，直接更新启用状态。
 
 <a name="TagEventRuleCreate"></a>
-## func TagEventRuleCreate
+## func [TagEventRuleCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L332>)
 
 ```go
 func TagEventRuleCreate(c *gin.Context)
@@ -205,7 +205,7 @@ func TagEventRuleCreate(c *gin.Context)
 TagEventRuleCreate 处理创建标签事件规则的请求。 创建前逐条件校验表达式语法；规则归属当前请求命名空间，条件在同一事务内随规则一并落库。
 
 <a name="TagEventRuleDetailGet"></a>
-## func TagEventRuleDetailGet
+## func [TagEventRuleDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L279>)
 
 ```go
 func TagEventRuleDetailGet(c *gin.Context)
@@ -214,7 +214,7 @@ func TagEventRuleDetailGet(c *gin.Context)
 TagEventRuleDetailGet 处理获取标签事件规则详情的请求。 返回规则的完整内容（含全部条件）与最新历史版本号、版本总数；仅允许访问当前命名空间内的规则。
 
 <a name="TagEventRuleDryRun"></a>
-## func TagEventRuleDryRun
+## func [TagEventRuleDryRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L734>)
 
 ```go
 func TagEventRuleDryRun(c *gin.Context)
@@ -223,7 +223,7 @@ func TagEventRuleDryRun(c *gin.Context)
 TagEventRuleDryRun 处理标签事件规则 dry\-run 的请求。 针对一条候选规则（不落库），先逐条件校验表达式，再于指定时间点执行一次事件检测； 仅将启用条件映射为 DetectionCondition 参与检测，禁用或空条件时直接返回空事件列表。
 
 <a name="TagEventRuleListGet"></a>
-## func TagEventRuleListGet
+## func [TagEventRuleListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L243>)
 
 ```go
 func TagEventRuleListGet(c *gin.Context)
@@ -232,7 +232,7 @@ func TagEventRuleListGet(c *gin.Context)
 TagEventRuleListGet 处理获取标签事件规则列表的请求。 支持分页、排序与过滤（时间/名称/匹配策略/启用状态），仅返回当前命名空间内的规则。
 
 <a name="TagEventRuleUpdate"></a>
-## func TagEventRuleUpdate
+## func [TagEventRuleUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L386>)
 
 ```go
 func TagEventRuleUpdate(c *gin.Context)
@@ -241,7 +241,7 @@ func TagEventRuleUpdate(c *gin.Context)
 TagEventRuleUpdate 处理更新标签事件规则的请求。 更新前先将当前内容（含全部条件）快照为新版本；随后逐条件校验并重建条件集合。 仅允许更新当前命名空间内的规则。
 
 <a name="TagEventRuleValidate"></a>
-## func TagEventRuleValidate
+## func [TagEventRuleValidate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L554>)
 
 ```go
 func TagEventRuleValidate(c *gin.Context)
@@ -250,7 +250,7 @@ func TagEventRuleValidate(c *gin.Context)
 TagEventRuleValidate 处理标签事件规则表达式语法校验的请求。 仅校验传入的表达式，返回精炼后的标准表达式或错误消息；HTTP 200 表达业务结果。
 
 <a name="TagEventRuleVersionList"></a>
-## func TagEventRuleVersionList
+## func [TagEventRuleVersionList](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L573>)
 
 ```go
 func TagEventRuleVersionList(c *gin.Context)
@@ -259,7 +259,7 @@ func TagEventRuleVersionList(c *gin.Context)
 TagEventRuleVersionList 处理获取标签事件规则历史版本列表的请求。 返回该规则的全部历史版本，按版本号倒序；仅允许访问当前命名空间内的规则版本。
 
 <a name="TagEventRuleVersionRollback"></a>
-## func TagEventRuleVersionRollback
+## func [TagEventRuleVersionRollback](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L631>)
 
 ```go
 func TagEventRuleVersionRollback(c *gin.Context)
@@ -268,7 +268,7 @@ func TagEventRuleVersionRollback(c *gin.Context)
 TagEventRuleVersionRollback 处理标签事件规则回滚的请求。 将规则回滚到指定历史版本：回滚前先快照当前内容，再从目标版本解析并校验条件， 校验通过后落库并重建条件集合。 仅允许回滚当前命名空间内的规则。
 
 <a name="TagRuleBatchDelete"></a>
-## func TagRuleBatchDelete
+## func [TagRuleBatchDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L524>)
 
 ```go
 func TagRuleBatchDelete(c *gin.Context)
@@ -277,7 +277,7 @@ func TagRuleBatchDelete(c *gin.Context)
 TagRuleBatchDelete 批量删除标签规则。 逐条复用原 tagRuleDelete 的事务级联删版本 \+ notifyTagRuleChange 语义； 规则不存在（或不属于当前命名空间）视为成功跳过（幂等）。
 
 <a name="TagRuleBatchSetEnabled"></a>
-## func TagRuleBatchSetEnabled
+## func [TagRuleBatchSetEnabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L570>)
 
 ```go
 func TagRuleBatchSetEnabled(enabled bool) gin.HandlerFunc
@@ -291,7 +291,7 @@ TagRuleBatchSetEnabled 批量启用/停用标签规则。 逐条复用原 tagRul
 - 更新成功后 notifyTagRuleChange。
 
 <a name="TagRuleCreate"></a>
-## func TagRuleCreate
+## func [TagRuleCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L422>)
 
 ```go
 func TagRuleCreate(c *gin.Context)
@@ -300,7 +300,7 @@ func TagRuleCreate(c *gin.Context)
 TagRuleCreate 处理创建标签规则的请求。 创建前执行语法校验与组级编译校验；规则归属当前请求命名空间；成功后本地失效缓存并发布 etcd 变更事件。
 
 <a name="TagRuleDetailGet"></a>
-## func TagRuleDetailGet
+## func [TagRuleDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L381>)
 
 ```go
 func TagRuleDetailGet(c *gin.Context)
@@ -309,7 +309,7 @@ func TagRuleDetailGet(c *gin.Context)
 TagRuleDetailGet 处理获取标签规则详情的请求。 返回规则的完整内容与最新历史版本号、版本总数；仅允许访问当前命名空间内的规则。
 
 <a name="TagRuleDryRun"></a>
-## func TagRuleDryRun
+## func [TagRuleDryRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L791>)
 
 ```go
 func TagRuleDryRun(c *gin.Context)
@@ -318,7 +318,7 @@ func TagRuleDryRun(c *gin.Context)
 TagRuleDryRun 处理单规则 dry\-run 的请求。 仅针对一条候选规则（rego），先经公共 Rego 校验（语法 \+ 契约 \+ 组级编译）， 校验通过后再经 CompileRule 编译并评估输入文档。 评估前按请求命名空间绑定第三方数据源池，规则内的 sqlite.query 可查询裸名 vtable。 输出仅含错误消息文本，不返回错误对象，避免错误堆栈等实现细节泄露。
 
 <a name="TagRuleDryRunGroup"></a>
-## func TagRuleDryRunGroup
+## func [TagRuleDryRunGroup](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L831>)
 
 ```go
 func TagRuleDryRunGroup(c *gin.Context)
@@ -327,7 +327,7 @@ func TagRuleDryRunGroup(c *gin.Context)
 TagRuleDryRunGroup 处理规则组 dry\-run 的请求。 针对一组候选规则（rules），先经公共 Rego 校验（逐条语法契约 \+ 整组语义编译）， 校验通过后再经 CompileGroup 编译并评估输入文档， 评估前按请求命名空间绑定第三方数据源池，规则内的 sqlite.query 可查询裸名 vtable。 输出逐规则详情与合并标签。 输出仅含错误消息文本，不返回错误对象，避免错误堆栈等实现细节泄露。
 
 <a name="TagRuleFunctions"></a>
-## func TagRuleFunctions
+## func [TagRuleFunctions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L720>)
 
 ```go
 func TagRuleFunctions(c *gin.Context)
@@ -336,7 +336,7 @@ func TagRuleFunctions(c *gin.Context)
 TagRuleFunctions 处理获取 rego 规则可调用的自定义 OPA 内置函数元信息的请求。 返回函数名、说明（按请求语言翻译）、调用签名与用法示例； 供前端 Rego 编辑器实现自定义函数的关键词高亮、悬停签名提示与自动补全。
 
 <a name="TagRuleListGet"></a>
-## func TagRuleListGet
+## func [TagRuleListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L345>)
 
 ```go
 func TagRuleListGet(c *gin.Context)
@@ -345,7 +345,7 @@ func TagRuleListGet(c *gin.Context)
 TagRuleListGet 处理获取标签规则列表的请求。 支持分页、排序与过滤（时间/名称/目标类型/启用状态），仅返回当前命名空间内的规则。
 
 <a name="TagRuleModelMetadata"></a>
-## func TagRuleModelMetadata
+## func [TagRuleModelMetadata](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L655>)
 
 ```go
 func TagRuleModelMetadata(c *gin.Context)
@@ -354,7 +354,7 @@ func TagRuleModelMetadata(c *gin.Context)
 TagRuleModelMetadata 处理获取标签规则目标模型输入字段元信息的请求。 返回输入文档扁平化字段元信息列表（按字段名排序，Description 按请求语言翻译） 与合法标签维度选项列表；供前端 Rego 编辑器自动补全与 dimension 下拉使用； 未注册模型返回 400 \+ 错误码 1203。
 
 <a name="TagRuleModelSamples"></a>
-## func TagRuleModelSamples
+## func [TagRuleModelSamples](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L682>)
 
 ```go
 func TagRuleModelSamples(c *gin.Context)
@@ -363,7 +363,7 @@ func TagRuleModelSamples(c *gin.Context)
 TagRuleModelSamples 处理获取标签规则目标模型系统样例列表的请求。 模型在当前命名空间下无样例时懒供给（default 零值文档，HttpTransport 额外预置 http\-example）后返回； 样例按命名空间隔离，仅返回当前请求命名空间的样例； 样例输入文档反序列化为 map；未注册模型返回 400 \+ 错误码 1203。
 
 <a name="TagRuleSampleBatchDelete"></a>
-## func TagRuleSampleBatchDelete
+## func [TagRuleSampleBatchDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule_sample.go#L292>)
 
 ```go
 func TagRuleSampleBatchDelete(c *gin.Context)
@@ -372,7 +372,7 @@ func TagRuleSampleBatchDelete(c *gin.Context)
 TagRuleSampleBatchDelete 批量删除标签规则样例。 逐条复用原 tagRuleSampleDelete 的 S3 body 清理 \+ 删除语义； 样例不存在（或不属于当前命名空间）视为成功跳过（幂等）。 删除后若该模型后续触发懒供给，缺失的系统样例（default 等）会被重新生成。
 
 <a name="TagRuleSampleCreate"></a>
-## func TagRuleSampleCreate
+## func [TagRuleSampleCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule_sample.go#L132>)
 
 ```go
 func TagRuleSampleCreate(c *gin.Context)
@@ -381,7 +381,7 @@ func TagRuleSampleCreate(c *gin.Context)
 TagRuleSampleCreate 处理创建标签规则样例的请求。 创建前校验目标模型已注册（未注册直接拒绝，避免死样例），并将输入文档 反序列化为目标模型实例验证（与规则运行期样例校验的反序列化路径一致）， 失败拒绝落库；通过后输入文档序列化为 JSONB 落库。
 
 <a name="TagRuleSampleDetailGet"></a>
-## func TagRuleSampleDetailGet
+## func [TagRuleSampleDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule_sample.go#L214>)
 
 ```go
 func TagRuleSampleDetailGet(c *gin.Context)
@@ -390,7 +390,7 @@ func TagRuleSampleDetailGet(c *gin.Context)
 TagRuleSampleDetailGet 处理获取标签规则样例详情的请求。 返回样例完整内容，输入文档反序列化为 map 后输出；仅允许访问当前命名空间内的样例。
 
 <a name="TagRuleSampleListGet"></a>
-## func TagRuleSampleListGet
+## func [TagRuleSampleListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule_sample.go#L94>)
 
 ```go
 func TagRuleSampleListGet(c *gin.Context)
@@ -399,7 +399,7 @@ func TagRuleSampleListGet(c *gin.Context)
 TagRuleSampleListGet 处理获取标签规则样例列表的请求。 支持分页、排序与过滤（时间/名称/目标模型）；仅返回当前命名空间内的样例。
 
 <a name="TagRuleSampleUpdate"></a>
-## func TagRuleSampleUpdate
+## func [TagRuleSampleUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule_sample.go#L247>)
 
 ```go
 func TagRuleSampleUpdate(c *gin.Context)
@@ -408,7 +408,7 @@ func TagRuleSampleUpdate(c *gin.Context)
 TagRuleSampleUpdate 处理更新标签规则样例的请求。 样例的 Model 与 Input 创建后不可变，仅允许调整 Name 与 Description； 落库仅写 name/description 两列，不触碰 model/input。仅允许更新当前命名空间内的样例。
 
 <a name="TagRuleSqliteMeta"></a>
-## func TagRuleSqliteMeta
+## func [TagRuleSqliteMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L742>)
 
 ```go
 func TagRuleSqliteMeta(c *gin.Context)
@@ -417,7 +417,7 @@ func TagRuleSqliteMeta(c *gin.Context)
 TagRuleSqliteMeta 处理获取当前命名空间 sqlite vtable 数据源 schema 元信息的请求。 返回已注册数据源的 \{name, columns\} 列表，供前端 Rego 编辑器对 sqlite.query 内的 SQL 语句实现表名/列名补全与提示。
 
 <a name="TagRuleUpdate"></a>
-## func TagRuleUpdate
+## func [TagRuleUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L461>)
 
 ```go
 func TagRuleUpdate(c *gin.Context)
@@ -426,7 +426,7 @@ func TagRuleUpdate(c *gin.Context)
 TagRuleUpdate 处理更新标签规则的请求。 更新前先将当前内容快照为新版本；随后校验并落库；成功后失效缓存并广播变更。 仅允许更新当前命名空间内的规则。
 
 <a name="TagRuleValidate"></a>
-## func TagRuleValidate
+## func [TagRuleValidate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L626>)
 
 ```go
 func TagRuleValidate(c *gin.Context)
@@ -435,7 +435,7 @@ func TagRuleValidate(c *gin.Context)
 TagRuleValidate 处理标签规则语法校验的请求。 仅校验传入的 Rego 源码，返回结构化错误（带行列号）；HTTP 200 表达业务结果。 复用公共 Rego 校验（ValidateRegoRules），与写路径/dry\-run 校验语义一致。 请求携带已注册的目标模型（model）时，追加字段感知 lint（LintInputRefs）： 引用不存在的 input 字段产出 warning 级告警进入 Warnings，不阻断合法结果； model 为空或未注册时 Warnings 为空数组。
 
 <a name="TagRuleVersionList"></a>
-## func TagRuleVersionList
+## func [TagRuleVersionList](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L889>)
 
 ```go
 func TagRuleVersionList(c *gin.Context)
@@ -444,7 +444,7 @@ func TagRuleVersionList(c *gin.Context)
 TagRuleVersionList 处理获取标签规则历史版本列表的请求。 返回该规则的全部历史版本，按版本号倒序；仅允许访问当前命名空间内的规则版本。
 
 <a name="TagRuleVersionRollback"></a>
-## func TagRuleVersionRollback
+## func [TagRuleVersionRollback](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L925>)
 
 ```go
 func TagRuleVersionRollback(c *gin.Context)
@@ -453,7 +453,7 @@ func TagRuleVersionRollback(c *gin.Context)
 TagRuleVersionRollback 处理标签规则回滚的请求。 将规则回滚到指定历史版本：回滚前先快照当前内容，再把目标版本内容写回， 校验通过后落库，最后失效缓存并广播变更。 仅允许回滚当前命名空间内的规则。
 
 <a name="TagEventRecordDetailOut"></a>
-## type TagEventRecordDetailOut
+## type [TagEventRecordDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_record.go#L100-L118>)
 
 TagEventRecordDetailOut 定义标签事件记录详情输出结构。 嵌入 BaseItemOut 携带审计字段；除事件基础信息外，还携带命中明细（Hits） 及其关联的多条通知发送记录（Sends）。
 
@@ -480,7 +480,7 @@ type TagEventRecordDetailOut struct {
 ```
 
 <a name="TagEventRecordHitOut"></a>
-## type TagEventRecordHitOut
+## type [TagEventRecordHitOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_record.go#L48-L67>)
 
 TagEventRecordHitOut 定义标签事件记录命中明细输出项。 展示某条事件条件在时间窗口内对特定维度值的命中统计。
 
@@ -508,7 +508,7 @@ type TagEventRecordHitOut struct {
 ```
 
 <a name="TagEventRecordHitRecordsIn"></a>
-## type TagEventRecordHitRecordsIn
+## type [TagEventRecordHitRecordsIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_record.go#L357-L366>)
 
 TagEventRecordHitRecordsIn 定义标签事件记录命中条件原始数据反查入参。 Model/IDs 来自详情命中明细（TagEventRecordHitOut），CreatedAtFrom/CreatedAtTo 为原始记录 入库时间预筛范围（前端由事件检测时间 detectedAt 与条件窗口 window 推导）， 供后端在 ClickHouse 查询时按 created\_at 分区裁剪；两端时间字段零值表示不限制。
 
@@ -526,7 +526,7 @@ type TagEventRecordHitRecordsIn struct {
 ```
 
 <a name="TagEventRecordHitRecordsOut"></a>
-## type TagEventRecordHitRecordsOut
+## type [TagEventRecordHitRecordsOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_record.go#L370-L373>)
 
 TagEventRecordHitRecordsOut 定义标签事件记录命中条件原始数据反查输出。 Items 为该命中条件对应的原始数据明细（当前为 http\_transports 全字段行）。
 
@@ -538,7 +538,7 @@ type TagEventRecordHitRecordsOut struct {
 ```
 
 <a name="TagEventRecordListOut"></a>
-## type TagEventRecordListOut
+## type [TagEventRecordListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_record.go#L31-L44>)
 
 TagEventRecordListOut 定义标签事件记录列表的输出项结构。 嵌入 BaseItemOut 携带审计字段、BaseTotalOut 支持分页总数统计； 展示触发规则快照、是否全命中与事件状态等核心信息。
 
@@ -560,7 +560,7 @@ type TagEventRecordListOut struct {
 ```
 
 <a name="TagEventRecordSendOut"></a>
-## type TagEventRecordSendOut
+## type [TagEventRecordSendOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_record.go#L72-L95>)
 
 TagEventRecordSendOut 定义标签事件关联的通知发送记录输出项。 数据来自 notification\_records（event\_type=tag\_event\_record 且 event\_id=事件记录ID）， 目标名/渠道名为尽力补全，相关目标或渠道已删除时为空字符串。
 
@@ -592,7 +592,7 @@ type TagEventRecordSendOut struct {
 ```
 
 <a name="TagEventRuleBaseDetailOut"></a>
-## type TagEventRuleBaseDetailOut
+## type [TagEventRuleBaseDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L140-L152>)
 
 TagEventRuleBaseDetailOut 定义标签事件规则的基础详情输出结构。 包含规则的标识字段与审计字段，用于列表和详情场景的公共部分。
 
@@ -613,7 +613,7 @@ type TagEventRuleBaseDetailOut struct {
 ```
 
 <a name="TagEventRuleBatchIn"></a>
-## type TagEventRuleBatchIn
+## type [TagEventRuleBatchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L464-L467>)
 
 TagEventRuleBatchIn 批量操作标签事件规则的请求输入结构。 Ids 接受标量（单个 ID）或数组（多个 ID）。
 
@@ -625,7 +625,7 @@ type TagEventRuleBatchIn struct {
 ```
 
 <a name="TagEventRuleConditionIn"></a>
-## type TagEventRuleConditionIn
+## type [TagEventRuleConditionIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L50-L69>)
 
 TagEventRuleConditionIn 定义单条标签事件条件的请求输入结构。 表达式为标签标识符的布尔组合（AND / OR / NOT / 括号），标签由 TagRule 识别产生。 Window 上限 7 天（纳秒），Threshold 上限 1000000：防止异常值导致检测查询扫描 过大的时间范围或产生无意义计数，与前端 tagEventConditionSchema 保持一致。
 
@@ -653,7 +653,7 @@ type TagEventRuleConditionIn struct {
 ```
 
 <a name="TagEventRuleConditionOut"></a>
-## type TagEventRuleConditionOut
+## type [TagEventRuleConditionOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L116-L136>)
 
 TagEventRuleConditionOut 定义单条标签事件条件的输出结构。 嵌入 BaseItemOut 携带审计字段，业务字段与 TagEventRuleConditionIn 一一对应。
 
@@ -682,7 +682,7 @@ type TagEventRuleConditionOut struct {
 ```
 
 <a name="TagEventRuleCreateIn"></a>
-## type TagEventRuleCreateIn
+## type [TagEventRuleCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L73-L92>)
 
 TagEventRuleCreateIn 定义创建标签事件规则的请求输入结构。 命名空间取自请求上下文，规则名无需在命名空间内唯一（条件维度进一步区分触发语义）。
 
@@ -710,7 +710,7 @@ type TagEventRuleCreateIn struct {
 ```
 
 <a name="TagEventRuleDetailOut"></a>
-## type TagEventRuleDetailOut
+## type [TagEventRuleDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L156-L169>)
 
 TagEventRuleDetailOut 定义标签事件规则的完整详情输出结构。 在基础详情之上附加全部条件与版本统计信息。
 
@@ -732,7 +732,7 @@ type TagEventRuleDetailOut struct {
 ```
 
 <a name="TagEventRuleDryRunIn"></a>
-## type TagEventRuleDryRunIn
+## type [TagEventRuleDryRunIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L216-L227>)
 
 TagEventRuleDryRunIn 定义标签事件规则 dry\-run 的请求输入结构。 针对一条候选规则（不落库），在指定时间点执行一次事件检测并返回命中事件。
 
@@ -752,7 +752,7 @@ type TagEventRuleDryRunIn struct {
 ```
 
 <a name="TagEventRuleDryRunOut"></a>
-## type TagEventRuleDryRunOut
+## type [TagEventRuleDryRunOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L230-L239>)
 
 TagEventRuleDryRunOut 定义标签事件规则 dry\-run 的结果输出结构。
 
@@ -770,7 +770,7 @@ type TagEventRuleDryRunOut struct {
 ```
 
 <a name="TagEventRuleListOut"></a>
-## type TagEventRuleListOut
+## type [TagEventRuleListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L173-L176>)
 
 TagEventRuleListOut 定义标签事件规则列表的输出项结构。 嵌入 BaseTotalOut 以支持分页总数统计。
 
@@ -782,7 +782,7 @@ type TagEventRuleListOut struct {
 ```
 
 <a name="TagEventRuleUpdateIn"></a>
-## type TagEventRuleUpdateIn
+## type [TagEventRuleUpdateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L96-L112>)
 
 TagEventRuleUpdateIn 定义更新标签事件规则的请求输入结构。 规则名称不可变，仅允许调整描述、匹配策略、启用状态、通知绑定与条件集合。
 
@@ -807,7 +807,7 @@ type TagEventRuleUpdateIn struct {
 ```
 
 <a name="TagEventRuleValidateIn"></a>
-## type TagEventRuleValidateIn
+## type [TagEventRuleValidateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L199-L202>)
 
 TagEventRuleValidateIn 定义标签事件规则表达式语法校验的请求输入结构。
 
@@ -819,7 +819,7 @@ type TagEventRuleValidateIn struct {
 ```
 
 <a name="TagEventRuleValidateOut"></a>
-## type TagEventRuleValidateOut
+## type [TagEventRuleValidateOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L205-L212>)
 
 TagEventRuleValidateOut 定义标签事件规则表达式语法校验的结果输出结构。
 
@@ -835,7 +835,7 @@ type TagEventRuleValidateOut struct {
 ```
 
 <a name="TagEventRuleValidationError"></a>
-## type TagEventRuleValidationError
+## type [TagEventRuleValidationError](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L31-L36>)
 
 TagEventRuleValidationError 描述单条标签事件条件的校验失败详情。 Index 为条件在规则中的下标，Message 为该条件表达式校验失败的错误消息。
 
@@ -849,7 +849,7 @@ type TagEventRuleValidationError struct {
 ```
 
 <a name="TagEventRuleVersionOut"></a>
-## type TagEventRuleVersionOut
+## type [TagEventRuleVersionOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_event_rule.go#L180-L196>)
 
 TagEventRuleVersionOut 定义标签事件规则历史版本的输出结构。 存储规则在快照时刻的完整内容，条件从 JSON 文本快照解析而来。
 
@@ -874,7 +874,7 @@ type TagEventRuleVersionOut struct {
 ```
 
 <a name="TagRuleBaseDetailOut"></a>
-## type TagRuleBaseDetailOut
+## type [TagRuleBaseDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L136-L146>)
 
 TagRuleBaseDetailOut 定义标签规则的基础详情输出结构。 包含规则的标识字段与审计字段，用于列表和详情场景的公共部分。
 
@@ -893,7 +893,7 @@ type TagRuleBaseDetailOut struct {
 ```
 
 <a name="TagRuleBatchIn"></a>
-## type TagRuleBatchIn
+## type [TagRuleBatchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L516-L519>)
 
 TagRuleBatchIn 批量操作标签规则的请求输入结构。 Ids 接受标量（单个 ID）或数组（多个 ID）。
 
@@ -905,7 +905,7 @@ type TagRuleBatchIn struct {
 ```
 
 <a name="TagRuleCreateIn"></a>
-## type TagRuleCreateIn
+## type [TagRuleCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L110-L121>)
 
 TagRuleCreateIn 定义创建标签规则的请求输入结构。 规则名称在同一个命名空间内的分组（model）中唯一，命名空间取自请求上下文。
 
@@ -925,7 +925,7 @@ type TagRuleCreateIn struct {
 ```
 
 <a name="TagRuleDetailOut"></a>
-## type TagRuleDetailOut
+## type [TagRuleDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L150-L158>)
 
 TagRuleDetailOut 定义标签规则的完整详情输出结构。 在基础详情之上附加 Rego 全文与版本统计信息。
 
@@ -942,7 +942,7 @@ type TagRuleDetailOut struct {
 ```
 
 <a name="TagRuleDryRunGroupIn"></a>
-## type TagRuleDryRunGroupIn
+## type [TagRuleDryRunGroupIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L313-L320>)
 
 TagRuleDryRunGroupIn 定义标签规则规则组 dry\-run 的请求输入结构。 针对一组候选规则（不落库、不影响引擎缓存），经 CompileGroup 编译后评估， input 为规则评估所需的 JSON 输入文档。
 
@@ -958,7 +958,7 @@ type TagRuleDryRunGroupIn struct {
 ```
 
 <a name="TagRuleDryRunOut"></a>
-## type TagRuleDryRunOut
+## type [TagRuleDryRunOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L334-L341>)
 
 TagRuleDryRunOut 定义标签规则 dry\-run 的结果输出结构。 仅暴露错误消息文本，不返回错误对象，避免错误堆栈等实现细节泄露。
 
@@ -974,7 +974,7 @@ type TagRuleDryRunOut struct {
 ```
 
 <a name="TagRuleDryRunRegoIn"></a>
-## type TagRuleDryRunRegoIn
+## type [TagRuleDryRunRegoIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L292-L297>)
 
 TagRuleDryRunRegoIn 定义 dry\-run 的单条候选规则输入结构。 Name 允许为空：dry\-run 面向草稿阶段，规则可能尚未命名，为空时经 defaults 库以占位名兜底。
 
@@ -988,7 +988,7 @@ type TagRuleDryRunRegoIn struct {
 ```
 
 <a name="TagRuleDryRunRuleIn"></a>
-## type TagRuleDryRunRuleIn
+## type [TagRuleDryRunRuleIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L302-L308>)
 
 TagRuleDryRunRuleIn 定义标签规则单规则 dry\-run 的请求输入结构。 仅针对一条候选规则（不落库、不影响引擎缓存），经 CompileRule 编译后评估， input 为规则评估所需的 JSON 输入文档。
 
@@ -1003,7 +1003,7 @@ type TagRuleDryRunRuleIn struct {
 ```
 
 <a name="TagRuleDryRunRuleOut"></a>
-## type TagRuleDryRunRuleOut
+## type [TagRuleDryRunRuleOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L323-L330>)
 
 TagRuleDryRunRuleOut 单条规则的 dry\-run 评估输出。
 
@@ -1019,7 +1019,7 @@ type TagRuleDryRunRuleOut struct {
 ```
 
 <a name="TagRuleFunctionOut"></a>
-## type TagRuleFunctionOut
+## type [TagRuleFunctionOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L249-L258>)
 
 TagRuleFunctionOut 定义自定义 OPA 内置函数的元信息输出项。 Description 已按请求语言翻译；Example 为可插入编辑器的用法示例文本。
 
@@ -1037,7 +1037,7 @@ type TagRuleFunctionOut struct {
 ```
 
 <a name="TagRuleFunctionsOut"></a>
-## type TagRuleFunctionsOut
+## type [TagRuleFunctionsOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L262-L265>)
 
 TagRuleFunctionsOut 定义自定义 OPA 内置函数元信息列表的输出结构。 供前端 Rego 编辑器实现自定义函数的关键词高亮、悬停签名提示与自动补全。
 
@@ -1049,7 +1049,7 @@ type TagRuleFunctionsOut struct {
 ```
 
 <a name="TagRuleListOut"></a>
-## type TagRuleListOut
+## type [TagRuleListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L162-L165>)
 
 TagRuleListOut 定义标签规则列表的输出项结构。 嵌入 BaseTotalOut 以支持分页总数统计。
 
@@ -1061,7 +1061,7 @@ type TagRuleListOut struct {
 ```
 
 <a name="TagRuleModelDimensionOut"></a>
-## type TagRuleModelDimensionOut
+## type [TagRuleModelDimensionOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L224-L227>)
 
 TagRuleModelDimensionOut 标签维度下拉选项：Value 为 dimension 取值 （snake\_case 列名，对应 tag\_summings.dimension 的存储值）。 展示名不在此输出：前端持有目标模型对应的 i18n 命名空间，按 Value 自行拼键翻译， 避免后端烤入具体命名空间前缀造成前后端耦合。
 
@@ -1073,7 +1073,7 @@ type TagRuleModelDimensionOut struct {
 ```
 
 <a name="TagRuleModelIn"></a>
-## type TagRuleModelIn
+## type [TagRuleModelIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L204-L207>)
 
 TagRuleModelIn 定义标签规则目标模型相关接口的请求输入结构。
 
@@ -1085,7 +1085,7 @@ type TagRuleModelIn struct {
 ```
 
 <a name="TagRuleModelMetadataOut"></a>
-## type TagRuleModelMetadataOut
+## type [TagRuleModelMetadataOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L210-L218>)
 
 TagRuleModelMetadataOut 定义标签规则目标模型输入字段元信息的输出结构。
 
@@ -1102,7 +1102,7 @@ type TagRuleModelMetadataOut struct {
 ```
 
 <a name="TagRuleModelSampleOut"></a>
-## type TagRuleModelSampleOut
+## type [TagRuleModelSampleOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L230-L237>)
 
 TagRuleModelSampleOut 定义标签规则目标模型系统样例的输出结构。
 
@@ -1118,7 +1118,7 @@ type TagRuleModelSampleOut struct {
 ```
 
 <a name="TagRuleModelSamplesOut"></a>
-## type TagRuleModelSamplesOut
+## type [TagRuleModelSamplesOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L240-L245>)
 
 TagRuleModelSamplesOut 定义标签规则目标模型系统样例列表的输出结构。
 
@@ -1132,7 +1132,7 @@ type TagRuleModelSamplesOut struct {
 ```
 
 <a name="TagRuleSampleBaseDetailOut"></a>
-## type TagRuleSampleBaseDetailOut
+## type [TagRuleSampleBaseDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule_sample.go#L56-L64>)
 
 TagRuleSampleBaseDetailOut 定义标签规则样例的基础详情输出结构。 包含样例的标识字段与审计字段，用于列表和详情场景的公共部分。
 
@@ -1149,7 +1149,7 @@ type TagRuleSampleBaseDetailOut struct {
 ```
 
 <a name="TagRuleSampleBatchIn"></a>
-## type TagRuleSampleBatchIn
+## type [TagRuleSampleBatchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule_sample.go#L283-L286>)
 
 TagRuleSampleBatchIn 批量操作标签规则样例的请求输入结构。 Ids 接受标量（单个 ID）或数组（多个 ID）。
 
@@ -1161,7 +1161,7 @@ type TagRuleSampleBatchIn struct {
 ```
 
 <a name="TagRuleSampleCreateIn"></a>
-## type TagRuleSampleCreateIn
+## type [TagRuleSampleCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule_sample.go#L33-L43>)
 
 TagRuleSampleCreateIn 定义创建标签规则样例的请求输入结构。 样例归属当前请求命名空间（经命名空间中间件解析）；model 必须是已注册的目标模型类型键 （如 zhongkuisec.com/zhongkui/internal/models/network.HttpTransport）。
 
@@ -1180,7 +1180,7 @@ type TagRuleSampleCreateIn struct {
 ```
 
 <a name="TagRuleSampleDetailOut"></a>
-## type TagRuleSampleDetailOut
+## type [TagRuleSampleDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule_sample.go#L68-L72>)
 
 TagRuleSampleDetailOut 定义标签规则样例的完整详情输出结构。 在基础详情之上附加样例输入文档（反序列化后的 map）。
 
@@ -1193,7 +1193,7 @@ type TagRuleSampleDetailOut struct {
 ```
 
 <a name="TagRuleSampleListOut"></a>
-## type TagRuleSampleListOut
+## type [TagRuleSampleListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule_sample.go#L76-L79>)
 
 TagRuleSampleListOut 定义标签规则样例列表的输出项结构。 嵌入 BaseTotalOut 以支持分页总数统计；省略 Input 重负载字段（详情接口返回）。
 
@@ -1205,7 +1205,7 @@ type TagRuleSampleListOut struct {
 ```
 
 <a name="TagRuleSampleUpdateIn"></a>
-## type TagRuleSampleUpdateIn
+## type [TagRuleSampleUpdateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule_sample.go#L47-L52>)
 
 TagRuleSampleUpdateIn 定义更新标签规则样例的请求输入结构。 样例的 Model 与 Input 创建后不可变，仅允许调整 Name 与 Description。
 
@@ -1219,7 +1219,7 @@ type TagRuleSampleUpdateIn struct {
 ```
 
 <a name="TagRuleSqliteColumnOut"></a>
-## type TagRuleSqliteColumnOut
+## type [TagRuleSqliteColumnOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L268-L273>)
 
 TagRuleSqliteColumnOut 定义 sqlite vtable 数据源的一个列元信息。
 
@@ -1233,7 +1233,7 @@ type TagRuleSqliteColumnOut struct {
 ```
 
 <a name="TagRuleSqliteDatasourceOut"></a>
-## type TagRuleSqliteDatasourceOut
+## type [TagRuleSqliteDatasourceOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L276-L281>)
 
 TagRuleSqliteDatasourceOut 定义已注册为 sqlite vtable 的第三方数据源元信息。
 
@@ -1247,7 +1247,7 @@ type TagRuleSqliteDatasourceOut struct {
 ```
 
 <a name="TagRuleSqliteMetaOut"></a>
-## type TagRuleSqliteMetaOut
+## type [TagRuleSqliteMetaOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L285-L288>)
 
 TagRuleSqliteMetaOut 定义 sqlite 语句编辑器元信息的输出结构。 供前端 Rego 编辑器对 sqlite.query 内的 SQL 语句实现表名/列名补全与提示。
 
@@ -1259,7 +1259,7 @@ type TagRuleSqliteMetaOut struct {
 ```
 
 <a name="TagRuleUpdateIn"></a>
-## type TagRuleUpdateIn
+## type [TagRuleUpdateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L125-L132>)
 
 TagRuleUpdateIn 定义更新标签规则的请求输入结构。 规则的分组标识（Name/Model）不可变，仅允许调整描述、内容与启用状态。
 
@@ -1275,7 +1275,7 @@ type TagRuleUpdateIn struct {
 ```
 
 <a name="TagRuleValidateIn"></a>
-## type TagRuleValidateIn
+## type [TagRuleValidateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L186-L191>)
 
 TagRuleValidateIn 定义标签规则语法校验的请求输入结构。
 
@@ -1289,7 +1289,7 @@ type TagRuleValidateIn struct {
 ```
 
 <a name="TagRuleValidateOut"></a>
-## type TagRuleValidateOut
+## type [TagRuleValidateOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L194-L201>)
 
 TagRuleValidateOut 定义标签规则语法校验的结果输出结构。
 
@@ -1305,7 +1305,7 @@ type TagRuleValidateOut struct {
 ```
 
 <a name="TagRuleVersionOut"></a>
-## type TagRuleVersionOut
+## type [TagRuleVersionOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L169-L183>)
 
 TagRuleVersionOut 定义标签规则历史版本的输出结构。 存储规则在快照时刻的完整内容。
 

@@ -177,7 +177,7 @@ var RegexOperations = []string{regexOpTest, regexOpReplace}
 ```
 
 <a name="BuildSearchCondQuery"></a>
-## func BuildSearchCondQuery
+## func [BuildSearchCondQuery](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L255>)
 
 ```go
 func BuildSearchCondQuery(db *database.DB, searcher SearcherIn) (*database.DB, error)
@@ -188,7 +188,7 @@ BuildSearchCondQuery 构建仅含过滤条件的查询前缀（无排序/分页/
 以独立 Session 隔离构建链：GORM 的 clone:0 实例上 Where 会原地追加条件， 若调用方复用同一 db 实例先后构建 count 与 data 两条链，条件会被重复注入。
 
 <a name="BuildSearchCountQuery"></a>
-## func BuildSearchCountQuery
+## func [BuildSearchCountQuery](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L275>)
 
 ```go
 func BuildSearchCountQuery(db *database.DB, searcher SearcherIn) (*database.DB, error)
@@ -197,7 +197,7 @@ func BuildSearchCountQuery(db *database.DB, searcher SearcherIn) (*database.DB, 
 BuildSearchCountQuery 构建合并搜索查询（过滤 \+ 字段投影 \+ 排序 \+ 分页）。 单查询同时返回行数据与总数列（SELECT 恒含 COUNT\(\*\) OVER\(\) AS total）， 供 PostgreSQL 等无窗口函数物化问题的列表接口使用。
 
 <a name="BuildSearchDataQuery"></a>
-## func BuildSearchDataQuery
+## func [BuildSearchDataQuery](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L295>)
 
 ```go
 func BuildSearchDataQuery(db *database.DB, searcher SearcherIn) (*database.DB, error)
@@ -206,7 +206,7 @@ func BuildSearchDataQuery(db *database.DB, searcher SearcherIn) (*database.DB, e
 BuildSearchDataQuery 构建数据查询（过滤 \+ 字段投影 \+ 排序 \+ 分页，无总数列）。 与 BuildSearchCountQuery 配套（拆分流程）：ORDER BY 命中 ClickHouse 排序键时可倒序读 \+ LIMIT 早停， 仅物化当前页行数据；总数由配套 count 查询提供，避免窗口函数全量物化。
 
 <a name="CalculateFileMD5"></a>
-## func CalculateFileMD5
+## func [CalculateFileMD5](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/file.go#L36>)
 
 ```go
 func CalculateFileMD5(filePath string) ([]byte, error)
@@ -276,7 +276,7 @@ fmt.Printf("MD5 hash: %x\n", hash)
 </details>
 
 <a name="CalculateFileSHA256"></a>
-## func CalculateFileSHA256
+## func [CalculateFileSHA256](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/file.go#L72>)
 
 ```go
 func CalculateFileSHA256(filePath string) ([]byte, error)
@@ -346,7 +346,7 @@ fmt.Printf("SHA-256 hash: %x\n", hash)
 </details>
 
 <a name="CoerceScalar"></a>
-## func CoerceScalar
+## func [CoerceScalar](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/scalar.go#L64>)
 
 ```go
 func CoerceScalar(kind ScalarKind, value any) (any, error)
@@ -355,7 +355,7 @@ func CoerceScalar(kind ScalarKind, value any) (any, error)
 CoerceScalar 把 JSON 解码得到的原生值（string、float64、bool）与 Go 原生 int 按 kind 收敛为 强类型值。字符串形式先按 ParseScalar 解析，但数值与布尔类型的空串（或纯空白）按该 kind 的 零值处理（表单清空数值/布尔字段的既有契约）；float64 收敛为 int 时要求其为整数；类型与 kind 不符时返回英文错误。
 
 <a name="ExtractFieldTag"></a>
-## func ExtractFieldTag
+## func [ExtractFieldTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/reflection.go#L47>)
 
 ```go
 func ExtractFieldTag(model any, path, nameTag, tagKey string) (string, error)
@@ -364,7 +364,7 @@ func ExtractFieldTag(model any, path, nameTag, tagKey string) (string, error)
 ExtractFieldTag 提取字段路径对应字段的指定标签值。 字段解析语义与 FindField 一致（nameTag 控制字段名匹配所用的标签，空值仅按 Go 字段名匹配）； 标签不存在时返回空字符串而非错误，路径无法解析时返回错误。
 
 <a name="FileExtension"></a>
-## func FileExtension
+## func [FileExtension](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/file.go#L102>)
 
 ```go
 func FileExtension(urlPath string) string
@@ -391,7 +391,7 @@ ext := FileExtension("/static/js/app.js") // "js"
 ```
 
 <a name="FindField"></a>
-## func FindField
+## func [FindField](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/reflection.go#L33>)
 
 ```go
 func FindField(model any, path, nameTag string) (*reflect.StructField, error)
@@ -406,7 +406,7 @@ FindField 解析结构体字段路径并返回对应的 reflect.StructField 指�
 model 为结构体实例或其指针；路径无法解析时返回 nil 与错误。
 
 <a name="FormatScalar"></a>
-## func FormatScalar
+## func [FormatScalar](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/scalar.go#L105>)
 
 ```go
 func FormatScalar(kind ScalarKind, value any) (string, error)
@@ -415,7 +415,7 @@ func FormatScalar(kind ScalarKind, value any) (string, error)
 FormatScalar 把值按 kind 格式化为稳定文本字面量（int→十进制、float→'g' 最短表示、 bool→true/false、string→原样），作为 ParseScalar 的逆向操作。值先经 CoerceScalar 收敛， 因此可接受 JSON 原生值；类型与 kind 不符时返回英文错误。
 
 <a name="ParseScalar"></a>
-## func ParseScalar
+## func [ParseScalar](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/scalar.go#L33>)
 
 ```go
 func ParseScalar(kind ScalarKind, literal string) (any, error)
@@ -424,7 +424,7 @@ func ParseScalar(kind ScalarKind, literal string) (any, error)
 ParseScalar 把文本字面量按 kind 解析为强类型值（string→string、int→int、 float→float64、bool→bool）。数值与布尔类型先修剪首尾空白（宽容直接手改库内数据的情形）， 字符串类型不修剪；解析失败或 kind 未知时返回英文错误。
 
 <a name="ProcessJSON"></a>
-## func ProcessJSON
+## func [ProcessJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/data.go#L75>)
 
 ```go
 func ProcessJSON(operation, text, path string, indent int) (any, error)
@@ -433,7 +433,7 @@ func ProcessJSON(operation, text, path string, indent int) (any, error)
 ProcessJSON 按 operation（validate / format / minify / query）处理 JSON 文本并返回对应结果 （JSONValidateResult / JSONTextResult / JSONQueryResult）。operation 先去除首尾空白；操作非法、 format 缩进越界、非法 JSON 或非法查询路径时返回英文错误（工具名前缀由适配器补齐）。indent 为 0 时取 DefaultJSONIndent。validate 对非法文本不视为失败，而是返回 Valid=false 与错误文本。
 
 <a name="ProjectItemFields"></a>
-## func ProjectItemFields
+## func [ProjectItemFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L492>)
 
 ```go
 func ProjectItemFields(out any, fields []string) map[string]any
@@ -442,7 +442,7 @@ func ProjectItemFields(out any, fields []string) map[string]any
 ProjectItemFields 按 JSON 键从列表输出项结构体中提取字段值，返回投影 map \- 仅提取 fields 命中的 JSON 键；不强制包含 "id" 字段（前端未请求时不输出） \- 跳过 json:"\-" 字段与未知键；支持匿名嵌入结构体字段展开 \- 反射字段索引按 reflect.Type 缓存（sync.Map），避免重复遍历
 
 <a name="ProjectSearchItems"></a>
-## func ProjectSearchItems
+## func [ProjectSearchItems](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L528>)
 
 ```go
 func ProjectSearchItems[T any](rows []T, searcher ProjectorSearcher, newOut func(*T) any) []map[string]any
@@ -451,7 +451,7 @@ func ProjectSearchItems[T any](rows []T, searcher ProjectorSearcher, newOut func
 ProjectSearchItems 将行列表按请求字段投影为 map 项列表 rows: 查询行（模型行或 Out 结构体）；searcher: 搜索入参（提供请求字段与投影白名单） newOut: 全字段映射函数（行 → 列表 Out，可为恒等函数） 请求字段为空时回退到全部白名单字段（GetOptions\(\).Fields）， 保证前端未指定 fields 时默认返回白名单全集，视图层无需自行判断。
 
 <a name="RunDatetimeCalc"></a>
-## func RunDatetimeCalc
+## func [RunDatetimeCalc](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/datetime.go#L98>)
 
 ```go
 func RunDatetimeCalc(in DatetimeCalcInput) (any, error)
@@ -460,7 +460,7 @@ func RunDatetimeCalc(in DatetimeCalcInput) (any, error)
 RunDatetimeCalc 按 operation 分派 datetime\_calc 的各操作，返回 DatetimePointResult（now / convert / add）或 DatetimeDiffResult（diff）。operation 非法时返回英文错误（工具名前缀由适配器补齐）。
 
 <a name="RunRegex"></a>
-## func RunRegex
+## func [RunRegex](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/text.go#L77>)
 
 ```go
 func RunRegex(operation, pattern, text, replacement string, global bool) (any, error)
@@ -469,7 +469,7 @@ func RunRegex(operation, pattern, text, replacement string, global bool) (any, e
 RunRegex 执行 regex 工具：校验 operation / pattern / replacement，编译正则后按操作类型返回 RegexTestResult（test）或 RegexReplaceResult（replace）。operation 非法、pattern / replacement 为空或正则编译失败时返回英文错误（工具名前缀由适配器补齐）。
 
 <a name="SetField"></a>
-## func SetField
+## func [SetField](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/reflection.go#L11>)
 
 ```go
 func SetField(obj any, name string, value any)
@@ -478,7 +478,7 @@ func SetField(obj any, name string, value any)
 SetField 设置结构体字段的值（字段不可导出时经 unsafe 反射写入）。
 
 <a name="BaseConvertResult"></a>
-## type BaseConvertResult
+## type [BaseConvertResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/math.go#L263-L268>)
 
 BaseConvertResult 是进制转换成功时返回的载荷。
 
@@ -492,7 +492,7 @@ type BaseConvertResult struct {
 ```
 
 <a name="ConvertBase"></a>
-### func ConvertBase
+### func [ConvertBase](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/math.go#L273>)
 
 ```go
 func ConvertBase(value string, fromBase, toBase int) (BaseConvertResult, error)
@@ -501,7 +501,7 @@ func ConvertBase(value string, fromBase, toBase int) (BaseConvertResult, error)
 ConvertBase 把 value（fromBase 进制下的整数表示，可带前导负号）转换为 toBase 进制并返回 BaseConvertResult。fromBase / toBase 须在 2..36 之间；value 去空白后为空或对源进制非法时 返回英文错误。
 
 <a name="BaseItemOut"></a>
-## type BaseItemOut
+## type [BaseItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L318-L322>)
 
 BaseItemOut 定义了基础输出项结构 包含所有实体共有的字段
 
@@ -514,7 +514,7 @@ type BaseItemOut struct {
 ```
 
 <a name="BaseSoftDeleteItemOut"></a>
-## type BaseSoftDeleteItemOut
+## type [BaseSoftDeleteItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L326-L329>)
 
 BaseSoftDeleteItemOut 定义了软删除基础输出项结构 在 BaseItemOut 基础上添加了删除时间字段
 
@@ -526,7 +526,7 @@ type BaseSoftDeleteItemOut struct {
 ```
 
 <a name="BaseTotalOut"></a>
-## type BaseTotalOut
+## type [BaseTotalOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L333-L335>)
 
 BaseTotalOut 定义了基础总数输出结构 用于嵌入到其他输出结构中
 
@@ -537,7 +537,7 @@ type BaseTotalOut struct {
 ```
 
 <a name="BaseTotalOut.GetTotal"></a>
-### func \(\*BaseTotalOut\) GetTotal
+### func \(\*BaseTotalOut\) [GetTotal](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L339>)
 
 ```go
 func (o *BaseTotalOut) GetTotal() uint
@@ -546,7 +546,7 @@ func (o *BaseTotalOut) GetTotal() uint
 GetTotal 获取总数 返回值：总数
 
 <a name="CSVParseResult"></a>
-## type CSVParseResult
+## type [CSVParseResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/data.go#L224-L237>)
 
 CSVParseResult 是 ParseCSV 成功时返回的载荷：header / rows 无数据时为空数组而非 null；rowCount 为数据行数（不含表头），columnCount 为列数。
 
@@ -568,7 +568,7 @@ type CSVParseResult struct {
 ```
 
 <a name="ParseCSV"></a>
-### func ParseCSV
+### func [ParseCSV](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/data.go#L242>)
 
 ```go
 func ParseCSV(text, delimiter string, hasHeader bool) (CSVParseResult, error)
@@ -577,7 +577,7 @@ func ParseCSV(text, delimiter string, hasHeader bool) (CSVParseResult, error)
 ParseCSV 用 delimiter（为空时取 DefaultCSVDelimiter，须为单个字符）解析 CSV 文本，按 hasHeader 决定首行是否作为表头，返回 CSVParseResult。分隔符非单字符或 CSV 语法非法（如引号不闭合）时返回 英文错误（工具名前缀由适配器补齐）。
 
 <a name="DatetimeCalcInput"></a>
-## type DatetimeCalcInput
+## type [DatetimeCalcInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/datetime.go#L77-L94>)
 
 DatetimeCalcInput 汇集 datetime\_calc 的全部入参，供 RunDatetimeCalc 按 operation 分派。
 
@@ -603,7 +603,7 @@ type DatetimeCalcInput struct {
 ```
 
 <a name="DatetimeDiffResult"></a>
-## type DatetimeDiffResult
+## type [DatetimeDiffResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/datetime.go#L67-L74>)
 
 DatetimeDiffResult 是 diff 返回的载荷：两个时间点之差。
 
@@ -619,7 +619,7 @@ type DatetimeDiffResult struct {
 ```
 
 <a name="DatetimePointResult"></a>
-## type DatetimePointResult
+## type [DatetimePointResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/datetime.go#L41-L64>)
 
 DatetimePointResult 是 now / convert / add 返回的载荷：一个时间点在目标时区下的各字段拆解，便于 模型直接引用。
 
@@ -651,7 +651,7 @@ type DatetimePointResult struct {
 ```
 
 <a name="EncodeConvertResult"></a>
-## type EncodeConvertResult
+## type [EncodeConvertResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/encoding.go#L126-L133>)
 
 EncodeConvertResult 是 EncodeConvert 成功时返回的载荷。
 
@@ -667,7 +667,7 @@ type EncodeConvertResult struct {
 ```
 
 <a name="EncodeConvert"></a>
-### func EncodeConvert
+### func [EncodeConvert](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/encoding.go#L138>)
 
 ```go
 func EncodeConvert(scheme, operation, text string) (EncodeConvertResult, error)
@@ -676,7 +676,7 @@ func EncodeConvert(scheme, operation, text string) (EncodeConvertResult, error)
 EncodeConvert 以 scheme 指定的方案对 text 执行 operation（encode 或 decode）并返回 EncodeConvertResult。operation 与 scheme 先去除首尾空白；操作方向非法、方案越界、文本为空或 decode 输入非法（如非法 base64 / hex）时返回英文错误（工具名前缀由适配器补齐）。
 
 <a name="EnumOption"></a>
-## type EnumOption
+## type [EnumOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/enum.go#L8-L13>)
 
 EnumOption 定义可选枚举值项。 由元信息自省（meta.go）从声明的枚举注册表中读取，随 FieldMeta 的 enumOptions 字段下发给前端：
 
@@ -693,7 +693,7 @@ type EnumOption struct {
 ```
 
 <a name="FieldProjector"></a>
-## type FieldProjector
+## type [FieldProjector](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L71-L74>)
 
 FieldProjector 可选接口：列表请求支持字段投影 实现此接口的类型可指定查询返回的字段列表
 
@@ -705,7 +705,7 @@ type FieldProjector interface {
 ```
 
 <a name="FilterByItem"></a>
-## type FilterByItem
+## type [FilterByItem](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L51-L56>)
 
 FilterByItem 定义了过滤项的接口 实现此接口的类型可以提供过滤所需的字段信息
 
@@ -719,7 +719,7 @@ type FilterByItem interface {
 ```
 
 <a name="FilterByOption"></a>
-## type FilterByOption
+## type [FilterByOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L26-L31>)
 
 FilterByOption 定义了过滤选项的配置结构 用于描述前端可以使用的过滤条件
 
@@ -733,7 +733,7 @@ type FilterByOption struct {
 ```
 
 <a name="FilterByOptionItem"></a>
-## type FilterByOptionItem
+## type [FilterByOptionItem](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L19-L22>)
 
 FilterByOptionItem 定义了枚举过滤条件的可选值结构 Title 为展示名的 i18n 键，由前端渲染时翻译
 
@@ -745,7 +745,7 @@ type FilterByOptionItem struct {
 ```
 
 <a name="HashResult"></a>
-## type HashResult
+## type [HashResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/encoding.go#L48-L55>)
 
 HashResult 是 Hash 成功时返回的载荷：摘要的十六进制与小写 base64 两种表示。
 
@@ -761,7 +761,7 @@ type HashResult struct {
 ```
 
 <a name="Hash"></a>
-### func Hash
+### func [Hash](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/encoding.go#L59>)
 
 ```go
 func Hash(input, algorithm string) (HashResult, error)
@@ -770,7 +770,7 @@ func Hash(input, algorithm string) (HashResult, error)
 Hash 对 UTF\-8 文本 input 以 algorithm 指定的算法计算摘要并返回 HashResult。algorithm 先去除首尾 空白；算法越界或文本为空时返回英文错误（工具名前缀由适配器补齐）。
 
 <a name="JSONQueryResult"></a>
-## type JSONQueryResult
+## type [JSONQueryResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/data.go#L60-L69>)
 
 JSONQueryResult 是 json 工具 query 操作返回的载荷：命中时 value 为任意 JSON 值（未命中时省略）。 Value 用 json.RawMessage 承载，以便正确区分「未命中」（省略）与命中且值为 null / 0 / false / "" 等零值（仍需输出）。
 
@@ -788,7 +788,7 @@ type JSONQueryResult struct {
 ```
 
 <a name="JSONTextResult"></a>
-## type JSONTextResult
+## type [JSONTextResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/data.go#L50-L55>)
 
 JSONTextResult 是 json 工具 format / minify 操作返回的载荷。
 
@@ -802,7 +802,7 @@ type JSONTextResult struct {
 ```
 
 <a name="JSONValidateResult"></a>
-## type JSONValidateResult
+## type [JSONValidateResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/data.go#L40-L47>)
 
 JSONValidateResult 是 json 工具 validate 操作返回的载荷：合法时 error 省略。
 
@@ -818,7 +818,7 @@ type JSONValidateResult struct {
 ```
 
 <a name="JsonDiffEntry"></a>
-## type JsonDiffEntry
+## type [JsonDiffEntry](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/text.go#L167-L176>)
 
 JsonDiffEntry 是单条差异：路径、类型与两侧取值。added 的左值与 removed 的右值为 null。
 
@@ -836,7 +836,7 @@ type JsonDiffEntry struct {
 ```
 
 <a name="JsonDiffResult"></a>
-## type JsonDiffResult
+## type [JsonDiffResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/text.go#L179-L186>)
 
 JsonDiffResult 是 json\_diff 返回的载荷：differences 按路径确定性排列（无差异时为空数组）。
 
@@ -852,7 +852,7 @@ type JsonDiffResult struct {
 ```
 
 <a name="DiffJSON"></a>
-### func DiffJSON
+### func [DiffJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/text.go#L190>)
 
 ```go
 func DiffJSON(left, right string) (JsonDiffResult, error)
@@ -861,7 +861,7 @@ func DiffJSON(left, right string) (JsonDiffResult, error)
 DiffJSON 比较两段 JSON 文本的结构化差异：对象按键比较（缺失 / 新增 / 值变），数组按下标比较（长度 差视为新增 / 删除），标量直接比较。任一侧非法 JSON 时返回英文错误（工具名前缀由适配器补齐）。
 
 <a name="LinearSystemSolution"></a>
-## type LinearSystemSolution
+## type [LinearSystemSolution](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/equation.go#L413-L424>)
 
 LinearSystemSolution 是线性方程组求解成功时返回的载荷：SolutionType 取 unique|infinite|none； unique 给 solution，infinite 给 particular 与 nullspace，none 时各向量为空。
 
@@ -881,7 +881,7 @@ type LinearSystemSolution struct {
 ```
 
 <a name="SolveLinearSystem"></a>
-### func SolveLinearSystem
+### func [SolveLinearSystem](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/equation.go#L429>)
 
 ```go
 func SolveLinearSystem(a [][]float64, b []float64, tolerance float64) (LinearSystemSolution, error)
@@ -890,7 +890,7 @@ func SolveLinearSystem(a [][]float64, b []float64, tolerance float64) (LinearSys
 SolveLinearSystem 求解线性方程组 a x = b。a 为系数矩阵（按行给出，必须为方阵），b 为常数列 向量。返回解的类型（unique / infinite / none）、矩阵 A 的秩，以及相应的解向量、特解与零空间基 向量。容差非正、矩阵为空 / 非方阵或 b 长度不符时返回英文错误。
 
 <a name="MathEvalResult"></a>
-## type MathEvalResult
+## type [MathEvalResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/math.go#L108-L113>)
 
 MathEvalResult 是表达式求值成功时返回的载荷：result 为求值结果（数字统一为 float64， 布尔保持 bool），expression 为原表达式。
 
@@ -904,7 +904,7 @@ type MathEvalResult struct {
 ```
 
 <a name="EvalMathExpression"></a>
-### func EvalMathExpression
+### func [EvalMathExpression](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/math.go#L118>)
 
 ```go
 func EvalMathExpression(expression string) (MathEvalResult, error)
@@ -913,7 +913,7 @@ func EvalMathExpression(expression string) (MathEvalResult, error)
 EvalMathExpression 对单个算术/逻辑表达式求值并返回 MathEvalResult。表达式先去除首尾空白， 为空则返回错误；语法非法、求值失败或结果类型不可序列化时返回英文错误。结果中的 expression 为去空白后的表达式。
 
 <a name="NonlinearSolution"></a>
-## type NonlinearSolution
+## type [NonlinearSolution](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/equation.go#L901-L910>)
 
 NonlinearSolution 是非线性方程组求解成功时返回的载荷：solution 为变量名到解的映射，residual 为各方程绝对值残差的最大值，converged 表示是否在迭代上限内收敛。
 
@@ -931,7 +931,7 @@ type NonlinearSolution struct {
 ```
 
 <a name="SolveNonlinearSystem"></a>
-### func SolveNonlinearSystem
+### func [SolveNonlinearSystem](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/equation.go#L916>)
 
 ```go
 func SolveNonlinearSystem(equations []string, variables []string, initial []float64, tolerance float64, maxIterations int) (NonlinearSolution, error)
@@ -940,7 +940,7 @@ func SolveNonlinearSystem(equations []string, variables []string, initial []floa
 SolveNonlinearSystem 求解非线性方程组 F\(x\)=0（牛顿\-拉夫逊法，雅可比矩阵用中心差分数值近似）。 equations 每项为约定等于 0 的表达式，variables 给出变量名，initial 给出迭代初值；三者长度必须 一致。容差非正、迭代上限小于 1、任一入参为空、长度不一致、变量名为空或重名、表达式非法时返回 英文错误；雅可比奇异返回英文错误；迭代上限内未收敛不报错，仅将 converged 置为 false。
 
 <a name="OrderByItem"></a>
-## type OrderByItem
+## type [OrderByItem](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L43-L47>)
 
 OrderByItem 定义了排序项的接口 实现此接口的类型可以提供排序所需的字段信息
 
@@ -953,7 +953,7 @@ type OrderByItem interface {
 ```
 
 <a name="PolynomialRoot"></a>
-## type PolynomialRoot
+## type [PolynomialRoot](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/equation.go#L75-L84>)
 
 PolynomialRoot 是多项式求根输出中的单个根：实部 / 虚部、可精确表达时的有理数串与重数。
 
@@ -971,7 +971,7 @@ type PolynomialRoot struct {
 ```
 
 <a name="PolynomialSolution"></a>
-## type PolynomialSolution
+## type [PolynomialSolution](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/equation.go#L87-L92>)
 
 PolynomialSolution 是多项式求根成功时返回的载荷。
 
@@ -985,7 +985,7 @@ type PolynomialSolution struct {
 ```
 
 <a name="SolvePolynomial"></a>
-### func SolvePolynomial
+### func [SolvePolynomial](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/equation.go#L103>)
 
 ```go
 func SolvePolynomial(coefficients []float64, tolerance float64, maxIterations int) (PolynomialSolution, error)
@@ -994,7 +994,7 @@ func SolvePolynomial(coefficients []float64, tolerance float64, maxIterations in
 SolvePolynomial 求一元多项式 P\(x\)=0 的全部根。coefficients 从最高次到最低次排列；去掉前导零 系数得到真实次数后，若系数可表示为整数则用有理根定理精确提取有理根（含重数）并对约化多项式用 Durand–Kerner 求复根。容差非正、迭代上限小于 1、系数为空 / 全零或次数小于 1 时返回英文错误。
 
 <a name="ProjectorSearcher"></a>
-## type ProjectorSearcher
+## type [ProjectorSearcher](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L79-L82>)
 
 ProjectorSearcher 字段投影搜索入参 组合 SearcherIn 与 FieldProjector，为 ProjectSearchItems 的入参契约： 列表接口入参必须同时具备搜索参数与字段投影能力。
 
@@ -1006,7 +1006,7 @@ type ProjectorSearcher interface {
 ```
 
 <a name="RegexMatch"></a>
-## type RegexMatch
+## type [RegexMatch](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/text.go#L41-L50>)
 
 RegexMatch 是 test 操作返回的单条匹配：文本、起始字节位置、捕获组与命名捕获组。
 
@@ -1024,7 +1024,7 @@ type RegexMatch struct {
 ```
 
 <a name="RegexReplaceResult"></a>
-## type RegexReplaceResult
+## type [RegexReplaceResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/text.go#L65-L72>)
 
 RegexReplaceResult 是 regex 在 operation 为 replace 时返回的载荷。
 
@@ -1040,7 +1040,7 @@ type RegexReplaceResult struct {
 ```
 
 <a name="RegexTestResult"></a>
-## type RegexTestResult
+## type [RegexTestResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/text.go#L53-L62>)
 
 RegexTestResult 是 regex 在 operation 为 test 时返回的载荷。
 
@@ -1058,7 +1058,7 @@ type RegexTestResult struct {
 ```
 
 <a name="RootFindEntry"></a>
-## type RootFindEntry
+## type [RootFindEntry](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/equation.go#L729-L736>)
 
 RootFindEntry 是求根输出中的单个根：根的近似值、该点的函数值与所用方法。
 
@@ -1074,7 +1074,7 @@ type RootFindEntry struct {
 ```
 
 <a name="RootFindSolution"></a>
-## type RootFindSolution
+## type [RootFindSolution](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/equation.go#L739-L742>)
 
 RootFindSolution 是求根成功时返回的载荷：roots 按根值升序排列，无根时为空数组。
 
@@ -1086,7 +1086,7 @@ type RootFindSolution struct {
 ```
 
 <a name="FindRoots"></a>
-### func FindRoots
+### func [FindRoots](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/equation.go#L749>)
 
 ```go
 func FindRoots(expression string, interval *[2]float64, initial *float64, tolerance float64, maxIterations int) (RootFindSolution, error)
@@ -1095,7 +1095,7 @@ func FindRoots(expression string, interval *[2]float64, initial *float64, tolera
 FindRoots 对一般方程 f\(x\)=0 做数值求根，表达式中的变量名固定为 x，^ 表示幂运算。可给定扫描区间 interval（在区间内扫描变号子区间并用二分法细化）或给定初值 initial（用牛顿法迭代），至少提供 其中之一，二者都给时合并两条模式的结果。表达式的数学函数支持 sin cos tan exp log sqrt abs pow 等。 表达式为空、非法，interval / initial 均未提供，区间非正长度，容差非正或迭代上限小于 1 时返回 英文错误。
 
 <a name="ScalarKind"></a>
-## type ScalarKind
+## type [ScalarKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/scalar.go#L16>)
 
 ScalarKind 是 JSON 标量值的类型标识，用于在「文本字面量」与「强类型值」之间做统一转换。 它是各层自有类型词汇表（参数类型、表单字段语义类型、JSON schema 类型）的最小公共内核： 各层保留自己的枚举，只把解析与格式化委托到本文件，避免同一种转换被实现多份而行为漂移。
 
@@ -1119,7 +1119,7 @@ const (
 ```
 
 <a name="SearchOptions"></a>
-## type SearchOptions
+## type [SearchOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L35-L39>)
 
 SearchOptions 定义了搜索选项的配置结构 用于描述前端可以使用的排序和过滤配置
 
@@ -1132,7 +1132,7 @@ type SearchOptions struct {
 ```
 
 <a name="SearchOut"></a>
-## type SearchOut
+## type [SearchOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L348-L351>)
 
 SearchOut 定义了搜索输出结构 M: 实现了 TotalOut 接口的类型
 
@@ -1144,7 +1144,7 @@ type SearchOut[M TotalOut] struct {
 ```
 
 <a name="NewSearchOut"></a>
-### func NewSearchOut
+### func [NewSearchOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L356>)
 
 ```go
 func NewSearchOut[M TotalOut](items []M) *SearchOut[M]
@@ -1153,7 +1153,7 @@ func NewSearchOut[M TotalOut](items []M) *SearchOut[M]
 NewSearchOut 创建新的搜索输出对象 items: 查询结果列表 返回值：搜索输出对象指针
 
 <a name="SearchProjectedOut"></a>
-## type SearchProjectedOut
+## type [SearchProjectedOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L544-L547>)
 
 SearchProjectedOut 定义了投影搜索输出结构（items 为字段投影 map）
 
@@ -1165,7 +1165,7 @@ type SearchProjectedOut struct {
 ```
 
 <a name="NewSearchProjectedOut"></a>
-### func NewSearchProjectedOut
+### func [NewSearchProjectedOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L552>)
 
 ```go
 func NewSearchProjectedOut(total uint, items []map[string]any) *SearchProjectedOut
@@ -1174,7 +1174,7 @@ func NewSearchProjectedOut(total uint, items []map[string]any) *SearchProjectedO
 NewSearchProjectedOut 创建投影搜索输出对象 total: 总记录数；items: 字段投影项列表 返回值：投影搜索输出对象指针
 
 <a name="SearcherIn"></a>
-## type SearcherIn
+## type [SearcherIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L60-L67>)
 
 SearcherIn 定义了搜索输入参数的接口 实现此接口的类型可以提供搜索所需的所有参数
 
@@ -1190,7 +1190,7 @@ type SearcherIn interface {
 ```
 
 <a name="TextStatsResult"></a>
-## type TextStatsResult
+## type [TextStatsResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/text.go#L303-L316>)
 
 TextStatsResult 是 text\_stats 返回的载荷，覆盖字符、单词、行与段落的统计。
 
@@ -1212,7 +1212,7 @@ type TextStatsResult struct {
 ```
 
 <a name="StatsText"></a>
-### func StatsText
+### func [StatsText](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/text.go#L320>)
 
 ```go
 func StatsText(text string) (TextStatsResult, error)
@@ -1221,7 +1221,7 @@ func StatsText(text string) (TextStatsResult, error)
 StatsText 统计一段文本的字符数、去空白字符数、UTF\-8 字节数、词数、行数与段落数。字符数按 Unicode 码点（rune）计，行数按 \\n 计，段落按连续空行分隔的非空块计；空文本各项均为 0。
 
 <a name="TotalOut"></a>
-## type TotalOut
+## type [TotalOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/search.go#L312-L314>)
 
 TotalOut 定义了获取总数的接口 实现此接口的类型可以提供查询结果的总数
 
@@ -1232,7 +1232,7 @@ type TotalOut interface {
 ```
 
 <a name="URLParseResult"></a>
-## type URLParseResult
+## type [URLParseResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/data.go#L294-L313>)
 
 URLParseResult 是 ParseURL 成功时返回的载荷：query 为参数名到值的映射（无参数时为空对象而非 null）。
 
@@ -1260,7 +1260,7 @@ type URLParseResult struct {
 ```
 
 <a name="ParseURL"></a>
-### func ParseURL
+### func [ParseURL](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/data.go#L317>)
 
 ```go
 func ParseURL(raw string) (URLParseResult, error)
@@ -1269,7 +1269,7 @@ func ParseURL(raw string) (URLParseResult, error)
 ParseURL 用标准库 net/url 把 raw 拆解为结构化字段并返回 URLParseResult。raw 去空白后为空或非法 时返回英文错误（工具名前缀由适配器补齐）。
 
 <a name="UUIDResult"></a>
-## type UUIDResult
+## type [UUIDResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/encoding.go#L180-L185>)
 
 UUIDResult 是 GenerateUUID 成功时返回的载荷：UUIDs 为生成结果（至少一个，因而恒非空）。
 
@@ -1283,7 +1283,7 @@ type UUIDResult struct {
 ```
 
 <a name="GenerateUUID"></a>
-### func GenerateUUID
+### func [GenerateUUID](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/encoding.go#L190>)
 
 ```go
 func GenerateUUID(version string, count int) (UUIDResult, error)
@@ -1292,7 +1292,7 @@ func GenerateUUID(version string, count int) (UUIDResult, error)
 GenerateUUID 按 version（"4" 或 "7"）生成 count 个 UUID 并返回 UUIDResult。version 先去除首尾 空白，为空则取 DefaultUUIDVersion；版本越界、数量越界（不在 1..100）或生成失败时返回英文错误 （工具名前缀由适配器补齐）。
 
 <a name="UnitConvertResult"></a>
-## type UnitConvertResult
+## type [UnitConvertResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/math.go#L164-L173>)
 
 UnitConvertResult 是单位换算成功时返回的载荷。
 
@@ -1310,7 +1310,7 @@ type UnitConvertResult struct {
 ```
 
 <a name="ConvertUnit"></a>
-### func ConvertUnit
+### func [ConvertUnit](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/utils/math.go#L177>)
 
 ```go
 func ConvertUnit(value float64, from, to string) (UnitConvertResult, error)

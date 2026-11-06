@@ -13,7 +13,7 @@
 
 
 <a name="NeedsHumanReview"></a>
-## func NeedsHumanReview
+## func [NeedsHumanReview](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/audit/policy.go#L22>)
 
 ```go
 func NeedsHumanReview(level contract.AuditLevel, valve modelsai.ReviewValve) bool
@@ -32,7 +32,7 @@ none            人工   自动   自动
 即：must 为绝对下界，任何阀门下均需人工；each 为绝对下界，任何重要级下均需人工； auto 阀门下仅 auto / none 重要级可自动；none 阀门下仅 must 需人工。
 
 <a name="ChatResolver"></a>
-## type ChatResolver
+## type [ChatResolver](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/audit/evaluator.go#L24>)
 
 ChatResolver 按档位解析对话模型。
 
@@ -41,7 +41,7 @@ type ChatResolver = func(slot modelsai.Slot) (model.BaseChatModel, error)
 ```
 
 <a name="Deps"></a>
-## type Deps
+## type [Deps](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/audit/evaluator.go#L27-L36>)
 
 Deps 是评估器的装配依赖。
 
@@ -59,7 +59,7 @@ type Deps struct {
 ```
 
 <a name="Evaluator"></a>
-## type Evaluator
+## type [Evaluator](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/audit/evaluator.go#L40-L49>)
 
 Evaluator 对一批待执行工具调用做独立的重要性分级：优先使用 flash 档位模型，失败时一律保守 回落 must，绝不中断调用方。
 
@@ -70,7 +70,7 @@ type Evaluator struct {
 ```
 
 <a name="New"></a>
-### func New
+### func [New](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/audit/evaluator.go#L52>)
 
 ```go
 func New(deps Deps) *Evaluator
@@ -79,7 +79,7 @@ func New(deps Deps) *Evaluator
 New 构造评估器。
 
 <a name="Evaluator.Levels"></a>
-### func \(\*Evaluator\) Levels
+### func \(\*Evaluator\) [Levels](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/audit/evaluator.go#L60>)
 
 ```go
 func (e *Evaluator) Levels(ctx context.Context, runSlot modelsai.Slot, calls []contract.PendingCall) []contract.AuditLevel

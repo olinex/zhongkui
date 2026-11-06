@@ -323,7 +323,7 @@
 
 
 <a name="AddEnumBinding"></a>
-## func AddEnumBinding
+## func [AddEnumBinding](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/enum_registry.go#L22>)
 
 ```go
 func AddEnumBinding(typeName, field, className string)
@@ -332,7 +332,7 @@ func AddEnumBinding(typeName, field, className string)
 AddEnumBinding 注册某视图结构体单个枚举字段与枚举类的绑定。 供"类名引用"的运行时字段（如 NotificationTemplateCreateIn.event、 NotificationRecordListOut.channelType 等）在对应模块 init\(\) 时写入 enumBindings； typeName 为结构体 reflect.Type.Name\(\)，与 search.toml \[\[enums\]\] 声明的类型名一致； 同结构体同字段重复注册时覆盖。init\(\) 串行执行、包初始化在单线程完成， 原地修改包级 map 安全。
 
 <a name="BatchExecute"></a>
-## func BatchExecute
+## func [BatchExecute](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/batch.go#L65>)
 
 ```go
 func BatchExecute[T any](c *gin.Context, items []T, idOf func(T) string, act func(T) error)
@@ -341,7 +341,7 @@ func BatchExecute[T any](c *gin.Context, items []T, idOf func(T) string, act fun
 batchExecute 批量执行骨架：逐条调用 act，错误捕获进 Failed（不中断后续条目）， 最终统一返回 BatchResultOut 汇总（HTTP 200 表达批量结果，失败在明细中体现）。
 
 <a name="BuildJSONExample"></a>
-## func BuildJSONExample
+## func [BuildJSONExample](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/catalog_example.go#L31>)
 
 ```go
 func BuildJSONExample(t reflect.Type) string
@@ -350,7 +350,7 @@ func BuildJSONExample(t reflect.Type) string
 BuildJSONExample 依据结构体类型构造 JSON 示例正文（不含代码围栏）；类型为空或非结构体时返回空串。 输出缩进 2 空格、字段顺序与结构体声明顺序一致，对同一类型连续调用结果逐字节相等。
 
 <a name="CapabilityItems"></a>
-## func CapabilityItems
+## func [CapabilityItems](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/capability.go#L64>)
 
 ```go
 func CapabilityItems() []capability.Capability
@@ -359,7 +359,7 @@ func CapabilityItems() []capability.Capability
 CapabilityItems 从接口目录派生能力快照：仅保留声明了 CapabilityMeta 的接口，按业务域展示 顺序与能力 ID 稳定排序，并补齐业务域中文名。
 
 <a name="EnumGet"></a>
-## func EnumGet
+## func [EnumGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/enum.go#L50>)
 
 ```go
 func EnumGet(c *gin.Context)
@@ -368,7 +368,7 @@ func EnumGet(c *gin.Context)
 EnumGet 处理 /admin/enum/get：按类名 \+ 语言返回条目（key/value/label）。 未知枚举类返回 400；label 经 translate.EnumLabel 按 enum.\<类名\>.\<key\> 翻译，未命中回退 key。
 
 <a name="EnumList"></a>
-## func EnumList
+## func [EnumList](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/enum.go#L86>)
 
 ```go
 func EnumList(c *gin.Context)
@@ -377,7 +377,7 @@ func EnumList(c *gin.Context)
 EnumList 处理 /admin/enum/list：按语言返回全部枚举类条目。
 
 <a name="FeaturesListGet"></a>
-## func FeaturesListGet
+## func [FeaturesListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/features.go#L30>)
 
 ```go
 func FeaturesListGet(c *gin.Context)
@@ -386,7 +386,7 @@ func FeaturesListGet(c *gin.Context)
 FeaturesListGet 处理功能开关列表请求（公共接口，无需认证）。 读取注入的功能开关注册表并以视图层独立输出结构逐项映射返回（不可用原因按请求语言 本地化），前端据此刻画功能入口的可用性：功能关闭时相关入口不隐藏而是置为不可用态， 并在用户进入功能页时引导其前往开通入口。
 
 <a name="GetRawParam"></a>
-## func GetRawParam
+## func [GetRawParam](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/base.go#L91>)
 
 ```go
 func GetRawParam(c *gin.Context, name string) (string, bool)
@@ -405,7 +405,7 @@ getRawParam 从 Gin 上下文中获取原始字符串类型的 URL 路径参数�
 - bool: 是否成功获取（true 表示参数有效，false 表示参数为空且请求已被中断）
 
 <a name="GetUUIDParam"></a>
-## func GetUUIDParam
+## func [GetUUIDParam](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/base.go#L131>)
 
 ```go
 func GetUUIDParam(c *gin.Context, name string) (serializer.HexUUID, bool)
@@ -424,7 +424,7 @@ getUUIDParam 从 Gin 上下文中获取 UUID 类型的 URL 路径参数。 将�
 - bool: 是否成功解析（true 表示 UUID 有效，false 表示无效且请求已被中断）
 
 <a name="GetUint64Param"></a>
-## func GetUint64Param
+## func [GetUint64Param](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/base.go#L110>)
 
 ```go
 func GetUint64Param(c *gin.Context, name string) (uint64, bool)
@@ -443,7 +443,7 @@ getUint64Param 从 Gin 上下文中获取 uint64 类型的 URL 路径参数。 �
 - bool: 是否成功解析（true 表示参数有效，false 表示解析失败且请求已被中断）
 
 <a name="IsScalarStructType"></a>
-## func IsScalarStructType
+## func [IsScalarStructType](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/meta.go#L328>)
 
 ```go
 func IsScalarStructType(t reflect.Type) bool
@@ -452,7 +452,7 @@ func IsScalarStructType(t reflect.Type) bool
 IsScalarStructType 判断结构体类型是否应作为标量呈现（不展开为字段表、示例中不展开为对象）： 目前仅 time.Time —— 其内部字段为 wall/ext/loc，展开无意义。
 
 <a name="ListMetaGinHandler"></a>
-## func ListMetaGinHandler
+## func [ListMetaGinHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/meta.go#L271>)
 
 ```go
 func ListMetaGinHandler[M utils.SearcherIn, N utils.TotalOut](opts ...MetadataOption) gin.HandlerFunc
@@ -477,7 +477,7 @@ ListMetaGinHandler 创建一个返回列表接口自省信息的 Gin 处理器�
 ```
 
 <a name="NestedStructType"></a>
-## func NestedStructType
+## func [NestedStructType](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/meta.go#L339>)
 
 ```go
 func NestedStructType(field *FieldMeta) (reflect.Type, bool)
@@ -486,7 +486,7 @@ func NestedStructType(field *FieldMeta) (reflect.Type, bool)
 NestedStructType 返回字段所引用的具名结构体类型：逐层剥离指针、切片、数组与 map 的值类型后， 若得到具名结构体且不属于标量呈现类型（见 IsScalarStructType），返回 \(t, true\)； 非结构体、未具名结构体（Name 为空）或标量结构体一律返回 \(nil, false\)。 供接口知识文档递归展开嵌套类型字段定义使用。
 
 <a name="ReadMultipartFile"></a>
-## func ReadMultipartFile
+## func [ReadMultipartFile](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/multipart.go#L28>)
 
 ```go
 func ReadMultipartFile(c *gin.Context, cb func(name string, body []byte)) (io.Reader, error)
@@ -495,7 +495,7 @@ func ReadMultipartFile(c *gin.Context, cb func(name string, body []byte)) (io.Re
 ReadMultipartFile 流式解析 multipart/form\-data 请求：把 file 字段之前出现的普通表单字段经 cb\(name, body\) 回调交给调用方填充，并把 file 部分原样作为读取流返回给调用方直通存储层—— file 内容不预读、不缓冲，内存占用与文件大小无关。约定 file 字段须位于最后一个 part（前端 保证顺序），因此返回的流在回调完成后即可安全读取。未携带 file 时返回 nil。 普通表单字段按 maxFormFieldBytes 有界读取，超出即返回错误；返回的读取流须由调用方关闭。 调用方需要原始文件名时可把返回的 io.Reader 断言为 \*multipart.Part 后调用其 FileName\(\)。
 
 <a name="RegisterApi"></a>
-## func RegisterApi
+## func [RegisterApi](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/catalog.go#L68>)
 
 ```go
 func RegisterApi(group *gin.RouterGroup, path, description string, opts ...MetadataOption)
@@ -512,7 +512,7 @@ views.RegisterApi(tagRuleGroup, "/delete", "批量删除标签规则及其全部
 ```
 
 <a name="RegisterListApi"></a>
-## func RegisterListApi
+## func [RegisterListApi](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/catalog.go#L86>)
 
 ```go
 func RegisterListApi[M utils.SearcherIn, N utils.TotalOut](group *gin.RouterGroup, path, description string, opts ...MetadataOption)
@@ -527,7 +527,7 @@ views.RegisterListApi[*views.TagRuleListGetSearchIn, *TagRuleListOut](tagRuleGro
 ```
 
 <a name="StructMetaGinHandler"></a>
-## func StructMetaGinHandler
+## func [StructMetaGinHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/meta.go#L208>)
 
 ```go
 func StructMetaGinHandler(opts ...MetadataOption) gin.HandlerFunc
@@ -544,7 +544,7 @@ adminGroup.OPTIONS("/user/:unionID/get", StructMetaGinHandler(
 ```
 
 <a name="ValidFlexLen"></a>
-## func ValidFlexLen
+## func [ValidFlexLen](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/batch.go#L79>)
 
 ```go
 func ValidFlexLen[T any](c *gin.Context, items []T) bool
@@ -553,7 +553,7 @@ func ValidFlexLen[T any](c *gin.Context, items []T) bool
 validFlexLen 校验批量标识符列表长度（1..maxBatchItems）。 长度非法时以 400 中断请求并返回 false。
 
 <a name="AgentMemoryListGetFilterBy"></a>
-## type AgentMemoryListGetFilterBy
+## type [AgentMemoryListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L274-L285>)
 
 
 
@@ -573,7 +573,7 @@ type AgentMemoryListGetFilterBy struct {
 ```
 
 <a name="AgentMemoryListGetOrderBy"></a>
-## type AgentMemoryListGetOrderBy
+## type [AgentMemoryListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L60-L63>)
 
 
 
@@ -585,7 +585,7 @@ type AgentMemoryListGetOrderBy struct {
 ```
 
 <a name="AgentMemoryListGetSearchIn"></a>
-## type AgentMemoryListGetSearchIn
+## type [AgentMemoryListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L287-L293>)
 
 
 
@@ -600,7 +600,7 @@ type AgentMemoryListGetSearchIn struct {
 ```
 
 <a name="AgentMemoryListGetSearchIn.GetFields"></a>
-### func \(\*AgentMemoryListGetSearchIn\) GetFields
+### func \(\*AgentMemoryListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L355>)
 
 ```go
 func (s *AgentMemoryListGetSearchIn) GetFields() []string
@@ -609,7 +609,7 @@ func (s *AgentMemoryListGetSearchIn) GetFields() []string
 
 
 <a name="AgentMemoryListGetSearchIn.GetFilterBy"></a>
-### func \(\*AgentMemoryListGetSearchIn\) GetFilterBy
+### func \(\*AgentMemoryListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L317>)
 
 ```go
 func (s *AgentMemoryListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -618,7 +618,7 @@ func (s *AgentMemoryListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
 
 
 <a name="AgentMemoryListGetSearchIn.GetGreedy"></a>
-### func \(\*AgentMemoryListGetSearchIn\) GetGreedy
+### func \(\*AgentMemoryListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L295>)
 
 ```go
 func (s *AgentMemoryListGetSearchIn) GetGreedy() bool
@@ -627,7 +627,7 @@ func (s *AgentMemoryListGetSearchIn) GetGreedy() bool
 
 
 <a name="AgentMemoryListGetSearchIn.GetOptions"></a>
-### func \(\*AgentMemoryListGetSearchIn\) GetOptions
+### func \(\*AgentMemoryListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L399>)
 
 ```go
 func (s *AgentMemoryListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -636,7 +636,7 @@ func (s *AgentMemoryListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="AgentMemoryListGetSearchIn.GetOrderBy"></a>
-### func \(\*AgentMemoryListGetSearchIn\) GetOrderBy
+### func \(\*AgentMemoryListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L299>)
 
 ```go
 func (s *AgentMemoryListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -645,7 +645,7 @@ func (s *AgentMemoryListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="AgentMemoryListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*AgentMemoryListGetSearchIn\) ResolveSelectColumns
+### func \(\*AgentMemoryListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L359>)
 
 ```go
 func (s *AgentMemoryListGetSearchIn) ResolveSelectColumns() []string
@@ -654,7 +654,7 @@ func (s *AgentMemoryListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="AgentSkillListGetFilterBy"></a>
-## type AgentSkillListGetFilterBy
+## type [AgentSkillListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L757-L767>)
 
 
 
@@ -673,7 +673,7 @@ type AgentSkillListGetFilterBy struct {
 ```
 
 <a name="AgentSkillListGetOrderBy"></a>
-## type AgentSkillListGetOrderBy
+## type [AgentSkillListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L564-L567>)
 
 
 
@@ -685,7 +685,7 @@ type AgentSkillListGetOrderBy struct {
 ```
 
 <a name="AgentSkillListGetSearchIn"></a>
-## type AgentSkillListGetSearchIn
+## type [AgentSkillListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L769-L775>)
 
 
 
@@ -700,7 +700,7 @@ type AgentSkillListGetSearchIn struct {
 ```
 
 <a name="AgentSkillListGetSearchIn.GetFields"></a>
-### func \(\*AgentSkillListGetSearchIn\) GetFields
+### func \(\*AgentSkillListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L834>)
 
 ```go
 func (s *AgentSkillListGetSearchIn) GetFields() []string
@@ -709,7 +709,7 @@ func (s *AgentSkillListGetSearchIn) GetFields() []string
 
 
 <a name="AgentSkillListGetSearchIn.GetFilterBy"></a>
-### func \(\*AgentSkillListGetSearchIn\) GetFilterBy
+### func \(\*AgentSkillListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L799>)
 
 ```go
 func (s *AgentSkillListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -718,7 +718,7 @@ func (s *AgentSkillListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
 
 
 <a name="AgentSkillListGetSearchIn.GetGreedy"></a>
-### func \(\*AgentSkillListGetSearchIn\) GetGreedy
+### func \(\*AgentSkillListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L777>)
 
 ```go
 func (s *AgentSkillListGetSearchIn) GetGreedy() bool
@@ -727,7 +727,7 @@ func (s *AgentSkillListGetSearchIn) GetGreedy() bool
 
 
 <a name="AgentSkillListGetSearchIn.GetOptions"></a>
-### func \(\*AgentSkillListGetSearchIn\) GetOptions
+### func \(\*AgentSkillListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L878>)
 
 ```go
 func (s *AgentSkillListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -736,7 +736,7 @@ func (s *AgentSkillListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="AgentSkillListGetSearchIn.GetOrderBy"></a>
-### func \(\*AgentSkillListGetSearchIn\) GetOrderBy
+### func \(\*AgentSkillListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L781>)
 
 ```go
 func (s *AgentSkillListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -745,7 +745,7 @@ func (s *AgentSkillListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="AgentSkillListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*AgentSkillListGetSearchIn\) ResolveSelectColumns
+### func \(\*AgentSkillListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L838>)
 
 ```go
 func (s *AgentSkillListGetSearchIn) ResolveSelectColumns() []string
@@ -754,7 +754,7 @@ func (s *AgentSkillListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="ApiDescriptor"></a>
-## type ApiDescriptor
+## type [ApiDescriptor](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/catalog.go#L30-L43>)
 
 ApiDescriptor 描述一个原生接口，以 \(HTTP 方法, 完整路径\) 为稳定键。
 
@@ -776,7 +776,7 @@ type ApiDescriptor struct {
 ```
 
 <a name="ApiCatalog"></a>
-### func ApiCatalog
+### func [ApiCatalog](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/catalog.go#L131>)
 
 ```go
 func ApiCatalog() []ApiDescriptor
@@ -785,7 +785,7 @@ func ApiCatalog() []ApiDescriptor
 ApiCatalog 返回接口目录的快照，按 \(路径, 方法\) 确定性排序。
 
 <a name="ApiKnowledgeDoc"></a>
-## type ApiKnowledgeDoc
+## type [ApiKnowledgeDoc](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/catalog.go#L46-L51>)
 
 ApiKnowledgeDoc 是接口知识文档的渲染结果，可直接映射为知识库生成文档。
 
@@ -799,7 +799,7 @@ type ApiKnowledgeDoc struct {
 ```
 
 <a name="ApiKnowledgeDocs"></a>
-### func ApiKnowledgeDocs
+### func [ApiKnowledgeDocs](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/catalog.go#L149>)
 
 ```go
 func ApiKnowledgeDocs() []ApiKnowledgeDoc
@@ -808,7 +808,7 @@ func ApiKnowledgeDocs() []ApiKnowledgeDoc
 ApiKnowledgeDocs 将目录中纳入 RAG 的接口渲染为知识文档（每条 \(method, path\) 一篇， 标题为稳定去重键）。未纳入 RAG 的接口不出现，从而在同步时被幂等删除。
 
 <a name="RenderApiDoc"></a>
-### func RenderApiDoc
+### func [RenderApiDoc](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/catalog.go#L163>)
 
 ```go
 func RenderApiDoc(descriptor ApiDescriptor) ApiKnowledgeDoc
@@ -817,7 +817,7 @@ func RenderApiDoc(descriptor ApiDescriptor) ApiKnowledgeDoc
 RenderApiDoc 把单个接口渲染为文档投影使用的标题与正文。 正文与 RAG 知识文档同源，保证人类参考页与模型上下文逐字一致。
 
 <a name="ApiMeta"></a>
-## type ApiMeta
+## type [ApiMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/meta.go#L113>)
 
 ApiMeta 描述一个接口路径下所有 HTTP 方法的元信息。 key 为 HTTP 方法名（如 GET、POST），value 为对应方法的接口元信息； 未指定结构体的部分在 JSON 序列化时输出为 null。
 
@@ -826,7 +826,7 @@ type ApiMeta map[string]*MethodMeta
 ```
 
 <a name="BatchFailureOut"></a>
-## type BatchFailureOut
+## type [BatchFailureOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/batch.go#L48-L53>)
 
 BatchFailureOut 批量操作中单条失败项的汇总信息。
 
@@ -840,7 +840,7 @@ type BatchFailureOut struct {
 ```
 
 <a name="BatchResultOut"></a>
-## type BatchResultOut
+## type [BatchResultOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/batch.go#L56-L61>)
 
 BatchResultOut 批量操作的结果汇总（尽力而为 \+ 失败汇总）。
 
@@ -854,7 +854,7 @@ type BatchResultOut struct {
 ```
 
 <a name="CapabilityMeta"></a>
-## type CapabilityMeta
+## type [CapabilityMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/capability.go#L17-L30>)
 
 CapabilityMeta 描述一个原生接口对外暴露的 AI 能力语义；随 RegisterApi / RegisterListApi 一并声明，方法、路径与用途由接口声明本身提供，此处只补充业务域、意图与可调用属性。
 
@@ -876,7 +876,7 @@ type CapabilityMeta struct {
 ```
 
 <a name="CapturerListGetFilterBy"></a>
-## type CapturerListGetFilterBy
+## type [CapturerListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L1230-L1240>)
 
 
 
@@ -895,7 +895,7 @@ type CapturerListGetFilterBy struct {
 ```
 
 <a name="CapturerListGetOrderBy"></a>
-## type CapturerListGetOrderBy
+## type [CapturerListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L1037-L1040>)
 
 
 
@@ -907,7 +907,7 @@ type CapturerListGetOrderBy struct {
 ```
 
 <a name="CapturerListGetSearchIn"></a>
-## type CapturerListGetSearchIn
+## type [CapturerListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L1242-L1248>)
 
 
 
@@ -922,7 +922,7 @@ type CapturerListGetSearchIn struct {
 ```
 
 <a name="CapturerListGetSearchIn.GetFields"></a>
-### func \(\*CapturerListGetSearchIn\) GetFields
+### func \(\*CapturerListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L1307>)
 
 ```go
 func (s *CapturerListGetSearchIn) GetFields() []string
@@ -931,7 +931,7 @@ func (s *CapturerListGetSearchIn) GetFields() []string
 
 
 <a name="CapturerListGetSearchIn.GetFilterBy"></a>
-### func \(\*CapturerListGetSearchIn\) GetFilterBy
+### func \(\*CapturerListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L1272>)
 
 ```go
 func (s *CapturerListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -940,7 +940,7 @@ func (s *CapturerListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
 
 
 <a name="CapturerListGetSearchIn.GetGreedy"></a>
-### func \(\*CapturerListGetSearchIn\) GetGreedy
+### func \(\*CapturerListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L1250>)
 
 ```go
 func (s *CapturerListGetSearchIn) GetGreedy() bool
@@ -949,7 +949,7 @@ func (s *CapturerListGetSearchIn) GetGreedy() bool
 
 
 <a name="CapturerListGetSearchIn.GetOptions"></a>
-### func \(\*CapturerListGetSearchIn\) GetOptions
+### func \(\*CapturerListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L1343>)
 
 ```go
 func (s *CapturerListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -958,7 +958,7 @@ func (s *CapturerListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="CapturerListGetSearchIn.GetOrderBy"></a>
-### func \(\*CapturerListGetSearchIn\) GetOrderBy
+### func \(\*CapturerListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L1254>)
 
 ```go
 func (s *CapturerListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -967,7 +967,7 @@ func (s *CapturerListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="CapturerListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*CapturerListGetSearchIn\) ResolveSelectColumns
+### func \(\*CapturerListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L1311>)
 
 ```go
 func (s *CapturerListGetSearchIn) ResolveSelectColumns() []string
@@ -976,7 +976,7 @@ func (s *CapturerListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="DatasourceListGetFilterBy"></a>
-## type DatasourceListGetFilterBy
+## type [DatasourceListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L1729-L1739>)
 
 
 
@@ -995,7 +995,7 @@ type DatasourceListGetFilterBy struct {
 ```
 
 <a name="DatasourceListGetOrderBy"></a>
-## type DatasourceListGetOrderBy
+## type [DatasourceListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L1536-L1539>)
 
 
 
@@ -1007,7 +1007,7 @@ type DatasourceListGetOrderBy struct {
 ```
 
 <a name="DatasourceListGetSearchIn"></a>
-## type DatasourceListGetSearchIn
+## type [DatasourceListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L1741-L1747>)
 
 
 
@@ -1022,7 +1022,7 @@ type DatasourceListGetSearchIn struct {
 ```
 
 <a name="DatasourceListGetSearchIn.GetFields"></a>
-### func \(\*DatasourceListGetSearchIn\) GetFields
+### func \(\*DatasourceListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L1806>)
 
 ```go
 func (s *DatasourceListGetSearchIn) GetFields() []string
@@ -1031,7 +1031,7 @@ func (s *DatasourceListGetSearchIn) GetFields() []string
 
 
 <a name="DatasourceListGetSearchIn.GetFilterBy"></a>
-### func \(\*DatasourceListGetSearchIn\) GetFilterBy
+### func \(\*DatasourceListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L1771>)
 
 ```go
 func (s *DatasourceListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -1040,7 +1040,7 @@ func (s *DatasourceListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
 
 
 <a name="DatasourceListGetSearchIn.GetGreedy"></a>
-### func \(\*DatasourceListGetSearchIn\) GetGreedy
+### func \(\*DatasourceListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L1749>)
 
 ```go
 func (s *DatasourceListGetSearchIn) GetGreedy() bool
@@ -1049,7 +1049,7 @@ func (s *DatasourceListGetSearchIn) GetGreedy() bool
 
 
 <a name="DatasourceListGetSearchIn.GetOptions"></a>
-### func \(\*DatasourceListGetSearchIn\) GetOptions
+### func \(\*DatasourceListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L1846>)
 
 ```go
 func (s *DatasourceListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -1058,7 +1058,7 @@ func (s *DatasourceListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="DatasourceListGetSearchIn.GetOrderBy"></a>
-### func \(\*DatasourceListGetSearchIn\) GetOrderBy
+### func \(\*DatasourceListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L1753>)
 
 ```go
 func (s *DatasourceListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -1067,7 +1067,7 @@ func (s *DatasourceListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="DatasourceListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*DatasourceListGetSearchIn\) ResolveSelectColumns
+### func \(\*DatasourceListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L1810>)
 
 ```go
 func (s *DatasourceListGetSearchIn) ResolveSelectColumns() []string
@@ -1076,7 +1076,7 @@ func (s *DatasourceListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="EnumEntryOut"></a>
-## type EnumEntryOut
+## type [EnumEntryOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/enum.go#L23-L30>)
 
 EnumEntryOut 枚举条目出参：key（i18n 定位）、value（数据库存储）、label（按请求语言翻译）。
 
@@ -1092,7 +1092,7 @@ type EnumEntryOut struct {
 ```
 
 <a name="EnumGetIn"></a>
-## type EnumGetIn
+## type [EnumGetIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/enum.go#L41-L46>)
 
 EnumGetIn 枚举类查询入参：type 为枚举类名（必填），lang 为请求语言（缺省回退请求头语言）。
 
@@ -1106,7 +1106,7 @@ type EnumGetIn struct {
 ```
 
 <a name="EnumListIn"></a>
-## type EnumListIn
+## type [EnumListIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/enum.go#L74-L77>)
 
 EnumListIn 枚举全量类查询入参：lang 为请求语言（缺省回退请求头语言）。
 
@@ -1118,7 +1118,7 @@ type EnumListIn struct {
 ```
 
 <a name="EnumListOut"></a>
-## type EnumListOut
+## type [EnumListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/enum.go#L80-L83>)
 
 EnumListOut 枚举全量类出参。
 
@@ -1130,7 +1130,7 @@ type EnumListOut struct {
 ```
 
 <a name="EnumTypeOut"></a>
-## type EnumTypeOut
+## type [EnumTypeOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/enum.go#L33-L38>)
 
 EnumTypeOut 单个枚举类出参：类名 \+ 条目列表。
 
@@ -1144,7 +1144,7 @@ type EnumTypeOut struct {
 ```
 
 <a name="FeatureOut"></a>
-## type FeatureOut
+## type [FeatureOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/features.go#L13-L21>)
 
 FeatureOut 功能开关输出项：键 \+ 启停状态 \+ 不可用原因。
 
@@ -1161,7 +1161,7 @@ type FeatureOut struct {
 ```
 
 <a name="FeaturesListGetOut"></a>
-## type FeaturesListGetOut
+## type [FeaturesListGetOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/features.go#L24>)
 
 FeaturesListGetOut 功能开关列表输出：依装配顺序返回全部功能开关。
 
@@ -1170,7 +1170,7 @@ type FeaturesListGetOut []FeatureOut
 ```
 
 <a name="FieldMeta"></a>
-## type FieldMeta
+## type [FieldMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/meta.go#L63-L87>)
 
 FieldMeta 描述接口结构体中单个字段的元信息。 通过反射从结构体字段标签中提取，供前端动态渲染表单与校验规则。 字段展示文案（label）不由后端提供：前端依据字段名与业务上下文自行拼接 i18n key 翻译。
 
@@ -1199,7 +1199,7 @@ type FieldMeta struct {
 ```
 
 <a name="GetStructFields"></a>
-### func GetStructFields
+### func [GetStructFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/meta.go#L375>)
 
 ```go
 func GetStructFields(t reflect.Type) []*FieldMeta
@@ -1217,7 +1217,7 @@ getStructFields 通过反射提取结构体的字段元信息列表（OPTIONS �
 未指定结构体类型或类型非结构体时返回 nil。
 
 <a name="FlexList"></a>
-## type FlexList
+## type [FlexList](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/batch.go#L27>)
 
 FlexList 兼容标量与数组两种 JSON 形式的标识符列表。 标量形式（如 5 / "abc"）等价于单元素数组（\[5\] / \["abc"\]）， 用于动作接口（delete/enable/disable/activate/deactivate）的标识符入参： 单条可传标量或单元素数组，多条传数组。 元素为 serializer.HexUUID（\[16\]byte 底层）时标量形式为 JSON 字符串， 数组形式为字符串数组，由元素自身的 UnmarshalJSON 处理。
 
@@ -1226,7 +1226,7 @@ type FlexList[T any] []T
 ```
 
 <a name="FlexList[T].UnmarshalJSON"></a>
-### func \(\*FlexList\[T\]\) UnmarshalJSON
+### func \(\*FlexList\[T\]\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/batch.go#L31>)
 
 ```go
 func (l *FlexList[T]) UnmarshalJSON(data []byte) error
@@ -1235,7 +1235,7 @@ func (l *FlexList[T]) UnmarshalJSON(data []byte) error
 UnmarshalJSON 实现 json.Unmarshaler 接口。 输入为数组时直接按 \[\]T 解析；输入为标量时包装为单元素数组后解析。
 
 <a name="GroupListGetFilterBy"></a>
-## type GroupListGetFilterBy
+## type [GroupListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L2166-L2174>)
 
 
 
@@ -1252,7 +1252,7 @@ type GroupListGetFilterBy struct {
 ```
 
 <a name="GroupListGetOrderBy"></a>
-## type GroupListGetOrderBy
+## type [GroupListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L2015-L2018>)
 
 
 
@@ -1264,7 +1264,7 @@ type GroupListGetOrderBy struct {
 ```
 
 <a name="GroupListGetSearchIn"></a>
-## type GroupListGetSearchIn
+## type [GroupListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L2176-L2182>)
 
 
 
@@ -1279,7 +1279,7 @@ type GroupListGetSearchIn struct {
 ```
 
 <a name="GroupListGetSearchIn.GetFields"></a>
-### func \(\*GroupListGetSearchIn\) GetFields
+### func \(\*GroupListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L2235>)
 
 ```go
 func (s *GroupListGetSearchIn) GetFields() []string
@@ -1288,7 +1288,7 @@ func (s *GroupListGetSearchIn) GetFields() []string
 
 
 <a name="GroupListGetSearchIn.GetFilterBy"></a>
-### func \(\*GroupListGetSearchIn\) GetFilterBy
+### func \(\*GroupListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L2206>)
 
 ```go
 func (s *GroupListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -1297,7 +1297,7 @@ func (s *GroupListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
 
 
 <a name="GroupListGetSearchIn.GetGreedy"></a>
-### func \(\*GroupListGetSearchIn\) GetGreedy
+### func \(\*GroupListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L2184>)
 
 ```go
 func (s *GroupListGetSearchIn) GetGreedy() bool
@@ -1306,7 +1306,7 @@ func (s *GroupListGetSearchIn) GetGreedy() bool
 
 
 <a name="GroupListGetSearchIn.GetOptions"></a>
-### func \(\*GroupListGetSearchIn\) GetOptions
+### func \(\*GroupListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L2269>)
 
 ```go
 func (s *GroupListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -1315,7 +1315,7 @@ func (s *GroupListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="GroupListGetSearchIn.GetOrderBy"></a>
-### func \(\*GroupListGetSearchIn\) GetOrderBy
+### func \(\*GroupListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L2188>)
 
 ```go
 func (s *GroupListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -1324,7 +1324,7 @@ func (s *GroupListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="GroupListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*GroupListGetSearchIn\) ResolveSelectColumns
+### func \(\*GroupListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L2239>)
 
 ```go
 func (s *GroupListGetSearchIn) ResolveSelectColumns() []string
@@ -1333,7 +1333,7 @@ func (s *GroupListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="HeaderOption"></a>
-## type HeaderOption
+## type [HeaderOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/base.go#L21-L24>)
 
 HeaderOption 描述列表视图中单个列的元数据信息。 前端可根据此结构动态渲染表格列，包括列名和对应的数据类型。
 
@@ -1345,7 +1345,7 @@ type HeaderOption struct {
 ```
 
 <a name="HttpTransportListGetFilterBy"></a>
-## type HttpTransportListGetFilterBy
+## type [HttpTransportListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L2722-L2738>)
 
 
 
@@ -1370,7 +1370,7 @@ type HttpTransportListGetFilterBy struct {
 ```
 
 <a name="HttpTransportListGetOrderBy"></a>
-## type HttpTransportListGetOrderBy
+## type [HttpTransportListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L2403-L2406>)
 
 
 
@@ -1382,7 +1382,7 @@ type HttpTransportListGetOrderBy struct {
 ```
 
 <a name="HttpTransportListGetSearchIn"></a>
-## type HttpTransportListGetSearchIn
+## type [HttpTransportListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L2740-L2746>)
 
 
 
@@ -1397,7 +1397,7 @@ type HttpTransportListGetSearchIn struct {
 ```
 
 <a name="HttpTransportListGetSearchIn.GetFields"></a>
-### func \(\*HttpTransportListGetSearchIn\) GetFields
+### func \(\*HttpTransportListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L2811>)
 
 ```go
 func (s *HttpTransportListGetSearchIn) GetFields() []string
@@ -1406,7 +1406,7 @@ func (s *HttpTransportListGetSearchIn) GetFields() []string
 
 
 <a name="HttpTransportListGetSearchIn.GetFilterBy"></a>
-### func \(\*HttpTransportListGetSearchIn\) GetFilterBy
+### func \(\*HttpTransportListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L2767>)
 
 ```go
 func (s *HttpTransportListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -1415,7 +1415,7 @@ func (s *HttpTransportListGetSearchIn) GetFilterBy() map[string]utils.FilterByIt
 
 
 <a name="HttpTransportListGetSearchIn.GetGreedy"></a>
-### func \(\*HttpTransportListGetSearchIn\) GetGreedy
+### func \(\*HttpTransportListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L2748>)
 
 ```go
 func (s *HttpTransportListGetSearchIn) GetGreedy() bool
@@ -1424,7 +1424,7 @@ func (s *HttpTransportListGetSearchIn) GetGreedy() bool
 
 
 <a name="HttpTransportListGetSearchIn.GetOptions"></a>
-### func \(\*HttpTransportListGetSearchIn\) GetOptions
+### func \(\*HttpTransportListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L3221>)
 
 ```go
 func (s *HttpTransportListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -1433,7 +1433,7 @@ func (s *HttpTransportListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="HttpTransportListGetSearchIn.GetOrderBy"></a>
-### func \(\*HttpTransportListGetSearchIn\) GetOrderBy
+### func \(\*HttpTransportListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L2752>)
 
 ```go
 func (s *HttpTransportListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -1442,7 +1442,7 @@ func (s *HttpTransportListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="HttpTransportListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*HttpTransportListGetSearchIn\) ResolveSelectColumns
+### func \(\*HttpTransportListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L2815>)
 
 ```go
 func (s *HttpTransportListGetSearchIn) ResolveSelectColumns() []string
@@ -1451,7 +1451,7 @@ func (s *HttpTransportListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="Ipv4TcpListGetFilterBy"></a>
-## type Ipv4TcpListGetFilterBy
+## type [Ipv4TcpListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L3797-L3809>)
 
 
 
@@ -1472,7 +1472,7 @@ type Ipv4TcpListGetFilterBy struct {
 ```
 
 <a name="Ipv4TcpListGetOrderBy"></a>
-## type Ipv4TcpListGetOrderBy
+## type [Ipv4TcpListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L3562-L3565>)
 
 
 
@@ -1484,7 +1484,7 @@ type Ipv4TcpListGetOrderBy struct {
 ```
 
 <a name="Ipv4TcpListGetSearchIn"></a>
-## type Ipv4TcpListGetSearchIn
+## type [Ipv4TcpListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L3811-L3817>)
 
 
 
@@ -1499,7 +1499,7 @@ type Ipv4TcpListGetSearchIn struct {
 ```
 
 <a name="Ipv4TcpListGetSearchIn.GetFields"></a>
-### func \(\*Ipv4TcpListGetSearchIn\) GetFields
+### func \(\*Ipv4TcpListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L3870>)
 
 ```go
 func (s *Ipv4TcpListGetSearchIn) GetFields() []string
@@ -1508,7 +1508,7 @@ func (s *Ipv4TcpListGetSearchIn) GetFields() []string
 
 
 <a name="Ipv4TcpListGetSearchIn.GetFilterBy"></a>
-### func \(\*Ipv4TcpListGetSearchIn\) GetFilterBy
+### func \(\*Ipv4TcpListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L3838>)
 
 ```go
 func (s *Ipv4TcpListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -1517,7 +1517,7 @@ func (s *Ipv4TcpListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
 
 
 <a name="Ipv4TcpListGetSearchIn.GetGreedy"></a>
-### func \(\*Ipv4TcpListGetSearchIn\) GetGreedy
+### func \(\*Ipv4TcpListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L3819>)
 
 ```go
 func (s *Ipv4TcpListGetSearchIn) GetGreedy() bool
@@ -1526,7 +1526,7 @@ func (s *Ipv4TcpListGetSearchIn) GetGreedy() bool
 
 
 <a name="Ipv4TcpListGetSearchIn.GetOptions"></a>
-### func \(\*Ipv4TcpListGetSearchIn\) GetOptions
+### func \(\*Ipv4TcpListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L3998>)
 
 ```go
 func (s *Ipv4TcpListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -1535,7 +1535,7 @@ func (s *Ipv4TcpListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="Ipv4TcpListGetSearchIn.GetOrderBy"></a>
-### func \(\*Ipv4TcpListGetSearchIn\) GetOrderBy
+### func \(\*Ipv4TcpListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L3823>)
 
 ```go
 func (s *Ipv4TcpListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -1544,7 +1544,7 @@ func (s *Ipv4TcpListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="Ipv4TcpListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*Ipv4TcpListGetSearchIn\) ResolveSelectColumns
+### func \(\*Ipv4TcpListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L3874>)
 
 ```go
 func (s *Ipv4TcpListGetSearchIn) ResolveSelectColumns() []string
@@ -1553,7 +1553,7 @@ func (s *Ipv4TcpListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="Ipv6TcpListGetFilterBy"></a>
-## type Ipv6TcpListGetFilterBy
+## type [Ipv6TcpListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L4405-L4417>)
 
 
 
@@ -1574,7 +1574,7 @@ type Ipv6TcpListGetFilterBy struct {
 ```
 
 <a name="Ipv6TcpListGetOrderBy"></a>
-## type Ipv6TcpListGetOrderBy
+## type [Ipv6TcpListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L4170-L4173>)
 
 
 
@@ -1586,7 +1586,7 @@ type Ipv6TcpListGetOrderBy struct {
 ```
 
 <a name="Ipv6TcpListGetSearchIn"></a>
-## type Ipv6TcpListGetSearchIn
+## type [Ipv6TcpListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L4419-L4425>)
 
 
 
@@ -1601,7 +1601,7 @@ type Ipv6TcpListGetSearchIn struct {
 ```
 
 <a name="Ipv6TcpListGetSearchIn.GetFields"></a>
-### func \(\*Ipv6TcpListGetSearchIn\) GetFields
+### func \(\*Ipv6TcpListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L4478>)
 
 ```go
 func (s *Ipv6TcpListGetSearchIn) GetFields() []string
@@ -1610,7 +1610,7 @@ func (s *Ipv6TcpListGetSearchIn) GetFields() []string
 
 
 <a name="Ipv6TcpListGetSearchIn.GetFilterBy"></a>
-### func \(\*Ipv6TcpListGetSearchIn\) GetFilterBy
+### func \(\*Ipv6TcpListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L4446>)
 
 ```go
 func (s *Ipv6TcpListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -1619,7 +1619,7 @@ func (s *Ipv6TcpListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
 
 
 <a name="Ipv6TcpListGetSearchIn.GetGreedy"></a>
-### func \(\*Ipv6TcpListGetSearchIn\) GetGreedy
+### func \(\*Ipv6TcpListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L4427>)
 
 ```go
 func (s *Ipv6TcpListGetSearchIn) GetGreedy() bool
@@ -1628,7 +1628,7 @@ func (s *Ipv6TcpListGetSearchIn) GetGreedy() bool
 
 
 <a name="Ipv6TcpListGetSearchIn.GetOptions"></a>
-### func \(\*Ipv6TcpListGetSearchIn\) GetOptions
+### func \(\*Ipv6TcpListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L4596>)
 
 ```go
 func (s *Ipv6TcpListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -1637,7 +1637,7 @@ func (s *Ipv6TcpListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="Ipv6TcpListGetSearchIn.GetOrderBy"></a>
-### func \(\*Ipv6TcpListGetSearchIn\) GetOrderBy
+### func \(\*Ipv6TcpListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L4431>)
 
 ```go
 func (s *Ipv6TcpListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -1646,7 +1646,7 @@ func (s *Ipv6TcpListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="Ipv6TcpListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*Ipv6TcpListGetSearchIn\) ResolveSelectColumns
+### func \(\*Ipv6TcpListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L4482>)
 
 ```go
 func (s *Ipv6TcpListGetSearchIn) ResolveSelectColumns() []string
@@ -1655,7 +1655,7 @@ func (s *Ipv6TcpListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="Kind"></a>
-## type Kind
+## type [Kind](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/meta.go#L31>)
 
 Kind 描述字段的语义类型，供前端选择相应的表单控件。
 
@@ -1695,7 +1695,7 @@ const (
 ```
 
 <a name="KnowledgeDocumentListGetFilterBy"></a>
-## type KnowledgeDocumentListGetFilterBy
+## type [KnowledgeDocumentListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L4974-L4984>)
 
 
 
@@ -1714,7 +1714,7 @@ type KnowledgeDocumentListGetFilterBy struct {
 ```
 
 <a name="KnowledgeDocumentListGetOrderBy"></a>
-## type KnowledgeDocumentListGetOrderBy
+## type [KnowledgeDocumentListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L4781-L4784>)
 
 
 
@@ -1726,7 +1726,7 @@ type KnowledgeDocumentListGetOrderBy struct {
 ```
 
 <a name="KnowledgeDocumentListGetSearchIn"></a>
-## type KnowledgeDocumentListGetSearchIn
+## type [KnowledgeDocumentListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L4986-L4992>)
 
 
 
@@ -1741,7 +1741,7 @@ type KnowledgeDocumentListGetSearchIn struct {
 ```
 
 <a name="KnowledgeDocumentListGetSearchIn.GetFields"></a>
-### func \(\*KnowledgeDocumentListGetSearchIn\) GetFields
+### func \(\*KnowledgeDocumentListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L5051>)
 
 ```go
 func (s *KnowledgeDocumentListGetSearchIn) GetFields() []string
@@ -1750,7 +1750,7 @@ func (s *KnowledgeDocumentListGetSearchIn) GetFields() []string
 
 
 <a name="KnowledgeDocumentListGetSearchIn.GetFilterBy"></a>
-### func \(\*KnowledgeDocumentListGetSearchIn\) GetFilterBy
+### func \(\*KnowledgeDocumentListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L5016>)
 
 ```go
 func (s *KnowledgeDocumentListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -1759,7 +1759,7 @@ func (s *KnowledgeDocumentListGetSearchIn) GetFilterBy() map[string]utils.Filter
 
 
 <a name="KnowledgeDocumentListGetSearchIn.GetGreedy"></a>
-### func \(\*KnowledgeDocumentListGetSearchIn\) GetGreedy
+### func \(\*KnowledgeDocumentListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L4994>)
 
 ```go
 func (s *KnowledgeDocumentListGetSearchIn) GetGreedy() bool
@@ -1768,7 +1768,7 @@ func (s *KnowledgeDocumentListGetSearchIn) GetGreedy() bool
 
 
 <a name="KnowledgeDocumentListGetSearchIn.GetOptions"></a>
-### func \(\*KnowledgeDocumentListGetSearchIn\) GetOptions
+### func \(\*KnowledgeDocumentListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L5097>)
 
 ```go
 func (s *KnowledgeDocumentListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -1777,7 +1777,7 @@ func (s *KnowledgeDocumentListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="KnowledgeDocumentListGetSearchIn.GetOrderBy"></a>
-### func \(\*KnowledgeDocumentListGetSearchIn\) GetOrderBy
+### func \(\*KnowledgeDocumentListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L4998>)
 
 ```go
 func (s *KnowledgeDocumentListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -1786,7 +1786,7 @@ func (s *KnowledgeDocumentListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="KnowledgeDocumentListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*KnowledgeDocumentListGetSearchIn\) ResolveSelectColumns
+### func \(\*KnowledgeDocumentListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L5055>)
 
 ```go
 func (s *KnowledgeDocumentListGetSearchIn) ResolveSelectColumns() []string
@@ -1795,7 +1795,7 @@ func (s *KnowledgeDocumentListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="ListMeta"></a>
-## type ListMeta
+## type [ListMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/meta.go#L247-L251>)
 
 ListMeta 列表接口的自省信息响应结构。 在搜索选项（可排序/可过滤字段）与表格列元数据的基础上， 扩展各 HTTP 方法的结构体元信息，前端通过一次 OPTIONS 请求即可同时 获取搜索控件与表单/详情渲染所需的数据。
 
@@ -1808,7 +1808,7 @@ type ListMeta struct {
 ```
 
 <a name="LlmModelListGetFilterBy"></a>
-## type LlmModelListGetFilterBy
+## type [LlmModelListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L5462-L5472>)
 
 
 
@@ -1827,7 +1827,7 @@ type LlmModelListGetFilterBy struct {
 ```
 
 <a name="LlmModelListGetOrderBy"></a>
-## type LlmModelListGetOrderBy
+## type [LlmModelListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L5269-L5272>)
 
 
 
@@ -1839,7 +1839,7 @@ type LlmModelListGetOrderBy struct {
 ```
 
 <a name="LlmModelListGetSearchIn"></a>
-## type LlmModelListGetSearchIn
+## type [LlmModelListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L5474-L5480>)
 
 
 
@@ -1854,7 +1854,7 @@ type LlmModelListGetSearchIn struct {
 ```
 
 <a name="LlmModelListGetSearchIn.GetFields"></a>
-### func \(\*LlmModelListGetSearchIn\) GetFields
+### func \(\*LlmModelListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L5539>)
 
 ```go
 func (s *LlmModelListGetSearchIn) GetFields() []string
@@ -1863,7 +1863,7 @@ func (s *LlmModelListGetSearchIn) GetFields() []string
 
 
 <a name="LlmModelListGetSearchIn.GetFilterBy"></a>
-### func \(\*LlmModelListGetSearchIn\) GetFilterBy
+### func \(\*LlmModelListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L5504>)
 
 ```go
 func (s *LlmModelListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -1872,7 +1872,7 @@ func (s *LlmModelListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
 
 
 <a name="LlmModelListGetSearchIn.GetGreedy"></a>
-### func \(\*LlmModelListGetSearchIn\) GetGreedy
+### func \(\*LlmModelListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L5482>)
 
 ```go
 func (s *LlmModelListGetSearchIn) GetGreedy() bool
@@ -1881,7 +1881,7 @@ func (s *LlmModelListGetSearchIn) GetGreedy() bool
 
 
 <a name="LlmModelListGetSearchIn.GetOptions"></a>
-### func \(\*LlmModelListGetSearchIn\) GetOptions
+### func \(\*LlmModelListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L5603>)
 
 ```go
 func (s *LlmModelListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -1890,7 +1890,7 @@ func (s *LlmModelListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="LlmModelListGetSearchIn.GetOrderBy"></a>
-### func \(\*LlmModelListGetSearchIn\) GetOrderBy
+### func \(\*LlmModelListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L5486>)
 
 ```go
 func (s *LlmModelListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -1899,7 +1899,7 @@ func (s *LlmModelListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="LlmModelListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*LlmModelListGetSearchIn\) ResolveSelectColumns
+### func \(\*LlmModelListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L5543>)
 
 ```go
 func (s *LlmModelListGetSearchIn) ResolveSelectColumns() []string
@@ -1908,7 +1908,7 @@ func (s *LlmModelListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="LlmToolListGetFilterBy"></a>
-## type LlmToolListGetFilterBy
+## type [LlmToolListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L5977-L5987>)
 
 
 
@@ -1927,7 +1927,7 @@ type LlmToolListGetFilterBy struct {
 ```
 
 <a name="LlmToolListGetOrderBy"></a>
-## type LlmToolListGetOrderBy
+## type [LlmToolListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L5784-L5787>)
 
 
 
@@ -1939,7 +1939,7 @@ type LlmToolListGetOrderBy struct {
 ```
 
 <a name="LlmToolListGetSearchIn"></a>
-## type LlmToolListGetSearchIn
+## type [LlmToolListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L5989-L5995>)
 
 
 
@@ -1954,7 +1954,7 @@ type LlmToolListGetSearchIn struct {
 ```
 
 <a name="LlmToolListGetSearchIn.GetFields"></a>
-### func \(\*LlmToolListGetSearchIn\) GetFields
+### func \(\*LlmToolListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6054>)
 
 ```go
 func (s *LlmToolListGetSearchIn) GetFields() []string
@@ -1963,7 +1963,7 @@ func (s *LlmToolListGetSearchIn) GetFields() []string
 
 
 <a name="LlmToolListGetSearchIn.GetFilterBy"></a>
-### func \(\*LlmToolListGetSearchIn\) GetFilterBy
+### func \(\*LlmToolListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6019>)
 
 ```go
 func (s *LlmToolListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -1972,7 +1972,7 @@ func (s *LlmToolListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
 
 
 <a name="LlmToolListGetSearchIn.GetGreedy"></a>
-### func \(\*LlmToolListGetSearchIn\) GetGreedy
+### func \(\*LlmToolListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L5997>)
 
 ```go
 func (s *LlmToolListGetSearchIn) GetGreedy() bool
@@ -1981,7 +1981,7 @@ func (s *LlmToolListGetSearchIn) GetGreedy() bool
 
 
 <a name="LlmToolListGetSearchIn.GetOptions"></a>
-### func \(\*LlmToolListGetSearchIn\) GetOptions
+### func \(\*LlmToolListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6096>)
 
 ```go
 func (s *LlmToolListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -1990,7 +1990,7 @@ func (s *LlmToolListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="LlmToolListGetSearchIn.GetOrderBy"></a>
-### func \(\*LlmToolListGetSearchIn\) GetOrderBy
+### func \(\*LlmToolListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6001>)
 
 ```go
 func (s *LlmToolListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -1999,7 +1999,7 @@ func (s *LlmToolListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="LlmToolListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*LlmToolListGetSearchIn\) ResolveSelectColumns
+### func \(\*LlmToolListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6058>)
 
 ```go
 func (s *LlmToolListGetSearchIn) ResolveSelectColumns() []string
@@ -2008,7 +2008,7 @@ func (s *LlmToolListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="McpServerListGetFilterBy"></a>
-## type McpServerListGetFilterBy
+## type [McpServerListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6459-L6469>)
 
 
 
@@ -2027,7 +2027,7 @@ type McpServerListGetFilterBy struct {
 ```
 
 <a name="McpServerListGetOrderBy"></a>
-## type McpServerListGetOrderBy
+## type [McpServerListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6266-L6269>)
 
 
 
@@ -2039,7 +2039,7 @@ type McpServerListGetOrderBy struct {
 ```
 
 <a name="McpServerListGetSearchIn"></a>
-## type McpServerListGetSearchIn
+## type [McpServerListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6471-L6477>)
 
 
 
@@ -2054,7 +2054,7 @@ type McpServerListGetSearchIn struct {
 ```
 
 <a name="McpServerListGetSearchIn.GetFields"></a>
-### func \(\*McpServerListGetSearchIn\) GetFields
+### func \(\*McpServerListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6536>)
 
 ```go
 func (s *McpServerListGetSearchIn) GetFields() []string
@@ -2063,7 +2063,7 @@ func (s *McpServerListGetSearchIn) GetFields() []string
 
 
 <a name="McpServerListGetSearchIn.GetFilterBy"></a>
-### func \(\*McpServerListGetSearchIn\) GetFilterBy
+### func \(\*McpServerListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6501>)
 
 ```go
 func (s *McpServerListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -2072,7 +2072,7 @@ func (s *McpServerListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
 
 
 <a name="McpServerListGetSearchIn.GetGreedy"></a>
-### func \(\*McpServerListGetSearchIn\) GetGreedy
+### func \(\*McpServerListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6479>)
 
 ```go
 func (s *McpServerListGetSearchIn) GetGreedy() bool
@@ -2081,7 +2081,7 @@ func (s *McpServerListGetSearchIn) GetGreedy() bool
 
 
 <a name="McpServerListGetSearchIn.GetOptions"></a>
-### func \(\*McpServerListGetSearchIn\) GetOptions
+### func \(\*McpServerListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6580>)
 
 ```go
 func (s *McpServerListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -2090,7 +2090,7 @@ func (s *McpServerListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="McpServerListGetSearchIn.GetOrderBy"></a>
-### func \(\*McpServerListGetSearchIn\) GetOrderBy
+### func \(\*McpServerListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6483>)
 
 ```go
 func (s *McpServerListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -2099,7 +2099,7 @@ func (s *McpServerListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="McpServerListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*McpServerListGetSearchIn\) ResolveSelectColumns
+### func \(\*McpServerListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6540>)
 
 ```go
 func (s *McpServerListGetSearchIn) ResolveSelectColumns() []string
@@ -2108,7 +2108,7 @@ func (s *McpServerListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="MetadataOption"></a>
-## type MetadataOption
+## type [MetadataOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/meta.go#L133>)
 
 MetadataOption 元信息接口配置选项，用于指定接口各 HTTP 方法下的结构体类型。
 
@@ -2117,7 +2117,7 @@ type MetadataOption func(*metadataOptions)
 ```
 
 <a name="WithBodyInput"></a>
-### func WithBodyInput
+### func [WithBodyInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/meta.go#L175>)
 
 ```go
 func WithBodyInput[T any]() MetadataOption
@@ -2126,7 +2126,7 @@ func WithBodyInput[T any]() MetadataOption
 WithBodyInput 设置接口的请求体输入结构体类型。 支持传入值类型或指针类型，如 WithBodyInput\[UserGroupIn\]\(\)。
 
 <a name="WithBodyOutput"></a>
-### func WithBodyOutput
+### func [WithBodyOutput](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/meta.go#L183>)
 
 ```go
 func WithBodyOutput[T any]() MetadataOption
@@ -2135,7 +2135,7 @@ func WithBodyOutput[T any]() MetadataOption
 WithBodyOutput 设置接口的响应体输出结构体类型。 支持传入值类型或指针类型，如 WithBodyOutput\[UserDetailOut\]\(\)。
 
 <a name="WithCapability"></a>
-### func WithCapability
+### func [WithCapability](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/capability.go#L56>)
 
 ```go
 func WithCapability(meta CapabilityMeta) MetadataOption
@@ -2144,7 +2144,7 @@ func WithCapability(meta CapabilityMeta) MetadataOption
 WithCapability 声明接口的 AI 能力元数据；未声明的接口不进入能力地图与 api\_invoke 白名单。
 
 <a name="WithHeaderInput"></a>
-### func WithHeaderInput
+### func [WithHeaderInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/meta.go#L159>)
 
 ```go
 func WithHeaderInput[T any]() MetadataOption
@@ -2153,7 +2153,7 @@ func WithHeaderInput[T any]() MetadataOption
 WithHeaderInput 设置接口的请求头输入结构体类型。 支持传入值类型或指针类型，如 WithHeaderInput\[UserGroupIn\]\(\)。
 
 <a name="WithHeaderOutput"></a>
-### func WithHeaderOutput
+### func [WithHeaderOutput](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/meta.go#L167>)
 
 ```go
 func WithHeaderOutput[T any]() MetadataOption
@@ -2162,7 +2162,7 @@ func WithHeaderOutput[T any]() MetadataOption
 WithHeaderOutput 设置接口的响应头输出结构体类型。 支持传入值类型或指针类型。
 
 <a name="WithMethod"></a>
-### func WithMethod
+### func [WithMethod](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/meta.go#L144>)
 
 ```go
 func WithMethod(method string, opts ...MetadataOption) MetadataOption
@@ -2179,7 +2179,7 @@ adminGroup.OPTIONS("/user/:unionID/get", StructMetaGinHandler(
 ```
 
 <a name="WithRagEnabled"></a>
-### func WithRagEnabled
+### func [WithRagEnabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/meta.go#L192>)
 
 ```go
 func WithRagEnabled(enabled bool) MetadataOption
@@ -2188,7 +2188,7 @@ func WithRagEnabled(enabled bool) MetadataOption
 WithRagEnabled 设置该接口是否纳入 RAG 接口知识目录，缺省纳入（true）。 传 false 使接口退出同步文档集，下次同步时其 native\_api 分区条目被幂等删除； 该选项仅对经 RegisterApi / RegisterListApi 声明的接口生效。
 
 <a name="MethodMeta"></a>
-## type MethodMeta
+## type [MethodMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/meta.go#L103-L108>)
 
 MethodMeta 描述某个 HTTP 方法对应的接口元信息。 同一路径下不同方法（如 GET、POST）可能接收不同的入参并返回不同的出参。
 
@@ -2202,7 +2202,7 @@ type MethodMeta struct {
 ```
 
 <a name="NamespaceListGetFilterBy"></a>
-## type NamespaceListGetFilterBy
+## type [NamespaceListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6902-L6910>)
 
 
 
@@ -2219,7 +2219,7 @@ type NamespaceListGetFilterBy struct {
 ```
 
 <a name="NamespaceListGetOrderBy"></a>
-## type NamespaceListGetOrderBy
+## type [NamespaceListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6751-L6754>)
 
 
 
@@ -2231,7 +2231,7 @@ type NamespaceListGetOrderBy struct {
 ```
 
 <a name="NamespaceListGetSearchIn"></a>
-## type NamespaceListGetSearchIn
+## type [NamespaceListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6912-L6918>)
 
 
 
@@ -2246,7 +2246,7 @@ type NamespaceListGetSearchIn struct {
 ```
 
 <a name="NamespaceListGetSearchIn.GetFields"></a>
-### func \(\*NamespaceListGetSearchIn\) GetFields
+### func \(\*NamespaceListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6971>)
 
 ```go
 func (s *NamespaceListGetSearchIn) GetFields() []string
@@ -2255,7 +2255,7 @@ func (s *NamespaceListGetSearchIn) GetFields() []string
 
 
 <a name="NamespaceListGetSearchIn.GetFilterBy"></a>
-### func \(\*NamespaceListGetSearchIn\) GetFilterBy
+### func \(\*NamespaceListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6942>)
 
 ```go
 func (s *NamespaceListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -2264,7 +2264,7 @@ func (s *NamespaceListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
 
 
 <a name="NamespaceListGetSearchIn.GetGreedy"></a>
-### func \(\*NamespaceListGetSearchIn\) GetGreedy
+### func \(\*NamespaceListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6920>)
 
 ```go
 func (s *NamespaceListGetSearchIn) GetGreedy() bool
@@ -2273,7 +2273,7 @@ func (s *NamespaceListGetSearchIn) GetGreedy() bool
 
 
 <a name="NamespaceListGetSearchIn.GetOptions"></a>
-### func \(\*NamespaceListGetSearchIn\) GetOptions
+### func \(\*NamespaceListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7005>)
 
 ```go
 func (s *NamespaceListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -2282,7 +2282,7 @@ func (s *NamespaceListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="NamespaceListGetSearchIn.GetOrderBy"></a>
-### func \(\*NamespaceListGetSearchIn\) GetOrderBy
+### func \(\*NamespaceListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6924>)
 
 ```go
 func (s *NamespaceListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -2291,7 +2291,7 @@ func (s *NamespaceListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="NamespaceListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*NamespaceListGetSearchIn\) ResolveSelectColumns
+### func \(\*NamespaceListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L6975>)
 
 ```go
 func (s *NamespaceListGetSearchIn) ResolveSelectColumns() []string
@@ -2300,7 +2300,7 @@ func (s *NamespaceListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="NetworkStackListGetFilterBy"></a>
-## type NetworkStackListGetFilterBy
+## type [NetworkStackListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7383-L7392>)
 
 
 
@@ -2318,7 +2318,7 @@ type NetworkStackListGetFilterBy struct {
 ```
 
 <a name="NetworkStackListGetOrderBy"></a>
-## type NetworkStackListGetOrderBy
+## type [NetworkStackListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7211-L7214>)
 
 
 
@@ -2330,7 +2330,7 @@ type NetworkStackListGetOrderBy struct {
 ```
 
 <a name="NetworkStackListGetSearchIn"></a>
-## type NetworkStackListGetSearchIn
+## type [NetworkStackListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7394-L7400>)
 
 
 
@@ -2345,7 +2345,7 @@ type NetworkStackListGetSearchIn struct {
 ```
 
 <a name="NetworkStackListGetSearchIn.GetFields"></a>
-### func \(\*NetworkStackListGetSearchIn\) GetFields
+### func \(\*NetworkStackListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7456>)
 
 ```go
 func (s *NetworkStackListGetSearchIn) GetFields() []string
@@ -2354,7 +2354,7 @@ func (s *NetworkStackListGetSearchIn) GetFields() []string
 
 
 <a name="NetworkStackListGetSearchIn.GetFilterBy"></a>
-### func \(\*NetworkStackListGetSearchIn\) GetFilterBy
+### func \(\*NetworkStackListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7433>)
 
 ```go
 func (s *NetworkStackListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -2363,7 +2363,7 @@ func (s *NetworkStackListGetSearchIn) GetFilterBy() map[string]utils.FilterByIte
 
 
 <a name="NetworkStackListGetSearchIn.GetGreedy"></a>
-### func \(\*NetworkStackListGetSearchIn\) GetGreedy
+### func \(\*NetworkStackListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7402>)
 
 ```go
 func (s *NetworkStackListGetSearchIn) GetGreedy() bool
@@ -2372,7 +2372,7 @@ func (s *NetworkStackListGetSearchIn) GetGreedy() bool
 
 
 <a name="NetworkStackListGetSearchIn.GetOptions"></a>
-### func \(\*NetworkStackListGetSearchIn\) GetOptions
+### func \(\*NetworkStackListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7510>)
 
 ```go
 func (s *NetworkStackListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -2381,7 +2381,7 @@ func (s *NetworkStackListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="NetworkStackListGetSearchIn.GetOrderBy"></a>
-### func \(\*NetworkStackListGetSearchIn\) GetOrderBy
+### func \(\*NetworkStackListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7406>)
 
 ```go
 func (s *NetworkStackListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -2390,7 +2390,7 @@ func (s *NetworkStackListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="NetworkStackListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*NetworkStackListGetSearchIn\) ResolveSelectColumns
+### func \(\*NetworkStackListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7460>)
 
 ```go
 func (s *NetworkStackListGetSearchIn) ResolveSelectColumns() []string
@@ -2399,7 +2399,7 @@ func (s *NetworkStackListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="NotificationChannelListGetFilterBy"></a>
-## type NotificationChannelListGetFilterBy
+## type [NotificationChannelListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7827-L7837>)
 
 
 
@@ -2418,7 +2418,7 @@ type NotificationChannelListGetFilterBy struct {
 ```
 
 <a name="NotificationChannelListGetOrderBy"></a>
-## type NotificationChannelListGetOrderBy
+## type [NotificationChannelListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7634-L7637>)
 
 
 
@@ -2430,7 +2430,7 @@ type NotificationChannelListGetOrderBy struct {
 ```
 
 <a name="NotificationChannelListGetSearchIn"></a>
-## type NotificationChannelListGetSearchIn
+## type [NotificationChannelListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7839-L7845>)
 
 
 
@@ -2445,7 +2445,7 @@ type NotificationChannelListGetSearchIn struct {
 ```
 
 <a name="NotificationChannelListGetSearchIn.GetFields"></a>
-### func \(\*NotificationChannelListGetSearchIn\) GetFields
+### func \(\*NotificationChannelListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7904>)
 
 ```go
 func (s *NotificationChannelListGetSearchIn) GetFields() []string
@@ -2454,7 +2454,7 @@ func (s *NotificationChannelListGetSearchIn) GetFields() []string
 
 
 <a name="NotificationChannelListGetSearchIn.GetFilterBy"></a>
-### func \(\*NotificationChannelListGetSearchIn\) GetFilterBy
+### func \(\*NotificationChannelListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7869>)
 
 ```go
 func (s *NotificationChannelListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -2463,7 +2463,7 @@ func (s *NotificationChannelListGetSearchIn) GetFilterBy() map[string]utils.Filt
 
 
 <a name="NotificationChannelListGetSearchIn.GetGreedy"></a>
-### func \(\*NotificationChannelListGetSearchIn\) GetGreedy
+### func \(\*NotificationChannelListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7847>)
 
 ```go
 func (s *NotificationChannelListGetSearchIn) GetGreedy() bool
@@ -2472,7 +2472,7 @@ func (s *NotificationChannelListGetSearchIn) GetGreedy() bool
 
 
 <a name="NotificationChannelListGetSearchIn.GetOptions"></a>
-### func \(\*NotificationChannelListGetSearchIn\) GetOptions
+### func \(\*NotificationChannelListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7944>)
 
 ```go
 func (s *NotificationChannelListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -2481,7 +2481,7 @@ func (s *NotificationChannelListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="NotificationChannelListGetSearchIn.GetOrderBy"></a>
-### func \(\*NotificationChannelListGetSearchIn\) GetOrderBy
+### func \(\*NotificationChannelListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7851>)
 
 ```go
 func (s *NotificationChannelListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -2490,7 +2490,7 @@ func (s *NotificationChannelListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="NotificationChannelListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*NotificationChannelListGetSearchIn\) ResolveSelectColumns
+### func \(\*NotificationChannelListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L7908>)
 
 ```go
 func (s *NotificationChannelListGetSearchIn) ResolveSelectColumns() []string
@@ -2499,7 +2499,7 @@ func (s *NotificationChannelListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="NotificationGroupListGetFilterBy"></a>
-## type NotificationGroupListGetFilterBy
+## type [NotificationGroupListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L8286-L8295>)
 
 
 
@@ -2517,7 +2517,7 @@ type NotificationGroupListGetFilterBy struct {
 ```
 
 <a name="NotificationGroupListGetOrderBy"></a>
-## type NotificationGroupListGetOrderBy
+## type [NotificationGroupListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L8114-L8117>)
 
 
 
@@ -2529,7 +2529,7 @@ type NotificationGroupListGetOrderBy struct {
 ```
 
 <a name="NotificationGroupListGetSearchIn"></a>
-## type NotificationGroupListGetSearchIn
+## type [NotificationGroupListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L8297-L8303>)
 
 
 
@@ -2544,7 +2544,7 @@ type NotificationGroupListGetSearchIn struct {
 ```
 
 <a name="NotificationGroupListGetSearchIn.GetFields"></a>
-### func \(\*NotificationGroupListGetSearchIn\) GetFields
+### func \(\*NotificationGroupListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L8359>)
 
 ```go
 func (s *NotificationGroupListGetSearchIn) GetFields() []string
@@ -2553,7 +2553,7 @@ func (s *NotificationGroupListGetSearchIn) GetFields() []string
 
 
 <a name="NotificationGroupListGetSearchIn.GetFilterBy"></a>
-### func \(\*NotificationGroupListGetSearchIn\) GetFilterBy
+### func \(\*NotificationGroupListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L8327>)
 
 ```go
 func (s *NotificationGroupListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -2562,7 +2562,7 @@ func (s *NotificationGroupListGetSearchIn) GetFilterBy() map[string]utils.Filter
 
 
 <a name="NotificationGroupListGetSearchIn.GetGreedy"></a>
-### func \(\*NotificationGroupListGetSearchIn\) GetGreedy
+### func \(\*NotificationGroupListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L8305>)
 
 ```go
 func (s *NotificationGroupListGetSearchIn) GetGreedy() bool
@@ -2571,7 +2571,7 @@ func (s *NotificationGroupListGetSearchIn) GetGreedy() bool
 
 
 <a name="NotificationGroupListGetSearchIn.GetOptions"></a>
-### func \(\*NotificationGroupListGetSearchIn\) GetOptions
+### func \(\*NotificationGroupListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L8397>)
 
 ```go
 func (s *NotificationGroupListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -2580,7 +2580,7 @@ func (s *NotificationGroupListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="NotificationGroupListGetSearchIn.GetOrderBy"></a>
-### func \(\*NotificationGroupListGetSearchIn\) GetOrderBy
+### func \(\*NotificationGroupListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L8309>)
 
 ```go
 func (s *NotificationGroupListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -2589,7 +2589,7 @@ func (s *NotificationGroupListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="NotificationGroupListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*NotificationGroupListGetSearchIn\) ResolveSelectColumns
+### func \(\*NotificationGroupListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L8363>)
 
 ```go
 func (s *NotificationGroupListGetSearchIn) ResolveSelectColumns() []string
@@ -2598,7 +2598,7 @@ func (s *NotificationGroupListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="NotificationRecordListGetFilterBy"></a>
-## type NotificationRecordListGetFilterBy
+## type [NotificationRecordListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L8751-L8761>)
 
 
 
@@ -2617,7 +2617,7 @@ type NotificationRecordListGetFilterBy struct {
 ```
 
 <a name="NotificationRecordListGetOrderBy"></a>
-## type NotificationRecordListGetOrderBy
+## type [NotificationRecordListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L8558-L8561>)
 
 
 
@@ -2629,7 +2629,7 @@ type NotificationRecordListGetOrderBy struct {
 ```
 
 <a name="NotificationRecordListGetSearchIn"></a>
-## type NotificationRecordListGetSearchIn
+## type [NotificationRecordListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L8763-L8769>)
 
 
 
@@ -2644,7 +2644,7 @@ type NotificationRecordListGetSearchIn struct {
 ```
 
 <a name="NotificationRecordListGetSearchIn.GetFields"></a>
-### func \(\*NotificationRecordListGetSearchIn\) GetFields
+### func \(\*NotificationRecordListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L8828>)
 
 ```go
 func (s *NotificationRecordListGetSearchIn) GetFields() []string
@@ -2653,7 +2653,7 @@ func (s *NotificationRecordListGetSearchIn) GetFields() []string
 
 
 <a name="NotificationRecordListGetSearchIn.GetFilterBy"></a>
-### func \(\*NotificationRecordListGetSearchIn\) GetFilterBy
+### func \(\*NotificationRecordListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L8793>)
 
 ```go
 func (s *NotificationRecordListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -2662,7 +2662,7 @@ func (s *NotificationRecordListGetSearchIn) GetFilterBy() map[string]utils.Filte
 
 
 <a name="NotificationRecordListGetSearchIn.GetGreedy"></a>
-### func \(\*NotificationRecordListGetSearchIn\) GetGreedy
+### func \(\*NotificationRecordListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L8771>)
 
 ```go
 func (s *NotificationRecordListGetSearchIn) GetGreedy() bool
@@ -2671,7 +2671,7 @@ func (s *NotificationRecordListGetSearchIn) GetGreedy() bool
 
 
 <a name="NotificationRecordListGetSearchIn.GetOptions"></a>
-### func \(\*NotificationRecordListGetSearchIn\) GetOptions
+### func \(\*NotificationRecordListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L8874>)
 
 ```go
 func (s *NotificationRecordListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -2680,7 +2680,7 @@ func (s *NotificationRecordListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="NotificationRecordListGetSearchIn.GetOrderBy"></a>
-### func \(\*NotificationRecordListGetSearchIn\) GetOrderBy
+### func \(\*NotificationRecordListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L8775>)
 
 ```go
 func (s *NotificationRecordListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -2689,7 +2689,7 @@ func (s *NotificationRecordListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="NotificationRecordListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*NotificationRecordListGetSearchIn\) ResolveSelectColumns
+### func \(\*NotificationRecordListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L8832>)
 
 ```go
 func (s *NotificationRecordListGetSearchIn) ResolveSelectColumns() []string
@@ -2698,7 +2698,7 @@ func (s *NotificationRecordListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="NotificationTargetListGetFilterBy"></a>
-## type NotificationTargetListGetFilterBy
+## type [NotificationTargetListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L9269-L9281>)
 
 
 
@@ -2719,7 +2719,7 @@ type NotificationTargetListGetFilterBy struct {
 ```
 
 <a name="NotificationTargetListGetOrderBy"></a>
-## type NotificationTargetListGetOrderBy
+## type [NotificationTargetListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L9034-L9037>)
 
 
 
@@ -2731,7 +2731,7 @@ type NotificationTargetListGetOrderBy struct {
 ```
 
 <a name="NotificationTargetListGetSearchIn"></a>
-## type NotificationTargetListGetSearchIn
+## type [NotificationTargetListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L9283-L9289>)
 
 
 
@@ -2746,7 +2746,7 @@ type NotificationTargetListGetSearchIn struct {
 ```
 
 <a name="NotificationTargetListGetSearchIn.GetFields"></a>
-### func \(\*NotificationTargetListGetSearchIn\) GetFields
+### func \(\*NotificationTargetListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L9354>)
 
 ```go
 func (s *NotificationTargetListGetSearchIn) GetFields() []string
@@ -2755,7 +2755,7 @@ func (s *NotificationTargetListGetSearchIn) GetFields() []string
 
 
 <a name="NotificationTargetListGetSearchIn.GetFilterBy"></a>
-### func \(\*NotificationTargetListGetSearchIn\) GetFilterBy
+### func \(\*NotificationTargetListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L9313>)
 
 ```go
 func (s *NotificationTargetListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -2764,7 +2764,7 @@ func (s *NotificationTargetListGetSearchIn) GetFilterBy() map[string]utils.Filte
 
 
 <a name="NotificationTargetListGetSearchIn.GetGreedy"></a>
-### func \(\*NotificationTargetListGetSearchIn\) GetGreedy
+### func \(\*NotificationTargetListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L9291>)
 
 ```go
 func (s *NotificationTargetListGetSearchIn) GetGreedy() bool
@@ -2773,7 +2773,7 @@ func (s *NotificationTargetListGetSearchIn) GetGreedy() bool
 
 
 <a name="NotificationTargetListGetSearchIn.GetOptions"></a>
-### func \(\*NotificationTargetListGetSearchIn\) GetOptions
+### func \(\*NotificationTargetListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L9404>)
 
 ```go
 func (s *NotificationTargetListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -2782,7 +2782,7 @@ func (s *NotificationTargetListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="NotificationTargetListGetSearchIn.GetOrderBy"></a>
-### func \(\*NotificationTargetListGetSearchIn\) GetOrderBy
+### func \(\*NotificationTargetListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L9295>)
 
 ```go
 func (s *NotificationTargetListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -2791,7 +2791,7 @@ func (s *NotificationTargetListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="NotificationTargetListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*NotificationTargetListGetSearchIn\) ResolveSelectColumns
+### func \(\*NotificationTargetListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L9358>)
 
 ```go
 func (s *NotificationTargetListGetSearchIn) ResolveSelectColumns() []string
@@ -2800,7 +2800,7 @@ func (s *NotificationTargetListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="NotificationTemplateListGetFilterBy"></a>
-## type NotificationTemplateListGetFilterBy
+## type [NotificationTemplateListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L9808-L9819>)
 
 
 
@@ -2820,7 +2820,7 @@ type NotificationTemplateListGetFilterBy struct {
 ```
 
 <a name="NotificationTemplateListGetOrderBy"></a>
-## type NotificationTemplateListGetOrderBy
+## type [NotificationTemplateListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L9594-L9597>)
 
 
 
@@ -2832,7 +2832,7 @@ type NotificationTemplateListGetOrderBy struct {
 ```
 
 <a name="NotificationTemplateListGetSearchIn"></a>
-## type NotificationTemplateListGetSearchIn
+## type [NotificationTemplateListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L9821-L9827>)
 
 
 
@@ -2847,7 +2847,7 @@ type NotificationTemplateListGetSearchIn struct {
 ```
 
 <a name="NotificationTemplateListGetSearchIn.GetFields"></a>
-### func \(\*NotificationTemplateListGetSearchIn\) GetFields
+### func \(\*NotificationTemplateListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L9889>)
 
 ```go
 func (s *NotificationTemplateListGetSearchIn) GetFields() []string
@@ -2856,7 +2856,7 @@ func (s *NotificationTemplateListGetSearchIn) GetFields() []string
 
 
 <a name="NotificationTemplateListGetSearchIn.GetFilterBy"></a>
-### func \(\*NotificationTemplateListGetSearchIn\) GetFilterBy
+### func \(\*NotificationTemplateListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L9851>)
 
 ```go
 func (s *NotificationTemplateListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -2865,7 +2865,7 @@ func (s *NotificationTemplateListGetSearchIn) GetFilterBy() map[string]utils.Fil
 
 
 <a name="NotificationTemplateListGetSearchIn.GetGreedy"></a>
-### func \(\*NotificationTemplateListGetSearchIn\) GetGreedy
+### func \(\*NotificationTemplateListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L9829>)
 
 ```go
 func (s *NotificationTemplateListGetSearchIn) GetGreedy() bool
@@ -2874,7 +2874,7 @@ func (s *NotificationTemplateListGetSearchIn) GetGreedy() bool
 
 
 <a name="NotificationTemplateListGetSearchIn.GetOptions"></a>
-### func \(\*NotificationTemplateListGetSearchIn\) GetOptions
+### func \(\*NotificationTemplateListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L9931>)
 
 ```go
 func (s *NotificationTemplateListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -2883,7 +2883,7 @@ func (s *NotificationTemplateListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="NotificationTemplateListGetSearchIn.GetOrderBy"></a>
-### func \(\*NotificationTemplateListGetSearchIn\) GetOrderBy
+### func \(\*NotificationTemplateListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L9833>)
 
 ```go
 func (s *NotificationTemplateListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -2892,7 +2892,7 @@ func (s *NotificationTemplateListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="NotificationTemplateListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*NotificationTemplateListGetSearchIn\) ResolveSelectColumns
+### func \(\*NotificationTemplateListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L9893>)
 
 ```go
 func (s *NotificationTemplateListGetSearchIn) ResolveSelectColumns() []string
@@ -2901,7 +2901,7 @@ func (s *NotificationTemplateListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="Pagination"></a>
-## type Pagination
+## type [Pagination](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11-L14>)
 
 
 
@@ -2913,7 +2913,7 @@ type Pagination struct {
 ```
 
 <a name="Pagination.GetPage"></a>
-### func \(\*Pagination\) GetPage
+### func \(\*Pagination\) [GetPage](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L16>)
 
 ```go
 func (p *Pagination) GetPage() uint
@@ -2922,7 +2922,7 @@ func (p *Pagination) GetPage() uint
 
 
 <a name="Pagination.GetPageSize"></a>
-### func \(\*Pagination\) GetPageSize
+### func \(\*Pagination\) [GetPageSize](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L20>)
 
 ```go
 func (p *Pagination) GetPageSize() uint
@@ -2931,7 +2931,7 @@ func (p *Pagination) GetPageSize() uint
 
 
 <a name="PeriodicReportFeedListGetFilterBy"></a>
-## type PeriodicReportFeedListGetFilterBy
+## type [PeriodicReportFeedListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10116-L10117>)
 
 
 
@@ -2941,7 +2941,7 @@ type PeriodicReportFeedListGetFilterBy struct {
 ```
 
 <a name="PeriodicReportFeedListGetOrderBy"></a>
-## type PeriodicReportFeedListGetOrderBy
+## type [PeriodicReportFeedListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10111-L10114>)
 
 
 
@@ -2953,7 +2953,7 @@ type PeriodicReportFeedListGetOrderBy struct {
 ```
 
 <a name="PeriodicReportFeedListGetSearchIn"></a>
-## type PeriodicReportFeedListGetSearchIn
+## type [PeriodicReportFeedListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10119-L10125>)
 
 
 
@@ -2968,7 +2968,7 @@ type PeriodicReportFeedListGetSearchIn struct {
 ```
 
 <a name="PeriodicReportFeedListGetSearchIn.GetFields"></a>
-### func \(\*PeriodicReportFeedListGetSearchIn\) GetFields
+### func \(\*PeriodicReportFeedListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10157>)
 
 ```go
 func (s *PeriodicReportFeedListGetSearchIn) GetFields() []string
@@ -2977,7 +2977,7 @@ func (s *PeriodicReportFeedListGetSearchIn) GetFields() []string
 
 
 <a name="PeriodicReportFeedListGetSearchIn.GetFilterBy"></a>
-### func \(\*PeriodicReportFeedListGetSearchIn\) GetFilterBy
+### func \(\*PeriodicReportFeedListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10149>)
 
 ```go
 func (s *PeriodicReportFeedListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -2986,7 +2986,7 @@ func (s *PeriodicReportFeedListGetSearchIn) GetFilterBy() map[string]utils.Filte
 
 
 <a name="PeriodicReportFeedListGetSearchIn.GetGreedy"></a>
-### func \(\*PeriodicReportFeedListGetSearchIn\) GetGreedy
+### func \(\*PeriodicReportFeedListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10127>)
 
 ```go
 func (s *PeriodicReportFeedListGetSearchIn) GetGreedy() bool
@@ -2995,7 +2995,7 @@ func (s *PeriodicReportFeedListGetSearchIn) GetGreedy() bool
 
 
 <a name="PeriodicReportFeedListGetSearchIn.GetOptions"></a>
-### func \(\*PeriodicReportFeedListGetSearchIn\) GetOptions
+### func \(\*PeriodicReportFeedListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10195>)
 
 ```go
 func (s *PeriodicReportFeedListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -3004,7 +3004,7 @@ func (s *PeriodicReportFeedListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="PeriodicReportFeedListGetSearchIn.GetOrderBy"></a>
-### func \(\*PeriodicReportFeedListGetSearchIn\) GetOrderBy
+### func \(\*PeriodicReportFeedListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10131>)
 
 ```go
 func (s *PeriodicReportFeedListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -3013,7 +3013,7 @@ func (s *PeriodicReportFeedListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="PeriodicReportFeedListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*PeriodicReportFeedListGetSearchIn\) ResolveSelectColumns
+### func \(\*PeriodicReportFeedListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10161>)
 
 ```go
 func (s *PeriodicReportFeedListGetSearchIn) ResolveSelectColumns() []string
@@ -3022,7 +3022,7 @@ func (s *PeriodicReportFeedListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="PeriodicReportPlanListGetFilterBy"></a>
-## type PeriodicReportPlanListGetFilterBy
+## type [PeriodicReportPlanListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10422-L10431>)
 
 
 
@@ -3040,7 +3040,7 @@ type PeriodicReportPlanListGetFilterBy struct {
 ```
 
 <a name="PeriodicReportPlanListGetOrderBy"></a>
-## type PeriodicReportPlanListGetOrderBy
+## type [PeriodicReportPlanListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10250-L10253>)
 
 
 
@@ -3052,7 +3052,7 @@ type PeriodicReportPlanListGetOrderBy struct {
 ```
 
 <a name="PeriodicReportPlanListGetSearchIn"></a>
-## type PeriodicReportPlanListGetSearchIn
+## type [PeriodicReportPlanListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10433-L10439>)
 
 
 
@@ -3067,7 +3067,7 @@ type PeriodicReportPlanListGetSearchIn struct {
 ```
 
 <a name="PeriodicReportPlanListGetSearchIn.GetFields"></a>
-### func \(\*PeriodicReportPlanListGetSearchIn\) GetFields
+### func \(\*PeriodicReportPlanListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10495>)
 
 ```go
 func (s *PeriodicReportPlanListGetSearchIn) GetFields() []string
@@ -3076,7 +3076,7 @@ func (s *PeriodicReportPlanListGetSearchIn) GetFields() []string
 
 
 <a name="PeriodicReportPlanListGetSearchIn.GetFilterBy"></a>
-### func \(\*PeriodicReportPlanListGetSearchIn\) GetFilterBy
+### func \(\*PeriodicReportPlanListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10463>)
 
 ```go
 func (s *PeriodicReportPlanListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -3085,7 +3085,7 @@ func (s *PeriodicReportPlanListGetSearchIn) GetFilterBy() map[string]utils.Filte
 
 
 <a name="PeriodicReportPlanListGetSearchIn.GetGreedy"></a>
-### func \(\*PeriodicReportPlanListGetSearchIn\) GetGreedy
+### func \(\*PeriodicReportPlanListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10441>)
 
 ```go
 func (s *PeriodicReportPlanListGetSearchIn) GetGreedy() bool
@@ -3094,7 +3094,7 @@ func (s *PeriodicReportPlanListGetSearchIn) GetGreedy() bool
 
 
 <a name="PeriodicReportPlanListGetSearchIn.GetOptions"></a>
-### func \(\*PeriodicReportPlanListGetSearchIn\) GetOptions
+### func \(\*PeriodicReportPlanListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10545>)
 
 ```go
 func (s *PeriodicReportPlanListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -3103,7 +3103,7 @@ func (s *PeriodicReportPlanListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="PeriodicReportPlanListGetSearchIn.GetOrderBy"></a>
-### func \(\*PeriodicReportPlanListGetSearchIn\) GetOrderBy
+### func \(\*PeriodicReportPlanListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10445>)
 
 ```go
 func (s *PeriodicReportPlanListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -3112,7 +3112,7 @@ func (s *PeriodicReportPlanListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="PeriodicReportPlanListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*PeriodicReportPlanListGetSearchIn\) ResolveSelectColumns
+### func \(\*PeriodicReportPlanListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10499>)
 
 ```go
 func (s *PeriodicReportPlanListGetSearchIn) ResolveSelectColumns() []string
@@ -3121,7 +3121,7 @@ func (s *PeriodicReportPlanListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="PeriodicReportRunListGetFilterBy"></a>
-## type PeriodicReportRunListGetFilterBy
+## type [PeriodicReportRunListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10764-L10767>)
 
 
 
@@ -3133,7 +3133,7 @@ type PeriodicReportRunListGetFilterBy struct {
 ```
 
 <a name="PeriodicReportRunListGetOrderBy"></a>
-## type PeriodicReportRunListGetOrderBy
+## type [PeriodicReportRunListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10718-L10721>)
 
 
 
@@ -3145,7 +3145,7 @@ type PeriodicReportRunListGetOrderBy struct {
 ```
 
 <a name="PeriodicReportRunListGetSearchIn"></a>
-## type PeriodicReportRunListGetSearchIn
+## type [PeriodicReportRunListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10769-L10775>)
 
 
 
@@ -3160,7 +3160,7 @@ type PeriodicReportRunListGetSearchIn struct {
 ```
 
 <a name="PeriodicReportRunListGetSearchIn.GetFields"></a>
-### func \(\*PeriodicReportRunListGetSearchIn\) GetFields
+### func \(\*PeriodicReportRunListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10816>)
 
 ```go
 func (s *PeriodicReportRunListGetSearchIn) GetFields() []string
@@ -3169,7 +3169,7 @@ func (s *PeriodicReportRunListGetSearchIn) GetFields() []string
 
 
 <a name="PeriodicReportRunListGetSearchIn.GetFilterBy"></a>
-### func \(\*PeriodicReportRunListGetSearchIn\) GetFilterBy
+### func \(\*PeriodicReportRunListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10802>)
 
 ```go
 func (s *PeriodicReportRunListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -3178,7 +3178,7 @@ func (s *PeriodicReportRunListGetSearchIn) GetFilterBy() map[string]utils.Filter
 
 
 <a name="PeriodicReportRunListGetSearchIn.GetGreedy"></a>
-### func \(\*PeriodicReportRunListGetSearchIn\) GetGreedy
+### func \(\*PeriodicReportRunListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10777>)
 
 ```go
 func (s *PeriodicReportRunListGetSearchIn) GetGreedy() bool
@@ -3187,7 +3187,7 @@ func (s *PeriodicReportRunListGetSearchIn) GetGreedy() bool
 
 
 <a name="PeriodicReportRunListGetSearchIn.GetOptions"></a>
-### func \(\*PeriodicReportRunListGetSearchIn\) GetOptions
+### func \(\*PeriodicReportRunListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10864>)
 
 ```go
 func (s *PeriodicReportRunListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -3196,7 +3196,7 @@ func (s *PeriodicReportRunListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="PeriodicReportRunListGetSearchIn.GetOrderBy"></a>
-### func \(\*PeriodicReportRunListGetSearchIn\) GetOrderBy
+### func \(\*PeriodicReportRunListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10781>)
 
 ```go
 func (s *PeriodicReportRunListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -3205,7 +3205,7 @@ func (s *PeriodicReportRunListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="PeriodicReportRunListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*PeriodicReportRunListGetSearchIn\) ResolveSelectColumns
+### func \(\*PeriodicReportRunListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10820>)
 
 ```go
 func (s *PeriodicReportRunListGetSearchIn) ResolveSelectColumns() []string
@@ -3214,7 +3214,7 @@ func (s *PeriodicReportRunListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="PeriodicReportWatchListGetFilterBy"></a>
-## type PeriodicReportWatchListGetFilterBy
+## type [PeriodicReportWatchListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10986-L10989>)
 
 
 
@@ -3226,7 +3226,7 @@ type PeriodicReportWatchListGetFilterBy struct {
 ```
 
 <a name="PeriodicReportWatchListGetOrderBy"></a>
-## type PeriodicReportWatchListGetOrderBy
+## type [PeriodicReportWatchListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10940-L10943>)
 
 
 
@@ -3238,7 +3238,7 @@ type PeriodicReportWatchListGetOrderBy struct {
 ```
 
 <a name="PeriodicReportWatchListGetSearchIn"></a>
-## type PeriodicReportWatchListGetSearchIn
+## type [PeriodicReportWatchListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10991-L10997>)
 
 
 
@@ -3253,7 +3253,7 @@ type PeriodicReportWatchListGetSearchIn struct {
 ```
 
 <a name="PeriodicReportWatchListGetSearchIn.GetFields"></a>
-### func \(\*PeriodicReportWatchListGetSearchIn\) GetFields
+### func \(\*PeriodicReportWatchListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11035>)
 
 ```go
 func (s *PeriodicReportWatchListGetSearchIn) GetFields() []string
@@ -3262,7 +3262,7 @@ func (s *PeriodicReportWatchListGetSearchIn) GetFields() []string
 
 
 <a name="PeriodicReportWatchListGetSearchIn.GetFilterBy"></a>
-### func \(\*PeriodicReportWatchListGetSearchIn\) GetFilterBy
+### func \(\*PeriodicReportWatchListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11021>)
 
 ```go
 func (s *PeriodicReportWatchListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -3271,7 +3271,7 @@ func (s *PeriodicReportWatchListGetSearchIn) GetFilterBy() map[string]utils.Filt
 
 
 <a name="PeriodicReportWatchListGetSearchIn.GetGreedy"></a>
-### func \(\*PeriodicReportWatchListGetSearchIn\) GetGreedy
+### func \(\*PeriodicReportWatchListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L10999>)
 
 ```go
 func (s *PeriodicReportWatchListGetSearchIn) GetGreedy() bool
@@ -3280,7 +3280,7 @@ func (s *PeriodicReportWatchListGetSearchIn) GetGreedy() bool
 
 
 <a name="PeriodicReportWatchListGetSearchIn.GetOptions"></a>
-### func \(\*PeriodicReportWatchListGetSearchIn\) GetOptions
+### func \(\*PeriodicReportWatchListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11073>)
 
 ```go
 func (s *PeriodicReportWatchListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -3289,7 +3289,7 @@ func (s *PeriodicReportWatchListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="PeriodicReportWatchListGetSearchIn.GetOrderBy"></a>
-### func \(\*PeriodicReportWatchListGetSearchIn\) GetOrderBy
+### func \(\*PeriodicReportWatchListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11003>)
 
 ```go
 func (s *PeriodicReportWatchListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -3298,7 +3298,7 @@ func (s *PeriodicReportWatchListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="PeriodicReportWatchListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*PeriodicReportWatchListGetSearchIn\) ResolveSelectColumns
+### func \(\*PeriodicReportWatchListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11039>)
 
 ```go
 func (s *PeriodicReportWatchListGetSearchIn) ResolveSelectColumns() []string
@@ -3307,7 +3307,7 @@ func (s *PeriodicReportWatchListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="RbacPolicyTemplateListGetFilterBy"></a>
-## type RbacPolicyTemplateListGetFilterBy
+## type [RbacPolicyTemplateListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11316-L11325>)
 
 
 
@@ -3325,7 +3325,7 @@ type RbacPolicyTemplateListGetFilterBy struct {
 ```
 
 <a name="RbacPolicyTemplateListGetOrderBy"></a>
-## type RbacPolicyTemplateListGetOrderBy
+## type [RbacPolicyTemplateListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11144-L11147>)
 
 
 
@@ -3337,7 +3337,7 @@ type RbacPolicyTemplateListGetOrderBy struct {
 ```
 
 <a name="RbacPolicyTemplateListGetSearchIn"></a>
-## type RbacPolicyTemplateListGetSearchIn
+## type [RbacPolicyTemplateListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11327-L11333>)
 
 
 
@@ -3352,7 +3352,7 @@ type RbacPolicyTemplateListGetSearchIn struct {
 ```
 
 <a name="RbacPolicyTemplateListGetSearchIn.GetFields"></a>
-### func \(\*RbacPolicyTemplateListGetSearchIn\) GetFields
+### func \(\*RbacPolicyTemplateListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11389>)
 
 ```go
 func (s *RbacPolicyTemplateListGetSearchIn) GetFields() []string
@@ -3361,7 +3361,7 @@ func (s *RbacPolicyTemplateListGetSearchIn) GetFields() []string
 
 
 <a name="RbacPolicyTemplateListGetSearchIn.GetFilterBy"></a>
-### func \(\*RbacPolicyTemplateListGetSearchIn\) GetFilterBy
+### func \(\*RbacPolicyTemplateListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11357>)
 
 ```go
 func (s *RbacPolicyTemplateListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -3370,7 +3370,7 @@ func (s *RbacPolicyTemplateListGetSearchIn) GetFilterBy() map[string]utils.Filte
 
 
 <a name="RbacPolicyTemplateListGetSearchIn.GetGreedy"></a>
-### func \(\*RbacPolicyTemplateListGetSearchIn\) GetGreedy
+### func \(\*RbacPolicyTemplateListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11335>)
 
 ```go
 func (s *RbacPolicyTemplateListGetSearchIn) GetGreedy() bool
@@ -3379,7 +3379,7 @@ func (s *RbacPolicyTemplateListGetSearchIn) GetGreedy() bool
 
 
 <a name="RbacPolicyTemplateListGetSearchIn.GetOptions"></a>
-### func \(\*RbacPolicyTemplateListGetSearchIn\) GetOptions
+### func \(\*RbacPolicyTemplateListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11423>)
 
 ```go
 func (s *RbacPolicyTemplateListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -3388,7 +3388,7 @@ func (s *RbacPolicyTemplateListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="RbacPolicyTemplateListGetSearchIn.GetOrderBy"></a>
-### func \(\*RbacPolicyTemplateListGetSearchIn\) GetOrderBy
+### func \(\*RbacPolicyTemplateListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11339>)
 
 ```go
 func (s *RbacPolicyTemplateListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -3397,7 +3397,7 @@ func (s *RbacPolicyTemplateListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="RbacPolicyTemplateListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*RbacPolicyTemplateListGetSearchIn\) ResolveSelectColumns
+### func \(\*RbacPolicyTemplateListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11393>)
 
 ```go
 func (s *RbacPolicyTemplateListGetSearchIn) ResolveSelectColumns() []string
@@ -3406,7 +3406,7 @@ func (s *RbacPolicyTemplateListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="RegisterContext"></a>
-## type RegisterContext
+## type [RegisterContext](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/context.go#L15-L59>)
 
 RegisterContext 路由注册上下文。
 
@@ -3459,7 +3459,7 @@ type RegisterContext struct {
 ```
 
 <a name="StructMeta"></a>
-## type StructMeta
+## type [StructMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/meta.go#L91-L99>)
 
 StructMeta 描述单个接口结构体的元信息。 包含结构体类型名与其所有字段的元信息列表。
 
@@ -3472,7 +3472,7 @@ type StructMeta struct {
 ```
 
 <a name="TagEventRecordListGetFilterBy"></a>
-## type TagEventRecordListGetFilterBy
+## type [TagEventRecordListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11869-L11882>)
 
 
 
@@ -3494,7 +3494,7 @@ type TagEventRecordListGetFilterBy struct {
 ```
 
 <a name="TagEventRecordListGetOrderBy"></a>
-## type TagEventRecordListGetOrderBy
+## type [TagEventRecordListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11613-L11616>)
 
 
 
@@ -3506,7 +3506,7 @@ type TagEventRecordListGetOrderBy struct {
 ```
 
 <a name="TagEventRecordListGetSearchIn"></a>
-## type TagEventRecordListGetSearchIn
+## type [TagEventRecordListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11884-L11890>)
 
 
 
@@ -3521,7 +3521,7 @@ type TagEventRecordListGetSearchIn struct {
 ```
 
 <a name="TagEventRecordListGetSearchIn.GetFields"></a>
-### func \(\*TagEventRecordListGetSearchIn\) GetFields
+### func \(\*TagEventRecordListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11961>)
 
 ```go
 func (s *TagEventRecordListGetSearchIn) GetFields() []string
@@ -3530,7 +3530,7 @@ func (s *TagEventRecordListGetSearchIn) GetFields() []string
 
 
 <a name="TagEventRecordListGetSearchIn.GetFilterBy"></a>
-### func \(\*TagEventRecordListGetSearchIn\) GetFilterBy
+### func \(\*TagEventRecordListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11917>)
 
 ```go
 func (s *TagEventRecordListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -3539,7 +3539,7 @@ func (s *TagEventRecordListGetSearchIn) GetFilterBy() map[string]utils.FilterByI
 
 
 <a name="TagEventRecordListGetSearchIn.GetGreedy"></a>
-### func \(\*TagEventRecordListGetSearchIn\) GetGreedy
+### func \(\*TagEventRecordListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11892>)
 
 ```go
 func (s *TagEventRecordListGetSearchIn) GetGreedy() bool
@@ -3548,7 +3548,7 @@ func (s *TagEventRecordListGetSearchIn) GetGreedy() bool
 
 
 <a name="TagEventRecordListGetSearchIn.GetOptions"></a>
-### func \(\*TagEventRecordListGetSearchIn\) GetOptions
+### func \(\*TagEventRecordListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12001>)
 
 ```go
 func (s *TagEventRecordListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -3557,7 +3557,7 @@ func (s *TagEventRecordListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="TagEventRecordListGetSearchIn.GetOrderBy"></a>
-### func \(\*TagEventRecordListGetSearchIn\) GetOrderBy
+### func \(\*TagEventRecordListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11896>)
 
 ```go
 func (s *TagEventRecordListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -3566,7 +3566,7 @@ func (s *TagEventRecordListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="TagEventRecordListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*TagEventRecordListGetSearchIn\) ResolveSelectColumns
+### func \(\*TagEventRecordListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L11965>)
 
 ```go
 func (s *TagEventRecordListGetSearchIn) ResolveSelectColumns() []string
@@ -3575,7 +3575,7 @@ func (s *TagEventRecordListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="TagEventRuleListGetFilterBy"></a>
-## type TagEventRuleListGetFilterBy
+## type [TagEventRuleListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12393-L12403>)
 
 
 
@@ -3594,7 +3594,7 @@ type TagEventRuleListGetFilterBy struct {
 ```
 
 <a name="TagEventRuleListGetOrderBy"></a>
-## type TagEventRuleListGetOrderBy
+## type [TagEventRuleListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12200-L12203>)
 
 
 
@@ -3606,7 +3606,7 @@ type TagEventRuleListGetOrderBy struct {
 ```
 
 <a name="TagEventRuleListGetSearchIn"></a>
-## type TagEventRuleListGetSearchIn
+## type [TagEventRuleListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12405-L12411>)
 
 
 
@@ -3621,7 +3621,7 @@ type TagEventRuleListGetSearchIn struct {
 ```
 
 <a name="TagEventRuleListGetSearchIn.GetFields"></a>
-### func \(\*TagEventRuleListGetSearchIn\) GetFields
+### func \(\*TagEventRuleListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12470>)
 
 ```go
 func (s *TagEventRuleListGetSearchIn) GetFields() []string
@@ -3630,7 +3630,7 @@ func (s *TagEventRuleListGetSearchIn) GetFields() []string
 
 
 <a name="TagEventRuleListGetSearchIn.GetFilterBy"></a>
-### func \(\*TagEventRuleListGetSearchIn\) GetFilterBy
+### func \(\*TagEventRuleListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12435>)
 
 ```go
 func (s *TagEventRuleListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -3639,7 +3639,7 @@ func (s *TagEventRuleListGetSearchIn) GetFilterBy() map[string]utils.FilterByIte
 
 
 <a name="TagEventRuleListGetSearchIn.GetGreedy"></a>
-### func \(\*TagEventRuleListGetSearchIn\) GetGreedy
+### func \(\*TagEventRuleListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12413>)
 
 ```go
 func (s *TagEventRuleListGetSearchIn) GetGreedy() bool
@@ -3648,7 +3648,7 @@ func (s *TagEventRuleListGetSearchIn) GetGreedy() bool
 
 
 <a name="TagEventRuleListGetSearchIn.GetOptions"></a>
-### func \(\*TagEventRuleListGetSearchIn\) GetOptions
+### func \(\*TagEventRuleListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12510>)
 
 ```go
 func (s *TagEventRuleListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -3657,7 +3657,7 @@ func (s *TagEventRuleListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="TagEventRuleListGetSearchIn.GetOrderBy"></a>
-### func \(\*TagEventRuleListGetSearchIn\) GetOrderBy
+### func \(\*TagEventRuleListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12417>)
 
 ```go
 func (s *TagEventRuleListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -3666,7 +3666,7 @@ func (s *TagEventRuleListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="TagEventRuleListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*TagEventRuleListGetSearchIn\) ResolveSelectColumns
+### func \(\*TagEventRuleListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12474>)
 
 ```go
 func (s *TagEventRuleListGetSearchIn) ResolveSelectColumns() []string
@@ -3675,7 +3675,7 @@ func (s *TagEventRuleListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="TagRuleListGetFilterBy"></a>
-## type TagRuleListGetFilterBy
+## type [TagRuleListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12872-L12882>)
 
 
 
@@ -3694,7 +3694,7 @@ type TagRuleListGetFilterBy struct {
 ```
 
 <a name="TagRuleListGetOrderBy"></a>
-## type TagRuleListGetOrderBy
+## type [TagRuleListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12679-L12682>)
 
 
 
@@ -3706,7 +3706,7 @@ type TagRuleListGetOrderBy struct {
 ```
 
 <a name="TagRuleListGetSearchIn"></a>
-## type TagRuleListGetSearchIn
+## type [TagRuleListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12884-L12890>)
 
 
 
@@ -3721,7 +3721,7 @@ type TagRuleListGetSearchIn struct {
 ```
 
 <a name="TagRuleListGetSearchIn.GetFields"></a>
-### func \(\*TagRuleListGetSearchIn\) GetFields
+### func \(\*TagRuleListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12949>)
 
 ```go
 func (s *TagRuleListGetSearchIn) GetFields() []string
@@ -3730,7 +3730,7 @@ func (s *TagRuleListGetSearchIn) GetFields() []string
 
 
 <a name="TagRuleListGetSearchIn.GetFilterBy"></a>
-### func \(\*TagRuleListGetSearchIn\) GetFilterBy
+### func \(\*TagRuleListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12914>)
 
 ```go
 func (s *TagRuleListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -3739,7 +3739,7 @@ func (s *TagRuleListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
 
 
 <a name="TagRuleListGetSearchIn.GetGreedy"></a>
-### func \(\*TagRuleListGetSearchIn\) GetGreedy
+### func \(\*TagRuleListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12892>)
 
 ```go
 func (s *TagRuleListGetSearchIn) GetGreedy() bool
@@ -3748,7 +3748,7 @@ func (s *TagRuleListGetSearchIn) GetGreedy() bool
 
 
 <a name="TagRuleListGetSearchIn.GetOptions"></a>
-### func \(\*TagRuleListGetSearchIn\) GetOptions
+### func \(\*TagRuleListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12987>)
 
 ```go
 func (s *TagRuleListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -3757,7 +3757,7 @@ func (s *TagRuleListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="TagRuleListGetSearchIn.GetOrderBy"></a>
-### func \(\*TagRuleListGetSearchIn\) GetOrderBy
+### func \(\*TagRuleListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12896>)
 
 ```go
 func (s *TagRuleListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -3766,7 +3766,7 @@ func (s *TagRuleListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="TagRuleListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*TagRuleListGetSearchIn\) ResolveSelectColumns
+### func \(\*TagRuleListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L12953>)
 
 ```go
 func (s *TagRuleListGetSearchIn) ResolveSelectColumns() []string
@@ -3775,7 +3775,7 @@ func (s *TagRuleListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="TagRuleSampleListGetFilterBy"></a>
-## type TagRuleSampleListGetFilterBy
+## type [TagRuleSampleListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L13327-L13336>)
 
 
 
@@ -3793,7 +3793,7 @@ type TagRuleSampleListGetFilterBy struct {
 ```
 
 <a name="TagRuleSampleListGetOrderBy"></a>
-## type TagRuleSampleListGetOrderBy
+## type [TagRuleSampleListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L13155-L13158>)
 
 
 
@@ -3805,7 +3805,7 @@ type TagRuleSampleListGetOrderBy struct {
 ```
 
 <a name="TagRuleSampleListGetSearchIn"></a>
-## type TagRuleSampleListGetSearchIn
+## type [TagRuleSampleListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L13338-L13344>)
 
 
 
@@ -3820,7 +3820,7 @@ type TagRuleSampleListGetSearchIn struct {
 ```
 
 <a name="TagRuleSampleListGetSearchIn.GetFields"></a>
-### func \(\*TagRuleSampleListGetSearchIn\) GetFields
+### func \(\*TagRuleSampleListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L13400>)
 
 ```go
 func (s *TagRuleSampleListGetSearchIn) GetFields() []string
@@ -3829,7 +3829,7 @@ func (s *TagRuleSampleListGetSearchIn) GetFields() []string
 
 
 <a name="TagRuleSampleListGetSearchIn.GetFilterBy"></a>
-### func \(\*TagRuleSampleListGetSearchIn\) GetFilterBy
+### func \(\*TagRuleSampleListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L13368>)
 
 ```go
 func (s *TagRuleSampleListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -3838,7 +3838,7 @@ func (s *TagRuleSampleListGetSearchIn) GetFilterBy() map[string]utils.FilterByIt
 
 
 <a name="TagRuleSampleListGetSearchIn.GetGreedy"></a>
-### func \(\*TagRuleSampleListGetSearchIn\) GetGreedy
+### func \(\*TagRuleSampleListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L13346>)
 
 ```go
 func (s *TagRuleSampleListGetSearchIn) GetGreedy() bool
@@ -3847,7 +3847,7 @@ func (s *TagRuleSampleListGetSearchIn) GetGreedy() bool
 
 
 <a name="TagRuleSampleListGetSearchIn.GetOptions"></a>
-### func \(\*TagRuleSampleListGetSearchIn\) GetOptions
+### func \(\*TagRuleSampleListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L13436>)
 
 ```go
 func (s *TagRuleSampleListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -3856,7 +3856,7 @@ func (s *TagRuleSampleListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="TagRuleSampleListGetSearchIn.GetOrderBy"></a>
-### func \(\*TagRuleSampleListGetSearchIn\) GetOrderBy
+### func \(\*TagRuleSampleListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L13350>)
 
 ```go
 func (s *TagRuleSampleListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -3865,7 +3865,7 @@ func (s *TagRuleSampleListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="TagRuleSampleListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*TagRuleSampleListGetSearchIn\) ResolveSelectColumns
+### func \(\*TagRuleSampleListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L13404>)
 
 ```go
 func (s *TagRuleSampleListGetSearchIn) ResolveSelectColumns() []string
@@ -3874,7 +3874,7 @@ func (s *TagRuleSampleListGetSearchIn) ResolveSelectColumns() []string
 
 
 <a name="UserListGetFilterBy"></a>
-## type UserListGetFilterBy
+## type [UserListGetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L13810-L13821>)
 
 
 
@@ -3894,7 +3894,7 @@ type UserListGetFilterBy struct {
 ```
 
 <a name="UserListGetOrderBy"></a>
-## type UserListGetOrderBy
+## type [UserListGetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L13596-L13599>)
 
 
 
@@ -3906,7 +3906,7 @@ type UserListGetOrderBy struct {
 ```
 
 <a name="UserListGetSearchIn"></a>
-## type UserListGetSearchIn
+## type [UserListGetSearchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L13823-L13829>)
 
 
 
@@ -3921,7 +3921,7 @@ type UserListGetSearchIn struct {
 ```
 
 <a name="UserListGetSearchIn.GetFields"></a>
-### func \(\*UserListGetSearchIn\) GetFields
+### func \(\*UserListGetSearchIn\) [GetFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L13891>)
 
 ```go
 func (s *UserListGetSearchIn) GetFields() []string
@@ -3930,7 +3930,7 @@ func (s *UserListGetSearchIn) GetFields() []string
 
 
 <a name="UserListGetSearchIn.GetFilterBy"></a>
-### func \(\*UserListGetSearchIn\) GetFilterBy
+### func \(\*UserListGetSearchIn\) [GetFilterBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L13853>)
 
 ```go
 func (s *UserListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
@@ -3939,7 +3939,7 @@ func (s *UserListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
 
 
 <a name="UserListGetSearchIn.GetGreedy"></a>
-### func \(\*UserListGetSearchIn\) GetGreedy
+### func \(\*UserListGetSearchIn\) [GetGreedy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L13831>)
 
 ```go
 func (s *UserListGetSearchIn) GetGreedy() bool
@@ -3948,7 +3948,7 @@ func (s *UserListGetSearchIn) GetGreedy() bool
 
 
 <a name="UserListGetSearchIn.GetOptions"></a>
-### func \(\*UserListGetSearchIn\) GetOptions
+### func \(\*UserListGetSearchIn\) [GetOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L13935>)
 
 ```go
 func (s *UserListGetSearchIn) GetOptions() *utils.SearchOptions
@@ -3957,7 +3957,7 @@ func (s *UserListGetSearchIn) GetOptions() *utils.SearchOptions
 
 
 <a name="UserListGetSearchIn.GetOrderBy"></a>
-### func \(\*UserListGetSearchIn\) GetOrderBy
+### func \(\*UserListGetSearchIn\) [GetOrderBy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L13835>)
 
 ```go
 func (s *UserListGetSearchIn) GetOrderBy() []utils.OrderByItem
@@ -3966,7 +3966,7 @@ func (s *UserListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 
 <a name="UserListGetSearchIn.ResolveSelectColumns"></a>
-### func \(\*UserListGetSearchIn\) ResolveSelectColumns
+### func \(\*UserListGetSearchIn\) [ResolveSelectColumns](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/search.go#L13895>)
 
 ```go
 func (s *UserListGetSearchIn) ResolveSelectColumns() []string

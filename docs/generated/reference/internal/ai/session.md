@@ -92,7 +92,7 @@ var ErrInteractionRewindUnavailable = errors.New("agent interaction rewind unava
 ```
 
 <a name="RedoCheckpointID"></a>
-## func RedoCheckpointID
+## func [RedoCheckpointID](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/interaction_rewind.go#L30>)
 
 ```go
 func RedoCheckpointID(sessionID, interactionID uint) string
@@ -101,7 +101,7 @@ func RedoCheckpointID(sessionID, interactionID uint) string
 RedoCheckpointID 返回某条交互（审批 / 问卷）的 checkpoint 快照键。
 
 <a name="RedoCheckpointPrefix"></a>
-## func RedoCheckpointPrefix
+## func [RedoCheckpointPrefix](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/interaction_rewind.go#L35>)
 
 ```go
 func RedoCheckpointPrefix(sessionID uint) string
@@ -110,7 +110,7 @@ func RedoCheckpointPrefix(sessionID uint) string
 RedoCheckpointPrefix 返回某会话全部交互回退快照键的公共前缀，供会话删除时按前缀清理。
 
 <a name="InteractionRewind"></a>
-## type InteractionRewind
+## type [InteractionRewind](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/interaction_rewind.go#L40-L50>)
 
 InteractionRewind 是一次交互回退写入挂起现场所需的参数。
 
@@ -129,7 +129,7 @@ type InteractionRewind struct {
 ```
 
 <a name="Store"></a>
-## type Store
+## type [Store](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/store.go#L29-L32>)
 
 Store 提供 Agent 会话（AgentSession）与消息（AgentMessage）的持久化 CRUD， 全部操作基于 GORM（database.DB，即 \*gorm.DB）。会话删除时消息在同一事务内级联删除； 消息查询默认按会话内 seq 升序，与 LLM 对话顺序一致。
 
@@ -140,7 +140,7 @@ type Store struct {
 ```
 
 <a name="NewStore"></a>
-### func NewStore
+### func [NewStore](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/store.go#L35>)
 
 ```go
 func NewStore(db *database.DB) (*Store, error)
@@ -149,7 +149,7 @@ func NewStore(db *database.DB) (*Store, error)
 NewStore 构造 Store；db 为空时返回英文错误。
 
 <a name="Store.AbortPendingRun"></a>
-### func \(\*Store\) AbortPendingRun
+### func \(\*Store\) [AbortPendingRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/runs.go#L118>)
 
 ```go
 func (s *Store) AbortPendingRun(ctx context.Context, sessionID, userID uint) error
@@ -158,7 +158,7 @@ func (s *Store) AbortPendingRun(ctx context.Context, sessionID, userID uint) err
 AbortPendingRun 中止一个「等待中」会话的挂起现场（用户点击停止）：作废该会话最近一条 pending 现场 （置为 consumed），并把其锚点助手消息的终局阶段置为 cancelled，使状态推导回落 \`暂停/用户中止\`。 无 pending 现场（已消费 / 不存在）时幂等返回 nil——重复中止不报错。单事务执行，避免现场与 锚点消息中途不一致。不删除任何消息、长期记忆与压缩检查点。
 
 <a name="Store.AppendInteraction"></a>
-### func \(\*Store\) AppendInteraction
+### func \(\*Store\) [AppendInteraction](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/interactions.go#L23>)
 
 ```go
 func (s *Store) AppendInteraction(ctx context.Context, item *ai.AgentInteraction) (*ai.AgentInteraction, error)
@@ -167,7 +167,7 @@ func (s *Store) AppendInteraction(ctx context.Context, item *ai.AgentInteraction
 AppendInteraction 在单事务内追加一条持久化交互（审批 / 问卷 / 下一步）：先校验会话属于该属主用户， 再按会话内已有最大 seq 分配下一个序号（从 1 起），赋给 item.Seq 后落库。Status 为空时取缺省 pending；Payload 由调用方以 crypto 序列化器包装（serializer.NewCrypto\(业务 JSON\)）。 item 为空或 Kind 为空时返回英文错误；会话不存在（含归属不符）时返回 ErrSessionNotFound。
 
 <a name="Store.AppendMessage"></a>
-### func \(\*Store\) AppendMessage
+### func \(\*Store\) [AppendMessage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/messages.go#L37>)
 
 ```go
 func (s *Store) AppendMessage(ctx context.Context, msg *ai.AgentMessage) (*ai.AgentMessage, error)
@@ -176,7 +176,7 @@ func (s *Store) AppendMessage(ctx context.Context, msg *ai.AgentMessage) (*ai.Ag
 AppendMessage 在单事务内追加一条消息到会话：先以会话行的 message\_seq 计数列原子分配一个 seq （并发追加以该计数列为锁点全局串行，不重复），赋给 msg.Seq 后再落库。msg 为空时返回英文错误； 会话不存在或不属于消息携带的命名空间 / 属主用户时返回 ErrSessionNotFound。
 
 <a name="Store.AppendNativeMessage"></a>
-### func \(\*Store\) AppendNativeMessage
+### func \(\*Store\) [AppendNativeMessage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/native.go#L25>)
 
 ```go
 func (s *Store) AppendNativeMessage(ctx context.Context, msg *ai.AgentMessage) (*ai.AgentMessage, error)
@@ -185,7 +185,7 @@ func (s *Store) AppendNativeMessage(ctx context.Context, msg *ai.AgentMessage) (
 AppendNativeMessage 在单事务内追加一条承载 eino 原生消息载荷的消息：先复用会话行的 message\_seq 计数列原子分配一个 seq（与 AppendMessage 同一分配口径），赋给 msg.Seq 后再落库。MessageKind 为空 时取缺省 chat；Payload 由调用方以 crypto 序列化器包装（serializer.NewCrypto\(原生消息 JSON\)）。 Content 为空且提供了 Payload 时，按 MessageKind 解码载荷并回填正文，使滚动摘要与消息列表仍可读取 原生消息的文本；解码失败时保持 Content 为空，不影响追加。 msg 为空时返回英文错误；会话不存在或不属于消息携带的命名空间 / 属主用户时返回 ErrSessionNotFound。
 
 <a name="Store.AssistantSeqAtMessage"></a>
-### func \(\*Store\) AssistantSeqAtMessage
+### func \(\*Store\) [AssistantSeqAtMessage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/messages.go#L81>)
 
 ```go
 func (s *Store) AssistantSeqAtMessage(ctx context.Context, sessionID uint, namespaceName string, userID uint, messageID uint) (uint64, error)
@@ -194,7 +194,7 @@ func (s *Store) AssistantSeqAtMessage(ctx context.Context, sessionID uint, names
 AssistantSeqAtMessage 返回指定助手消息（id）在所属会话内的 seq，供手动压缩把折叠上界定位到该助手 回答；该消息不存在、不属于该会话的命名空间与属主，或不是助手消息时返回 ErrMessageNotFound。按角色 过滤而非按「第 N 轮」定位：折叠边界以选中的助手回答为准，与前端选中的那条消息一一对应。
 
 <a name="Store.BranchSessionFromUserMessage"></a>
-### func \(\*Store\) BranchSessionFromUserMessage
+### func \(\*Store\) [BranchSessionFromUserMessage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/branch.go#L129>)
 
 ```go
 func (s *Store) BranchSessionFromUserMessage(ctx context.Context, sessionID, userID uint, userMessageIndex int, title string) (*ai.AgentSession, error)
@@ -203,7 +203,7 @@ func (s *Store) BranchSessionFromUserMessage(ctx context.Context, sessionID, use
 BranchSessionFromUserMessage 以第 userMessageIndex 条（从 1 起，仅按用户消息计数、按 seq 升序 定位）用户消息所在轮次为结尾，把该会话从最早一条消息起、直到「下一条用户消息之前」的全部消息 复制为一个新会话，供前端「分支」使用（新会话可独立演进，源会话不受影响）。目标用户消息不存在 （序号越界）时返回 ErrMessageNotFound；源会话不属于给定属主用户时返回 ErrSessionNotFound。 单事务执行，避免复制中途留下半截会话。新会话归属同一命名空间与属主，标题为空时沿用源会话标题， 档位 / Agent 类型 / 审核阀门与源会话一致，状态 active；滚动摘要不复制（消息 seq 会重新编号， 原摘要覆盖范围失去意义）。复制出的消息在新会话内 seq 从 1 连续重新编号（新 session\_id 不同， 不受 UNIQUE\(session\_id,user\_id,seq\) 影响），保留 role/message\_kind/payload/content/draft/citations/ skill\_id/skill\_name/created\_at 等载荷，不复制 id 与源 seq。新会话的 message\_seq 直接置为复制条数（在插入时一次算好， 供后续追加消息从 count\+1 继续分配 seq）。
 
 <a name="Store.ClaimAgentRun"></a>
-### func \(\*Store\) ClaimAgentRun
+### func \(\*Store\) [ClaimAgentRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/runs.go#L37>)
 
 ```go
 func (s *Store) ClaimAgentRun(ctx context.Context, sessionID uint, namespaceName string, userID uint) (*modelsai.AgentRun, error)
@@ -212,7 +212,7 @@ func (s *Store) ClaimAgentRun(ctx context.Context, sessionID uint, namespaceName
 ClaimAgentRun 认领一次恢复请求对应的运行现场：以（会话 ID、命名空间、属主用户）为查询条件，优先 取该会话最新的 pending 现场，无 pending 时再取最新一行用于区分「不存在 / 已消费」——回退（reanswer） 会把较早的问卷现场重置为 pending 并把更晚的现场置为已消费，故必须按状态优先而非单纯按 id 取最新， 否则会认领到已消费的现场。归属不符的行在查询阶段即被过滤，表现为「不存在」；随后校验状态，通过后 原子置为 consumed（并发双提交只有一方成功）并返回该现场。挂起现场不设过期：无大模型调用在跑即无 生命周期需要管理，只要会话未删除，任何时间都可恢复。失败类别见包级哨兵 ErrAgentRunNotFound / ErrAgentRunConsumed，供上层映射业务码。
 
 <a name="Store.ContextTokens"></a>
-### func \(\*Store\) ContextTokens
+### func \(\*Store\) [ContextTokens](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/usage.go#L21>)
 
 ```go
 func (s *Store) ContextTokens(ctx context.Context, sessionID uint, namespaceName string, userID uint) (int, error)
@@ -221,7 +221,7 @@ func (s *Store) ContextTokens(ctx context.Context, sessionID uint, namespaceName
 ContextTokens 返回会话的上下文占用度量：最近一条「有用量记录」的助手消息的输入 token 数 （PromptTokens \> 0）。被取消 / 失败 / 挂起而中断落库的助手消息从未收到供应商的用量帧，用量列 为 0——它不构成一次测量，故跳过并回落到更早的末次测量（与前端占用环「取最近一条带用量的助手 消息」的口径一致）；若无任何可用测量（无助手消息，或全部助手消息都未记下用量）返回 0，不视为 错误。注意 0 的含义是「尚无测量」，不是「占用为 0」。
 
 <a name="Store.ContextUsage"></a>
-### func \(\*Store\) ContextUsage
+### func \(\*Store\) [ContextUsage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/usage.go#L53>)
 
 ```go
 func (s *Store) ContextUsage(ctx context.Context, sessionID uint, namespaceName string, userID uint) (int, error)
@@ -230,7 +230,7 @@ func (s *Store) ContextUsage(ctx context.Context, sessionID uint, namespaceName 
 ContextUsage 返回会话用于展示的上下文占用：取「末次真实测量」与「最近一次带估算的压缩推进」中 更晚发生者的 token 数——压缩本身不产生新的真实测量（见 ContextTokens），若压缩晚于末次测量 （即压缩后尚无生成落定），展示占用取该次压缩的即时估算（检查点 tokens\_after）；此后任一生成落定 （其助手消息行比该压缩更晚落库）即由真实测量接管。与 ContextTokens 的分工：本方法服务展示 （会话列表 / 详情 / 前端的占用指示），ContextTokens 服务压缩前的度量基线——压缩基线必须始终取 真实测量，绝不能用上一次的估算去度量下一次压缩，否则估算偏差会逐次累积。 会话既无测量也无估算时返回 0，含义同 ContextTokens：表示「尚无测量」，不是「占用为 0」。
 
 <a name="Store.ContextUsageBySession"></a>
-### func \(\*Store\) ContextUsageBySession
+### func \(\*Store\) [ContextUsageBySession](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/usage.go#L66>)
 
 ```go
 func (s *Store) ContextUsageBySession(ctx context.Context, namespaceName string, userID uint, sessionIDs []uint) (map[uint]int, error)
@@ -239,7 +239,7 @@ func (s *Store) ContextUsageBySession(ctx context.Context, namespaceName string,
 ContextUsageBySession 批量返回每个会话用于展示的上下文占用（口径同 ContextUsage）：分别取每个 会话末次真实测量的助手消息与最近一条带估算的压缩检查点，逐会话取更晚发生者。两侧各以一条分组 查询批量取回（避免逐会话查询的 N\+1），再在 Go 侧按落库时间合并——取舍规则只在此一处实现，单会话 口径即本方法的单元素特例。无可用值的会话不出现在结果中（调用方缺省为 0），sessionIDs 为空时返回 空 map。
 
 <a name="Store.CountUserTurns"></a>
-### func \(\*Store\) CountUserTurns
+### func \(\*Store\) [CountUserTurns](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/usage.go#L161>)
 
 ```go
 func (s *Store) CountUserTurns(ctx context.Context, sessionID uint, namespaceName string, userID uint) (int, error)
@@ -250,7 +250,7 @@ CountUserTurns 返回会话内当前存在的用户提问条数（有效轮次�
 会话锁定不需要写任何状态列：它是 StateOf 的全函数推导结果（UserTurns \>= MaxUserTurns 且无在途活动 / 挂起现场时即为 locked），因此本方法只如实读数，调用方（视图层事实装配）据此推导，回滚删除若干条提问 后有效轮次自然下降，状态即自然回到 paused——「派生即解锁」，不存在额外的解锁写路径。
 
 <a name="Store.CreateSession"></a>
-### func \(\*Store\) CreateSession
+### func \(\*Store\) [CreateSession](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/store.go#L45>)
 
 ```go
 func (s *Store) CreateSession(ctx context.Context, namespaceName, title string, slot ai.Slot, agentKind ai.AgentKind, userID uint) (*ai.AgentSession, error)
@@ -259,7 +259,7 @@ func (s *Store) CreateSession(ctx context.Context, namespaceName, title string, 
 CreateSession 创建一个新会话，初始状态为 active；slot 为该会话的缺省档位 \(flash/standard/advanced\)，空表示生成时按 agent.defaultSlot 参数解析；agentKind 为会话所属 Agent 类型，空取缺省 knowledge，非法取值直接返回英文错误且不落库。会话来由取普通助手会话。
 
 <a name="Store.CreateSessionWithOrigin"></a>
-### func \(\*Store\) CreateSessionWithOrigin
+### func \(\*Store\) [CreateSessionWithOrigin](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/store.go#L51>)
 
 ```go
 func (s *Store) CreateSessionWithOrigin(ctx context.Context, namespaceName, title string, slot ai.Slot, agentKind ai.AgentKind, origin ai.SessionOrigin, userID uint) (*ai.AgentSession, error)
@@ -268,7 +268,7 @@ func (s *Store) CreateSessionWithOrigin(ctx context.Context, namespaceName, titl
 CreateSessionWithOrigin 按指定会话来由创建会话；内部运行会话（如周期报告每次运行）以 periodic\_report 创建，从而不出现在 AI 助手会话列表中。
 
 <a name="Store.DB"></a>
-### func \(\*Store\) DB
+### func \(\*Store\) [DB](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/store.go#L196>)
 
 ```go
 func (s *Store) DB() *database.DB
@@ -277,7 +277,7 @@ func (s *Store) DB() *database.DB
 DB 返回底层数据库句柄，仅供测试与诊断读取原始行（加密列校验等）；生产链路不得使用。
 
 <a name="Store.DeleteMessage"></a>
-### func \(\*Store\) DeleteMessage
+### func \(\*Store\) [DeleteMessage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/messages.go#L134>)
 
 ```go
 func (s *Store) DeleteMessage(ctx context.Context, id uint, namespaceName string, userID uint) error
@@ -286,7 +286,7 @@ func (s *Store) DeleteMessage(ctx context.Context, id uint, namespaceName string
 DeleteMessage 硬删除一条消息行（按消息 ID 定位，并限定命名空间与属主用户），供回合在「本次流以挂起 结束」时回收其阶段性落库的那一行：挂起不是终局，续跑会把本回合已外发的正文并回最终 done，留着 这一行会在续跑结束后形成同一回合的两条助手消息。消息行本无 deleted\_at 列（见 DeleteSession）， 故这里即硬删；目标行不存在（含归属不符）时返回 ErrMessageNotFound。
 
 <a name="Store.DeleteSession"></a>
-### func \(\*Store\) DeleteSession
+### func \(\*Store\) [DeleteSession](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/store.go#L157>)
 
 ```go
 func (s *Store) DeleteSession(ctx context.Context, id uint, namespaceName string, userID uint) error
@@ -295,7 +295,7 @@ func (s *Store) DeleteSession(ctx context.Context, id uint, namespaceName string
 DeleteSession 在同一事务内以真实（硬）删除移除会话及其从属数据：会话行不再软删除，连同其消息、 持久化交互、压缩检查点、长期记忆与挂起运行现场一并整行删除。会话对各子表均为真 FK （ON DELETE CASCADE），但不依赖数据库是否强制外键（如 sqlite 默认关闭），仍显式清理：先删持久化 交互与消息、压缩检查点，再删长期记忆（agent\_memories）与挂起运行现场（agent\_runs），最后经 Unscoped 硬删会话本身（消息/交互/检查点本就无 deleted\_at 列为硬删；记忆与运行现场亦经 Unscoped 硬删）。
 
 <a name="Store.GetMessage"></a>
-### func \(\*Store\) GetMessage
+### func \(\*Store\) [GetMessage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/messages.go#L63>)
 
 ```go
 func (s *Store) GetMessage(ctx context.Context, id uint, namespaceName string, userID uint) (*ai.AgentMessage, error)
@@ -304,7 +304,7 @@ func (s *Store) GetMessage(ctx context.Context, id uint, namespaceName string, u
 GetMessage 按消息 ID 查询一条消息（限定命名空间与属主用户），供运行层取回问卷锚点行上的载荷； 不存在（含归属不符）时返回 ErrMessageNotFound。
 
 <a name="Store.GetPendingInterrupt"></a>
-### func \(\*Store\) GetPendingInterrupt
+### func \(\*Store\) [GetPendingInterrupt](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/native.go#L128>)
 
 ```go
 func (s *Store) GetPendingInterrupt(ctx context.Context, sessionID, userID uint) (string, error)
@@ -313,7 +313,7 @@ func (s *Store) GetPendingInterrupt(ctx context.Context, sessionID, userID uint)
 GetPendingInterrupt 读取会话当前挂起的根 interrupt ID（无挂起时为空串），会话按 id \+ 属主用户 定位；会话不存在（含归属不符）时返回 ErrSessionNotFound。
 
 <a name="Store.GetSession"></a>
-### func \(\*Store\) GetSession
+### func \(\*Store\) [GetSession](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/store.go#L77>)
 
 ```go
 func (s *Store) GetSession(ctx context.Context, id uint, namespaceName string, userID uint) (*ai.AgentSession, error)
@@ -322,7 +322,7 @@ func (s *Store) GetSession(ctx context.Context, id uint, namespaceName string, u
 GetSession 按 ID 查询会话，并限定其属于给定命名空间与属主用户（跨用户隔离）；不存在时返回 ErrSessionNotFound。
 
 <a name="Store.HistoryMessages"></a>
-### func \(\*Store\) HistoryMessages
+### func \(\*Store\) [HistoryMessages](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/messages.go#L169>)
 
 ```go
 func (s *Store) HistoryMessages(ctx context.Context, sessionID uint, namespaceName string, userID uint, maxCount int) ([]*ai.AgentMessage, error)
@@ -331,7 +331,7 @@ func (s *Store) HistoryMessages(ctx context.Context, sessionID uint, namespaceNa
 HistoryMessages 返回会话最近 maxCount 条消息（限定命名空间与属主用户，按会话内 seq 升序返回，最新在 后），供注入 LLM 上下文保持对话顺序；maxCount 非正数时返回全部消息。
 
 <a name="Store.LatestAssistantMessage"></a>
-### func \(\*Store\) LatestAssistantMessage
+### func \(\*Store\) [LatestAssistantMessage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/messages.go#L214>)
 
 ```go
 func (s *Store) LatestAssistantMessage(ctx context.Context, sessionID uint, namespaceName string, userID uint) (*ai.AgentMessage, error)
@@ -340,7 +340,7 @@ func (s *Store) LatestAssistantMessage(ctx context.Context, sessionID uint, name
 LatestAssistantMessage 返回会话最近一条助手消息（含草稿/引用载荷），并限定命名空间与属主用户； 不存在时返回 ErrMessageNotFound。
 
 <a name="Store.LatestRunByAnchor"></a>
-### func \(\*Store\) LatestRunByAnchor
+### func \(\*Store\) [LatestRunByAnchor](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/runs.go#L96>)
 
 ```go
 func (s *Store) LatestRunByAnchor(ctx context.Context, sessionID, userID, anchorMessageID uint) (*modelsai.AgentRun, error)
@@ -349,7 +349,7 @@ func (s *Store) LatestRunByAnchor(ctx context.Context, sessionID, userID, anchor
 LatestRunByAnchor 返回某会话内锚定到指定助手消息的最新运行现场（含已消费），供「重新审批」回退时 沿用原回合使用的档位；现场不存在（含归属不符）时返回 ErrAgentRunNotFound。
 
 <a name="Store.ListCompactionSummaries"></a>
-### func \(\*Store\) ListCompactionSummaries
+### func \(\*Store\) [ListCompactionSummaries](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/summary.go#L91>)
 
 ```go
 func (s *Store) ListCompactionSummaries(ctx context.Context, sessionID, userID uint) (map[uint64]string, error)
@@ -358,7 +358,7 @@ func (s *Store) ListCompactionSummaries(ctx context.Context, sessionID, userID u
 ListCompactionSummaries 返回会话内各压缩检查点的摘要全文（键为 upto\_seq，限定属主用户），供历史 回放中的压缩块在展开时查看已完成内容。摘要为密文列，方法只取 upto\_seq \+ summary，避免 ListCompactions 为消息列表回显而解密全部摘要；无检查点时返回空映射。
 
 <a name="Store.ListCompactions"></a>
-### func \(\*Store\) ListCompactions
+### func \(\*Store\) [ListCompactions](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/summary.go#L76>)
 
 ```go
 func (s *Store) ListCompactions(ctx context.Context, sessionID, userID uint) ([]*ai.AgentSessionCompaction, error)
@@ -367,7 +367,7 @@ func (s *Store) ListCompactions(ctx context.Context, sessionID, userID uint) ([]
 ListCompactions 返回会话内按 upto\_seq 升序的全部压缩检查点（限定属主用户），供消息列表在刷新后 回显历史压缩记录。仅取展示所需列——刻意不 Select summary，避免为回显而无谓解密摘要。
 
 <a name="Store.ListInteractions"></a>
-### func \(\*Store\) ListInteractions
+### func \(\*Store\) [ListInteractions](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/interactions.go#L64>)
 
 ```go
 func (s *Store) ListInteractions(ctx context.Context, sessionID, userID uint) ([]*ai.AgentInteraction, error)
@@ -376,7 +376,7 @@ func (s *Store) ListInteractions(ctx context.Context, sessionID, userID uint) ([
 ListInteractions 按会话内 seq 升序返回会话的全部持久化交互，并限定属主用户；无交互时返回空切片。 供刷新 / 重进会话时把已作答的审批、问卷与下一步卡片一并重建。
 
 <a name="Store.ListInteractionsByKind"></a>
-### func \(\*Store\) ListInteractionsByKind
+### func \(\*Store\) [ListInteractionsByKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/interaction_rewind.go#L54>)
 
 ```go
 func (s *Store) ListInteractionsByKind(ctx context.Context, sessionID, userID uint, kind ai.InteractionKind) ([]*ai.AgentInteraction, error)
@@ -385,7 +385,7 @@ func (s *Store) ListInteractionsByKind(ctx context.Context, sessionID, userID ui
 ListInteractionsByKind 按会话内 seq 倒序返回指定类型的交互（限定属主用户），供回退时按调用 ID / 中断 ID 定位目标交互；无匹配交互时返回空切片。
 
 <a name="Store.ListMessages"></a>
-### func \(\*Store\) ListMessages
+### func \(\*Store\) [ListMessages](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/messages.go#L152>)
 
 ```go
 func (s *Store) ListMessages(ctx context.Context, sessionID uint, namespaceName string, userID uint, limit, offset int) ([]*ai.AgentMessage, error)
@@ -394,7 +394,7 @@ func (s *Store) ListMessages(ctx context.Context, sessionID uint, namespaceName 
 ListMessages 分页列出会话（限定命名空间与属主用户）消息（按会话内 seq 升序）；limit/offset 非正数时 不限定。
 
 <a name="Store.ListMessagesAfter"></a>
-### func \(\*Store\) ListMessagesAfter
+### func \(\*Store\) [ListMessagesAfter](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/messages.go#L189>)
 
 ```go
 func (s *Store) ListMessagesAfter(ctx context.Context, sessionID uint, namespaceName string, userID uint, afterSeq uint) ([]*ai.AgentMessage, error)
@@ -403,7 +403,7 @@ func (s *Store) ListMessagesAfter(ctx context.Context, sessionID uint, namespace
 ListMessagesAfter 返回会话中 seq 大于 afterSeq 的消息（限定命名空间与属主用户，按会话内 seq 升序）， 供会话压缩取出「游标之后尚未摘要的全部消息」。
 
 <a name="Store.ListMessagesBefore"></a>
-### func \(\*Store\) ListMessagesBefore
+### func \(\*Store\) [ListMessagesBefore](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/messages.go#L202>)
 
 ```go
 func (s *Store) ListMessagesBefore(ctx context.Context, sessionID uint, namespaceName string, userID uint, beforeSeq uint, afterSeq uint) ([]*ai.AgentMessage, error)
@@ -412,7 +412,7 @@ func (s *Store) ListMessagesBefore(ctx context.Context, sessionID uint, namespac
 ListMessagesBefore 返回会话中 afterSeq 与 beforeSeq 之间的消息（afterSeq \< seq \< beforeSeq，限定命名 空间与属主用户，按会话内 seq 升序），供滚动摘要取出「窗口外且尚未摘要」的消息（窗口最旧消息 seq 作 上界）。
 
 <a name="Store.ListNativeMessages"></a>
-### func \(\*Store\) ListNativeMessages
+### func \(\*Store\) [ListNativeMessages](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/native.go#L53>)
 
 ```go
 func (s *Store) ListNativeMessages(ctx context.Context, sessionID uint, namespaceName string, userID uint, maxCount int) ([]*ai.AgentMessage, error)
@@ -421,7 +421,7 @@ func (s *Store) ListNativeMessages(ctx context.Context, sessionID uint, namespac
 ListNativeMessages 返回会话最近 maxCount 条消息（限定命名空间与属主用户，按会话内 seq 升序返回，最新 在后）；maxCount 非正数时返回全部消息。每条消息的 Payload 为原生消息 JSON（经 crypto 解密后由调用方 按 MessageKind 反序列化）；仅含 Content 的行也会返回，调用方按需回退。
 
 <a name="Store.ListSessions"></a>
-### func \(\*Store\) ListSessions
+### func \(\*Store\) [ListSessions](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/store.go#L94>)
 
 ```go
 func (s *Store) ListSessions(ctx context.Context, namespaceName string, userID uint, limit, offset int) ([]*ai.AgentSession, error)
@@ -430,7 +430,7 @@ func (s *Store) ListSessions(ctx context.Context, namespaceName string, userID u
 ListSessions 列出命名空间下属于该用户、状态为 active 且会话来由为普通助手的会话，按更新时间 倒序（最近活跃在前）；limit/offset 非正数时不限定。归档（archived）等非 active 会话与内部 运行会话（如周期报告每次运行的会话）不出现在列表中。
 
 <a name="Store.RenameSession"></a>
-### func \(\*Store\) RenameSession
+### func \(\*Store\) [RenameSession](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/store.go#L114>)
 
 ```go
 func (s *Store) RenameSession(ctx context.Context, id uint, namespaceName string, userID uint, title string) (*ai.AgentSession, error)
@@ -439,7 +439,7 @@ func (s *Store) RenameSession(ctx context.Context, id uint, namespaceName string
 RenameSession 重命名会话标题，返回更新后的会话；会话不属于给定命名空间 / 属主用户时返回 ErrSessionNotFound。
 
 <a name="Store.RewindToInteraction"></a>
-### func \(\*Store\) RewindToInteraction
+### func \(\*Store\) [RewindToInteraction](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/interaction_rewind.go#L73>)
 
 ```go
 func (s *Store) RewindToInteraction(ctx context.Context, sessionID, userID, interactionID uint, rewind InteractionRewind) error
@@ -448,7 +448,7 @@ func (s *Store) RewindToInteraction(ctx context.Context, sessionID, userID, inte
 RewindToInteraction 把会话回退到某条审批 / 问卷交互的挂起状态：删除该交互锚点消息之后的全部消息 （上次作答后续跑产生的回答）与更晚的交互，把该交互重置为待处理（审批清空决策、问卷清空作答）， 作废更晚的挂起现场，并以给定参数重建一条指向该锚点的 pending 运行现场——使状态重新落「等待审批 / 等待作答」，用户可重新选择，且续跑沿用挂起时的图现场而不是重跑整轮回答。 目标交互类型不符、不存在或归属不符时返回 ErrInteractionNotFound；锚点消息缺失返回 ErrMessageNotFound；回退点已被滚动摘要覆盖时返回 ErrInteractionRewindUnavailable（摘要含被删内容， 回退会使上下文口径不一致）。目标已是 pending 时幂等返回 nil。单事务执行，避免回退中途留下 不一致状态。
 
 <a name="Store.SaveAgentRun"></a>
-### func \(\*Store\) SaveAgentRun
+### func \(\*Store\) [SaveAgentRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/runs.go#L16>)
 
 ```go
 func (s *Store) SaveAgentRun(ctx context.Context, run *modelsai.AgentRun) error
@@ -457,7 +457,7 @@ func (s *Store) SaveAgentRun(ctx context.Context, run *modelsai.AgentRun) error
 SaveAgentRun 创建一行运行现场（状态为 pending），承载挂起时刻的运行现场。
 
 <a name="Store.SetAgentRunAnchor"></a>
-### func \(\*Store\) SetAgentRunAnchor
+### func \(\*Store\) [SetAgentRunAnchor](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/runs.go#L78>)
 
 ```go
 func (s *Store) SetAgentRunAnchor(ctx context.Context, runID, anchorMessageID uint) error
@@ -466,7 +466,7 @@ func (s *Store) SetAgentRunAnchor(ctx context.Context, runID, anchorMessageID ui
 prepareClientToolCall 处理一次 client 来源工具调用：仅当本次运行有持久化会话且具备审批通道时， 原样登记待执行调用（工具名与入参文本，后端不做解释），待本轮结束统一挂起；否则返回回灌给模型的 英文错误文本，此时不产生任何 ToolRequest。api\_invoke 是唯一例外：其目标接口必须由后端按能力 SetAgentRunAnchor 把挂起锚点消息 ID 回写到运行现场：挂起时 wrapPersist 写好承载本回合最终回答（问卷 挂起还承载问卷载荷）的助手消息行后调用，使续跑能原地终态化该行、回退接口能据锚点截断其后消息。现场 不存在（含归属不符）时返回 ErrAgentRunNotFound。
 
 <a name="Store.SetPendingInterrupt"></a>
-### func \(\*Store\) SetPendingInterrupt
+### func \(\*Store\) [SetPendingInterrupt](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/native.go#L113>)
 
 ```go
 func (s *Store) SetPendingInterrupt(ctx context.Context, sessionID, userID uint, interruptID string) error
@@ -475,7 +475,7 @@ func (s *Store) SetPendingInterrupt(ctx context.Context, sessionID, userID uint,
 SetPendingInterrupt 写入会话当前挂起的根 interrupt ID（传空串即清除挂起），会话按 id \+ 属主用户 定位；会话不存在（含归属不符）时返回 ErrSessionNotFound。
 
 <a name="Store.SetSessionStatus"></a>
-### func \(\*Store\) SetSessionStatus
+### func \(\*Store\) [SetSessionStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/store.go#L140>)
 
 ```go
 func (s *Store) SetSessionStatus(ctx context.Context, id uint, namespaceName string, userID uint, status ai.SessionStatus) (*ai.AgentSession, error)
@@ -484,7 +484,7 @@ func (s *Store) SetSessionStatus(ctx context.Context, id uint, namespaceName str
 SetSessionStatus 更新会话状态（如归档），返回更新后的会话；会话不属于给定命名空间 / 属主用户 时返回 ErrSessionNotFound。
 
 <a name="Store.TruncateMessagesFromUserMessage"></a>
-### func \(\*Store\) TruncateMessagesFromUserMessage
+### func \(\*Store\) [TruncateMessagesFromUserMessage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/branch.go#L29>)
 
 ```go
 func (s *Store) TruncateMessagesFromUserMessage(ctx context.Context, sessionID, userID uint, userMessageIndex int) error
@@ -493,7 +493,7 @@ func (s *Store) TruncateMessagesFromUserMessage(ctx context.Context, sessionID, 
 TruncateMessagesFromUserMessage 截断会话消息：删除会话内第 userMessageIndex 条（从 1 起，仅按 用户消息计数、按 seq 升序定位）用户消息，以及该条之后的全部消息（含助手回复），供 「回退 / 删除到某一轮对话」使用。目标用户消息不存在（序号越界）时返回 ErrMessageNotFound。 锚点落在被截断区间内的运行现场（agent\_runs）一并置为已消费：其锚点消息已删除，现场无从续跑， 留着会让前端把已删除回合当作挂起现场。锚点落在被截断区间内的持久化交互（agent\_interactions） 连同其 redo checkpoint 一并删除：交互卡片依附于助手消息，消息已删而卡片仍留在登记里时，历史回放 会把它挂到残留轮次或合成一条空回答，表现为已回退的「推荐的下一步」等卡片刷新后仍在。 单事务执行，避免截断中途留下不一致的会话内容。截断落在已压缩区间内（summary\_upto\_seq ≥ 被截断 起始 seq）时，按压缩检查点回退上下文起点：恢复「upto\_seq \< 起始 seq」的最近一个检查点的摘要与 游标，无可用检查点则清空摘要、summary\_upto\_seq 置 0（回到最开始）；并作废（删除）upto\_seq ≥ 起始 seq 的检查点。截断点尚未被摘要覆盖（summary\_upto\_seq \< 起始 seq）时摘要与游标保持不变。回滚不删除 压缩期间抽取的长期记忆（agent\_memories），也不做级联删除。后续追加仍按会话 message\_seq 单调分配， 序号不复用。
 
 <a name="Store.UpdateAssistantMessage"></a>
-### func \(\*Store\) UpdateAssistantMessage
+### func \(\*Store\) [UpdateAssistantMessage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/messages.go#L102>)
 
 ```go
 func (s *Store) UpdateAssistantMessage(ctx context.Context, msg *ai.AgentMessage) error
@@ -502,7 +502,7 @@ func (s *Store) UpdateAssistantMessage(ctx context.Context, msg *ai.AgentMessage
 UpdateAssistantMessage 原地更新一条已落库的助手消息（按消息 ID 定位，并限定属主用户），供运行 途中把阶段性落库的那一行继续累积正文，以及运行终结时写入生命周期终态阶段（phase：done / failed / cancelled / suspended）。不重分配 seq，故消息在会话内的顺序与只读游标不变。必须用「结构体 \+ Select」 写这几列（正文 / 草稿 / 引用为密文列，走 crypto 序列化器；map 形式会绕过序列化器把明文直写库，见 UpdateSummaryAndCheckpoint）。思考 / 问卷 / 授权清单不再有对应列，展示事实由事件块与 agent\_interactions 承载。msg 为空或 ID 为 0 时返回英文错误；目标消息不存在（含归属不符）时返回 ErrMessageNotFound。
 
 <a name="Store.UpdateInteractionStatus"></a>
-### func \(\*Store\) UpdateInteractionStatus
+### func \(\*Store\) [UpdateInteractionStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/interactions.go#L79>)
 
 ```go
 func (s *Store) UpdateInteractionStatus(ctx context.Context, id, userID uint, status ai.InteractionStatus, payload []byte) error
@@ -511,7 +511,7 @@ func (s *Store) UpdateInteractionStatus(ctx context.Context, id, userID uint, st
 UpdateInteractionStatus 更新一条持久化交互的状态（pending/answered/cancelled），按交互 ID \+ 属主 用户定位；payload 非 nil 时一并替换业务 JSON（以 crypto 序列化器加密后经「结构体 \+ Select」写入， map 形式会绕过序列化器把明文直写库），nil 表示只更新状态、保留原载荷。 id 为 0 或 status 为空时返回英文错误；目标交互不存在（含归属不符）时返回 ErrInteractionNotFound。
 
 <a name="Store.UpdateNativeMessage"></a>
-### func \(\*Store\) UpdateNativeMessage
+### func \(\*Store\) [UpdateNativeMessage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/native.go#L79>)
 
 ```go
 func (s *Store) UpdateNativeMessage(ctx context.Context, msg *ai.AgentMessage) error
@@ -520,7 +520,7 @@ func (s *Store) UpdateNativeMessage(ctx context.Context, msg *ai.AgentMessage) e
 UpdateNativeMessage 原地更新一条已落库的消息（按消息 ID \+ 会话 ID \+ 命名空间 \+ 属主用户定位），供运行 途中累积原生消息载荷以及终结时写入引用、用量与生命周期终态阶段。不重分配 seq，故消息在会话内的顺序 不变。必须用「结构体 \+ Select」写这几列（Payload / CitationsJSON 为密文列，走 crypto 序列化器； map 形式会绕过序列化器把明文直写库）。MessageKind 为空时按 chat 写回。 msg 为空、ID 或 SessionID 为 0 时返回英文错误；目标消息不存在（含归属不符）时返回 ErrMessageNotFound。
 
 <a name="Store.UpdateSessionValve"></a>
-### func \(\*Store\) UpdateSessionValve
+### func \(\*Store\) [UpdateSessionValve](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/store.go#L127>)
 
 ```go
 func (s *Store) UpdateSessionValve(ctx context.Context, id uint, namespaceName string, userID uint, valve ai.ReviewValve) (*ai.AgentSession, error)
@@ -529,7 +529,7 @@ func (s *Store) UpdateSessionValve(ctx context.Context, id uint, namespaceName s
 UpdateSessionValve 更新会话的审核阀门（each/auto/none），返回更新后的会话；会话不存在时返回 ErrSessionNotFound。阀门取值合法性由调用方经绑定标签校验，本方法只负责落库。
 
 <a name="Store.UpdateSummaryAndCheckpoint"></a>
-### func \(\*Store\) UpdateSummaryAndCheckpoint
+### func \(\*Store\) [UpdateSummaryAndCheckpoint](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/session/summary.go#L41>)
 
 ```go
 func (s *Store) UpdateSummaryAndCheckpoint(ctx context.Context, session *ai.AgentSession, summary string, uptoSeq uint, reason string, metrics contract.CompactionMetrics) error

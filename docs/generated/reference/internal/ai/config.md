@@ -432,7 +432,7 @@ var ToolSpecs = []ToolSpec{
 ```
 
 <a name="OptionAllowed"></a>
-## func OptionAllowed
+## func [OptionAllowed](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/config/params.go#L410>)
 
 ```go
 func OptionAllowed(spec ParamSpec, literal string) bool
@@ -441,7 +441,7 @@ func OptionAllowed(spec ParamSpec, literal string) bool
 OptionAllowed 判断字面量是否属于参数的封闭取值清单；清单为空表示自由文本，一律通过。 参数的封闭语义只有这一处实现，启动期强校验、写入接口与 fixture 守卫测试共用。
 
 <a name="ValidateRelations"></a>
-## func ValidateRelations
+## func [ValidateRelations](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/config/params.go#L442>)
 
 ```go
 func ValidateRelations(values map[string]string) error
@@ -453,7 +453,7 @@ ValidateRelations 校验跨键的参数关系约束：单键类型与封闭取�
 - agent.maxToolResultBytes 与 retrieval.expandDocLimit 同时为正时，前者不得小于后者： 整篇展开按 rune 计数、工具结果按字节截断，前者至少须容纳「1 字节 / rune」的下界， 否则整篇展开的结果必然在回灌前被截断成非法 JSON。
 
 <a name="ValidateValue"></a>
-## func ValidateValue
+## func [ValidateValue](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/config/params.go#L420>)
 
 ```go
 func ValidateValue(spec ParamSpec, literal string) error
@@ -462,7 +462,7 @@ func ValidateValue(spec ParamSpec, literal string) error
 ValidateValue 校验字面量能否按 spec.Kind 解析、且（当参数声明了封闭取值清单时）是否落在 清单内，不满足时返回英文错误（含键、类型或清单与字面量）。供启动期参数强校验与 fixture 守卫测试复用。
 
 <a name="ParamKind"></a>
-## type ParamKind
+## type [ParamKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/config/params.go#L15>)
 
 ParamKind 是参数值的类型标识，决定生效值的解析方式与前端表单控件类型。
 
@@ -488,7 +488,7 @@ const (
 ```
 
 <a name="ParamSpec"></a>
-## type ParamSpec
+## type [ParamSpec](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/config/params.go#L47-L63>)
 
 ParamSpec 是单个可调参数的元信息，由本包注册表唯一声明：本包只持有键、类型、分组与 封闭取值清单，既不含任何出厂值（含提示词正文），也不含任何面向用户的文案。出厂值由 migrate fixture 注入 agent\_params.default\_value，当前生效值存于同表 value 列，数据库是 该类值的唯一来源；展示名与说明一律经后端 i18n 提供（param.\<Key\>.label / param.\<Key\>.comment，Key 全局唯一因而直接复用为文案键的一部分），故本包内不出现任何 可翻译文案。
 
@@ -513,7 +513,7 @@ type ParamSpec struct {
 ```
 
 <a name="Lookup"></a>
-### func Lookup
+### func [Lookup](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/config/params.go#L382>)
 
 ```go
 func Lookup(key string) (ParamSpec, bool)
@@ -522,7 +522,7 @@ func Lookup(key string) (ParamSpec, bool)
 Lookup 按键查询参数元信息，未声明时返回 ok=false。
 
 <a name="Params"></a>
-## type Params
+## type [Params](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/config/params.go#L502-L505>)
 
 Params 是参数生效值的不可变读取器：值全部来自 agent\_params.value（出厂值由 fixture 注入同表 default\_value），本包不持有任何出厂值，因此取不到值即视为数据未按迁移 种子化，属异常状态。读取映射在构造时被复制，调用方后续修改入参不影响已构造的读取器。
 
@@ -533,7 +533,7 @@ type Params struct {
 ```
 
 <a name="NewParams"></a>
-### func NewParams
+### func [NewParams](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/config/params.go#L509>)
 
 ```go
 func NewParams(values map[string]string) *Params
@@ -542,7 +542,7 @@ func NewParams(values map[string]string) *Params
 NewParams 构造参数读取器：空串值视为「无值」被丢弃，其余键值原样保留。注册表未声明的 键不会被主动读取（读取时 panic），保留与否不影响运行。
 
 <a name="Params.Bool"></a>
-### func \(\*Params\) Bool
+### func \(\*Params\) [Bool](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/config/params.go#L557>)
 
 ```go
 func (p *Params) Bool(key string) bool
@@ -551,7 +551,7 @@ func (p *Params) Bool(key string) bool
 Bool 读取 bool 类型参数的生效值（接受 true/false/1/0 等 strconv 可解析形式）； 值缺失或不可解析时 panic（同 Int）。
 
 <a name="Params.Float"></a>
-### func \(\*Params\) Float
+### func \(\*Params\) [Float](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/config/params.go#L545>)
 
 ```go
 func (p *Params) Float(key string) float64
@@ -560,7 +560,7 @@ func (p *Params) Float(key string) float64
 Float 读取 float 类型参数的生效值；值缺失或不可解析时 panic（同 Int）。
 
 <a name="Params.Int"></a>
-### func \(\*Params\) Int
+### func \(\*Params\) [Int](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/config/params.go#L534>)
 
 ```go
 func (p *Params) Int(key string) int
@@ -569,7 +569,7 @@ func (p *Params) Int(key string) int
 Int 读取 int 类型参数的生效值；值缺失或不可解析时 panic（启动期强校验保证正常路径 不可达，此处属数据被绕过接口破坏的异常状态）。
 
 <a name="Params.String"></a>
-### func \(\*Params\) String
+### func \(\*Params\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/config/params.go#L521>)
 
 ```go
 func (p *Params) String(key string) string
@@ -578,7 +578,7 @@ func (p *Params) String(key string) string
 String 读取 string 类型参数的生效值。
 
 <a name="Params.Text"></a>
-### func \(\*Params\) Text
+### func \(\*Params\) [Text](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/config/params.go#L527>)
 
 ```go
 func (p *Params) Text(key string) string
@@ -587,7 +587,7 @@ func (p *Params) Text(key string) string
 Text 读取 text 类型参数的生效值（多行文本，如 prompt 原文）。
 
 <a name="ToolSpec"></a>
-## type ToolSpec
+## type [ToolSpec](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/config/tool_specs.go#L12-L17>)
 
 ToolSpec 是单个内置工具的元信息，由本包注册表唯一声明：本包只持有工具名与分组，既不 含任何实现（实现在 internal/ai/tools，按名解析为 eino tool.BaseTool），也不含任何出厂值 （工具出厂行由 migrate fixture 注入 llm\_tools，source='builtin'），更不含任何面向用户的 文案（展示名与说明一律经后端 i18n 提供：tool.\<Name\>.label / tool.\<Name\>.comment，Name 全局唯一因而直接复用为文案键的一部分），故本包内不出现任何可翻译文案。
 
@@ -601,7 +601,7 @@ type ToolSpec struct {
 ```
 
 <a name="LookupTool"></a>
-### func LookupTool
+### func [LookupTool](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/config/tool_specs.go#L127>)
 
 ```go
 func LookupTool(name string) (ToolSpec, bool)

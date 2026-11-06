@@ -78,7 +78,7 @@ var (
 ```
 
 <a name="DescribeConfig"></a>
-## func DescribeConfig
+## func [DescribeConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/config.go#L63>)
 
 ```go
 func DescribeConfig() config.ConfigDescriptions
@@ -87,7 +87,7 @@ func DescribeConfig() config.ConfigDescriptions
 DescribeConfig 返回配置项的描述信息，用于生成配置文档
 
 <a name="InitGlobalKeyDerivation"></a>
-## func InitGlobalKeyDerivation
+## func [InitGlobalKeyDerivation](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/keyderivation.go#L78>)
 
 ```go
 func InitGlobalKeyDerivation(secretKeyProvider SecretKeyProvider, passwordBook *PasswordBook)
@@ -103,7 +103,7 @@ InitGlobalKeyDerivation 初始化全局唯一的密钥派生器实例。
 - passwordBook: 密码本
 
 <a name="Config"></a>
-## type Config
+## type [Config](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/config.go#L42-L60>)
 
 Config 定义密钥管理相关的配置项。
 
@@ -142,7 +142,7 @@ type Config struct {
 ```
 
 <a name="ExtractConfig"></a>
-### func ExtractConfig
+### func [ExtractConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/config.go#L75>)
 
 ```go
 func ExtractConfig(viper *viper.Viper, validate *validator.Validate) (*Config, error)
@@ -160,7 +160,7 @@ ExtractConfig 从 viper 实例中提取密钥配置
 - error: 配置提取或验证失败时返回错误
 
 <a name="ConfigFileSecretKeyProvider"></a>
-## type ConfigFileSecretKeyProvider
+## type [ConfigFileSecretKeyProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L53-L59>)
 
 ConfigFileSecretKeyProvider 从配置文件读取主密钥的提供者。
 
@@ -179,7 +179,7 @@ type ConfigFileSecretKeyProvider struct {
 ```
 
 <a name="NewConfigFileSecretKeyProvider"></a>
-### func NewConfigFileSecretKeyProvider
+### func [NewConfigFileSecretKeyProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L68>)
 
 ```go
 func NewConfigFileSecretKeyProvider(parentSecretKey string) *ConfigFileSecretKeyProvider
@@ -196,7 +196,7 @@ NewConfigFileSecretKeyProvider 创建从配置文件读取主密钥的提供者�
 - \*ConfigFileSecretKeyProvider: 提供者实例
 
 <a name="ConfigFileSecretKeyProvider.GetSecretKey"></a>
-### func \(\*ConfigFileSecretKeyProvider\) GetSecretKey
+### func \(\*ConfigFileSecretKeyProvider\) [GetSecretKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L79>)
 
 ```go
 func (p *ConfigFileSecretKeyProvider) GetSecretKey() ([]byte, error)
@@ -212,7 +212,7 @@ GetSecretKey 返回配置文件中的主密钥。
 - error: 主密钥为空时返回错误
 
 <a name="KMSSecretKeyProvider"></a>
-## type KMSSecretKeyProvider
+## type [KMSSecretKeyProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L97>)
 
 KMSSecretKeyProvider 从 KMS 服务获取主密钥的提供者。
 
@@ -229,7 +229,7 @@ type KMSSecretKeyProvider struct{}
 ```
 
 <a name="NewKMSSecretKeyProvider"></a>
-### func NewKMSSecretKeyProvider
+### func [NewKMSSecretKeyProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L103>)
 
 ```go
 func NewKMSSecretKeyProvider() *KMSSecretKeyProvider
@@ -242,7 +242,7 @@ NewKMSSecretKeyProvider 创建 KMS 主密钥提供者。
 - \*KMSSecretKeyProvider: 提供者实例
 
 <a name="KMSSecretKeyProvider.GetSecretKey"></a>
-### func \(\*KMSSecretKeyProvider\) GetSecretKey
+### func \(\*KMSSecretKeyProvider\) [GetSecretKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L114>)
 
 ```go
 func (p *KMSSecretKeyProvider) GetSecretKey() ([]byte, error)
@@ -258,7 +258,7 @@ GetSecretKey 从 KMS 服务获取主密钥。
 - error: 总是返回"未实现"错误
 
 <a name="KeyDerivation"></a>
-## type KeyDerivation
+## type [KeyDerivation](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/keyderivation.go#L47-L53>)
 
 KeyDerivation 密钥派生器，使用 HKDF 算法从主密钥派生子密钥。
 
@@ -287,7 +287,7 @@ type KeyDerivation struct {
 ```
 
 <a name="GetKeyDerivation"></a>
-### func GetKeyDerivation
+### func [GetKeyDerivation](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/keyderivation.go#L91>)
 
 ```go
 func GetKeyDerivation() (*KeyDerivation, error)
@@ -303,7 +303,7 @@ GetKeyDerivation 返回全局唯一的密钥派生器实例。
 - error: 未初始化时返回 "crypto: KeyDerivation not initialized"
 
 <a name="NewKeyDerivation"></a>
-### func NewKeyDerivation
+### func [NewKeyDerivation](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/keyderivation.go#L63>)
 
 ```go
 func NewKeyDerivation(secretKeyProvider SecretKeyProvider, passwordBook *PasswordBook) *KeyDerivation
@@ -321,7 +321,7 @@ NewKeyDerivation 创建新的密钥派生器实例。
 - \*KeyDerivation: 密钥派生器实例
 
 <a name="KeyDerivation.DeriveChildKey"></a>
-### func \(\*KeyDerivation\) DeriveChildKey
+### func \(\*KeyDerivation\) [DeriveChildKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/keyderivation.go#L125>)
 
 ```go
 func (k *KeyDerivation) DeriveChildKey(offset, length int) ([]byte, error)
@@ -362,7 +362,7 @@ if err != nil {
 ```
 
 <a name="PasswordBook"></a>
-## type PasswordBook
+## type [PasswordBook](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/password_book.go#L31-L34>)
 
 PasswordBook 密码本，提供用于密钥派生的盐值数据。
 
@@ -381,7 +381,7 @@ type PasswordBook struct {
 ```
 
 <a name="LoadPasswordBook"></a>
-### func LoadPasswordBook
+### func [LoadPasswordBook](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/password_book.go#L88>)
 
 ```go
 func LoadPasswordBook(path string) (*PasswordBook, error)
@@ -412,7 +412,7 @@ LoadPasswordBook 加载密码本，支持回退到内置默认密码本。
 - 生产环境应使用独立的密码本文件，而非内置密码本
 
 <a name="LoadPasswordBookFromFile"></a>
-### func LoadPasswordBookFromFile
+### func [LoadPasswordBookFromFile](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/password_book.go#L58>)
 
 ```go
 func LoadPasswordBookFromFile(path string) (*PasswordBook, error)
@@ -435,7 +435,7 @@ LoadPasswordBookFromFile 从文件加载密码本。
 - 文件大小不等于 PasswordBookSize（65536 字节）
 
 <a name="PasswordBook.Bytes"></a>
-### func \(\*PasswordBook\) Bytes
+### func \(\*PasswordBook\) [Bytes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/password_book.go#L37>)
 
 ```go
 func (p *PasswordBook) Bytes() []byte
@@ -444,7 +444,7 @@ func (p *PasswordBook) Bytes() []byte
 Bytes 返回密码本的原始字节数据
 
 <a name="PasswordBook.Len"></a>
-### func \(\*PasswordBook\) Len
+### func \(\*PasswordBook\) [Len](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/password_book.go#L42>)
 
 ```go
 func (p *PasswordBook) Len() int
@@ -453,7 +453,7 @@ func (p *PasswordBook) Len() int
 Len 返回密码本的长度（字节数）
 
 <a name="SecretKeyProvider"></a>
-## type SecretKeyProvider
+## type [SecretKeyProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L35-L42>)
 
 SecretKeyProvider 定义主密钥提供者接口。
 
@@ -474,7 +474,7 @@ type SecretKeyProvider interface {
 ```
 
 <a name="NewSecretKeyProvider"></a>
-### func NewSecretKeyProvider
+### func [NewSecretKeyProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L135>)
 
 ```go
 func NewSecretKeyProvider(source string, parentSecretKey string) (SecretKeyProvider, error)

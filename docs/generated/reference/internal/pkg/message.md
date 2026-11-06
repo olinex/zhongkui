@@ -44,7 +44,7 @@ const (
 ```
 
 <a name="IsPlaceholderType"></a>
-## func IsPlaceholderType
+## func [IsPlaceholderType](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/schema.go#L40>)
 
 ```go
 func IsPlaceholderType(typ string) bool
@@ -53,7 +53,7 @@ func IsPlaceholderType(typ string) bool
 IsPlaceholderType 判断某渠道类型是否为「占位符」渠道。 占位符渠道的渠道级配置结构体字段数为 0（如 webhook：WebhookChannelConfig 为空对象）， 仅用于标明通知目标的类型，不承载任何渠道级参数。这类渠道作为固定数据随命名空间 自动种子化，前端不可创建、不可删除。
 
 <a name="PlaceholderTypes"></a>
-## func PlaceholderTypes
+## func [PlaceholderTypes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/schema.go#L47>)
 
 ```go
 func PlaceholderTypes() []string
@@ -62,7 +62,7 @@ func PlaceholderTypes() []string
 PlaceholderTypes 返回所有已注册的占位符渠道类型键（升序）。 用于命名空间创建时自动种子化占位渠道，以及迁移脚本补充既有命名空间缺位数据。
 
 <a name="RegisterChannel"></a>
-## func RegisterChannel
+## func [RegisterChannel](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/channel.go#L115>)
 
 ```go
 func RegisterChannel(typ string, factory Factory, channel, target reflect.Type)
@@ -71,7 +71,7 @@ func RegisterChannel(typ string, factory Factory, channel, target reflect.Type)
 RegisterChannel 注册渠道类型工厂，并同步注册其渠道级/目标级配置结构体类型供表单元信息抽取。 工厂负责依据渠道级配置构建渠道实例，各渠道在 init\(\) 中调用；外部包也可经此新增渠道类型。 channel/target 为渠道级/目标级配置结构体类型。同一类型键重复注册视为编程错误（panic）。
 
 <a name="RenderTemplateString"></a>
-## func RenderTemplateString
+## func [RenderTemplateString](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/render.go#L44>)
 
 ```go
 func RenderTemplateString(text string, params map[string]any) (string, error)
@@ -80,7 +80,7 @@ func RenderTemplateString(text string, params map[string]any) (string, error)
 RenderTemplateString 导出以给定参数渲染单条 Go text/template 模板字符串； 供试运行接口用样例参数渲染编辑器内的标题/正文。未知/非法模板返回带上下文的错误。
 
 <a name="RenderTemplateWithFuncs"></a>
-## func RenderTemplateWithFuncs
+## func [RenderTemplateWithFuncs](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/render.go#L30>)
 
 ```go
 func RenderTemplateWithFuncs(text string, params map[string]any, funcs template.FuncMap) (string, error)
@@ -89,7 +89,7 @@ func RenderTemplateWithFuncs(text string, params map[string]any, funcs template.
 RenderTemplateWithFuncs 导出以给定参数与自定义函数渲染单条 Go text/template 模板字符串。 与 RenderTemplateString 的区别在于可注入自定义模板函数（如通知 label 渲染的 t）， 适合按目标语言渲染带函数调用的默认/持久化模板。未知/非法模板返回带上下文的错误。
 
 <a name="Types"></a>
-## func Types
+## func [Types](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/channel.go#L130>)
 
 ```go
 func Types() []string
@@ -98,7 +98,7 @@ func Types() []string
 Types 返回已注册的渠道类型键（升序），供管理接口枚举可选类型。
 
 <a name="Channel"></a>
-## type Channel
+## type [Channel](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/channel.go#L88-L94>)
 
 Channel 通知渠道抽象接口，所有具体渠道实现（email、webhook 及后续新增）必须实现。 渠道实例承载渠道级配置（如 SMTP 账号密码）；Send 负责将消息投递到目标， 目标级配置由 Target 携带。新增渠道只需实现本接口并在工厂注册表中注册。
 
@@ -113,7 +113,7 @@ type Channel interface {
 ```
 
 <a name="New"></a>
-### func New
+### func [New](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/channel.go#L121>)
 
 ```go
 func New(typ string, config json.RawMessage) (Channel, error)
@@ -122,7 +122,7 @@ func New(typ string, config json.RawMessage) (Channel, error)
 New 依据渠道类型键与渠道级配置构建渠道实例；类型未注册时返回错误。
 
 <a name="EmailChannelConfig"></a>
-## type EmailChannelConfig
+## type [EmailChannelConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/email.go#L57-L68>)
 
 EmailChannelConfig 邮件渠道级配置，同时是前端配置表单的单一事实来源。 字段的 binding 标签驱动校验，form 标签（kind/default）经反射提取为前端表单 schema； 字段展示文案由前端依据字段名与渠道类型拼接 i18n key 翻译。
 
@@ -142,7 +142,7 @@ type EmailChannelConfig struct {
 ```
 
 <a name="EmailTarget"></a>
-## type EmailTarget
+## type [EmailTarget](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/email.go#L71-L74>)
 
 EmailTarget 邮件目标级配置。
 
@@ -154,7 +154,7 @@ type EmailTarget struct {
 ```
 
 <a name="Factory"></a>
-## type Factory
+## type [Factory](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/channel.go#L98>)
 
 Factory 渠道工厂，依据渠道级配置（JSON 原文）构建渠道实例。 配置非法（缺失必填字段、JSON 语法错误）时返回错误。
 
@@ -163,7 +163,7 @@ type Factory func(config json.RawMessage) (Channel, error)
 ```
 
 <a name="FormStructs"></a>
-## type FormStructs
+## type [FormStructs](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/schema.go#L17-L22>)
 
 FormStructs 描述某渠道类型的渠道级/目标级配置结构体类型。 由表单元信息抽取方（routes 层）通过反射读取结构体标签生成前端表单 schema。
 
@@ -177,7 +177,7 @@ type FormStructs struct {
 ```
 
 <a name="FormStructsFor"></a>
-### func FormStructsFor
+### func [FormStructsFor](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/schema.go#L31>)
 
 ```go
 func FormStructsFor(typ string) (FormStructs, bool)
@@ -186,7 +186,7 @@ func FormStructsFor(typ string) (FormStructs, bool)
 FormStructsFor 返回某渠道类型的配置结构体类型；未注册时返回 false。
 
 <a name="Message"></a>
-## type Message
+## type [Message](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/channel.go#L43-L51>)
 
 Message 通用结构化通知消息，与事件类型解耦：由事件源构造（模板键 \+ 参数）， 在发送时由 Service 按目标语言经 locales 模板渲染为具体文本（RenderedMessage）。 Params 的键与模板占位符（如 .Key）一一对应，采用开头大写驼峰命名。
 
@@ -203,7 +203,7 @@ type Message struct {
 ```
 
 <a name="Pool"></a>
-## type Pool
+## type [Pool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/pool.go#L23-L26>)
 
 Pool 消息渠道连接池的统一入口：持有按渠道 Key 惰性建池的渠道生命周期管理器。 作为 DI 注入对象注册为进程级单例；Shutdown 使池自身即关闭器，provider 层无需再包 一层 shutdowner 结构体，提升内聚性。
 
@@ -214,7 +214,7 @@ type Pool struct {
 ```
 
 <a name="NewPool"></a>
-### func NewPool
+### func [NewPool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/pool.go#L30>)
 
 ```go
 func NewPool() *Pool
@@ -223,7 +223,7 @@ func NewPool() *Pool
 NewPool 创建消息渠道连接池。资源类型为 message.Channel，依据 Key（类型 \+ 规范化 配置）惰性建池并由 go\-commons\-pool 托管连接复用与回收。
 
 <a name="Pool.Send"></a>
-### func \(\*Pool\) Send
+### func \(\*Pool\) [Send](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/pool.go#L80>)
 
 ```go
 func (p *Pool) Send(ctx context.Context, typ string, config json.RawMessage, target *Target, msg *RenderedMessage) (string, error)
@@ -232,7 +232,7 @@ func (p *Pool) Send(ctx context.Context, typ string, config json.RawMessage, tar
 Send 经统一资源池向目标投递渲染后的消息：借出与配置匹配的渠道实例并复用底层连接， 发送完成后归还；渠道实例借出（含建连/校验）失败或发送失败均原样返回错误。 发送失败仍归还对象，由下一次借出的 testOnBorrow 校验并在底层连接失效后自动重建。
 
 <a name="Pool.Shutdown"></a>
-### func \(\*Pool\) Shutdown
+### func \(\*Pool\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/pool.go#L92>)
 
 ```go
 func (p *Pool) Shutdown(ctx context.Context) error
@@ -241,7 +241,7 @@ func (p *Pool) Shutdown(ctx context.Context) error
 Shutdown 关闭全部渠道资源池并销毁存活连接，实现 do.ShutdownerWithContextAndError， 进程优雅关闭时由 samber/do 驱动调用。
 
 <a name="RenderedMessage"></a>
-## type RenderedMessage
+## type [RenderedMessage](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/channel.go#L55-L62>)
 
 RenderedMessage 渲染完成的具体通知消息（标题 \+ 正文），由 Service 依据目标语言 渲染 Message 后传入渠道；渠道负责将其投递，不再关心模板与参数。
 
@@ -257,7 +257,7 @@ type RenderedMessage struct {
 ```
 
 <a name="Result"></a>
-## type Result
+## type [Result](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/channel.go#L65-L68>)
 
 Result 渠道投递结果。
 
@@ -269,7 +269,7 @@ type Result struct {
 ```
 
 <a name="Target"></a>
-## type Target
+## type [Target](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/channel.go#L76-L83>)
 
 Target 目标信息，由 Service 从 notification\_targets 行解析后传入渠道。 Config 为目标级配置（JSON 原文），其结构由渠道类型定义并自行解析， 与渠道级配置相互独立：渠道级配置承载传输凭据（如 SMTP 账号密码）， 目标级配置承载具体接收者（如收件邮箱、Webhook URL）。 Language 为目标偏好的消息语言（如 en、zh\-Hans），空字符串表示使用平台默认语言， 由 Service 在渲染消息时消费，与渠道类型无关。
 
@@ -285,7 +285,7 @@ type Target struct {
 ```
 
 <a name="WebhookChannelConfig"></a>
-## type WebhookChannelConfig
+## type [WebhookChannelConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/webhook.go#L43>)
 
 WebhookChannelConfig Webhook 渠道级配置：当前为空对象（Webhook 地址在目标级配置中）。 反射产出空字段列表，供前端渲染空渠道级配置表单。
 
@@ -294,7 +294,7 @@ type WebhookChannelConfig struct{}
 ```
 
 <a name="WebhookTarget"></a>
-## type WebhookTarget
+## type [WebhookTarget](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/webhook.go#L46-L51>)
 
 WebhookTarget Webhook 目标级配置。
 

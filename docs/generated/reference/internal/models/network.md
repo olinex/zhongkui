@@ -142,7 +142,7 @@
 
 
 <a name="ExtractLayerInfos"></a>
-## func ExtractLayerInfos
+## func [ExtractLayerInfos](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L38>)
 
 ```go
 func ExtractLayerInfos(packet gopacket.Packet, baseLevel LayerLevel) (currentLevel LayerLevel, stack LayerStack, payload []byte)
@@ -178,7 +178,7 @@ ExtractLayerInfos 从数据包中提取网络层信息 该函数递归地解析�
 - 应用层: TLS（暂未实现详细解析）, 原始载荷
 
 <a name="AppTailer"></a>
-## type AppTailer
+## type [AppTailer](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L418-L439>)
 
 AppTailer 表示应用层的尾部信息 包含客户端和服务器端的已消耗字节数、数据偏移量、时间戳等信息
 
@@ -208,7 +208,7 @@ type AppTailer struct {
 ```
 
 <a name="AsPacket"></a>
-## type AsPacket
+## type [AsPacket](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L170-L175>)
 
 AsPacket 表示数据包的结构 用于存储原始网络数据包，包含完整的元数据和载荷
 
@@ -222,7 +222,7 @@ type AsPacket struct {
 ```
 
 <a name="BaseMeta"></a>
-## type BaseMeta
+## type [BaseMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L113-L121>)
 
 BaseMeta 表示基础元数据信息 所有网络数据模型的基础字段，用于数据分区和查询优化
 
@@ -239,7 +239,7 @@ type BaseMeta struct {
 ```
 
 <a name="CaptureMeta"></a>
-## type CaptureMeta
+## type [CaptureMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L150-L153>)
 
 CaptureMeta 表示捕获元数据 包含数据包捕获时的状态信息
 
@@ -251,7 +251,7 @@ type CaptureMeta struct {
 ```
 
 <a name="DirectionMeta"></a>
-## type DirectionMeta
+## type [DirectionMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L144-L146>)
 
 DirectionMeta 表示数据包方向元数据 Cli2Srv 标记该数据包是否为客户端到服务端方向（true表示客户端到服务端，false表示服务端到客户端）
 
@@ -262,7 +262,7 @@ type DirectionMeta struct {
 ```
 
 <a name="EthernetHeaders"></a>
-## type EthernetHeaders
+## type [EthernetHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/eth.go#L18-L27>)
 
 EthernetHeaders 表示以太网帧的头部信息 该结构体封装了以太网帧的关键头部字段，包括源MAC地址、目的MAC地址、 以太网类型和帧长度。这些字段用于网络数据包的识别、路由和分析。
 
@@ -286,7 +286,7 @@ type EthernetHeaders struct {
 ```
 
 <a name="NewEthernetHeaders"></a>
-### func NewEthernetHeaders
+### func [NewEthernetHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/eth.go#L43>)
 
 ```go
 func NewEthernetHeaders(eth *layers.Ethernet) *EthernetHeaders
@@ -309,7 +309,7 @@ NewEthernetHeaders 从gopacket以太网层创建EthernetHeaders实例 该函数�
 - 保持数据的原始性和准确性，不进行修改
 
 <a name="NewLoopbackHeaders"></a>
-### func NewLoopbackHeaders
+### func [NewLoopbackHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/eth.go#L53>)
 
 ```go
 func NewLoopbackHeaders() *EthernetHeaders
@@ -318,7 +318,7 @@ func NewLoopbackHeaders() *EthernetHeaders
 NewLoopbackHeaders 构造回环（loopback）数据包使用的空以太网头部实例。
 
 <a name="FrameInfo"></a>
-## type FrameInfo
+## type [FrameInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L106-L109>)
 
 FrameInfo 表示数据包的帧信息 包含时间戳和对应的网络层堆栈信息
 
@@ -330,7 +330,7 @@ type FrameInfo struct {
 ```
 
 <a name="GREChannel"></a>
-## type GREChannel
+## type [GREChannel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/channel.go#L151-L168>)
 
 GREChannel 表示GRE隧道通道信息 GRE（Generic Routing Encapsulation）是一种通用的隧道封装协议，用于在IP网络中封装各种网络层协议 该结构体存储GRE头部的主要字段，包括标志位、协议类型和可选字段
 
@@ -356,7 +356,7 @@ type GREChannel struct {
 ```
 
 <a name="NewGREChannel"></a>
-### func NewGREChannel
+### func [NewGREChannel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/channel.go#L184>)
 
 ```go
 func NewGREChannel(gre *layers.GRE) *GREChannel
@@ -380,7 +380,7 @@ NewGREChannel 从gopacket GRE层创建GREChannel 将gopacket库中的GRE层数�
 4. 便于后续序列化和存储
 
 <a name="GRERouting"></a>
-## type GRERouting
+## type [GRERouting](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/channel.go#L54-L59>)
 
 GRERouting 表示GRE路由信息 GRE（Generic Routing Encapsulation）协议支持源路由扩展（Source Route Extension） 该结构体存储GRE源路由信息，支持链式结构表示多个路由条目
 
@@ -394,7 +394,7 @@ type GRERouting struct {
 ```
 
 <a name="NewGRERouting"></a>
-### func NewGRERouting
+### func [NewGRERouting](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/channel.go#L74>)
 
 ```go
 func NewGRERouting(raw *layers.GRERouting) *GRERouting
@@ -417,7 +417,7 @@ NewGRERouting 从gopacket GRE路由创建GRERouting 递归转换gopacket中的GR
 3. 便于后续的序列化和反序列化操作
 
 <a name="GRERouting.Scan"></a>
-### func \(\*GRERouting\) Scan
+### func \(\*GRERouting\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/channel.go#L121>)
 
 ```go
 func (g *GRERouting) Scan(value any) error
@@ -445,7 +445,7 @@ Scan 实现数据库反序列化接口 从数据库读取JSON数据并反序列�
 4. 支持嵌套结构（Next字段）的递归反序列化
 
 <a name="GRERouting.Value"></a>
-### func \(\*GRERouting\) Value
+### func \(\*GRERouting\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/channel.go#L97>)
 
 ```go
 func (g *GRERouting) Value() (driver.Value, error)
@@ -465,7 +465,7 @@ Value 实现数据库序列化接口 将GRERouting结构体序列化为JSON格�
 3. 符合database/sql/driver.Value接口要求
 
 <a name="GeneveChannel"></a>
-## type GeneveChannel
+## type [GeneveChannel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/channel.go#L242-L250>)
 
 GeneveChannel 表示Geneve隧道通道信息 Geneve是一种通用的网络虚拟化封装协议，支持灵活的选项扩展 该结构体存储Geneve头部的主要字段，包括版本、协议类型、VNI和选项列表
 
@@ -482,7 +482,7 @@ type GeneveChannel struct {
 ```
 
 <a name="NewGeneveChannel"></a>
-### func NewGeneveChannel
+### func [NewGeneveChannel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/channel.go#L266>)
 
 ```go
 func NewGeneveChannel(geneve *layers.Geneve) *GeneveChannel
@@ -506,7 +506,7 @@ NewGeneveChannel 从gopacket Geneve层创建GeneveChannel 将gopacket库中的Ge
 4. 便于后续序列化和存储
 
 <a name="GeneveOption"></a>
-## type GeneveOption
+## type [GeneveOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/channel.go#L208-L214>)
 
 GeneveOption 表示Geneve选项信息 Geneve（Generic Network Virtualization Encapsulation）协议支持可扩展的选项字段 该结构体存储单个Geneve选项的详细信息，包括类别、类型、标志和数据
 
@@ -521,7 +521,7 @@ type GeneveOption struct {
 ```
 
 <a name="NewGeneveOption"></a>
-### func NewGeneveOption
+### func [NewGeneveOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/channel.go#L229>)
 
 ```go
 func NewGeneveOption(geneve *layers.GeneveOption) *GeneveOption
@@ -544,7 +544,7 @@ NewGeneveOption 从gopacket Geneve选项创建GeneveOption 将gopacket库中的G
 3. 便于后续序列化和存储
 
 <a name="HTTPMethod"></a>
-## type HTTPMethod
+## type [HTTPMethod](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/enum.go#L12>)
 
 HTTPMethod 是 HTTP 请求方法的取值类型（HttpRequestBody.Method 字段）。
 
@@ -578,7 +578,7 @@ const (
 ```
 
 <a name="HTTPVersion"></a>
-## type HTTPVersion
+## type [HTTPVersion](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/enum.go#L50>)
 
 HTTPVersion 是 HTTP 协议版本的取值类型（HttpBase.HttpVersion 字段）。
 
@@ -602,7 +602,7 @@ const (
 ```
 
 <a name="HttpBase"></a>
-## type HttpBase
+## type [HttpBase](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/http.go#L105-L124>)
 
 HttpBase 表示HTTP基本信息 包含HTTP通信的基础网络连接信息，用于标识通信的端点和协议版本
 
@@ -630,7 +630,7 @@ type HttpBase struct {
 ```
 
 <a name="HttpFingerprint"></a>
-## type HttpFingerprint
+## type [HttpFingerprint](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/http.go#L1007-L1020>)
 
 HttpFingerprint 表示 HttpTransport 上的 Http 指纹与设备类别猜测。
 
@@ -652,7 +652,7 @@ type HttpFingerprint struct {
 ```
 
 <a name="HttpRequestBody"></a>
-## type HttpRequestBody
+## type [HttpRequestBody](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/http.go#L857-L867>)
 
 HttpRequestBody 表示HTTP请求正文信息 包含HTTP请求的方法、主体内容和时间信息，头部字段已迁移至 HttpRequestHeaders
 
@@ -671,7 +671,7 @@ type HttpRequestBody struct {
 ```
 
 <a name="NewHttpRequestBody"></a>
-### func NewHttpRequestBody
+### func [NewHttpRequestBody](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/http.go#L927>)
 
 ```go
 func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Request, cryptoKey []byte) (*HttpRequestBody, error)
@@ -680,7 +680,7 @@ func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Requ
 NewHttpRequestBody 构建HTTP请求正文信息 将解压后的请求体上传至 S3，并以内容摘要作为对象键实现去重存储。 摘要密钥由请求正文字段的 secure 标签就地派生，与落库序列化器同源。
 
 <a name="HttpRequestHeaders"></a>
-## type HttpRequestHeaders
+## type [HttpRequestHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/http.go#L221-L412>)
 
 HttpRequestHeaders 表示HTTP请求头信息 包含所有标准HTTP请求头字段，参考 MDN HTTP Headers 文档标准 \(https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Reference/Headers\) 该结构体以大宽表形式定义，每个字段对应一个标准HTTP请求头
 
@@ -871,7 +871,7 @@ type HttpRequestHeaders struct {
 ```
 
 <a name="NewHttpRequestHeaders"></a>
-### func NewHttpRequestHeaders
+### func [NewHttpRequestHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/http.go#L420>)
 
 ```go
 func NewHttpRequestHeaders(req *http.Request) *HttpRequestHeaders
@@ -880,7 +880,7 @@ func NewHttpRequestHeaders(req *http.Request) *HttpRequestHeaders
 NewHttpRequestHeaders 从 HTTP 请求构建请求头宽表模型，涉敏头（凭据、Cookie、WebSocket 握手密钥）以 Crypto 加密存储。
 
 <a name="HttpResponseBody"></a>
-## type HttpResponseBody
+## type [HttpResponseBody](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/http.go#L952-L960>)
 
 HttpResponseBody 表示HTTP响应正文信息 包含HTTP响应的主体内容和时间信息，头部字段已迁移至 HttpResponseHeaders
 
@@ -897,7 +897,7 @@ type HttpResponseBody struct {
 ```
 
 <a name="NewHttpResponseBody"></a>
-### func NewHttpResponseBody
+### func [NewHttpResponseBody](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/http.go#L965>)
 
 ```go
 func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Response, cryptoKey []byte) (*HttpResponseBody, error)
@@ -906,7 +906,7 @@ func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Re
 NewHttpResponseBody 构建HTTP响应正文信息 将解压后的响应体上传至 S3，并以内容摘要作为对象键实现去重存储。 摘要密钥由响应正文字段的 secure 标签就地派生，与落库序列化器同源。
 
 <a name="HttpResponseHeaders"></a>
-## type HttpResponseHeaders
+## type [HttpResponseHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/http.go#L540-L753>)
 
 HttpResponseHeaders 表示HTTP响应头信息 包含所有标准HTTP响应头字段，参考 MDN HTTP Headers 文档标准 \(https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Reference/Headers\) 该结构体以大宽表形式定义，每个字段对应一个标准HTTP响应头
 
@@ -1116,7 +1116,7 @@ type HttpResponseHeaders struct {
 ```
 
 <a name="NewHttpResponseHeaders"></a>
-### func NewHttpResponseHeaders
+### func [NewHttpResponseHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/http.go#L756>)
 
 ```go
 func NewHttpResponseHeaders(resp *http.Response) *HttpResponseHeaders
@@ -1125,7 +1125,7 @@ func NewHttpResponseHeaders(resp *http.Response) *HttpResponseHeaders
 NewHttpResponseHeaders 从 HTTP 响应构建响应头宽表模型，涉敏头（认证质询、Set\-Cookie、WebSocket 握手接受）以 Crypto 加密存储。
 
 <a name="HttpTLS"></a>
-## type HttpTLS
+## type [HttpTLS](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/http.go#L182-L189>)
 
 HttpTLS 表示TLS安全认证信息 包含HTTPS连接的安全传输层协议（TLS）相关信息
 
@@ -1141,7 +1141,7 @@ type HttpTLS struct {
 ```
 
 <a name="HttpTransport"></a>
-## type HttpTransport
+## type [HttpTransport](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/http.go#L1043-L1072>)
 
 HttpTransport 表示HTTP传输层信息 完整的HTTP传输数据模型，组合了所有HTTP相关的元数据和内容信息 该结构体对应数据库中的http\_transport表，用于存储完整的HTTP会话数据
 
@@ -1199,7 +1199,7 @@ type HttpTransport struct {
 ```
 
 <a name="HttpURI"></a>
-## type HttpURI
+## type [HttpURI](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/http.go#L128-L143>)
 
 HttpURI 表示HTTP URI信息 包含HTTP请求的统一资源标识符（URI）的各个组成部分
 
@@ -1223,7 +1223,7 @@ type HttpURI struct {
 ```
 
 <a name="NewHttpURI"></a>
-### func NewHttpURI
+### func [NewHttpURI](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/http.go#L149>)
 
 ```go
 func NewHttpURI(req *http.Request) (*HttpURI, error)
@@ -1232,7 +1232,7 @@ func NewHttpURI(req *http.Request) (*HttpURI, error)
 NewHttpURI 构建HTTP URI信息 注意：使用 origin\-form（如 GET /path HTTP/1.1）直接访问时，请求行中不含 scheme 和 host， 需要借助请求头中的 Host 字段补齐，否则生成的 URL 与 Path 完全相同 （例如通过回环网络访问 127.0.0.1/localhost 的请求）
 
 <a name="IPv4Headers"></a>
-## type IPv4Headers
+## type [IPv4Headers](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv4.go#L112-L141>)
 
 IPv4Headers 表示IPv4协议头部信息 IPv4（Internet Protocol version 4）是互联网协议的第4版，是当前互联网最主要的网络层协议 该结构体封装了IPv4协议头部的所有字段，用于存储、查询和分析网络数据包
 
@@ -1284,7 +1284,7 @@ type IPv4Headers struct {
 ```
 
 <a name="NewIPv4Headers"></a>
-### func NewIPv4Headers
+### func [NewIPv4Headers](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv4.go#L172>)
 
 ```go
 func NewIPv4Headers(ipv4 *layers.IPv4) *IPv4Headers
@@ -1325,7 +1325,7 @@ NewIPv4Headers 从gopacket IPv4层创建IPv4Headers结构体 该函数是gopacke
 - 在ETL任务中用于数据转换
 
 <a name="IPv4Headers.DstAddr"></a>
-### func \(\*IPv4Headers\) DstAddr
+### func \(\*IPv4Headers\) [DstAddr](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv4.go#L243>)
 
 ```go
 func (i *IPv4Headers) DstAddr() net.IP
@@ -1360,7 +1360,7 @@ DstAddr 返回IPv4Headers中的目的IP地址 该方法提供类型安全的IP�
 - 检测DDoS攻击目标
 
 <a name="IPv4Headers.SrcAddr"></a>
-### func \(\*IPv4Headers\) SrcAddr
+### func \(\*IPv4Headers\) [SrcAddr](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv4.go#L215>)
 
 ```go
 func (i *IPv4Headers) SrcAddr() net.IP
@@ -1395,7 +1395,7 @@ SrcAddr 返回IPv4Headers中的源IP地址 该方法提供类型安全的IP地�
 - 实现基于IP地址的路由策略
 
 <a name="IPv4Options"></a>
-## type IPv4Options
+## type [IPv4Options](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv4.go#L31>)
 
 IPv4Options 表示IPv4协议头部中的选项列表 IPv4选项是IPv4协议的可选扩展字段，用于提供额外的控制功能 常见的IPv4选项包括：记录路由（Record Route）、时间戳（Timestamp）、 松散源路由（Loose Source Route）、严格源路由（Strict Source Route）等
 
@@ -1416,7 +1416,7 @@ type IPv4Options []layers.IPv4Option
 ```
 
 <a name="IPv4Options.Scan"></a>
-### func \(\*IPv4Options\) Scan
+### func \(\*IPv4Options\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv4.go#L72>)
 
 ```go
 func (i *IPv4Options) Scan(value any) error
@@ -1444,7 +1444,7 @@ Scan 实现sql.Scanner接口，从数据库读取值并反序列化为IPv4Option
 - string: 转换为\[\]byte后进行JSON反序列化
 
 <a name="IPv4Options.Value"></a>
-### func \(IPv4Options\) Value
+### func \(IPv4Options\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv4.go#L48>)
 
 ```go
 func (i IPv4Options) Value() (driver.Value, error)
@@ -1470,7 +1470,7 @@ Value 实现driver.Valuer接口，将IPv4Options序列化为数据库存储格�
 - 将IPv4Options序列化为JSON字符串存储在ClickHouse的String类型列中
 
 <a name="IPv6Base"></a>
-## type IPv6Base
+## type [IPv6Base](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L431-L468>)
 
 IPv6Base 表示IPv6基础头部信息 IPv6基础头部结构，包含IPv6数据包的基本信息 该结构对应RFC 8200中定义的IPv6头部格式
 
@@ -1516,7 +1516,7 @@ type IPv6Base struct {
 ```
 
 <a name="NewIPv6Base"></a>
-### func NewIPv6Base
+### func [NewIPv6Base](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L486>)
 
 ```go
 func NewIPv6Base(ipv6 *layers.IPv6) *IPv6Base
@@ -1543,7 +1543,7 @@ ipv6 - gopacket的IPv6层指针
 3. 处理逐跳选项：使用NewIPv6HopByHop函数转换逐跳选项头部
 
 <a name="IPv6Destination"></a>
-## type IPv6Destination
+## type [IPv6Destination](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L274-L290>)
 
 IPv6Destination 表示IPv6目标选项扩展头部 IPv6目标选项头部（Destination Options Header）结构 该扩展头部包含只需要在目标节点处理的选项 通常用于移动IPv6、家乡地址选项等
 
@@ -1568,7 +1568,7 @@ type IPv6Destination struct {
 ```
 
 <a name="NewIPv6Destination"></a>
-### func NewIPv6Destination
+### func [NewIPv6Destination](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L308>)
 
 ```go
 func NewIPv6Destination(ipv6 *layers.IPv6Destination) *IPv6Destination
@@ -1596,7 +1596,7 @@ ipv6 - gopacket的IPv6Destination指针
 ```
 
 <a name="IPv6Fragment"></a>
-## type IPv6Fragment
+## type [IPv6Fragment](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L325-L351>)
 
 IPv6Fragment 表示IPv6分片扩展头部 IPv6分片头部（Fragment Header）结构 该扩展头部用于IPv6数据包的分片和重组 与IPv4不同，IPv6只在源节点进行分片，中间路由器不进行分片
 
@@ -1631,7 +1631,7 @@ type IPv6Fragment struct {
 ```
 
 <a name="NewIPv6Fragment"></a>
-### func NewIPv6Fragment
+### func [NewIPv6Fragment](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L364>)
 
 ```go
 func NewIPv6Fragment(ipv6 *layers.IPv6Fragment) *IPv6Fragment
@@ -1652,7 +1652,7 @@ ipv6 - gopacket的IPv6Fragment指针
 ```
 
 <a name="IPv6HeaderTLVOption"></a>
-## type IPv6HeaderTLVOption
+## type [IPv6HeaderTLVOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L21-L45>)
 
 IPv6HeaderTLVOption 表示IPv6扩展头部TLV选项 IPv6扩展头部中的TLV（类型\-长度\-值）选项结构，用于存储IPv6扩展头部中的各种选项信息 这些选项可以出现在逐跳选项头部（Hop\-by\-Hop Options Header）或目标选项头部（Destination Options Header）中
 
@@ -1685,7 +1685,7 @@ type IPv6HeaderTLVOption struct {
 ```
 
 <a name="NewIPv6HeaderTLVOptionByDestination"></a>
-### func NewIPv6HeaderTLVOptionByDestination
+### func [NewIPv6HeaderTLVOptionByDestination](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L83>)
 
 ```go
 func NewIPv6HeaderTLVOptionByDestination(opt *layers.IPv6DestinationOption) *IPv6HeaderTLVOption
@@ -1706,7 +1706,7 @@ opt - gopacket的IPv6DestinationOption指针，如果为nil则返回nil
 ```
 
 <a name="NewIPv6HeaderTLVOptionByHBH"></a>
-### func NewIPv6HeaderTLVOptionByHBH
+### func [NewIPv6HeaderTLVOptionByHBH](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L58>)
 
 ```go
 func NewIPv6HeaderTLVOptionByHBH(opt *layers.IPv6HopByHopOption) *IPv6HeaderTLVOption
@@ -1727,7 +1727,7 @@ opt - gopacket的IPv6HopByHopOption指针，如果为nil则返回nil
 ```
 
 <a name="IPv6HeaderTLVOptions"></a>
-## type IPv6HeaderTLVOptions
+## type [IPv6HeaderTLVOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L100>)
 
 IPv6HeaderTLVOptions 表示IPv6扩展头部TLV选项列表 IPv6HeaderTLVOption的切片类型，用于存储多个TLV选项 该类型实现了数据库序列化接口，可以将选项列表存储到数据库中
 
@@ -1736,7 +1736,7 @@ type IPv6HeaderTLVOptions []IPv6HeaderTLVOption
 ```
 
 <a name="IPv6HeaderTLVOptions.Scan"></a>
-### func \(\*IPv6HeaderTLVOptions\) Scan
+### func \(\*IPv6HeaderTLVOptions\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L131>)
 
 ```go
 func (i *IPv6HeaderTLVOptions) Scan(value any) error
@@ -1764,7 +1764,7 @@ error - 反序列化过程中发生的错误，如果成功则为nil
 - 其他类型: 返回类型错误
 
 <a name="IPv6HeaderTLVOptions.Value"></a>
-### func \(IPv6HeaderTLVOptions\) Value
+### func \(IPv6HeaderTLVOptions\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L110>)
 
 ```go
 func (i IPv6HeaderTLVOptions) Value() (driver.Value, error)
@@ -1780,7 +1780,7 @@ error - 序列化过程中发生的错误，如果成功则为nil
 ```
 
 <a name="IPv6Headers"></a>
-## type IPv6Headers
+## type [IPv6Headers](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L503-L511>)
 
 IPv6Headers 表示IPv6协议头部信息 IPv6头部完整结构，包含基础头部和最后一个头部类型 该结构用于存储IPv6数据包的完整头部信息
 
@@ -1797,7 +1797,7 @@ type IPv6Headers struct {
 ```
 
 <a name="NewIPv6Headers"></a>
-### func NewIPv6Headers
+### func [NewIPv6Headers](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L535>)
 
 ```go
 func NewIPv6Headers(ipv6 *layers.IPv6) *IPv6Headers
@@ -1806,7 +1806,7 @@ func NewIPv6Headers(ipv6 *layers.IPv6) *IPv6Headers
 NewIPv6Headers 从gopacket IPv6层创建IPv6Headers 将gopacket的IPv6层转换为内部表示的IPv6Headers结构
 
 <a name="IPv6Headers.DstAddr"></a>
-### func \(\*IPv6Headers\) DstAddr
+### func \(\*IPv6Headers\) [DstAddr](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L529>)
 
 ```go
 func (i *IPv6Headers) DstAddr() net.IP
@@ -1821,7 +1821,7 @@ net.IP - 目的IPv6地址
 ```
 
 <a name="IPv6Headers.SrcAddr"></a>
-### func \(\*IPv6Headers\) SrcAddr
+### func \(\*IPv6Headers\) [SrcAddr](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L519>)
 
 ```go
 func (i *IPv6Headers) SrcAddr() net.IP
@@ -1836,7 +1836,7 @@ net.IP - 源IPv6地址
 ```
 
 <a name="IPv6HopByHop"></a>
-## type IPv6HopByHop
+## type [IPv6HopByHop](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L160-L176>)
 
 IPv6HopByHop 表示IPv6逐跳选项扩展头部 IPv6逐跳选项头部（Hop\-by\-Hop Options Header）结构 该扩展头部包含需要在数据包传输路径上每个路由器处理的选项 通常用于路由器告警（Router Alert）、Jumbo Payload等选项
 
@@ -1861,7 +1861,7 @@ type IPv6HopByHop struct {
 ```
 
 <a name="NewIPv6HopByHop"></a>
-### func NewIPv6HopByHop
+### func [NewIPv6HopByHop](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L195>)
 
 ```go
 func NewIPv6HopByHop(hbh *layers.IPv6HopByHop) *IPv6HopByHop
@@ -1889,7 +1889,7 @@ hbh - gopacket的IPv6HopByHop指针，如果为nil则返回nil
 4. 创建并返回IPv6HopByHop结构
 
 <a name="IPv6HopByHop.Scan"></a>
-### func \(\*IPv6HopByHop\) Scan
+### func \(\*IPv6HopByHop\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L243>)
 
 ```go
 func (h *IPv6HopByHop) Scan(value any) error
@@ -1918,7 +1918,7 @@ error - 反序列化过程中发生的错误，如果成功则为nil
 ```
 
 <a name="IPv6HopByHop.Value"></a>
-### func \(\*IPv6HopByHop\) Value
+### func \(\*IPv6HopByHop\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L219>)
 
 ```go
 func (h *IPv6HopByHop) Value() (driver.Value, error)
@@ -1934,7 +1934,7 @@ error - 序列化过程中发生的错误，如果成功则为nil
 ```
 
 <a name="IPv6Routing"></a>
-## type IPv6Routing
+## type [IPv6Routing](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L379-L404>)
 
 IPv6Routing 表示IPv6路由扩展头部 IPv6路由头部（Routing Header）结构 该扩展头部用于指定数据包经过的中间节点（源路由） 支持多种路由类型，如类型0（已弃用）、类型2（移动IPv6）等
 
@@ -1968,7 +1968,7 @@ type IPv6Routing struct {
 ```
 
 <a name="NewIPv6Routing"></a>
-### func NewIPv6Routing
+### func [NewIPv6Routing](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L417>)
 
 ```go
 func NewIPv6Routing(ipv6 *layers.IPv6Routing) *IPv6Routing
@@ -1989,7 +1989,7 @@ ipv6 - gopacket的IPv6Routing指针
 ```
 
 <a name="LayerInfo"></a>
-## type LayerInfo
+## type [LayerInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L53-L57>)
 
 LayerInfo 表示网络层的详细信息 包含协议层级、协议类型和对应的头部信息
 
@@ -2002,7 +2002,7 @@ type LayerInfo struct {
 ```
 
 <a name="LayerLevel"></a>
-## type LayerLevel
+## type [LayerLevel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L36>)
 
 LayerLevel 表示网络协议栈的层次级别 使用OSI模型中的层级定义，但跳过了表示层和会话层（第5\-6层）
 
@@ -2032,7 +2032,7 @@ const (
 ```
 
 <a name="LayerLevel.Next"></a>
-### func \(LayerLevel\) Next
+### func \(LayerLevel\) [Next](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L41>)
 
 ```go
 func (l LayerLevel) Next() LayerLevel
@@ -2041,7 +2041,7 @@ func (l LayerLevel) Next() LayerLevel
 Next 返回下一个协议层级别 根据OSI模型，链路层\(2\) \-\> 网络层\(3\) \-\> 传输层\(4\) \-\> 应用层\(7\) 注意：跳过了表示层\(5\)和会话层\(6\)
 
 <a name="LayerStack"></a>
-## type LayerStack
+## type [LayerStack](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L61>)
 
 LayerStack 表示网络层的堆栈结构 按照从底层到高层的顺序存储网络协议层信息
 
@@ -2050,7 +2050,7 @@ type LayerStack []*LayerInfo
 ```
 
 <a name="LayerStack.Scan"></a>
-### func \(\*LayerStack\) Scan
+### func \(\*LayerStack\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L79>)
 
 ```go
 func (l *LayerStack) Scan(value any) error
@@ -2059,7 +2059,7 @@ func (l *LayerStack) Scan(value any) error
 Scan 实现数据库反序列化接口 从数据库读取JSON字符串并反序列化为LayerStack
 
 <a name="LayerStack.Value"></a>
-### func \(LayerStack\) Value
+### func \(LayerStack\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L65>)
 
 ```go
 func (l LayerStack) Value() (driver.Value, error)
@@ -2068,7 +2068,7 @@ func (l LayerStack) Value() (driver.Value, error)
 Value 实现数据库序列化接口 将LayerStack序列化为JSON字符串存储到数据库
 
 <a name="MPLSChannel"></a>
-## type MPLSChannel
+## type [MPLSChannel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/channel.go#L285-L290>)
 
 MPLSChannel 表示MPLS标签通道信息 MPLS（Multiprotocol Label Switching）是一种数据包转发技术，使用标签进行快速交换 该结构体存储MPLS标签栈中的单个标签信息，包括标签值、流量类别、栈底标志和TTL
 
@@ -2082,7 +2082,7 @@ type MPLSChannel struct {
 ```
 
 <a name="NewMPLSChannel"></a>
-### func NewMPLSChannel
+### func [NewMPLSChannel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/channel.go#L306>)
 
 ```go
 func NewMPLSChannel(mpls *layers.MPLS) *MPLSChannel
@@ -2106,7 +2106,7 @@ NewMPLSChannel 从gopacket MPLS层创建MPLSChannel 将gopacket库中的MPLS层�
 4. 支持MPLS标签栈的递归解析（通过builder.go中的ExtractLayerInfos函数）
 
 <a name="ModelBuilder"></a>
-## type ModelBuilder
+## type [ModelBuilder](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L285-L294>)
 
 ModelBuilder 数据包模型构建器 用于将原始网络数据包转换为特定层级的结构化数据模型 支持从链路层到传输层的模型构建，便于后续存储、查询和分析
 
@@ -2124,7 +2124,7 @@ type ModelBuilder struct {
 ```
 
 <a name="NewPacketModelBuilder"></a>
-### func NewPacketModelBuilder
+### func [NewPacketModelBuilder](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L574>)
 
 ```go
 func NewPacketModelBuilder(packet gopacket.Packet, sessionID serializer.HexUUID, source reporter_v1.ResourceRaw) *ModelBuilder
@@ -2154,7 +2154,7 @@ NewPacketModelBuilder 创建数据包模型构建器 工厂函数，用于从原
 4. 返回可直接用于模型构建的实例
 
 <a name="ModelBuilder.BuildAsPacketApplicationModel"></a>
-### func \(\*ModelBuilder\) BuildAsPacketApplicationModel
+### func \(\*ModelBuilder\) [BuildAsPacketApplicationModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L521>)
 
 ```go
 func (b *ModelBuilder) BuildAsPacketApplicationModel() any
@@ -2173,7 +2173,7 @@ BuildAsPacketApplicationModel 构建应用层数据包模型 将原始数据包�
 3. 保持接口一致性，便于后续功能扩展
 
 <a name="ModelBuilder.BuildAsPacketLinkModel"></a>
-### func \(\*ModelBuilder\) BuildAsPacketLinkModel
+### func \(\*ModelBuilder\) [BuildAsPacketLinkModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L313>)
 
 ```go
 func (b *ModelBuilder) BuildAsPacketLinkModel() any
@@ -2200,7 +2200,7 @@ BuildAsPacketLinkModel 构建链路层数据包模型 将原始数据包转换�
 4. 返回可用于数据库存储的结构化数据
 
 <a name="ModelBuilder.BuildAsPacketModel"></a>
-### func \(\*ModelBuilder\) BuildAsPacketModel
+### func \(\*ModelBuilder\) [BuildAsPacketModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L540>)
 
 ```go
 func (b *ModelBuilder) BuildAsPacketModel() any
@@ -2224,7 +2224,7 @@ BuildAsPacketModel 根据层级构建数据包模型 根据数据包的最高解
 4. 简化上层代码调用，无需手动判断层级
 
 <a name="ModelBuilder.BuildAsPacketNetworkModel"></a>
-### func \(\*ModelBuilder\) BuildAsPacketNetworkModel
+### func \(\*ModelBuilder\) [BuildAsPacketNetworkModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L379>)
 
 ```go
 func (b *ModelBuilder) BuildAsPacketNetworkModel() any
@@ -2253,7 +2253,7 @@ BuildAsPacketNetworkModel 构建网络层数据包模型 将原始数据包转�
 5. 返回可用于数据库存储的结构化数据
 
 <a name="ModelBuilder.BuildAsPacketTransportModel"></a>
-### func \(\*ModelBuilder\) BuildAsPacketTransportModel
+### func \(\*ModelBuilder\) [BuildAsPacketTransportModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L443>)
 
 ```go
 func (b *ModelBuilder) BuildAsPacketTransportModel() any
@@ -2288,7 +2288,7 @@ BuildAsPacketTransportModel 构建传输层数据包模型 将原始数据包转
 - 支持IPv4/TCP、IPv4/UDP、IPv6/TCP、IPv6/UDP四种组合
 
 <a name="NetworkFrame"></a>
-## type NetworkFrame
+## type [NetworkFrame](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/stack.go#L12>)
 
 NetworkFrame 表示单个数据包展平后的网络协议栈记录列表。
 
@@ -2297,7 +2297,7 @@ type NetworkFrame []*NetworkStack
 ```
 
 <a name="NewNetworkFrame"></a>
-### func NewNetworkFrame
+### func [NewNetworkFrame](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/stack.go#L25>)
 
 ```go
 func NewNetworkFrame(stack LayerStack, meta BaseMeta, timestamp time.Time) NetworkFrame
@@ -2316,7 +2316,7 @@ NewNetworkFrame 将数据包的网络层堆栈展平为 NetworkStack 记录列�
 - NetworkFrame: 展平后的记录列表，Seq、TraceID 与 Direction 由调用方补充设置
 
 <a name="NetworkStack"></a>
-## type NetworkStack
+## type [NetworkStack](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/stack.go#L59-L77>)
 
 NetworkStack 表示网络协议栈中的一个帧，包含协议类型、头部信息等。
 
@@ -2343,7 +2343,7 @@ type NetworkStack struct {
 ```
 
 <a name="PacketEthernet"></a>
-## type PacketEthernet
+## type [PacketEthernet](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/eth.go#L77-L81>)
 
 PacketEthernet 表示完整的以太网数据包 该结构体组合了AsPacket基础结构和EthernetHeaders以太网头部信息， 用于存储和分析原始的网络数据包。它包含了数据包的所有元数据和载荷。
 
@@ -2369,7 +2369,7 @@ type PacketEthernet struct {
 ```
 
 <a name="PacketIPv4"></a>
-## type PacketIPv4
+## type [PacketIPv4](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv4.go#L271-L276>)
 
 PacketIPv4 表示完整的IPv4网络数据包 该结构体组合了以太网层（链路层）和IPv4层（网络层）的头部信息 用于存储和分析从网络捕获的原始IPv4数据包
 
@@ -2408,7 +2408,7 @@ type PacketIPv4 struct {
 ```
 
 <a name="PacketIPv4TCP"></a>
-## type PacketIPv4TCP
+## type [PacketIPv4TCP](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L260-L268>)
 
 PacketIPv4TCP 表示IPv4 TCP数据包 组合了PacketIPv4和TCPHeaders，表示完整的IPv4 TCP数据包信息 包含以太网层、IPv4层和TCP层的所有头部信息
 
@@ -2425,7 +2425,7 @@ type PacketIPv4TCP struct {
 ```
 
 <a name="PacketIPv4TCP.CaptureTimestamp"></a>
-### func \(\*PacketIPv4TCP\) CaptureTimestamp
+### func \(\*PacketIPv4TCP\) [CaptureTimestamp](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L272>)
 
 ```go
 func (p *PacketIPv4TCP) CaptureTimestamp() time.Time
@@ -2434,7 +2434,7 @@ func (p *PacketIPv4TCP) CaptureTimestamp() time.Time
 CaptureTimestamp 返回数据包的捕获时间戳 时间戳用于记录数据包的捕获时间，用于后续的分析和处理
 
 <a name="PacketIPv4TCP.FrameInfo"></a>
-### func \(\*PacketIPv4TCP\) FrameInfo
+### func \(\*PacketIPv4TCP\) [FrameInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L312>)
 
 ```go
 func (p *PacketIPv4TCP) FrameInfo() *FrameInfo
@@ -2443,7 +2443,7 @@ func (p *PacketIPv4TCP) FrameInfo() *FrameInfo
 FrameInfo 返回帧信息 提供对数据包时间戳和协议层堆栈信息的访问接口 返回值: 包含时间戳和层堆栈的FrameInfo结构
 
 <a name="PacketIPv4TCP.GetPayload"></a>
-### func \(\*PacketIPv4TCP\) GetPayload
+### func \(\*PacketIPv4TCP\) [GetPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L329>)
 
 ```go
 func (p *PacketIPv4TCP) GetPayload() []byte
@@ -2452,7 +2452,7 @@ func (p *PacketIPv4TCP) GetPayload() []byte
 GetPayload 返回TCP数据包的载荷数据 从加密存储的 Payload 字段中获取解密后的原始载荷字节
 
 <a name="PacketIPv4TCP.IngestedAt"></a>
-### func \(\*PacketIPv4TCP\) IngestedAt
+### func \(\*PacketIPv4TCP\) [IngestedAt](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L278>)
 
 ```go
 func (p *PacketIPv4TCP) IngestedAt() time.Time
@@ -2461,7 +2461,7 @@ func (p *PacketIPv4TCP) IngestedAt() time.Time
 IngestedAt 返回数据包的入库时间戳 入库时间标识数据包写入数据库的时间，用于分布式编排器推进消费水位
 
 <a name="PacketIPv4TCP.Meta"></a>
-### func \(\*PacketIPv4TCP\) Meta
+### func \(\*PacketIPv4TCP\) [Meta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L305>)
 
 ```go
 func (p *PacketIPv4TCP) Meta() *BaseMeta
@@ -2470,7 +2470,7 @@ func (p *PacketIPv4TCP) Meta() *BaseMeta
 Meta 返回基础元数据 提供对数据包基础元数据的访问接口 返回值: 指向BaseMeta结构的指针
 
 <a name="PacketIPv4TCP.NetworkFrame"></a>
-### func \(\*PacketIPv4TCP\) NetworkFrame
+### func \(\*PacketIPv4TCP\) [NetworkFrame](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L323>)
 
 ```go
 func (p *PacketIPv4TCP) NetworkFrame() NetworkFrame
@@ -2479,7 +2479,7 @@ func (p *PacketIPv4TCP) NetworkFrame() NetworkFrame
 NetworkFrame 返回数据包的网络层帧信息 将数据包的网络层堆栈展平为NetworkStack记录列表，用于记录数据包的捕获上下文。 每条记录的 Seq、TraceID、Direction 与载荷字节偏移（PayloadStart/EndOffset） 由TCP流侧在数据包进入缓冲区时补充设置。
 
 <a name="PacketIPv4TCP.StreamID"></a>
-### func \(\*PacketIPv4TCP\) StreamID
+### func \(\*PacketIPv4TCP\) [StreamID](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L296>)
 
 ```go
 func (p *PacketIPv4TCP) StreamID() string
@@ -2488,7 +2488,7 @@ func (p *PacketIPv4TCP) StreamID() string
 StreamID 返回TCP流ID 通过 hash/maphash 对源IP、目的IP、源端口、目的端口计算64\-bit哈希，生成唯一的流标识符 流ID用于识别属于同一TCP连接的所有数据包 返回值: 16字符的十六进制64\-bit哈希字符串
 
 <a name="PacketIPv4TCP.TcpFingerprint"></a>
-### func \(\*PacketIPv4TCP\) TcpFingerprint
+### func \(\*PacketIPv4TCP\) [TcpFingerprint](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L285>)
 
 ```go
 func (p *PacketIPv4TCP) TcpFingerprint() *PacketTCPFingerprint
@@ -2497,7 +2497,7 @@ func (p *PacketIPv4TCP) TcpFingerprint() *PacketTCPFingerprint
 TcpFingerprint 返回数据包携带的被动 TCP 指纹。 指纹由 pcap 导入阶段对 SYN / SYN\-ACK 握手包识别并落库， 组包阶段通过该方法透传给流重组器；无指纹时返回 nil。
 
 <a name="PacketIPv4UDP"></a>
-## type PacketIPv4UDP
+## type [PacketIPv4UDP](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/udp.go#L59-L66>)
 
 PacketIPv4UDP 表示IPv4 UDP数据包 组合了PacketIPv4和UDPHeaders，表示完整的IPv4 UDP数据包信息 包含以太网层、IPv4层和UDP层的所有头部信息
 
@@ -2519,7 +2519,7 @@ type PacketIPv4UDP struct {
 ```
 
 <a name="PacketIPv4UDP.StreamID"></a>
-### func \(\*PacketIPv4UDP\) StreamID
+### func \(\*PacketIPv4UDP\) [StreamID](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/udp.go#L72>)
 
 ```go
 func (p *PacketIPv4UDP) StreamID() string
@@ -2528,7 +2528,7 @@ func (p *PacketIPv4UDP) StreamID() string
 StreamID 返回TCP流ID 通过 hash/maphash 对源IP、目的IP、源端口、目的端口计算64\-bit哈希，生成唯一的流标识符 流ID用于识别属于同一TCP连接的所有数据包 返回值: 16字符的十六进制64\-bit哈希字符串
 
 <a name="PacketIPv6"></a>
-## type PacketIPv6
+## type [PacketIPv6](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L545-L554>)
 
 PacketIPv6 表示IPv6数据包 IPv6数据包完整结构，包含以太网头部和IPv6头部 该结构用于存储原始IPv6数据包信息，对应数据库中的packet\_ipv6表
 
@@ -2546,7 +2546,7 @@ type PacketIPv6 struct {
 ```
 
 <a name="PacketIPv6TCP"></a>
-## type PacketIPv6TCP
+## type [PacketIPv6TCP](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L339-L348>)
 
 PacketIPv6TCP 表示IPv6 TCP数据包 组合了PacketIPv6和TCPHeaders，表示完整的IPv6 TCP数据包信息 包含以太网层、IPv6层和TCP层的所有头部信息
 
@@ -2564,7 +2564,7 @@ type PacketIPv6TCP struct {
 ```
 
 <a name="PacketIPv6TCP.CaptureTimestamp"></a>
-### func \(\*PacketIPv6TCP\) CaptureTimestamp
+### func \(\*PacketIPv6TCP\) [CaptureTimestamp](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L352>)
 
 ```go
 func (p *PacketIPv6TCP) CaptureTimestamp() time.Time
@@ -2573,7 +2573,7 @@ func (p *PacketIPv6TCP) CaptureTimestamp() time.Time
 CaptureTimestamp 返回数据包的捕获时间戳 时间戳用于记录数据包的捕获时间，用于后续的分析和处理
 
 <a name="PacketIPv6TCP.FrameInfo"></a>
-### func \(\*PacketIPv6TCP\) FrameInfo
+### func \(\*PacketIPv6TCP\) [FrameInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L392>)
 
 ```go
 func (p *PacketIPv6TCP) FrameInfo() *FrameInfo
@@ -2582,7 +2582,7 @@ func (p *PacketIPv6TCP) FrameInfo() *FrameInfo
 FrameInfo 返回帧信息 提供对数据包时间戳和协议层堆栈信息的访问接口 返回值: 包含时间戳和层堆栈的FrameInfo结构
 
 <a name="PacketIPv6TCP.GetPayload"></a>
-### func \(\*PacketIPv6TCP\) GetPayload
+### func \(\*PacketIPv6TCP\) [GetPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L409>)
 
 ```go
 func (p *PacketIPv6TCP) GetPayload() []byte
@@ -2591,7 +2591,7 @@ func (p *PacketIPv6TCP) GetPayload() []byte
 GetPayload 返回TCP数据包的载荷数据 从加密存储的 Payload 字段中获取解密后的原始载荷字节
 
 <a name="PacketIPv6TCP.IngestedAt"></a>
-### func \(\*PacketIPv6TCP\) IngestedAt
+### func \(\*PacketIPv6TCP\) [IngestedAt](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L358>)
 
 ```go
 func (p *PacketIPv6TCP) IngestedAt() time.Time
@@ -2600,7 +2600,7 @@ func (p *PacketIPv6TCP) IngestedAt() time.Time
 IngestedAt 返回数据包的入库时间戳 入库时间标识数据包写入数据库的时间，用于分布式编排器推进消费水位
 
 <a name="PacketIPv6TCP.Meta"></a>
-### func \(\*PacketIPv6TCP\) Meta
+### func \(\*PacketIPv6TCP\) [Meta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L385>)
 
 ```go
 func (p *PacketIPv6TCP) Meta() *BaseMeta
@@ -2609,7 +2609,7 @@ func (p *PacketIPv6TCP) Meta() *BaseMeta
 Meta 返回基础元数据 提供对数据包基础元数据的访问接口 返回值: 指向BaseMeta结构的指针
 
 <a name="PacketIPv6TCP.NetworkFrame"></a>
-### func \(\*PacketIPv6TCP\) NetworkFrame
+### func \(\*PacketIPv6TCP\) [NetworkFrame](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L403>)
 
 ```go
 func (p *PacketIPv6TCP) NetworkFrame() NetworkFrame
@@ -2618,7 +2618,7 @@ func (p *PacketIPv6TCP) NetworkFrame() NetworkFrame
 NetworkFrame 返回数据包的网络层帧信息 将数据包的网络层堆栈展平为NetworkStack记录列表，用于记录数据包的捕获上下文。 每条记录的 Seq、TraceID、Direction 与载荷字节偏移（PayloadStart/EndOffset） 由TCP流侧在数据包进入缓冲区时补充设置。
 
 <a name="PacketIPv6TCP.StreamID"></a>
-### func \(\*PacketIPv6TCP\) StreamID
+### func \(\*PacketIPv6TCP\) [StreamID](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L376>)
 
 ```go
 func (p *PacketIPv6TCP) StreamID() string
@@ -2627,7 +2627,7 @@ func (p *PacketIPv6TCP) StreamID() string
 StreamID 返回TCP流ID 通过计算源IPv6地址、目的IPv6地址、源端口、目的端口的哈希值生成唯一的流标识符 流ID用于识别属于同一TCP连接的所有数据包，支持IPv6地址 返回值: 16字符的十六进制64\-bit哈希字符串
 
 <a name="PacketIPv6TCP.TcpFingerprint"></a>
-### func \(\*PacketIPv6TCP\) TcpFingerprint
+### func \(\*PacketIPv6TCP\) [TcpFingerprint](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L365>)
 
 ```go
 func (p *PacketIPv6TCP) TcpFingerprint() *PacketTCPFingerprint
@@ -2636,7 +2636,7 @@ func (p *PacketIPv6TCP) TcpFingerprint() *PacketTCPFingerprint
 TcpFingerprint 返回数据包携带的被动 TCP 指纹。 指纹由 pcap 导入阶段对 SYN / SYN\-ACK 握手包识别并落库， 组包阶段通过该方法透传给流重组器；无指纹时返回 nil。
 
 <a name="PacketIPv6UDP"></a>
-## type PacketIPv6UDP
+## type [PacketIPv6UDP](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/udp.go#L86-L93>)
 
 PacketIPv6UDP 表示IPv6 UDP数据包 组合了PacketIPv6和UDPHeaders，表示完整的IPv6 UDP数据包信息 包含以太网层、IPv6层和UDP层的所有头部信息
 
@@ -2658,7 +2658,7 @@ type PacketIPv6UDP struct {
 ```
 
 <a name="PacketIPv6UDP.StreamID"></a>
-### func \(\*PacketIPv6UDP\) StreamID
+### func \(\*PacketIPv6UDP\) [StreamID](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/udp.go#L99>)
 
 ```go
 func (p *PacketIPv6UDP) StreamID() string
@@ -2667,7 +2667,7 @@ func (p *PacketIPv6UDP) StreamID() string
 StreamID 返回TCP流ID 通过计算源IPv6地址、目的IPv6地址、源端口、目的端口的哈希值生成唯一的流标识符 流ID用于识别属于同一TCP连接的所有数据包，支持IPv6地址 返回值: 16字符的十六进制64\-bit哈希字符串
 
 <a name="PacketMeta"></a>
-## type PacketMeta
+## type [PacketMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L157-L159>)
 
 PacketMeta 表示数据包元数据 包含原始数据包的网络层堆栈信息
 
@@ -2678,7 +2678,7 @@ type PacketMeta struct {
 ```
 
 <a name="PacketTCPFingerprint"></a>
-## type PacketTCPFingerprint
+## type [PacketTCPFingerprint](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L246-L255>)
 
 PacketTCPFingerprint 表示单条 TCP 包记录上的被动指纹识别结果（p0f 风格）。 描述该数据包发送端（源地址）的 OS / MTU 等特征，由 pcap 导入阶段计算并落库。
 
@@ -2696,7 +2696,7 @@ type PacketTCPFingerprint struct {
 ```
 
 <a name="RowMeta"></a>
-## type RowMeta
+## type [RowMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L125-L127>)
 
 RowMeta 行唯一标识元数据 为流量数据行提供全局唯一 ID，供行详情接口按 namespace \+ id 定位单行
 
@@ -2707,7 +2707,7 @@ type RowMeta struct {
 ```
 
 <a name="TCPHeaders"></a>
-## type TCPHeaders
+## type [TCPHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L117-L154>)
 
 TCPHeaders 表示TCP协议头部信息 包含TCP协议头部的所有字段，用于存储和操作TCP数据包头部信息 支持数据库存储和JSON序列化，使用GORM标签定义数据库字段属性
 
@@ -2753,7 +2753,7 @@ type TCPHeaders struct {
 ```
 
 <a name="NewTCPHeaders"></a>
-### func NewTCPHeaders
+### func [NewTCPHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L221>)
 
 ```go
 func NewTCPHeaders(tcp *layers.TCP) *TCPHeaders
@@ -2762,7 +2762,7 @@ func NewTCPHeaders(tcp *layers.TCP) *TCPHeaders
 NewTCPHeaders 从gopacket TCP层创建TCPHeaders 将底层gopacket库解析的TCP头部信息转换为应用层的TCPHeaders结构 参数tcp: gopacket库解析的TCP层对象，包含原始TCP头部信息 返回值: 新创建的TCPHeaders指针，包含所有TCP头部字段
 
 <a name="TCPHeaders.AckNum"></a>
-### func \(\*TCPHeaders\) AckNum
+### func \(\*TCPHeaders\) [AckNum](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L178>)
 
 ```go
 func (t *TCPHeaders) AckNum() uint32
@@ -2771,7 +2771,7 @@ func (t *TCPHeaders) AckNum() uint32
 AckNum 返回确认号 确认号表示期望接收的下一个字节的序列号 返回值: 32位无符号整数确认号
 
 <a name="TCPHeaders.DstPort"></a>
-### func \(\*TCPHeaders\) DstPort
+### func \(\*TCPHeaders\) [DstPort](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L164>)
 
 ```go
 func (t *TCPHeaders) DstPort() layers.TCPPort
@@ -2780,7 +2780,7 @@ func (t *TCPHeaders) DstPort() layers.TCPPort
 DstPort 返回目的端口号 返回值: 目的端口号，layers.TCPPort类型
 
 <a name="TCPHeaders.IsAck"></a>
-### func \(\*TCPHeaders\) IsAck
+### func \(\*TCPHeaders\) [IsAck](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L199>)
 
 ```go
 func (t *TCPHeaders) IsAck() bool
@@ -2789,7 +2789,7 @@ func (t *TCPHeaders) IsAck() bool
 IsAck 判断是否为ACK包 ACK包用于确认数据接收，不包含SYN或FIN标志 返回值: true表示是ACK包（SYN=0, ACK=1, FIN=0）
 
 <a name="TCPHeaders.IsFin"></a>
-### func \(\*TCPHeaders\) IsFin
+### func \(\*TCPHeaders\) [IsFin](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L206>)
 
 ```go
 func (t *TCPHeaders) IsFin() bool
@@ -2798,7 +2798,7 @@ func (t *TCPHeaders) IsFin() bool
 IsFin 判断是否为FIN包 FIN包用于关闭TCP连接，表示发送方完成数据发送 返回值: true表示是FIN包（FIN=1）
 
 <a name="TCPHeaders.IsRst"></a>
-### func \(\*TCPHeaders\) IsRst
+### func \(\*TCPHeaders\) [IsRst](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L213>)
 
 ```go
 func (t *TCPHeaders) IsRst() bool
@@ -2807,7 +2807,7 @@ func (t *TCPHeaders) IsRst() bool
 IsRst 判断是否为RST包 RST包用于立即终止TCP连接，通常表示异常情况 返回值: true表示是RST包（RST=1）
 
 <a name="TCPHeaders.IsSyn"></a>
-### func \(\*TCPHeaders\) IsSyn
+### func \(\*TCPHeaders\) [IsSyn](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L185>)
 
 ```go
 func (t *TCPHeaders) IsSyn() bool
@@ -2816,7 +2816,7 @@ func (t *TCPHeaders) IsSyn() bool
 IsSyn 判断是否为SYN包 SYN包用于建立TCP连接，同步序列号 返回值: true表示是SYN包（SYN=1, ACK=0, FIN=0）
 
 <a name="TCPHeaders.IsSynAck"></a>
-### func \(\*TCPHeaders\) IsSynAck
+### func \(\*TCPHeaders\) [IsSynAck](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L192>)
 
 ```go
 func (t *TCPHeaders) IsSynAck() bool
@@ -2825,7 +2825,7 @@ func (t *TCPHeaders) IsSynAck() bool
 IsSynAck 判断是否为SYN\-ACK包 SYN\-ACK包用于响应SYN包，确认连接建立 返回值: true表示是SYN\-ACK包（SYN=1, ACK=1）
 
 <a name="TCPHeaders.SeqNum"></a>
-### func \(\*TCPHeaders\) SeqNum
+### func \(\*TCPHeaders\) [SeqNum](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L171>)
 
 ```go
 func (t *TCPHeaders) SeqNum() uint32
@@ -2834,7 +2834,7 @@ func (t *TCPHeaders) SeqNum() uint32
 SeqNum 返回序列号 序列号用于标识TCP数据段在数据流中的位置 返回值: 32位无符号整数序列号
 
 <a name="TCPHeaders.SrcPort"></a>
-### func \(\*TCPHeaders\) SrcPort
+### func \(\*TCPHeaders\) [SrcPort](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L158>)
 
 ```go
 func (t *TCPHeaders) SrcPort() layers.TCPPort
@@ -2843,7 +2843,7 @@ func (t *TCPHeaders) SrcPort() layers.TCPPort
 SrcPort 返回源端口号 返回值: 源端口号，layers.TCPPort类型
 
 <a name="TCPOption"></a>
-## type TCPOption
+## type [TCPOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L48-L52>)
 
 TCPOption 表示TCP协议选项 TCP选项用于在TCP连接建立和通信过程中传递额外信息 每个TCP选项包含类型、长度和数据三个部分
 
@@ -2856,7 +2856,7 @@ type TCPOption struct {
 ```
 
 <a name="TCPOptions"></a>
-## type TCPOptions
+## type [TCPOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L56>)
 
 TCPOptions 表示TCP选项列表 用于存储多个TCP选项，支持数据库序列化和反序列化
 
@@ -2865,7 +2865,7 @@ type TCPOptions []TCPOption
 ```
 
 <a name="NewTCPOptions"></a>
-### func NewTCPOptions
+### func [NewTCPOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L62>)
 
 ```go
 func NewTCPOptions(options []layers.TCPOption) TCPOptions
@@ -2874,7 +2874,7 @@ func NewTCPOptions(options []layers.TCPOption) TCPOptions
 NewTCPOptions 从gopacket TCP选项创建TCPOptions 将底层gopacket库的TCP选项转换为应用层的TCPOptions结构 参数options: gopacket库解析的原始TCP选项列表 返回值: 转换后的TCPOptions结构
 
 <a name="TCPOptions.Scan"></a>
-### func \(\*TCPOptions\) Scan
+### func \(\*TCPOptions\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L89>)
 
 ```go
 func (o *TCPOptions) Scan(value any) error
@@ -2883,7 +2883,7 @@ func (o *TCPOptions) Scan(value any) error
 Scan 实现数据库反序列化接口 从数据库读取数据并反序列化为TCPOptions结构 参数value: 从数据库读取的原始值，可以是\[\]byte或string类型 返回值error: 反序列化过程中的错误
 
 <a name="TCPOptions.Value"></a>
-### func \(TCPOptions\) Value
+### func \(TCPOptions\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L78>)
 
 ```go
 func (o TCPOptions) Value() (driver.Value, error)
@@ -2892,7 +2892,7 @@ func (o TCPOptions) Value() (driver.Value, error)
 Value 实现数据库序列化接口 将TCPOptions序列化为JSON格式，用于存储到数据库 返回值driver.Value: 序列化后的数据库值 返回值error: 序列化过程中的错误
 
 <a name="TagsMeta"></a>
-## type TagsMeta
+## type [TagsMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L162-L166>)
 
 TagsMeta 表示风险标签元数据，存储去重排序后的标签数组
 
@@ -2905,7 +2905,7 @@ type TagsMeta struct {
 ```
 
 <a name="TcpFingerprint"></a>
-## type TcpFingerprint
+## type [TcpFingerprint](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/http.go#L989-L1004>)
 
 TcpFingerprint 表示 HttpTransport 上的 TCP 指纹（客户端/服务端）， 来源于 pcap 导入阶段写入 tcp 包表的指纹，经组包器 StreamMeta 透传填充。
 
@@ -2929,7 +2929,7 @@ type TcpFingerprint struct {
 ```
 
 <a name="TimestampMeta"></a>
-## type TimestampMeta
+## type [TimestampMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L131-L134>)
 
 TimestampMeta 表示时间元数据 包含采集时间与入库时间，使用高精度时间格式存储
 
@@ -2941,7 +2941,7 @@ type TimestampMeta struct {
 ```
 
 <a name="TraceMeta"></a>
-## type TraceMeta
+## type [TraceMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L137-L140>)
 
 TraceMeta 表示链路追踪元数据，携带用于关联同一请求各环节的追踪 ID
 
@@ -2953,7 +2953,7 @@ type TraceMeta struct {
 ```
 
 <a name="UDPHeaders"></a>
-## type UDPHeaders
+## type [UDPHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/udp.go#L18-L27>)
 
 UDPHeaders 表示UDP协议头部信息 UDP（User Datagram Protocol）是一种无连接的传输层协议，提供简单的不可靠数据报服务 该结构体封装了UDP协议头部的所有字段，用于存储、查询和分析UDP数据包
 
@@ -2977,7 +2977,7 @@ type UDPHeaders struct {
 ```
 
 <a name="NewUDPHeaders"></a>
-### func NewUDPHeaders
+### func [NewUDPHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/udp.go#L42>)
 
 ```go
 func NewUDPHeaders(udp *layers.UDP) *UDPHeaders
@@ -3000,7 +3000,7 @@ NewUDPHeaders 从gopacket UDP层创建UDPHeaders 将底层gopacket库解析的UD
 3. 复制校验和字段
 
 <a name="VXLANChannel"></a>
-## type VXLANChannel
+## type [VXLANChannel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/channel.go#L18-L25>)
 
 VXLANChannel 表示VXLAN隧道通道信息 VXLAN（Virtual Extensible LAN）是一种网络虚拟化技术，用于在现有IP网络上创建虚拟二层网络 该结构体存储VXLAN头部的主要字段，便于后续分析和存储
 
@@ -3016,7 +3016,7 @@ type VXLANChannel struct {
 ```
 
 <a name="NewVXLANChannel"></a>
-### func NewVXLANChannel
+### func [NewVXLANChannel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/channel.go#L40>)
 
 ```go
 func NewVXLANChannel(vxlan *layers.VXLAN) *VXLANChannel

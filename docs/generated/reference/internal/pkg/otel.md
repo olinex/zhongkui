@@ -57,7 +57,7 @@ const (
 ```
 
 <a name="AsynqServerMiddleware"></a>
-## func AsynqServerMiddleware
+## func [AsynqServerMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/instrument.go#L36>)
 
 ```go
 func AsynqServerMiddleware() asynq.MiddlewareFunc
@@ -68,7 +68,7 @@ AsynqServerMiddleware 返回 Asynq 任务处理中间件，为每个任务执行
 span name 格式为 "asynq.task/\{taskType\}"，包含 taskType，taskID 等 attribute。 当 Runtime 为 nil 时返回 nil。
 
 <a name="EtcdDialOptions"></a>
-## func EtcdDialOptions
+## func [EtcdDialOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/instrument.go#L232>)
 
 ```go
 func EtcdDialOptions() []g.DialOption
@@ -79,7 +79,7 @@ EtcdDialOptions 返回 etcd 客户端使用的 OTEL gRPC 拨号选项。
 etcd client/v3 底层使用 gRPC 通信，通过注入 otelgrpc 拦截器实现链路追踪。 当 Runtime 为 nil 时返回空切片。
 
 <a name="GinMiddleware"></a>
-## func GinMiddleware
+## func [GinMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/instrument.go#L197>)
 
 ```go
 func GinMiddleware(name string) gin.HandlerFunc
@@ -88,7 +88,7 @@ func GinMiddleware(name string) gin.HandlerFunc
 GinMiddleware 返回基于 otelgin 的 Gin 中间件，为 HTTP 请求创建追踪 span；OTEL 未启用时返回 nil。
 
 <a name="GormPlugin"></a>
-## func GormPlugin
+## func [GormPlugin](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/instrument.go#L189>)
 
 ```go
 func GormPlugin() gorm.Plugin
@@ -99,7 +99,7 @@ GormPlugin 返回 GORM 的 OTEL 插件，自动为数据库操作创建 trace sp
 当 Runtime 为 nil 时返回 nil。
 
 <a name="GrpcClientOptions"></a>
-## func GrpcClientOptions
+## func [GrpcClientOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/instrument.go#L219>)
 
 ```go
 func GrpcClientOptions() []g.DialOption
@@ -110,7 +110,7 @@ GrpcClientOptions 返回 gRPC Client 的 OTEL stats handler 拨号选项。
 当 Runtime 为 nil 时返回空切片。
 
 <a name="GrpcServerOptions"></a>
-## func GrpcServerOptions
+## func [GrpcServerOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/instrument.go#L207>)
 
 ```go
 func GrpcServerOptions() []g.ServerOption
@@ -121,7 +121,7 @@ GrpcServerOptions 返回 gRPC Server 的 OTEL stats handler 选项。
 当 Runtime 为 nil 时返回空切片。
 
 <a name="InjectRedisClient"></a>
-## func InjectRedisClient
+## func [InjectRedisClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/instrument.go#L109>)
 
 ```go
 func InjectRedisClient(client *redis.Client) error
@@ -130,7 +130,7 @@ func InjectRedisClient(client *redis.Client) error
 InjectRedisClient 为 Redis 客户端注入 OpenTelemetry 的链路追踪与指标采集；OTEL 未启用时不作处理。
 
 <a name="NewFilterSpanProcessor"></a>
-## func NewFilterSpanProcessor
+## func [NewFilterSpanProcessor](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/sampler.go#L34>)
 
 ```go
 func NewFilterSpanProcessor(next sdktrace.SpanProcessor) sdktrace.SpanProcessor
@@ -141,7 +141,7 @@ NewFilterSpanProcessor 创建一个尾部过滤 SpanProcessor。 当 sampler typ
 next 是下游的 SpanProcessor（通常为 BatchSpanProcessor）， 只有通过过滤条件的 Span 才会被转发给 next。
 
 <a name="NewLogExporter"></a>
-## func NewLogExporter
+## func [NewLogExporter](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/exporter.go#L72>)
 
 ```go
 func NewLogExporter(ctx context.Context) (sdklog.Exporter, error)
@@ -150,7 +150,7 @@ func NewLogExporter(ctx context.Context) (sdklog.Exporter, error)
 NewLogExporter 按配置创建日志导出器，支持标准输出与 OTLP（http/grpc）两种方式。
 
 <a name="NewLogProvider"></a>
-## func NewLogProvider
+## func [NewLogProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/provider.go#L39>)
 
 ```go
 func NewLogProvider(exp sdklog.Exporter, res *sdkresource.Resource) *sdklog.LoggerProvider
@@ -159,7 +159,7 @@ func NewLogProvider(exp sdklog.Exporter, res *sdkresource.Resource) *sdklog.Logg
 NewLogProvider 创建日志 Provider，使用批量处理器导出日志。
 
 <a name="NewMeterExporter"></a>
-## func NewMeterExporter
+## func [NewMeterExporter](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/exporter.go#L51>)
 
 ```go
 func NewMeterExporter(ctx context.Context) (sdkmetric.Exporter, error)
@@ -168,7 +168,7 @@ func NewMeterExporter(ctx context.Context) (sdkmetric.Exporter, error)
 NewMeterExporter 按配置创建指标导出器，支持标准输出与 OTLP（http/grpc）两种方式。
 
 <a name="NewMeterProvider"></a>
-## func NewMeterProvider
+## func [NewMeterProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/provider.go#L34>)
 
 ```go
 func NewMeterProvider(exp sdkmetric.Exporter, res *sdkresource.Resource) *sdkmetric.MeterProvider
@@ -177,7 +177,7 @@ func NewMeterProvider(exp sdkmetric.Exporter, res *sdkresource.Resource) *sdkmet
 NewMeterProvider 创建指标 Provider，使用周期性导出器上报指标。
 
 <a name="NewResource"></a>
-## func NewResource
+## func [NewResource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/resource.go#L16>)
 
 ```go
 func NewResource(ctx context.Context) (*sdkresource.Resource, error)
@@ -186,7 +186,7 @@ func NewResource(ctx context.Context) (*sdkresource.Resource, error)
 NewResource 构建 OpenTelemetry 资源，自动采集环境、SDK、进程与主机等属性。
 
 <a name="NewSampler"></a>
-## func NewSampler
+## func [NewSampler](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/sampler.go#L16>)
 
 ```go
 func NewSampler() sdktrace.Sampler
@@ -199,7 +199,7 @@ NewSampler 根据环境配置创建对应的 Sampler。
 - tail: 尾部过滤，Span 创建时全量采样，由 SpanProcessor 在 Span 结束时过滤
 
 <a name="NewTraceExporter"></a>
-## func NewTraceExporter
+## func [NewTraceExporter](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/exporter.go#L30>)
 
 ```go
 func NewTraceExporter(ctx context.Context) (sdktrace.SpanExporter, error)
@@ -208,7 +208,7 @@ func NewTraceExporter(ctx context.Context) (sdktrace.SpanExporter, error)
 NewTraceExporter 按配置创建链路导出器，支持标准输出与 OTLP（http/grpc）两种方式。
 
 <a name="NewTraceProvider"></a>
-## func NewTraceProvider
+## func [NewTraceProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/provider.go#L13>)
 
 ```go
 func NewTraceProvider(exp sdktrace.SpanExporter, res *sdkresource.Resource) *sdktrace.TracerProvider
@@ -217,7 +217,7 @@ func NewTraceProvider(exp sdktrace.SpanExporter, res *sdkresource.Resource) *sdk
 NewTraceProvider 创建链路追踪 Provider，按采样器类型装配批处理或尾部过滤处理器。
 
 <a name="S3ClientOptions"></a>
-## func S3ClientOptions
+## func [S3ClientOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/instrument.go#L242>)
 
 ```go
 func S3ClientOptions() []s3.ClientOption
@@ -226,7 +226,7 @@ func S3ClientOptions() []s3.ClientOption
 S3ClientOptions 返回 S3 客户端的 OTEL 追踪选项（经自定义 RoundTripper 埋点）；OTEL 未启用时返回 nil。
 
 <a name="Setup"></a>
-## func Setup
+## func [Setup](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/otel.go#L23>)
 
 ```go
 func Setup(ctx context.Context) (func(context.Context) error, error)
@@ -235,7 +235,7 @@ func Setup(ctx context.Context) (func(context.Context) error, error)
 Setup 初始化 OpenTelemetry，注册文本映射传播器并设置各类 Provider， 返回用于释放资源的关闭函数。未启用时仅返回空关闭函数。
 
 <a name="WrapLogger"></a>
-## func WrapLogger
+## func [WrapLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/instrument.go#L163>)
 
 ```go
 func WrapLogger(logger *zap.Logger, name string) *zap.Logger
@@ -246,7 +246,7 @@ WrapLogger 将已有的 \*zap.Logger 包装，使其通过 OpenTelemetry 导出�
 当 OTEL 未启用或日志导出被禁用时，返回原始 logger 不做任何修改。 name 参数对应 otelzap 的 logger name，用于在 log.LoggerProvider 中区分不同 logger。
 
 <a name="WrapSugaredLogger"></a>
-## func WrapSugaredLogger
+## func [WrapSugaredLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/instrument.go#L177>)
 
 ```go
 func WrapSugaredLogger(logger *logging.Logger, name string) *logging.Logger
@@ -255,7 +255,7 @@ func WrapSugaredLogger(logger *logging.Logger, name string) *logging.Logger
 WrapSugaredLogger 将已有的 \*logging.Logger 包装，使其通过 OTEL 导出日志。 同时启用 logging.EnableCtx\(\)，使 logger.Ctx\(ctx\) 将 context 注入日志字段供 otelzap trace 关联。
 
 <a name="OtelEnv"></a>
-## type OtelEnv
+## type [OtelEnv](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/environments.go#L36-L49>)
 
 OtelEnv 描述 OpenTelemetry 的运行配置项。
 
@@ -286,7 +286,7 @@ var (
 ```
 
 <a name="TracedAsynqClient"></a>
-## type TracedAsynqClient
+## type [TracedAsynqClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/instrument.go#L63-L67>)
 
 TracedAsynqClient 包装 asynq.Client，在任务入队时自动创建追踪 span。
 
@@ -298,7 +298,7 @@ type TracedAsynqClient struct {
 ```
 
 <a name="WrapAsynqClient"></a>
-### func WrapAsynqClient
+### func [WrapAsynqClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/instrument.go#L70>)
 
 ```go
 func WrapAsynqClient(cli *asynq.Client) *TracedAsynqClient
@@ -307,7 +307,7 @@ func WrapAsynqClient(cli *asynq.Client) *TracedAsynqClient
 WrapAsynqClient 把 asynq.Client 包装为带追踪能力的 TracedAsynqClient；OTEL 未启用时返回 nil。
 
 <a name="TracedAsynqClient.EnqueueContext"></a>
-### func \(\*TracedAsynqClient\) EnqueueContext
+### func \(\*TracedAsynqClient\) [EnqueueContext](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/otel/instrument.go#L81>)
 
 ```go
 func (c *TracedAsynqClient) EnqueueContext(ctx context.Context, task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error)

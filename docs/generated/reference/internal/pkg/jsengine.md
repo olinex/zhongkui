@@ -37,7 +37,7 @@ var (
 ```
 
 <a name="IsUndefined"></a>
-## func IsUndefined
+## func [IsUndefined](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/jsengine/engine.go#L40>)
 
 ```go
 func IsUndefined(value Value) bool
@@ -46,7 +46,7 @@ func IsUndefined(value Value) bool
 IsUndefined 报告 value 是否为 undefined。
 
 <a name="Register"></a>
-## func Register
+## func [Register](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/jsengine/engine.go#L61>)
 
 ```go
 func Register(registrar Registrar)
@@ -55,7 +55,7 @@ func Register(registrar Registrar)
 Register 登记一个注入项：名称空或重复即 panic（与内置工具注册表的 fail fast 一致）。
 
 <a name="RegisterScript"></a>
-## func RegisterScript
+## func [RegisterScript](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/jsengine/engine.go#L80>)
 
 ```go
 func RegisterScript(name string, source []byte)
@@ -64,7 +64,7 @@ func RegisterScript(name string, source []byte)
 RegisterScript 是注册「执行一段嵌入式脚本」的便捷入口：脚本在引擎启动时按登记顺序执行， 需要浏览器桩或 Go 绑定的场景请直接用 Register。
 
 <a name="Engine"></a>
-## type Engine
+## type [Engine](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/jsengine/engine.go#L98-L109>)
 
 Engine 是受管的 goja 运行时：一个进程一份（由 provider 构造并管理生命周期），所有调用串行。
 
@@ -75,7 +75,7 @@ type Engine struct {
 ```
 
 <a name="New"></a>
-### func New
+### func [New](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/jsengine/engine.go#L112>)
 
 ```go
 func New() *Engine
@@ -84,7 +84,7 @@ func New() *Engine
 New 构造一个未启动的引擎；调用方须执行 Start 后才可 Do。
 
 <a name="Engine.Do"></a>
-### func \(\*Engine\) Do
+### func \(\*Engine\) [Do](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/jsengine/engine.go#L144>)
 
 ```go
 func (e *Engine) Do(fn func(vm *Runtime) error) error
@@ -93,7 +93,7 @@ func (e *Engine) Do(fn func(vm *Runtime) error) error
 Do 在互斥保护下把 VM 交给 fn 执行。引擎未启动或已关闭时返回错误；fn 返回的错误原样透传。
 
 <a name="Engine.Shutdown"></a>
-### func \(\*Engine\) Shutdown
+### func \(\*Engine\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/jsengine/engine.go#L164>)
 
 ```go
 func (e *Engine) Shutdown() error
@@ -102,7 +102,7 @@ func (e *Engine) Shutdown() error
 Shutdown 实现 do.Shutdowner：中断正在执行的脚本并释放 VM 引用，之后 Do 一律返回 ErrClosed。 幂等；VM 对象由 GC 回收（goja 未提供 Close）。
 
 <a name="Engine.Start"></a>
-### func \(\*Engine\) Start
+### func \(\*Engine\) [Start](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/jsengine/engine.go#L118>)
 
 ```go
 func (e *Engine) Start(_ context.Context) error
@@ -111,7 +111,7 @@ func (e *Engine) Start(_ context.Context) error
 Start 创建 VM 并按注册顺序执行全部注入项；幂等（重复调用直接返回）。ctx 仅用于表达启动时机， 脚本执行本身不可取消（单次加载通常在数百毫秒内完成）。
 
 <a name="LoadError"></a>
-## type LoadError
+## type [LoadError](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/jsengine/errors.go#L19-L24>)
 
 LoadError 记录某个注入项执行失败：用于把注册项名称带进启动错误，便于定位是哪段脚本坏了。
 
@@ -125,7 +125,7 @@ type LoadError struct {
 ```
 
 <a name="LoadError.Error"></a>
-### func \(\*LoadError\) Error
+### func \(\*LoadError\) [Error](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/jsengine/errors.go#L27>)
 
 ```go
 func (e *LoadError) Error() string
@@ -134,7 +134,7 @@ func (e *LoadError) Error() string
 Error 实现 error。
 
 <a name="LoadError.Unwrap"></a>
-### func \(\*LoadError\) Unwrap
+### func \(\*LoadError\) [Unwrap](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/jsengine/errors.go#L32>)
 
 ```go
 func (e *LoadError) Unwrap() error
@@ -143,7 +143,7 @@ func (e *LoadError) Unwrap() error
 Unwrap 支持 errors.Is / errors.As 追到原始错误。
 
 <a name="Registrar"></a>
-## type Registrar
+## type [Registrar](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/jsengine/engine.go#L46-L51>)
 
 Registrar 是一个注入项：在引擎启动时对 VM 做一次初始化，可安装全局桩、绑定 Go 函数或 执行嵌入式脚本。Setup 返回错误会中止引擎启动（视为编程缺陷，由调用方决定是否 panic）。
 
@@ -157,7 +157,7 @@ type Registrar struct {
 ```
 
 <a name="Runtime"></a>
-## type Runtime
+## type [Runtime](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/jsengine/engine.go#L34>)
 
 Runtime 是 goja 运行时的类型别名：注入项与 Do 回调统一使用 \*Runtime 表达「一段可执行脚本的 宿主」，使业务包无需直接依赖 goja。
 
@@ -166,7 +166,7 @@ type Runtime = goja.Runtime
 ```
 
 <a name="Value"></a>
-## type Value
+## type [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/jsengine/engine.go#L37>)
 
 Value 是 goja 值类型的别名，配合 IsUndefined 使用。
 

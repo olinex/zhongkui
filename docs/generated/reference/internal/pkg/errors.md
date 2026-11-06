@@ -14,7 +14,7 @@
 
 
 <a name="As"></a>
-## func As
+## func [As](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/errors/errors.go#L104>)
 
 ```go
 func As(err error, target any) bool
@@ -32,7 +32,7 @@ if errors.As(err, &mismatch) {
 ```
 
 <a name="Is"></a>
-## func Is
+## func [Is](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/errors/errors.go#L91>)
 
 ```go
 func Is(err error, target error) bool
@@ -49,7 +49,7 @@ if errors.Is(err, io.EOF) {
 ```
 
 <a name="Join"></a>
-## func Join
+## func [Join](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/errors/errors.go#L109>)
 
 ```go
 func Join(errs ...error) error
@@ -58,7 +58,7 @@ func Join(errs ...error) error
 Join 把多个错误合并为一个错误，nil 错误会被忽略（全部为 nil 时返回 nil）。
 
 <a name="New"></a>
-## func New
+## func [New](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/errors/errors.go#L23>)
 
 ```go
 func New(msg string) error
@@ -73,7 +73,7 @@ err := errors.New("something went wrong")
 ```
 
 <a name="Newf"></a>
-## func Newf
+## func [Newf](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/errors/errors.go#L36>)
 
 ```go
 func Newf(format string, args ...any) error
@@ -88,7 +88,7 @@ err := errors.Newf("invalid value: %d", value)
 ```
 
 <a name="WithStack"></a>
-## func WithStack
+## func [WithStack](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/errors/errors.go#L53>)
 
 ```go
 func WithStack(err error) error
@@ -106,7 +106,7 @@ if err != nil {
 ```
 
 <a name="Wrapf"></a>
-## func Wrapf
+## func [Wrapf](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/errors/errors.go#L72>)
 
 ```go
 func Wrapf(err error, format string, args ...any) error

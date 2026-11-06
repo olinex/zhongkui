@@ -54,7 +54,7 @@ var (
 ```
 
 <a name="Column"></a>
-## type Column
+## type [Column](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/datasource.go#L46-L51>)
 
 Column 描述 vtable 中的一个列。
 
@@ -68,7 +68,7 @@ type Column struct {
 ```
 
 <a name="Constraint"></a>
-## type Constraint
+## type [Constraint](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/datasource.go#L90-L98>)
 
 Constraint 是一条下推筛选约束。
 
@@ -85,7 +85,7 @@ type Constraint struct {
 ```
 
 <a name="Datasource"></a>
-## type Datasource
+## type [Datasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/datasource.go#L113-L117>)
 
 Datasource 是第三方数据源需实现的通用标准接口。 Open 依据下推约束返回一个行游标；实现方应尽力在数据源头过滤，但过滤 仅是优化：sqlite 侧以 Omit=false 复查每个返回行，因此过滤结果必须是 真实匹配行的超集，禁止漏掉任何真实匹配的行（漏行无法被复查找回）。
 
@@ -98,7 +98,7 @@ type Datasource interface {
 ```
 
 <a name="DatasourceSchema"></a>
-## type DatasourceSchema
+## type [DatasourceSchema](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/sqlite.go#L427-L432>)
 
 DatasourceSchema 描述一个已注册数据源的 vtable schema 元信息。
 
@@ -112,7 +112,7 @@ type DatasourceSchema struct {
 ```
 
 <a name="Op"></a>
-## type Op
+## type [Op](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/datasource.go#L62>)
 
 Op 是下推约束的操作符，与 sqlite 的 IndexConstraintOp 一一映射。
 
@@ -150,7 +150,7 @@ const (
 ```
 
 <a name="Option"></a>
-## type Option
+## type [Option](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/sqlite.go#L50>)
 
 Option 配置 SQLitePool 的函数式选项。
 
@@ -159,7 +159,7 @@ type Option func(*sqlitePoolOptions)
 ```
 
 <a name="WithConnections"></a>
-### func WithConnections
+### func [WithConnections](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/sqlite.go#L53>)
 
 ```go
 func WithConnections(n int) Option
@@ -168,7 +168,7 @@ func WithConnections(n int) Option
 WithConnections 设置 sqlite 连接池上限（默认 8）。
 
 <a name="WithMaxRows"></a>
-### func WithMaxRows
+### func [WithMaxRows](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/sqlite.go#L58>)
 
 ```go
 func WithMaxRows(n int) Option
@@ -177,7 +177,7 @@ func WithMaxRows(n int) Option
 WithMaxRows 设置单次查询最大返回行数（默认 1000）。
 
 <a name="WithQueryTimeout"></a>
-### func WithQueryTimeout
+### func [WithQueryTimeout](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/sqlite.go#L63>)
 
 ```go
 func WithQueryTimeout(d time.Duration) Option
@@ -186,7 +186,7 @@ func WithQueryTimeout(d time.Duration) Option
 WithQueryTimeout 设置查询默认超时（默认 5s；仅在调用方 ctx 无截止时间时生效）。
 
 <a name="Rows"></a>
-## type Rows
+## type [Rows](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/datasource.go#L101-L107>)
 
 Rows 是数据源返回的行游标。
 
@@ -201,7 +201,7 @@ type Rows interface {
 ```
 
 <a name="SQLitePool"></a>
-## type SQLitePool
+## type [SQLitePool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/sqlite.go#L78-L95>)
 
 SQLitePool 是 sqlite vtable 外部数据源接入的总入口：维护 sqlite 连接池、 数据源实例池与数据源注册表，提供注册/注销/查询/关闭能力。进程级共享， 可并发使用。
 
@@ -212,7 +212,7 @@ type SQLitePool struct {
 ```
 
 <a name="NewSQLitePool"></a>
-### func NewSQLitePool
+### func [NewSQLitePool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/sqlite.go#L99>)
 
 ```go
 func NewSQLitePool(opts ...Option) *SQLitePool
@@ -221,7 +221,7 @@ func NewSQLitePool(opts ...Option) *SQLitePool
 NewSQLitePool 创建 SQLitePool。连接在首次借出时经 Lifespan.Open 惰性建立， 数据源实例在首次被 vtable 引用时惰性构建。
 
 <a name="SQLitePool.Close"></a>
-### func \(\*SQLitePool\) Close
+### func \(\*SQLitePool\) [Close](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/sqlite.go#L410>)
 
 ```go
 func (p *SQLitePool) Close(ctx context.Context)
@@ -230,7 +230,7 @@ func (p *SQLitePool) Close(ctx context.Context)
 Close 关闭连接池与数据源池，销毁全部闲置资源（幂等，可重复调用）。
 
 <a name="SQLitePool.DatasourceSchemas"></a>
-### func \(\*SQLitePool\) DatasourceSchemas
+### func \(\*SQLitePool\) [DatasourceSchemas](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/sqlite.go#L437>)
 
 ```go
 func (p *SQLitePool) DatasourceSchemas() []DatasourceSchema
@@ -239,7 +239,7 @@ func (p *SQLitePool) DatasourceSchemas() []DatasourceSchema
 DatasourceSchemas 返回当前已注册（未注销）数据源的 schema 元信息，按名排序。 供前端 Rego 编辑器的 SQL 补全（表名/列名）与文档展示使用；schema 为注册时 的静态声明，不含实例状态。
 
 <a name="SQLitePool.Datasources"></a>
-### func \(\*SQLitePool\) Datasources
+### func \(\*SQLitePool\) [Datasources](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/sqlite.go#L245>)
 
 ```go
 func (p *SQLitePool) Datasources() []string
@@ -248,7 +248,7 @@ func (p *SQLitePool) Datasources() []string
 Datasources 返回当前已注册（未注销）的数据源名，按字典序排序。
 
 <a name="SQLitePool.Query"></a>
-### func \(\*SQLitePool\) Query
+### func \(\*SQLitePool\) [Query](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/sqlite.go#L292>)
 
 ```go
 func (p *SQLitePool) Query(ctx context.Context, sql string, args ...any) ([]string, [][]any, error)
@@ -257,7 +257,7 @@ func (p *SQLitePool) Query(ctx context.Context, sql string, args ...any) ([]stri
 Query 执行一条只读 SQL，返回列名与行值。； ctx 无截止时间时套用连接级默认超时。vtable 回调期间查询上下文经连接 对象透传给数据源。
 
 <a name="SQLitePool.RegisterDatasource"></a>
-### func \(\*SQLitePool\) RegisterDatasource
+### func \(\*SQLitePool\) [RegisterDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/sqlite.go#L200>)
 
 ```go
 func (p *SQLitePool) RegisterDatasource(ctx context.Context, name string, schema Schema, make resourcepool.Make[Datasource]) error
@@ -266,7 +266,7 @@ func (p *SQLitePool) RegisterDatasource(ctx context.Context, name string, schema
 RegisterDatasource 注册（或覆盖）一个数据源为可查询的 vtable。 先校验名称与 schema，再加写锁写入注册表；不触碰任何在途连接，变更经 连接借出时的模块同步惰性生效。覆盖已存在的数据源时，同步清理该数据源 名下的闲置实例（借出中的实例由游标归还时的版本校验失效），保证新工厂 在下次查询立即生效。
 
 <a name="SQLitePool.Shutdown"></a>
-### func \(\*SQLitePool\) Shutdown
+### func \(\*SQLitePool\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/sqlite.go#L421>)
 
 ```go
 func (p *SQLitePool) Shutdown(ctx context.Context) error
@@ -275,7 +275,7 @@ func (p *SQLitePool) Shutdown(ctx context.Context) error
 Shutdown 实现 do.ShutdownerWithContextAndError，作为 DI 生命周期钩子： 转发至 Close 关闭连接池与数据源池（幂等）。\*SQLitePool 由此自身即关闭器， provider 层无需再包一层 shutdowner 结构体，提升内聚性。
 
 <a name="SQLitePool.UnregisterDatasource"></a>
-### func \(\*SQLitePool\) UnregisterDatasource
+### func \(\*SQLitePool\) [UnregisterDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/sqlite.go#L227>)
 
 ```go
 func (p *SQLitePool) UnregisterDatasource(ctx context.Context, name string) error
@@ -284,7 +284,7 @@ func (p *SQLitePool) UnregisterDatasource(ctx context.Context, name string) erro
 UnregisterDatasource 注销一个数据源：条目标记为 tombstone 并升版本 （保留原 schema 供占位模块声明），已注册但尚未注销时返回 ErrDatasourceNotRegistered。
 
 <a name="Schema"></a>
-## type Schema
+## type [Schema](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/datasource.go#L54-L59>)
 
 Schema 描述一个数据源的 vtable schema。
 
@@ -298,7 +298,7 @@ type Schema struct {
 ```
 
 <a name="ValueType"></a>
-## type ValueType
+## type [ValueType](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/datasource.go#L28>)
 
 ValueType 描述数据源列到 SQLite 类型的亲和性映射： String→TEXT、Int64→INTEGER、Float64→REAL、Bool→INTEGER、Blob→BLOB， Any→无类型（declare 时省略类型声明，交由 SQLite 按值推断）。
 

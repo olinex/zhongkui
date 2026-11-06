@@ -41,7 +41,7 @@
 
 
 <a name="Check"></a>
-## func Check
+## func [Check](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/check.go#L116>)
 
 ```go
 func Check(ctx context.Context, cfg *Config, models []any) error
@@ -50,7 +50,7 @@ func Check(ctx context.Context, cfg *Config, models []any) error
 Check 在临时数据库上执行全部迁移，然后比对模型声明与实际结构。
 
 <a name="CheckModels"></a>
-## func CheckModels
+## func [CheckModels](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/check.go#L163>)
 
 ```go
 func CheckModels(ctx context.Context, db *sql.DB, driver string, models []any) error
@@ -59,7 +59,7 @@ func CheckModels(ctx context.Context, db *sql.DB, driver string, models []any) e
 CheckModels 比对给定数据库结构与模型声明，输出差异表格。
 
 <a name="Diff"></a>
-## func Diff
+## func [Diff](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/diff.go#L79>)
 
 ```go
 func Diff(ctx context.Context, currentCfg, tempCfg *Config) error
@@ -68,7 +68,7 @@ func Diff(ctx context.Context, currentCfg, tempCfg *Config) error
 Diff 比对当前数据库与迁移后目标数据库的结构，输出差异表格。
 
 <a name="EnsureDatabase"></a>
-## func EnsureDatabase
+## func [EnsureDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/tempdb.go#L68>)
 
 ```go
 func EnsureDatabase(ctx context.Context, driver, dsn string) error
@@ -77,7 +77,7 @@ func EnsureDatabase(ctx context.Context, driver, dsn string) error
 EnsureDatabase 确保目标数据库存在，不存在则创建。 复用 tempdb 的 dialect 与 DSN 解析逻辑，供测试助手（internal/pkg/testdb）在连接测试库前调用。 PostgreSQL 的 CREATE DATABASE 不支持 IF NOT EXISTS，目标已存在时报错视为正常（幂等）。
 
 <a name="CheckIssue"></a>
-## type CheckIssue
+## type [CheckIssue](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/check.go#L102-L113>)
 
 CheckIssue 描述一条结构和模型比对发现的问题。
 
@@ -97,7 +97,7 @@ type CheckIssue struct {
 ```
 
 <a name="ColumnDiff"></a>
-## type ColumnDiff
+## type [ColumnDiff](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/diff.go#L48-L57>)
 
 ColumnDiff 描述单列的变更。
 
@@ -115,7 +115,7 @@ type ColumnDiff struct {
 ```
 
 <a name="ColumnInfo"></a>
-## type ColumnInfo
+## type [ColumnInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/diff.go#L16-L25>)
 
 ColumnInfo 描述数据库中的列信息。
 
@@ -133,7 +133,7 @@ type ColumnInfo struct {
 ```
 
 <a name="Config"></a>
-## type Config
+## type [Config](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/config.go#L9-L28>)
 
 Config 描述数据库迁移所需的连接、迁移脚本与执行行为配置。
 
@@ -161,7 +161,7 @@ type Config struct {
 ```
 
 <a name="NewConfig"></a>
-### func NewConfig
+### func [NewConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/config.go#L31>)
 
 ```go
 func NewConfig(driver, dsn string) *Config
@@ -170,7 +170,7 @@ func NewConfig(driver, dsn string) *Config
 NewConfig 创建迁移配置，设置驱动、连接串与默认 5 分钟超时。
 
 <a name="Config.WithKeepTemp"></a>
-### func \(\*Config\) WithKeepTemp
+### func \(\*Config\) [WithKeepTemp](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/config.go#L65>)
 
 ```go
 func (c *Config) WithKeepTemp(keep bool) *Config
@@ -179,7 +179,7 @@ func (c *Config) WithKeepTemp(keep bool) *Config
 WithKeepTemp 设置是否保留临时数据库。
 
 <a name="Config.WithMigrations"></a>
-### func \(\*Config\) WithMigrations
+### func \(\*Config\) [WithMigrations](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/config.go#L46>)
 
 ```go
 func (c *Config) WithMigrations(fs embed.FS, dir string) *Config
@@ -188,7 +188,7 @@ func (c *Config) WithMigrations(fs embed.FS, dir string) *Config
 WithMigrations 设置内嵌的迁移脚本文件系统及其目录。
 
 <a name="Config.WithName"></a>
-### func \(\*Config\) WithName
+### func \(\*Config\) [WithName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/config.go#L40>)
 
 ```go
 func (c *Config) WithName(name string) *Config
@@ -197,7 +197,7 @@ func (c *Config) WithName(name string) *Config
 WithName 设置数据库名称（core / raw），用于 CLI 打印时标识目标数据库
 
 <a name="Config.WithTimeout"></a>
-### func \(\*Config\) WithTimeout
+### func \(\*Config\) [WithTimeout](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/config.go#L53>)
 
 ```go
 func (c *Config) WithTimeout(timeout time.Duration) *Config
@@ -206,7 +206,7 @@ func (c *Config) WithTimeout(timeout time.Duration) *Config
 WithTimeout 设置迁移操作超时时间。
 
 <a name="Config.WithVerbose"></a>
-### func \(\*Config\) WithVerbose
+### func \(\*Config\) [WithVerbose](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/config.go#L59>)
 
 ```go
 func (c *Config) WithVerbose(verbose bool) *Config
@@ -215,7 +215,7 @@ func (c *Config) WithVerbose(verbose bool) *Config
 WithVerbose 设置是否输出详细日志。
 
 <a name="DiffResult"></a>
-## type DiffResult
+## type [DiffResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/diff.go#L36-L45>)
 
 DiffResult 汇总两套数据库结构的比对结果。
 
@@ -233,7 +233,7 @@ type DiffResult struct {
 ```
 
 <a name="DryRunResult"></a>
-## type DryRunResult
+## type [DryRunResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/dryrun.go#L12-L21>)
 
 DryRunResult 描述一次迁移演练的结果。
 
@@ -251,7 +251,7 @@ type DryRunResult struct {
 ```
 
 <a name="DryRun"></a>
-### func DryRun
+### func [DryRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/dryrun.go#L24>)
 
 ```go
 func DryRun(ctx context.Context, cfg *Config) (*DryRunResult, error)
@@ -260,7 +260,7 @@ func DryRun(ctx context.Context, cfg *Config) (*DryRunResult, error)
 DryRun 在临时数据库上执行迁移演练并返回结果。
 
 <a name="IssueKind"></a>
-## type IssueKind
+## type [IssueKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/check.go#L69>)
 
 IssueKind 表示结构比对问题的种类。
 
@@ -286,7 +286,7 @@ const (
 ```
 
 <a name="IssueKind.Label"></a>
-### func \(IssueKind\) Label
+### func \(IssueKind\) [Label](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/check.go#L86>)
 
 ```go
 func (k IssueKind) Label() string
@@ -295,7 +295,7 @@ func (k IssueKind) Label() string
 Label 返回问题种类对应的本地化名称。
 
 <a name="Migrator"></a>
-## type Migrator
+## type [Migrator](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/migrate.go#L77-L82>)
 
 Migrator 封装 goose 迁移操作与数据库连接。
 
@@ -306,7 +306,7 @@ type Migrator struct {
 ```
 
 <a name="NewMigrator"></a>
-### func NewMigrator
+### func [NewMigrator](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/migrate.go#L85>)
 
 ```go
 func NewMigrator(cfg *Config) (*Migrator, error)
@@ -315,7 +315,7 @@ func NewMigrator(cfg *Config) (*Migrator, error)
 NewMigrator 依据配置建立数据库连接并创建迁移执行器。
 
 <a name="NewMigratorFromDB"></a>
-### func NewMigratorFromDB
+### func [NewMigratorFromDB](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/migrate.go#L102>)
 
 ```go
 func NewMigratorFromDB(cfg *Config, db *sql.DB) (*Migrator, error)
@@ -324,7 +324,7 @@ func NewMigratorFromDB(cfg *Config, db *sql.DB) (*Migrator, error)
 NewMigratorFromDB 复用已有的数据库连接创建迁移执行器。
 
 <a name="Migrator.Close"></a>
-### func \(\*Migrator\) Close
+### func \(\*Migrator\) [Close](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/migrate.go#L165>)
 
 ```go
 func (m *Migrator) Close() error
@@ -333,7 +333,7 @@ func (m *Migrator) Close() error
 Close 关闭底层数据库连接。
 
 <a name="Migrator.Down"></a>
-### func \(\*Migrator\) Down
+### func \(\*Migrator\) [Down](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/migrate.go#L188>)
 
 ```go
 func (m *Migrator) Down(ctx context.Context) error
@@ -342,7 +342,7 @@ func (m *Migrator) Down(ctx context.Context) error
 Down 回滚最近一次已应用的迁移。
 
 <a name="Migrator.DownTo"></a>
-### func \(\*Migrator\) DownTo
+### func \(\*Migrator\) [DownTo](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/migrate.go#L202>)
 
 ```go
 func (m *Migrator) DownTo(ctx context.Context, version int64) error
@@ -351,7 +351,7 @@ func (m *Migrator) DownTo(ctx context.Context, version int64) error
 DownTo 回滚至指定版本（仅向下）。
 
 <a name="Migrator.GetCurrentVersion"></a>
-### func \(\*Migrator\) GetCurrentVersion
+### func \(\*Migrator\) [GetCurrentVersion](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/migrate.go#L216>)
 
 ```go
 func (m *Migrator) GetCurrentVersion(ctx context.Context) (int64, error)
@@ -360,7 +360,7 @@ func (m *Migrator) GetCurrentVersion(ctx context.Context) (int64, error)
 GetCurrentVersion 返回数据库当前已应用的最新迁移版本。
 
 <a name="Migrator.Status"></a>
-### func \(\*Migrator\) Status
+### func \(\*Migrator\) [Status](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/migrate.go#L221>)
 
 ```go
 func (m *Migrator) Status(ctx context.Context) error
@@ -369,7 +369,7 @@ func (m *Migrator) Status(ctx context.Context) error
 Status 打印全部迁移文件的应用状态表格。
 
 <a name="Migrator.Up"></a>
-### func \(\*Migrator\) Up
+### func \(\*Migrator\) [Up](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/migrate.go#L170>)
 
 ```go
 func (m *Migrator) Up(ctx context.Context) error
@@ -378,7 +378,7 @@ func (m *Migrator) Up(ctx context.Context) error
 Up 执行全部未应用的迁移。
 
 <a name="Migrator.UpTo"></a>
-### func \(\*Migrator\) UpTo
+### func \(\*Migrator\) [UpTo](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/migrate.go#L179>)
 
 ```go
 func (m *Migrator) UpTo(ctx context.Context, version int64) error
@@ -387,7 +387,7 @@ func (m *Migrator) UpTo(ctx context.Context, version int64) error
 UpTo 迁移至指定版本（仅向上）。
 
 <a name="TableDiff"></a>
-## type TableDiff
+## type [TableDiff](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/diff.go#L60-L69>)
 
 TableDiff 描述单表的列级变更。
 
@@ -405,7 +405,7 @@ type TableDiff struct {
 ```
 
 <a name="TableInfo"></a>
-## type TableInfo
+## type [TableInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/diff.go#L28-L33>)
 
 TableInfo 描述数据库中的表及其列集合。
 
@@ -419,7 +419,7 @@ type TableInfo struct {
 ```
 
 <a name="TempDB"></a>
-## type TempDB
+## type [TempDB](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/tempdb.go#L43-L54>)
 
 TempDB 表示一个已创建的临时数据库及其连接信息。
 
@@ -430,7 +430,7 @@ type TempDB struct {
 ```
 
 <a name="CreateTempDB"></a>
-### func CreateTempDB
+### func [CreateTempDB](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/tempdb.go#L112>)
 
 ```go
 func CreateTempDB(ctx context.Context, cfg *Config) (*TempDB, error)
@@ -439,7 +439,7 @@ func CreateTempDB(ctx context.Context, cfg *Config) (*TempDB, error)
 CreateTempDB 按配置创建临时数据库并返回其连接句柄。
 
 <a name="TempDB.Close"></a>
-### func \(\*TempDB\) Close
+### func \(\*TempDB\) [Close](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/migrate/tempdb.go#L168>)
 
 ```go
 func (t *TempDB) Close(ctx context.Context) error

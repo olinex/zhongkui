@@ -28,7 +28,7 @@ const Prefix = "zap"
 ```
 
 <a name="DescribeConfig"></a>
-## func DescribeConfig
+## func [DescribeConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/logging/config.go#L172>)
 
 ```go
 func DescribeConfig(names ...string) config.ConfigDescriptions
@@ -61,7 +61,7 @@ descriptions := DescribeConfig("level", "encoding")
 ```
 
 <a name="EnableCtx"></a>
-## func EnableCtx
+## func [EnableCtx](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/logging/base.go#L30>)
 
 ```go
 func EnableCtx()
@@ -70,7 +70,7 @@ func EnableCtx()
 EnableCtx 启用 context 注入功能。 OTEL 集成应调用此函数，之后 Ctx\(ctx\) 会将 context 注入日志字段， otelzap bridge 自动提取用于 trace 关联，contextStrippingCore 确保不会输出到 stdout。
 
 <a name="ParseLevel"></a>
-## func ParseLevel
+## func [ParseLevel](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/logging/config.go#L130>)
 
 ```go
 func ParseLevel(level string) zapcore.Level
@@ -107,7 +107,7 @@ level := ParseLevel("info") // 返回 zapcore.InfoLevel
 ```
 
 <a name="Config"></a>
-## type Config
+## type [Config](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/logging/config.go#L21-L65>)
 
 Config 定义了日志系统的配置结构 该结构体通过 mapstructure 标签支持从配置文件自动解析 通过 default 标签设置默认值，comment 标签提供配置说明
 
@@ -160,7 +160,7 @@ type Config struct {
 ```
 
 <a name="ExtractConfig"></a>
-### func ExtractConfig
+### func [ExtractConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/logging/config.go#L205>)
 
 ```go
 func ExtractConfig(viper *viper.Viper, validate *validator.Validate, name string) (*Config, error)
@@ -203,7 +203,7 @@ if err != nil {
 ```
 
 <a name="Config.ToZapConfig"></a>
-### func \(\*Config\) ToZapConfig
+### func \(\*Config\) [ToZapConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/logging/config.go#L86>)
 
 ```go
 func (cfg *Config) ToZapConfig() *LoggerCfg
@@ -233,7 +233,7 @@ logger, err := zapCfg.Build()
 ```
 
 <a name="Logger"></a>
-## type Logger
+## type [Logger](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/logging/base.go#L19-L21>)
 
 Logger 包装 \*zap.SugaredLogger，提供结构化日志记录功能。 通过嵌入方式继承 SugaredLogger 的全部方法，同时提供 Ctx 方法用于注入 context。
 
@@ -244,7 +244,7 @@ type Logger struct {
 ```
 
 <a name="NewDebugLogger"></a>
-### func NewDebugLogger
+### func [NewDebugLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/logging/base.go#L104>)
 
 ```go
 func NewDebugLogger() (*Logger, error)
@@ -253,7 +253,7 @@ func NewDebugLogger() (*Logger, error)
 NewDebugLogger 在默认配置基础上启用开发模式并将日志级别设为 debug，用于本地调试。
 
 <a name="NewDefaultLogger"></a>
-### func NewDefaultLogger
+### func [NewDefaultLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/logging/base.go#L95>)
 
 ```go
 func NewDefaultLogger() (*Logger, error)
@@ -291,7 +291,7 @@ defer logger.Sync()
 ```
 
 <a name="NewProductionLogger"></a>
-### func NewProductionLogger
+### func [NewProductionLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/logging/base.go#L61>)
 
 ```go
 func NewProductionLogger(cfg *LoggerCfg) (*Logger, error)
@@ -324,7 +324,7 @@ defer logger.Sync()
 ```
 
 <a name="Logger.Ctx"></a>
-### func \(\*Logger\) Ctx
+### func \(\*Logger\) [Ctx](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/logging/base.go#L38>)
 
 ```go
 func (l *Logger) Ctx(ctx context.Context) *Logger
@@ -333,7 +333,7 @@ func (l *Logger) Ctx(ctx context.Context) *Logger
 Ctx 将 context 注入到日志记录器中。 OTEL 未启用时为零开销 no\-op；启用后将 context 作为字段注入以供 otelzap trace 关联。
 
 <a name="LoggerCfg"></a>
-## type LoggerCfg
+## type [LoggerCfg](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/logging/base.go#L15>)
 
 LoggerCfg 是 zap.Config 的类型别名，用于简化导入和类型引用
 

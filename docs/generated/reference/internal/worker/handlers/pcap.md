@@ -43,7 +43,7 @@ const (
 ```
 
 <a name="ExtractPacketFromPcap"></a>
-## func ExtractPacketFromPcap
+## func [ExtractPacketFromPcap](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/extractor.go#L36>)
 
 ```go
 func ExtractPacketFromPcap(ctx context.Context, task etl.Task, channel chan<- any) error
@@ -52,7 +52,7 @@ func ExtractPacketFromPcap(ctx context.Context, task etl.Task, channel chan<- an
 ExtractPacketFromPcap 从 PCAP 文件中提取数据包的提取函数。 从 S3 获取 PCAP 文件，解压后解析数据包并通过 channel 输出（golang 原生类型）。
 
 <a name="LoadPacketModelToTable"></a>
-## func LoadPacketModelToTable
+## func [LoadPacketModelToTable](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/loader.go#L15>)
 
 ```go
 func LoadPacketModelToTable(ctx context.Context, items []any) error
@@ -61,7 +61,7 @@ func LoadPacketModelToTable(ctx context.Context, items []any) error
 LoadPacketModelToTable 将网络数据包模型加载到数据库表中。 根据不同的数据包类型（Ethernet、IPv4、IPv6、TCP、UDP），分别批量插入对应的数据表。 使用并发方式同时写入多种类型的包数据。
 
 <a name="NewPcapS3ObjectTask"></a>
-## func NewPcapS3ObjectTask
+## func [NewPcapS3ObjectTask](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/caller.go#L45>)
 
 ```go
 func NewPcapS3ObjectTask(value *PcapS3Object) (*asynq.Task, error)
@@ -70,7 +70,7 @@ func NewPcapS3ObjectTask(value *PcapS3Object) (*asynq.Task, error)
 NewPcapS3ObjectTask 创建一个新的 PCAP 导入异步任务。 将 PcapS3Object 序列化为 JSON 并包装为 asynq.Task。
 
 <a name="TransFromPacketToModel"></a>
-## func TransFromPacketToModel
+## func [TransFromPacketToModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/transformer.go#L18>)
 
 ```go
 func TransFromPacketToModel(ctx context.Context, i any) (any, error)
@@ -79,7 +79,7 @@ func TransFromPacketToModel(ctx context.Context, i any) (any, error)
 TransFromPacketToModel 将数据包项转换为网络模型的数据转换函数。 从 PcapItem 中提取信息，使用 PacketModelBuilder 构建网络数据包模型。 对 TCP 握手包（SYN / SYN\-ACK）额外计算被动指纹并回填到模型。
 
 <a name="WithPcapStats"></a>
-## func WithPcapStats
+## func [WithPcapStats](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/stats.go#L53>)
 
 ```go
 func WithPcapStats(ctx context.Context, stats *PcapStats) context.Context
@@ -88,7 +88,7 @@ func WithPcapStats(ctx context.Context, stats *PcapStats) context.Context
 WithPcapStats 将 PcapStats 实例注入到 context 中
 
 <a name="PcapItem"></a>
-## type PcapItem
+## type [PcapItem](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/extractor.go#L28-L32>)
 
 PcapItem 表示从 PCAP 文件中提取的数据包项。 包含会话 ID、数据源信息和 gopacket 包。
 
@@ -101,7 +101,7 @@ type PcapItem struct {
 ```
 
 <a name="PcapS3Object"></a>
-## type PcapS3Object
+## type [PcapS3Object](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/caller.go#L22-L29>)
 
 PcapS3Object 表示从 S3 获取的 PCAP 文件的对象信息。 包含会话 ID、时间戳、命名空间、名称和版本等元数据。
 
@@ -117,7 +117,7 @@ type PcapS3Object struct {
 ```
 
 <a name="PcapS3Object.GetObjectKey"></a>
-### func \(\*PcapS3Object\) GetObjectKey
+### func \(\*PcapS3Object\) [GetObjectKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/caller.go#L33>)
 
 ```go
 func (o *PcapS3Object) GetObjectKey() string
@@ -126,7 +126,7 @@ func (o *PcapS3Object) GetObjectKey() string
 GetObjectKey 获取 S3 对象的完整键名。 根据命名空间、名称、版本、时间戳和会话 ID 构建对象键。
 
 <a name="PcapStats"></a>
-## type PcapStats
+## type [PcapStats](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/stats.go#L18-L43>)
 
 PcapStats PCAP 导入任务统计收集器，使用原子操作保证并发安全 用于追踪每次 PCAP 导入任务的关键指标： \- 累计提取的数据包数量和字节数 \- 累计加载的各类网络模型数量（Ethernet、IPv4、IPv6、TCP、UDP） \- 任务启动时间，用于计算处理耗时和速率
 
@@ -137,7 +137,7 @@ type PcapStats struct {
 ```
 
 <a name="GetPcapStats"></a>
-### func GetPcapStats
+### func [GetPcapStats](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/stats.go#L58>)
 
 ```go
 func GetPcapStats(ctx context.Context) *PcapStats
@@ -146,7 +146,7 @@ func GetPcapStats(ctx context.Context) *PcapStats
 GetPcapStats 从 context 中获取 PcapStats 实例
 
 <a name="NewPcapStats"></a>
-### func NewPcapStats
+### func [NewPcapStats](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/stats.go#L46>)
 
 ```go
 func NewPcapStats() *PcapStats
@@ -155,7 +155,7 @@ func NewPcapStats() *PcapStats
 NewPcapStats 创建新的 PCAP 统计收集器实例，记录当前时间为启动时间
 
 <a name="PcapStats.RecordEth"></a>
-### func \(\*PcapStats\) RecordEth
+### func \(\*PcapStats\) [RecordEth](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/stats.go#L73>)
 
 ```go
 func (s *PcapStats) RecordEth()
@@ -164,7 +164,7 @@ func (s *PcapStats) RecordEth()
 RecordEth 记录加载一个 Ethernet 模型
 
 <a name="PcapStats.RecordIPv4"></a>
-### func \(\*PcapStats\) RecordIPv4
+### func \(\*PcapStats\) [RecordIPv4](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/stats.go#L78>)
 
 ```go
 func (s *PcapStats) RecordIPv4()
@@ -173,7 +173,7 @@ func (s *PcapStats) RecordIPv4()
 RecordIPv4 记录加载一个 IPv4 模型
 
 <a name="PcapStats.RecordIPv4TCP"></a>
-### func \(\*PcapStats\) RecordIPv4TCP
+### func \(\*PcapStats\) [RecordIPv4TCP](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/stats.go#L88>)
 
 ```go
 func (s *PcapStats) RecordIPv4TCP()
@@ -182,7 +182,7 @@ func (s *PcapStats) RecordIPv4TCP()
 RecordIPv4TCP 记录加载一个 IPv4 TCP 模型
 
 <a name="PcapStats.RecordIPv4UDP"></a>
-### func \(\*PcapStats\) RecordIPv4UDP
+### func \(\*PcapStats\) [RecordIPv4UDP](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/stats.go#L98>)
 
 ```go
 func (s *PcapStats) RecordIPv4UDP()
@@ -191,7 +191,7 @@ func (s *PcapStats) RecordIPv4UDP()
 RecordIPv4UDP 记录加载一个 IPv4 UDP 模型
 
 <a name="PcapStats.RecordIPv6"></a>
-### func \(\*PcapStats\) RecordIPv6
+### func \(\*PcapStats\) [RecordIPv6](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/stats.go#L83>)
 
 ```go
 func (s *PcapStats) RecordIPv6()
@@ -200,7 +200,7 @@ func (s *PcapStats) RecordIPv6()
 RecordIPv6 记录加载一个 IPv6 模型
 
 <a name="PcapStats.RecordIPv6TCP"></a>
-### func \(\*PcapStats\) RecordIPv6TCP
+### func \(\*PcapStats\) [RecordIPv6TCP](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/stats.go#L93>)
 
 ```go
 func (s *PcapStats) RecordIPv6TCP()
@@ -209,7 +209,7 @@ func (s *PcapStats) RecordIPv6TCP()
 RecordIPv6TCP 记录加载一个 IPv6 TCP 模型
 
 <a name="PcapStats.RecordIPv6UDP"></a>
-### func \(\*PcapStats\) RecordIPv6UDP
+### func \(\*PcapStats\) [RecordIPv6UDP](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/stats.go#L103>)
 
 ```go
 func (s *PcapStats) RecordIPv6UDP()
@@ -218,7 +218,7 @@ func (s *PcapStats) RecordIPv6UDP()
 RecordIPv6UDP 记录加载一个 IPv6 UDP 模型
 
 <a name="PcapStats.RecordPacket"></a>
-### func \(\*PcapStats\) RecordPacket
+### func \(\*PcapStats\) [RecordPacket](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/stats.go#L67>)
 
 ```go
 func (s *PcapStats) RecordPacket(packetBytes int)
@@ -227,7 +227,7 @@ func (s *PcapStats) RecordPacket(packetBytes int)
 RecordPacket 记录提取到一个数据包，原子性地累加包计数和字节数 packetBytes 为该数据包的原始字节数
 
 <a name="PcapStats.RecordTCPFingerprint"></a>
-### func \(\*PcapStats\) RecordTCPFingerprint
+### func \(\*PcapStats\) [RecordTCPFingerprint](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/stats.go#L108>)
 
 ```go
 func (s *PcapStats) RecordTCPFingerprint()
@@ -236,7 +236,7 @@ func (s *PcapStats) RecordTCPFingerprint()
 RecordTCPFingerprint 记录一次成功的 TCP 被动指纹识别（SYN / SYN\-ACK 包）
 
 <a name="PcapStats.RecordTCPFingerprintError"></a>
-### func \(\*PcapStats\) RecordTCPFingerprintError
+### func \(\*PcapStats\) [RecordTCPFingerprintError](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/stats.go#L113>)
 
 ```go
 func (s *PcapStats) RecordTCPFingerprintError()
@@ -245,7 +245,7 @@ func (s *PcapStats) RecordTCPFingerprintError()
 RecordTCPFingerprintError 记录一次 TCP 被动指纹识别失败（FFI 不可用或解析错误）
 
 <a name="PcapStats.Snapshot"></a>
-### func \(\*PcapStats\) Snapshot
+### func \(\*PcapStats\) [Snapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/stats.go#L118>)
 
 ```go
 func (s *PcapStats) Snapshot() PcapStatsSnapshot
@@ -254,7 +254,7 @@ func (s *PcapStats) Snapshot() PcapStatsSnapshot
 Snapshot 获取当前统计数据的原子快照，返回一份不可变的副本
 
 <a name="PcapStatsSnapshot"></a>
-## type PcapStatsSnapshot
+## type [PcapStatsSnapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/stats.go#L136-L161>)
 
 PcapStatsSnapshot 统计数据的不可变快照
 
@@ -288,7 +288,7 @@ type PcapStatsSnapshot struct {
 ```
 
 <a name="PcapStatsSnapshot.String"></a>
-### func \(PcapStatsSnapshot\) String
+### func \(PcapStatsSnapshot\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/stats.go#L165>)
 
 ```go
 func (s PcapStatsSnapshot) String() string

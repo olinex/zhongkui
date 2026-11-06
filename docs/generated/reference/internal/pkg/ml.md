@@ -16,7 +16,7 @@
 
 
 <a name="BrichClusterFeature"></a>
-## type BrichClusterFeature
+## type [BrichClusterFeature](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/ml/cluster.go#L14-L18>)
 
 BrichClusterFeature 表示BIRCH聚类算法的聚类特征 它使用三个统计量来高效表示一个数据聚类： \- N: 数据点的数量 \- LineSum: 所有数据点的线性和（一阶矩） \- SquareSum: 所有数据点的平方和（二阶矩） 这种表示方法允许在不存储所有原始数据点的情况下计算聚类的基本统计特性
 
@@ -29,7 +29,7 @@ type BrichClusterFeature struct {
 ```
 
 <a name="NewBrichClusterFeature"></a>
-### func NewBrichClusterFeature
+### func [NewBrichClusterFeature](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/ml/cluster.go#L23>)
 
 ```go
 func NewBrichClusterFeature() *BrichClusterFeature
@@ -38,7 +38,7 @@ func NewBrichClusterFeature() *BrichClusterFeature
 NewBrichClusterFeature 创建并返回一个新的聚类特征实例 返回的聚类特征的所有字段都初始化为0 这个函数用于创建一个空的聚类特征，可以后续添加数据点
 
 <a name="BrichClusterFeature.Add"></a>
-### func \(\*BrichClusterFeature\) Add
+### func \(\*BrichClusterFeature\) [Add](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/ml/cluster.go#L48>)
 
 ```go
 func (c *BrichClusterFeature) Add(n, ls, ss *big.Int)
@@ -53,7 +53,7 @@ Add 向聚类特征添加原始统计量 参数：
 这个方法将给定的统计量累加到当前的聚类特征中 用于合并两个聚类特征的统计信息或添加批量的数据点统计
 
 <a name="BrichClusterFeature.AddInt64"></a>
-### func \(\*BrichClusterFeature\) AddInt64
+### func \(\*BrichClusterFeature\) [AddInt64](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/ml/cluster.go#L65>)
 
 ```go
 func (c *BrichClusterFeature) AddInt64(value int64)
@@ -72,7 +72,7 @@ AddInt64 向聚类特征添加一个整数值的数据点 参数：
 如果value为负数，方法会panic 这是添加单个数据点最方便的方法
 
 <a name="BrichClusterFeature.Append"></a>
-### func \(\*BrichClusterFeature\) Append
+### func \(\*BrichClusterFeature\) [Append](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/ml/cluster.go#L83>)
 
 ```go
 func (c *BrichClusterFeature) Append(cf *BrichClusterFeature)
@@ -85,7 +85,7 @@ Append 将另一个聚类特征的统计量追加到当前聚类特征 参数：
 这个方法将另一个聚类特征的N、LineSum和SquareSum累加到当前聚类特征 用于合并两个聚类，是BIRCH算法中聚类合并的核心操作
 
 <a name="BrichClusterFeature.Centroid"></a>
-### func \(\*BrichClusterFeature\) Centroid
+### func \(\*BrichClusterFeature\) [Centroid](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/ml/cluster.go#L92>)
 
 ```go
 func (c *BrichClusterFeature) Centroid() *big.Float
@@ -94,7 +94,7 @@ func (c *BrichClusterFeature) Centroid() *big.Float
 Centroid 计算并返回聚类的质心（均值） 返回值：聚类的质心，即所有数据点的平均值 质心计算公式：centroid = LineSum / N 如果聚类为空（N=0），返回0 质心是聚类的中心位置，用于表示聚类的典型位置
 
 <a name="BrichClusterFeature.Compare"></a>
-### func \(\*BrichClusterFeature\) Compare
+### func \(\*BrichClusterFeature\) [Compare](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/ml/cluster.go#L161>)
 
 ```go
 func (c *BrichClusterFeature) Compare(other *BrichClusterFeature) *big.Float
@@ -122,7 +122,7 @@ Compare 计算当前聚类特征与另一个聚类特征的相似度 参数：
 这个方法用于BIRCH算法中判断两个聚类是否应该合并
 
 <a name="BrichClusterFeature.Radius"></a>
-### func \(\*BrichClusterFeature\) Radius
+### func \(\*BrichClusterFeature\) [Radius](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/ml/cluster.go#L111>)
 
 ```go
 func (c *BrichClusterFeature) Radius() *big.Float
@@ -131,7 +131,7 @@ func (c *BrichClusterFeature) Radius() *big.Float
 Radius 计算并返回聚类的半径（标准差） 返回值：聚类的半径，即数据点相对于质心的平均距离 半径计算公式：radius = sqrt\( \(SS \- 2\*centroid\*LS \+ N\*centroid²\) / N \) 其中centroid是聚类的质心 如果聚类为空（N=0）或只有一个数据点（N=1），返回0 半径表示聚类的紧密程度，半径越小表示聚类越紧凑
 
 <a name="BrichClusterFeature.Reset"></a>
-### func \(\*BrichClusterFeature\) Reset
+### func \(\*BrichClusterFeature\) [Reset](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/ml/cluster.go#L34>)
 
 ```go
 func (c *BrichClusterFeature) Reset()

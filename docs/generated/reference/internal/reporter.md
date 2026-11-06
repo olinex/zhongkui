@@ -12,7 +12,7 @@
 
 
 <a name="ReporterService"></a>
-## type ReporterService
+## type [ReporterService](<https://gitee.com/olinex/zhongkui/blob/master/internal/reporter/service.go#L38-L48>)
 
 ReporterService 实现了 reporter\_v1.ReporterServiceServer 接口 该服务提供两个主要功能：
 
@@ -34,7 +34,7 @@ type ReporterService struct {
 ```
 
 <a name="NewReportService"></a>
-### func NewReportService
+### func [NewReportService](<https://gitee.com/olinex/zhongkui/blob/master/internal/reporter/service.go#L51>)
 
 ```go
 func NewReportService(i do.Injector) *ReporterService
@@ -43,7 +43,7 @@ func NewReportService(i do.Injector) *ReporterService
 NewReportService 从依赖注入器装配并注册上报服务。
 
 <a name="ReporterService.Feedback"></a>
-### func \(\*ReporterService\) Feedback
+### func \(\*ReporterService\) [Feedback](<https://gitee.com/olinex/zhongkui/blob/master/internal/reporter/service.go#L339>)
 
 ```go
 func (srv *ReporterService) Feedback(stream g.ClientStreamingServer[reporter_v1.FeedbackRequest, emptypb.Empty]) (err error)
@@ -72,7 +72,7 @@ Feedback 实现 gRPC 客户端流式接口，用于接收客户端的反馈信�
 5. 客户端发送完成后，返回空的响应
 
 <a name="ReporterService.Run"></a>
-### func \(\*ReporterService\) Run
+### func \(\*ReporterService\) [Run](<https://gitee.com/olinex/zhongkui/blob/master/internal/reporter/service.go#L436>)
 
 ```go
 func (srv *ReporterService) Run(ctx context.Context) (err error)
@@ -81,7 +81,7 @@ func (srv *ReporterService) Run(ctx context.Context) (err error)
 Run 启动 gRPC 服务，等待上下文取消后优雅关闭或启动失败退出。
 
 <a name="ReporterService.Watch"></a>
-### func \(\*ReporterService\) Watch
+### func \(\*ReporterService\) [Watch](<https://gitee.com/olinex/zhongkui/blob/master/internal/reporter/service.go#L121>)
 
 ```go
 func (srv *ReporterService) Watch(req *reporter_v1.WatchRequest, stream g.ServerStreamingServer[reporter_v1.WatchResponse]) (err error)

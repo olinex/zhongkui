@@ -75,7 +75,7 @@
 
 
 <a name="CapturerBatchDelete"></a>
-## func CapturerBatchDelete
+## func [CapturerBatchDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L331>)
 
 ```go
 func CapturerBatchDelete(c *gin.Context)
@@ -92,7 +92,7 @@ CapturerBatchDelete 批量删除抓包器。 逐条复用原 capturerDelete 的 
 - 单条删除失败（数据库或 etcd 错误）→ 记入失败明细，不中断其他条目
 
 <a name="CapturerCreate"></a>
-## func CapturerCreate
+## func [CapturerCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L243>)
 
 ```go
 func CapturerCreate(c *gin.Context)
@@ -120,7 +120,7 @@ CapturerCreate 处理创建抓包器的请求。
 - 创建失败（如唯一索引冲突） → 500 意外错误
 
 <a name="CapturerDetailGet"></a>
-## func CapturerDetailGet
+## func [CapturerDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L185>)
 
 ```go
 func CapturerDetailGet(c *gin.Context)
@@ -144,7 +144,7 @@ CapturerDetailGet 处理获取抓包器详情的请求。
 - etcd 配置获取失败 → 500 意外错误
 
 <a name="CapturerListGet"></a>
-## func CapturerListGet
+## func [CapturerListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L140>)
 
 ```go
 func CapturerListGet(c *gin.Context)
@@ -169,7 +169,7 @@ CapturerListGet 处理获取抓包器列表的请求。
 - 查询构建或执行失败 → 500 意外错误
 
 <a name="CapturerStatusListGet"></a>
-## func CapturerStatusListGet
+## func [CapturerStatusListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L429>)
 
 ```go
 func CapturerStatusListGet(i do.Injector) gin.HandlerFunc
@@ -180,7 +180,7 @@ CapturerStatusListGet 处理采集器运行状态列表请求：读取 etcd 中 
 键格式：\{GlobalPrefix\}/reporter/\{namespace\}/\{name\}/\{version\}/sts/\{sessionID\}， 值为 proto 序列化的 reporter\_v1.FeedbackRequest（带租约，离线即过期消失）。 仅保留每个资源（namespace/name/version）中 timestamp 最大的一条会话。
 
 <a name="CapturerUpdate"></a>
-## func CapturerUpdate
+## func [CapturerUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L289>)
 
 ```go
 func CapturerUpdate(c *gin.Context)
@@ -211,7 +211,7 @@ CapturerUpdate 处理更新抓包器配置的请求。
 - etcd 配置更新失败 → 500 意外错误
 
 <a name="DependencyListGet"></a>
-## func DependencyListGet
+## func [DependencyListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/dependency_deps.go#L55>)
 
 ```go
 func DependencyListGet(i do.Injector) gin.HandlerFunc
@@ -220,7 +220,7 @@ func DependencyListGet(i do.Injector) gin.HandlerFunc
 DependencyListGet 处理依赖状态列表请求；返回全量外部依赖状态。 由于需访问注入器构造探测注册表，返回 gin.HandlerFunc 闭包。
 
 <a name="GroupBatchDelete"></a>
-## func GroupBatchDelete
+## func [GroupBatchDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_group.go#L298>)
 
 ```go
 func GroupBatchDelete(c *gin.Context)
@@ -245,7 +245,7 @@ GroupBatchDelete 批量删除用户组。 逐条复用原 groupDelete 的引用�
 - 成功: 返回BatchResultOut汇总（succeeded \+ failed明细）
 
 <a name="GroupCreate"></a>
-## func GroupCreate
+## func [GroupCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_group.go#L245>)
 
 ```go
 func GroupCreate(c *gin.Context)
@@ -267,7 +267,7 @@ GroupCreate 处理创建用户组请求。 创建新的用户组，组名必须�
 - 失败: 返回相应的错误信息（如组名已存在、验证失败）
 
 <a name="GroupDetailGet"></a>
-## func GroupDetailGet
+## func [GroupDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_group.go#L147>)
 
 ```go
 func GroupDetailGet(c *gin.Context)
@@ -289,7 +289,7 @@ URL参数:
 - 失败: 返回相应的错误信息（如组不存在）
 
 <a name="GroupListGet"></a>
-## func GroupListGet
+## func [GroupListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_group.go#L94>)
 
 ```go
 func GroupListGet(c *gin.Context)
@@ -311,7 +311,7 @@ GroupListGet 处理获取用户组列表请求。 支持分页、排序和过滤
 - 失败: 返回相应的错误信息
 
 <a name="GroupRbacPolicyAdd"></a>
-## func GroupRbacPolicyAdd
+## func [GroupRbacPolicyAdd](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_group.go#L370>)
 
 ```go
 func GroupRbacPolicyAdd(c *gin.Context)
@@ -342,7 +342,7 @@ URL参数:
 - 事务内以 FOR UPDATE 行锁校验组与模板，锁保持到 enforcer 写入完成后再提交， 避免"校验通过后被并发删除组/模板"的竞态（SQLite 测试环境无 FOR UPDATE，退化为普通读）
 
 <a name="GroupRbacPolicyRemove"></a>
-## func GroupRbacPolicyRemove
+## func [GroupRbacPolicyRemove](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_group.go#L460>)
 
 ```go
 func GroupRbacPolicyRemove(c *gin.Context)
@@ -373,7 +373,7 @@ URL参数:
 - 使用软删除或硬删除取决于数据库配置
 
 <a name="GroupUpdate"></a>
-## func GroupUpdate
+## func [GroupUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_group.go#L197>)
 
 ```go
 func GroupUpdate(c *gin.Context)
@@ -399,7 +399,7 @@ URL参数:
 - 失败: 返回相应的错误信息（如组不存在、验证失败）
 
 <a name="NamespaceBatchDelete"></a>
-## func NamespaceBatchDelete
+## func [NamespaceBatchDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_namespace.go#L200>)
 
 ```go
 func NamespaceBatchDelete(c *gin.Context)
@@ -426,7 +426,7 @@ NamespaceBatchDelete 批量删除命名空间。 逐条复用原 namespaceDelete
 - 成功: 返回BatchResultOut汇总（succeeded \+ failed明细）
 
 <a name="NamespaceCreate"></a>
-## func NamespaceCreate
+## func [NamespaceCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_namespace.go#L285>)
 
 ```go
 func NamespaceCreate(c *gin.Context)
@@ -471,7 +471,7 @@ NamespaceCreate 处理创建命名空间请求。
 - 简单的成功响应，不包含数据体
 
 <a name="NamespaceDetailGet"></a>
-## func NamespaceDetailGet
+## func [NamespaceDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_namespace.go#L161>)
 
 ```go
 func NamespaceDetailGet(c *gin.Context)
@@ -509,7 +509,7 @@ URL路径参数：
 - 包含命名空间详情的JSON数据
 
 <a name="NamespaceListGet"></a>
-## func NamespaceListGet
+## func [NamespaceListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_namespace.go#L105>)
 
 ```go
 func NamespaceListGet(c *gin.Context)
@@ -547,7 +547,7 @@ NamespaceListGet 处理获取命名空间列表请求。
 - 包含分页信息的命名空间列表数据
 
 <a name="NamespaceUpdate"></a>
-## func NamespaceUpdate
+## func [NamespaceUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_namespace.go#L359>)
 
 ```go
 func NamespaceUpdate(c *gin.Context)
@@ -595,7 +595,7 @@ URL路径参数：
 - 简单的成功响应，不包含数据体
 
 <a name="RbacPolicyTemplateListGet"></a>
-## func RbacPolicyTemplateListGet
+## func [RbacPolicyTemplateListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_rbac.go#L58>)
 
 ```go
 func RbacPolicyTemplateListGet(c *gin.Context)
@@ -617,7 +617,7 @@ RbacPolicyTemplateListGet 获取RBAC策略模板列表 这是一个HTTP GET处�
 返回值: 无，通过Gin上下文返回HTTP响应
 
 <a name="RegisterRoutes"></a>
-## func RegisterRoutes
+## func [RegisterRoutes](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/register.go#L14>)
 
 ```go
 func RegisterRoutes(ctx *views.RegisterContext)
@@ -626,7 +626,7 @@ func RegisterRoutes(ctx *views.RegisterContext)
 RegisterRoutes 注册 /api/v1/admin 管理接口路由。 管理接口需要完整的认证和授权，用于系统管理和配置。
 
 <a name="ServiceListGet"></a>
-## func ServiceListGet
+## func [ServiceListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/service_deps.go#L65>)
 
 ```go
 func ServiceListGet(i do.Injector) gin.HandlerFunc
@@ -635,7 +635,7 @@ func ServiceListGet(i do.Injector) gin.HandlerFunc
 ServiceListGet 处理服务状态列表请求：读取 etcd 服务目录，返回运行中服务实例列表。 由于需从注入器取 viper 与 etcd 客户端，返回 gin.HandlerFunc 闭包。
 
 <a name="UserBatchSetActive"></a>
-## func UserBatchSetActive
+## func [UserBatchSetActive](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_user.go#L323>)
 
 ```go
 func UserBatchSetActive(active bool) gin.HandlerFunc
@@ -652,7 +652,7 @@ UserBatchSetActive 批量设置用户激活/禁用状态的处理函数工厂。
 - gin.HandlerFunc: 批量处理用户状态设置的Gin处理函数
 
 <a name="UserCreate"></a>
-## func UserCreate
+## func [UserCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_user.go#L181>)
 
 ```go
 func UserCreate(c *gin.Context)
@@ -674,7 +674,7 @@ UserCreate 处理管理员创建用户请求 路由：POST /api/v1/admin/user/cr
 - 失败: 返回相应的错误信息（如用户名或邮箱已存在、验证失败）
 
 <a name="UserDetailGet"></a>
-## func UserDetailGet
+## func [UserDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_user.go#L237>)
 
 ```go
 func UserDetailGet(c *gin.Context)
@@ -696,7 +696,7 @@ URL参数:
 - 失败: 返回相应的错误信息
 
 <a name="UserFrontendConfigReset"></a>
-## func UserFrontendConfigReset
+## func [UserFrontendConfigReset](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_user.go#L557>)
 
 ```go
 func UserFrontendConfigReset(c *gin.Context)
@@ -718,7 +718,7 @@ URL参数:
 - 失败: 返回相应的错误信息
 
 <a name="UserGroupJoin"></a>
-## func UserGroupJoin
+## func [UserGroupJoin](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_user.go#L432>)
 
 ```go
 func UserGroupJoin(c *gin.Context)
@@ -748,7 +748,7 @@ URL参数:
 - 事务内以 FOR UPDATE 行锁校验用户、用户组与命名空间，锁保持到 enforcer 写入完成后再提交， 避免"校验通过后被并发禁用用户/删除命名空间"的竞态（SQLite 测试环境无 FOR UPDATE，退化为普通读）
 
 <a name="UserGroupLeave"></a>
-## func UserGroupLeave
+## func [UserGroupLeave](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_user.go#L518>)
 
 ```go
 func UserGroupLeave(c *gin.Context)
@@ -774,7 +774,7 @@ URL参数:
 - 失败: 返回相应的错误信息
 
 <a name="UserListGet"></a>
-## func UserListGet
+## func [UserListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_user.go#L127>)
 
 ```go
 func UserListGet(c *gin.Context)
@@ -796,7 +796,7 @@ UserListGet 处理获取用户列表请求 支持分页、排序和过滤查询�
 - 失败: 返回相应的错误信息
 
 <a name="UserPasswordReset"></a>
-## func UserPasswordReset
+## func [UserPasswordReset](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_user.go#L363>)
 
 ```go
 func UserPasswordReset(c *gin.Context)
@@ -824,7 +824,7 @@ URL参数:
 - 失败: 返回相应的错误信息（如用户不存在、密码强度不足）
 
 <a name="UserUpdate"></a>
-## func UserUpdate
+## func [UserUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_user.go#L281>)
 
 ```go
 func UserUpdate(c *gin.Context)
@@ -850,7 +850,7 @@ URL参数:
 - 失败: 返回相应的错误信息
 
 <a name="AdminUserPasswordResetIn"></a>
-## type AdminUserPasswordResetIn
+## type [AdminUserPasswordResetIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_user.go#L53-L56>)
 
 AdminUserPasswordResetIn 定义管理员重置用户密码的输入结构体
 
@@ -866,7 +866,7 @@ type AdminUserPasswordResetIn struct {
 ```
 
 <a name="AdminUserPasswordResetOut"></a>
-## type AdminUserPasswordResetOut
+## type [AdminUserPasswordResetOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_user.go#L62-L65>)
 
 AdminUserPasswordResetOut 定义管理员重置用户密码的输出结构体
 
@@ -880,7 +880,7 @@ type AdminUserPasswordResetOut struct {
 ```
 
 <a name="CapturerBaseDetailOut"></a>
-## type CapturerBaseDetailOut
+## type [CapturerBaseDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L97-L105>)
 
 CapturerBaseDetailOut 定义抓包器的基础详情输出结构。 包含抓包器的标识信息和审计字段，用于列表和详情场景的公共部分。
 
@@ -904,7 +904,7 @@ type CapturerBaseDetailOut struct {
 ```
 
 <a name="CapturerBatchDeleteIn"></a>
-## type CapturerBatchDeleteIn
+## type [CapturerBatchDeleteIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L315-L318>)
 
 CapturerBatchDeleteIn 批量删除抓包器的请求输入结构。 Ids 接受标量（单个 ID）或数组（多个 ID）。
 
@@ -916,7 +916,7 @@ type CapturerBatchDeleteIn struct {
 ```
 
 <a name="CapturerConfigIn"></a>
-## type CapturerConfigIn
+## type [CapturerConfigIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L43-L56>)
 
 CapturerConfigIn 定义抓包器配置的请求输入结构。 该结构对应 reporter 进程的实际抓包参数，在创建和更新抓包器时使用。 配置数据序列化后存储在 etcd 中，供 reporter 进程读取。
 
@@ -938,7 +938,7 @@ type CapturerConfigIn struct {
 ```
 
 <a name="CapturerConfigIn.ToGRPC"></a>
-### func \(\*CapturerConfigIn\) ToGRPC
+### func \(\*CapturerConfigIn\) [ToGRPC](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L64>)
 
 ```go
 func (cc *CapturerConfigIn) ToGRPC() *reporter_v1.Config
@@ -951,7 +951,7 @@ ToGRPC 将 CapturerConfigIn 转换为 gRPC 协议层定义的 Config 结构。 �
 - \*reporter\_v1.Config: 与 CapturerConfigIn 字段一一对应的 gRPC 配置对象
 
 <a name="CapturerCreateIn"></a>
-## type CapturerCreateIn
+## type [CapturerCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L78-L87>)
 
 CapturerCreateIn 定义创建抓包器的请求输入结构。 包含抓包器的标识信息（命名空间、名称、版本）和配置参数。 三个标识字段联合组成唯一索引，确保同一命名空间下不存在重复的抓包器。
 
@@ -969,7 +969,7 @@ type CapturerCreateIn struct {
 ```
 
 <a name="CapturerDetailOut"></a>
-## type CapturerDetailOut
+## type [CapturerDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L110-L114>)
 
 CapturerDetailOut 定义抓包器的完整详情输出结构。 在基础详情之上增加了从 etcd 获取的运行配置信息。 用于 CapturerDetailGet 接口的响应体。
 
@@ -982,7 +982,7 @@ type CapturerDetailOut struct {
 ```
 
 <a name="CapturerListOut"></a>
-## type CapturerListOut
+## type [CapturerListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L119-L122>)
 
 CapturerListOut 定义抓包器列表的输出项结构。 在基础详情之上嵌入 BaseTotalOut 以支持分页总数统计。 用于 CapturerListGet 接口的响应体列表项。
 
@@ -994,7 +994,7 @@ type CapturerListOut struct {
 ```
 
 <a name="CapturerStatusItemOut"></a>
-## type CapturerStatusItemOut
+## type [CapturerStatusItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L373-L390>)
 
 CapturerStatusItemOut 单个采集器资源运行状态输出项。 字段为基本类型，逐字段映射自 etcd 中解析出的会话状态，不引用模型层结构体。
 
@@ -1020,7 +1020,7 @@ type CapturerStatusItemOut struct {
 ```
 
 <a name="CapturerStatusListOut"></a>
-## type CapturerStatusListOut
+## type [CapturerStatusListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L393-L396>)
 
 CapturerStatusListOut 采集器运行状态列表输出。
 
@@ -1032,7 +1032,7 @@ type CapturerStatusListOut struct {
 ```
 
 <a name="DependencyItemOut"></a>
-## type DependencyItemOut
+## type [DependencyItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/dependency_deps.go#L17-L32>)
 
 DependencyItemOut 单个外部依赖状态输出项。 字段为基本类型，逐字段映射自 status.Status，不引用模型层结构体。
 
@@ -1056,7 +1056,7 @@ type DependencyItemOut struct {
 ```
 
 <a name="DependencyListOut"></a>
-## type DependencyListOut
+## type [DependencyListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/dependency_deps.go#L35-L38>)
 
 DependencyListOut 依赖状态列表输出。
 
@@ -1068,7 +1068,7 @@ type DependencyListOut struct {
 ```
 
 <a name="GroupBaseDetailOut"></a>
-## type GroupBaseDetailOut
+## type [GroupBaseDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_group.go#L54-L62>)
 
 GroupBaseDetailOut 定义组基础详情输出结构体。 包含用户组的基本信息和系统字段。
 
@@ -1085,7 +1085,7 @@ type GroupBaseDetailOut struct {
 ```
 
 <a name="GroupBatchDeleteIn"></a>
-## type GroupBatchDeleteIn
+## type [GroupBatchDeleteIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_group.go#L279-L282>)
 
 GroupBatchDeleteIn 批量删除用户组的请求输入结构。 Names 接受标量（单个组名）或数组（多个组名）。
 
@@ -1097,7 +1097,7 @@ type GroupBatchDeleteIn struct {
 ```
 
 <a name="GroupCreateIn"></a>
-## type GroupCreateIn
+## type [GroupCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_group.go#L44-L50>)
 
 GroupCreateIn 定义组创建输入结构体。 用于创建新的用户组，包含组名和描述信息。
 
@@ -1112,7 +1112,7 @@ type GroupCreateIn struct {
 ```
 
 <a name="GroupDetailOut"></a>
-## type GroupDetailOut
+## type [GroupDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_group.go#L66-L72>)
 
 GroupDetailOut 定义组完整详情输出结构体。 包含用户组的基本信息及其关联的RBAC策略列表。
 
@@ -1127,7 +1127,7 @@ type GroupDetailOut struct {
 ```
 
 <a name="GroupListOut"></a>
-## type GroupListOut
+## type [GroupListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_group.go#L76-L80>)
 
 GroupListOut 定义组列表输出结构体。 用于分页查询用户组列表时的返回结构。
 
@@ -1140,7 +1140,7 @@ type GroupListOut struct {
 ```
 
 <a name="GroupRbacPolicyDetailOut"></a>
-## type GroupRbacPolicyDetailOut
+## type [GroupRbacPolicyDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_rbac.go#L15-L20>)
 
 GroupRbacPolicyDetailOut 表示组RBAC策略详情输出结构 用于返回组策略的详细信息，继承BaseItemOut基础字段
 
@@ -1154,7 +1154,7 @@ type GroupRbacPolicyDetailOut struct {
 ```
 
 <a name="GroupRbacPolicyIn"></a>
-## type GroupRbacPolicyIn
+## type [GroupRbacPolicyIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_group.go#L20-L32>)
 
 GroupRbacPolicyIn 定义组RBAC策略输入结构体。 用于为指定用户组添加或移除RBAC权限策略。
 
@@ -1175,7 +1175,7 @@ type GroupRbacPolicyIn struct {
 ```
 
 <a name="GroupUpdateIn"></a>
-## type GroupUpdateIn
+## type [GroupUpdateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_group.go#L36-L40>)
 
 GroupUpdateIn 定义组更新输入结构体。 用于更新现有用户组的描述信息。
 
@@ -1188,7 +1188,7 @@ type GroupUpdateIn struct {
 ```
 
 <a name="NamespaceBatchDeleteIn"></a>
-## type NamespaceBatchDeleteIn
+## type [NamespaceBatchDeleteIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_namespace.go#L178-L181>)
 
 NamespaceBatchDeleteIn 批量删除命名空间的请求输入结构。 Names 接受标量（单个命名空间名）或数组（多个命名空间名）。
 
@@ -1200,7 +1200,7 @@ type NamespaceBatchDeleteIn struct {
 ```
 
 <a name="NamespaceCreateIn"></a>
-## type NamespaceCreateIn
+## type [NamespaceCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_namespace.go#L41-L45>)
 
 NamespaceCreateIn 定义命名空间创建输入结构体。
 
@@ -1225,7 +1225,7 @@ type NamespaceCreateIn struct {
 ```
 
 <a name="NamespaceDetailOut"></a>
-## type NamespaceDetailOut
+## type [NamespaceDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_namespace.go#L59-L65>)
 
 NamespaceDetailOut 定义命名空间详情输出结构体。
 
@@ -1253,7 +1253,7 @@ type NamespaceDetailOut struct {
 ```
 
 <a name="NamespaceListOut"></a>
-## type NamespaceListOut
+## type [NamespaceListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_namespace.go#L75-L78>)
 
 NamespaceListOut 定义命名空间列表输出结构体。
 
@@ -1272,7 +1272,7 @@ type NamespaceListOut struct {
 ```
 
 <a name="NamespaceUpdateIn"></a>
-## type NamespaceUpdateIn
+## type [NamespaceUpdateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_namespace.go#L23-L26>)
 
 NamespaceUpdateIn 定义命名空间更新输入结构体。
 
@@ -1288,7 +1288,7 @@ type NamespaceUpdateIn struct {
 ```
 
 <a name="RbacPolicyTemplateDetailOut"></a>
-## type RbacPolicyTemplateDetailOut
+## type [RbacPolicyTemplateDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_rbac.go#L32-L36>)
 
 RbacPolicyTemplateDetailOut 表示RBAC策略模板详情输出结构 用于返回策略模板的详细信息，继承BaseItemOut基础字段
 
@@ -1301,7 +1301,7 @@ type RbacPolicyTemplateDetailOut struct {
 ```
 
 <a name="RbacPolicyTemplateListOut"></a>
-## type RbacPolicyTemplateListOut
+## type [RbacPolicyTemplateListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_rbac.go#L40-L43>)
 
 RbacPolicyTemplateListOut 表示RBAC策略模板列表输出结构 用于返回策略模板列表，包含详情和分页信息
 
@@ -1313,7 +1313,7 @@ type RbacPolicyTemplateListOut struct {
 ```
 
 <a name="ServiceItemOut"></a>
-## type ServiceItemOut
+## type [ServiceItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/service_deps.go#L21-L40>)
 
 ServiceItemOut 单个服务实例运行状态输出项。 字段为基本类型，逐字段映射自 health.ServiceInfo，不引用模型层结构体。
 
@@ -1341,7 +1341,7 @@ type ServiceItemOut struct {
 ```
 
 <a name="ServiceListOut"></a>
-## type ServiceListOut
+## type [ServiceListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/service_deps.go#L43-L46>)
 
 ServiceListOut 服务实例状态列表输出。
 
@@ -1353,7 +1353,7 @@ type ServiceListOut struct {
 ```
 
 <a name="UserBaseDetailOut"></a>
-## type UserBaseDetailOut
+## type [UserBaseDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_user.go#L69-L95>)
 
 UserBaseDetailOut 定义用户基础详情输出结构体 包含用户的基本信息和系统字段，用于用户详情和列表展示
 
@@ -1388,7 +1388,7 @@ type UserBaseDetailOut struct {
 ```
 
 <a name="UserBatchActiveIn"></a>
-## type UserBatchActiveIn
+## type [UserBatchActiveIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_user.go#L310-L313>)
 
 UserBatchActiveIn 批量设置用户激活状态的请求输入结构。 UnionIDs 接受标量（单个 unionID 字符串）或数组（多个 unionID 字符串）。
 
@@ -1400,7 +1400,7 @@ type UserBatchActiveIn struct {
 ```
 
 <a name="UserCreateIn"></a>
-## type UserCreateIn
+## type [UserCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_user.go#L43-L46>)
 
 UserCreateIn 定义管理员创建用户的输入结构体 继承个人资料与登录凭据结构，包含用户名、密码、昵称和邮箱
 
@@ -1412,7 +1412,7 @@ type UserCreateIn struct {
 ```
 
 <a name="UserDetailOut"></a>
-## type UserDetailOut
+## type [UserDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_user.go#L99-L105>)
 
 UserDetailOut 定义用户完整详情输出结构体 包含用户的基本信息及其关联的用户组列表，用于用户详情查询
 
@@ -1427,7 +1427,7 @@ type UserDetailOut struct {
 ```
 
 <a name="UserGroupIn"></a>
-## type UserGroupIn
+## type [UserGroupIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_user.go#L31-L39>)
 
 UserGroupIn 定义用户加入/离开用户组的输入参数结构体 用于处理用户与用户组关系的操作，包含命名空间和组名信息
 
@@ -1444,7 +1444,7 @@ type UserGroupIn struct {
 ```
 
 <a name="UserListOut"></a>
-## type UserListOut
+## type [UserListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_user.go#L109-L113>)
 
 UserListOut 定义用户列表输出结构体 用于分页查询用户列表时的返回结构，包含分页统计信息
 
@@ -1457,7 +1457,7 @@ type UserListOut struct {
 ```
 
 <a name="UserRbacPolicyDetailOut"></a>
-## type UserRbacPolicyDetailOut
+## type [UserRbacPolicyDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_rbac.go#L24-L28>)
 
 UserRbacPolicyDetailOut 表示用户RBAC策略详情输出结构 用于返回用户策略的详细信息，继承BaseItemOut基础字段
 

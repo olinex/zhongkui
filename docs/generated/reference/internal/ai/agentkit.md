@@ -85,7 +85,7 @@ const (
 ```
 
 <a name="NormalizeNextSteps"></a>
-## func NormalizeNextSteps
+## func [NormalizeNextSteps](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/next_steps.go#L417>)
 
 ```go
 func NormalizeNextSteps(items []contract.NextStep) ([]contract.NextStep, error)
@@ -94,7 +94,7 @@ func NormalizeNextSteps(items []contract.NextStep) ([]contract.NextStep, error)
 NormalizeNextSteps 归一化推荐项：标题 / 文本 / 理由分别去首尾空白与包裹引号、折叠换行与连续空白， 文本为空时回退标题，按文本精确去重，最多保留 nextStepsMaxItems 条。归一化\*\*不做长度截断\*\*：任一 非空条目不满足 contract.NextStep 的 binding 标签（Text / Reason 必填，Title ≤ 24、Reason ≤ 64、 Text ≤ 200 个字符）时返回英文错误，由调用方把错误回传给模型重新生成。首条标记为最推荐。
 
 <a name="ParseNextSteps"></a>
-## func ParseNextSteps
+## func [ParseNextSteps](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/next_steps.go#L374>)
 
 ```go
 func ParseNextSteps(content string) ([]contract.NextStep, error)
@@ -103,7 +103,7 @@ func ParseNextSteps(content string) ([]contract.NextStep, error)
 ParseNextSteps 容错解析推荐模型输出：先去掉 \`\`\`json 代码围栏，再按 \{"steps":\[...\]\} 解析； 失败时退回裸数组解析。条目既接受 \{"title","reason","text"\} 对象，也接受纯字符串。
 
 <a name="RecommendNextSteps"></a>
-## func RecommendNextSteps
+## func [RecommendNextSteps](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/next_steps.go#L208>)
 
 ```go
 func RecommendNextSteps[M adk.MessageType](ctx context.Context, rt *Runtime, req Request, summary string, history []M, answer string) []contract.NextStep
@@ -112,7 +112,7 @@ func RecommendNextSteps[M adk.MessageType](ctx context.Context, rt *Runtime, req
 RecommendNextSteps 是基于整体上下文的独立推荐调用，现作为内联路径的兜底：仅当模型未按约定输出 内联下一步段（或该段无法解析 / 不满足契约）时执行，用于非 general 助手、或提示词未遵循约定的模型。 仅在真实会话（SessionID 非零）、开关开启且回答非空时执行。输出解析或长度校验失败时，把具体错误 回传给模型要求重新生成（最多 nextStepsMaxAttempts 次），不在本地截断模型输出；模型 / 超时失败或 次数用尽时只告警并返回 nil，绝不中断本轮收尾与落库。返回项已按推荐程度排序，首条 Recommended 为 true。
 
 <a name="SanitizeBusinessData"></a>
-## func SanitizeBusinessData
+## func [SanitizeBusinessData](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/sanitize.go#L25>)
 
 ```go
 func SanitizeBusinessData(data contract.BusinessData, params *config.Params) (contract.BusinessData, error)
@@ -128,7 +128,7 @@ SanitizeBusinessData 对业务数据执行清洗与限界，返回与原数据�
 返回结果始终是合法 JSON 对象（json.Marshal 不会失败），供上层直接序列化注入。
 
 <a name="TrimMessagesByBytes"></a>
-## func TrimMessagesByBytes
+## func [TrimMessagesByBytes](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/compaction.go#L13>)
 
 ```go
 func TrimMessagesByBytes(messages []*modelsai.AgentMessage, maxBytes int) []*modelsai.AgentMessage
@@ -137,7 +137,7 @@ func TrimMessagesByBytes(messages []*modelsai.AgentMessage, maxBytes int) []*mod
 TrimMessagesByBytes 按字节预算从最旧开始丢弃整条消息，直到剩余消息的正文字节总数不超过 maxBytes；至少保留最新一条（只丢整条消息，故不会切断多字节字符），maxBytes 非正数或 未超预算时原样返回。
 
 <a name="WithAutomation"></a>
-## func WithAutomation
+## func [WithAutomation](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/automation.go#L22>)
 
 ```go
 func WithAutomation(ctx context.Context, automation *Automation) context.Context
@@ -146,7 +146,7 @@ func WithAutomation(ctx context.Context, automation *Automation) context.Context
 WithAutomation 把无人值守上下文写入 ctx；automation 为 nil 时原样返回 ctx。
 
 <a name="WithRunContext"></a>
-## func WithRunContext
+## func [WithRunContext](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/run_context.go#L16>)
 
 ```go
 func WithRunContext[M adk.MessageType](ctx context.Context, rc RunContext[M]) context.Context
@@ -155,7 +155,7 @@ func WithRunContext[M adk.MessageType](ctx context.Context, rc RunContext[M]) co
 WithRunContext 在 Runner.Run 之前把运行上下文注入 ctx。GenModelInput 读取它以组装模型输入。RunContext 只在全新运行时注入；恢复的运行没有 运行上下文，因此 GenModelInput 会原样传递还原后的消息。
 
 <a name="Automation"></a>
-## type Automation
+## type [Automation](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/automation.go#L12-L16>)
 
 Automation 是无人值守运行上下文：只在周期报告等后台运行中注入，使工具层不再依赖前端交互。
 
@@ -170,7 +170,7 @@ type Automation struct {
 ```
 
 <a name="AutomationFrom"></a>
-### func AutomationFrom
+### func [AutomationFrom](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/automation.go#L30>)
 
 ```go
 func AutomationFrom(ctx context.Context) (*Automation, bool)
@@ -179,7 +179,7 @@ func AutomationFrom(ctx context.Context) (*Automation, bool)
 AutomationFrom 读取当前 ctx 中的无人值守上下文。
 
 <a name="DBCheckPointStore"></a>
-## type DBCheckPointStore
+## type [DBCheckPointStore](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/checkpoint.go#L68-L71>)
 
 DBCheckPointStore 是 eino checkpoint 存储的 core（PostgreSQL）实现：按 checkpoint ID 把 运行现场加密落库（agent\_checkpoints），使挂起现场跨进程 / 进程重启存活。
 
@@ -190,7 +190,7 @@ type DBCheckPointStore struct {
 ```
 
 <a name="NewDBCheckPointStore"></a>
-### func NewDBCheckPointStore
+### func [NewDBCheckPointStore](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/checkpoint.go#L74>)
 
 ```go
 func NewDBCheckPointStore(db *database.DB) (*DBCheckPointStore, error)
@@ -199,7 +199,7 @@ func NewDBCheckPointStore(db *database.DB) (*DBCheckPointStore, error)
 NewDBCheckPointStore 构造 core 库 checkpoint 存储；db 为空时返回英文错误。
 
 <a name="DBCheckPointStore.Delete"></a>
-### func \(\*DBCheckPointStore\) Delete
+### func \(\*DBCheckPointStore\) [Delete](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/checkpoint.go#L107>)
 
 ```go
 func (s *DBCheckPointStore) Delete(ctx context.Context, id string) error
@@ -208,7 +208,7 @@ func (s *DBCheckPointStore) Delete(ctx context.Context, id string) error
 Delete 删除指定 ID 的 checkpoint（幂等）。
 
 <a name="DBCheckPointStore.Get"></a>
-### func \(\*DBCheckPointStore\) Get
+### func \(\*DBCheckPointStore\) [Get](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/checkpoint.go#L82>)
 
 ```go
 func (s *DBCheckPointStore) Get(ctx context.Context, id string) ([]byte, bool, error)
@@ -217,7 +217,7 @@ func (s *DBCheckPointStore) Get(ctx context.Context, id string) ([]byte, bool, e
 Get 读取指定 ID 的 checkpoint：不存在时返回 \(nil, false, nil\)。返回独立副本。
 
 <a name="DBCheckPointStore.Set"></a>
-### func \(\*DBCheckPointStore\) Set
+### func \(\*DBCheckPointStore\) [Set](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/checkpoint.go#L95>)
 
 ```go
 func (s *DBCheckPointStore) Set(ctx context.Context, id string, data []byte) error
@@ -226,7 +226,7 @@ func (s *DBCheckPointStore) Set(ctx context.Context, id string, data []byte) err
 Set 写入指定 ID 的 checkpoint：同一 ID 重复写入按 checkpoint\_id 幂等覆盖现场字节， payload 经 crypto 序列化器加密。
 
 <a name="Deps"></a>
-## type Deps
+## type [Deps](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/types.go#L94-L115>)
 
 Deps 是 agentkit 的装配依赖集合。
 
@@ -256,7 +256,7 @@ type Deps struct {
 ```
 
 <a name="InlineNextStepsFilter"></a>
-## type InlineNextStepsFilter
+## type [InlineNextStepsFilter](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/next_steps.go#L65-L72>)
 
 InlineNextStepsFilter 从正文流中剥离内联下一步段：起始标记之前的正文即时外发，标记内只累积、 不下发。标记可能跨 chunk 边界，故两个状态各保留「标记长度 \- 1」的尾部缓冲；结束标记之后的内容 一律丢弃（约定中该段位于整段回答最末尾）。body 累积已外发的正文全文，供 done 覆盖时使用。
 
@@ -269,7 +269,7 @@ type InlineNextStepsFilter struct {
 ```
 
 <a name="NewInlineNextStepsFilter"></a>
-### func NewInlineNextStepsFilter
+### func [NewInlineNextStepsFilter](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/next_steps.go#L75>)
 
 ```go
 func NewInlineNextStepsFilter() *InlineNextStepsFilter
@@ -278,7 +278,7 @@ func NewInlineNextStepsFilter() *InlineNextStepsFilter
 NewInlineNextStepsFilter 创建过滤器。
 
 <a name="InlineNextStepsFilter.Body"></a>
-### func \(\*InlineNextStepsFilter\) Body
+### func \(\*InlineNextStepsFilter\) [Body](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/next_steps.go#L173>)
 
 ```go
 func (f *InlineNextStepsFilter) Body() string
@@ -287,7 +287,7 @@ func (f *InlineNextStepsFilter) Body() string
 Body 返回已外发的正文全文。
 
 <a name="InlineNextStepsFilter.Close"></a>
-### func \(\*InlineNextStepsFilter\) Close
+### func \(\*InlineNextStepsFilter\) [Close](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/next_steps.go#L139>)
 
 ```go
 func (f *InlineNextStepsFilter) Close() string
@@ -296,7 +296,7 @@ func (f *InlineNextStepsFilter) Close() string
 Close 处理流结束：正文态把残留缓冲作为正文补发；下一步段未闭合时把残留并入载荷（容忍模型 漏写结束标记）。返回需要补发的正文字符串。
 
 <a name="InlineNextStepsFilter.ResetSection"></a>
-### func \(\*InlineNextStepsFilter\) ResetSection
+### func \(\*InlineNextStepsFilter\) [ResetSection](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/next_steps.go#L158>)
 
 ```go
 func (f *InlineNextStepsFilter) ResetSection() string
@@ -305,7 +305,7 @@ func (f *InlineNextStepsFilter) ResetSection() string
 ResetSection 在一个工具轮结束时复位：丢弃该轮累积的载荷与标记状态，避免中间轮误输出的 下一步段吞掉后续轮次的正文；正文全量保持不变。返回需要在轮次边界补发的正文尾缓冲（标记不会 跨轮次，残留缓冲必属正文）。
 
 <a name="InlineNextStepsFilter.Seen"></a>
-### func \(\*InlineNextStepsFilter\) Seen
+### func \(\*InlineNextStepsFilter\) [Seen](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/next_steps.go#L178>)
 
 ```go
 func (f *InlineNextStepsFilter) Seen() bool
@@ -314,7 +314,7 @@ func (f *InlineNextStepsFilter) Seen() bool
 Seen 表示本次流是否出现过起始标记：投影层据此判断是否需要把累积正文替换为剥离后的全文。
 
 <a name="InlineNextStepsFilter.Steps"></a>
-### func \(\*InlineNextStepsFilter\) Steps
+### func \(\*InlineNextStepsFilter\) [Steps](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/next_steps.go#L184>)
 
 ```go
 func (f *InlineNextStepsFilter) Steps() (steps []contract.NextStep, seen bool, err error)
@@ -323,7 +323,7 @@ func (f *InlineNextStepsFilter) Steps() (steps []contract.NextStep, seen bool, e
 Steps 返回标记内解析出的推荐项：seen 表示本次流是否出现过起始标记（false 时调用方应回退到 独立推荐调用）；seen 为 true 但解析或契约校验失败时返回错误，调用方记录告警后同样回退。
 
 <a name="InlineNextStepsFilter.Write"></a>
-### func \(\*InlineNextStepsFilter\) Write
+### func \(\*InlineNextStepsFilter\) [Write](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/next_steps.go#L90>)
 
 ```go
 func (f *InlineNextStepsFilter) Write(chunk string) string
@@ -332,7 +332,7 @@ func (f *InlineNextStepsFilter) Write(chunk string) string
 Write 接收一个正文增量，返回本次应外发的正文（可能为空）。返回值只含起始标记之前的文本。
 
 <a name="MemoryCheckPointStore"></a>
-## type MemoryCheckPointStore
+## type [MemoryCheckPointStore](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/checkpoint.go#L27-L32>)
 
 MemoryCheckPointStore 是 eino checkpoint 存储的进程内实现：按 checkpoint ID 保存运行现场 字节。供测试与无数据库场景使用；生产运行使用 DBCheckPointStore 持久化到 core。
 
@@ -343,7 +343,7 @@ type MemoryCheckPointStore struct {
 ```
 
 <a name="NewMemoryCheckPointStore"></a>
-### func NewMemoryCheckPointStore
+### func [NewMemoryCheckPointStore](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/checkpoint.go#L35>)
 
 ```go
 func NewMemoryCheckPointStore() *MemoryCheckPointStore
@@ -352,7 +352,7 @@ func NewMemoryCheckPointStore() *MemoryCheckPointStore
 NewMemoryCheckPointStore 构造一个空的进程内 checkpoint 存储。
 
 <a name="MemoryCheckPointStore.Delete"></a>
-### func \(\*MemoryCheckPointStore\) Delete
+### func \(\*MemoryCheckPointStore\) [Delete](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/checkpoint.go#L59>)
 
 ```go
 func (s *MemoryCheckPointStore) Delete(_ context.Context, id string) error
@@ -361,7 +361,7 @@ func (s *MemoryCheckPointStore) Delete(_ context.Context, id string) error
 Delete 删除指定 ID 的 checkpoint（幂等）。
 
 <a name="MemoryCheckPointStore.Get"></a>
-### func \(\*MemoryCheckPointStore\) Get
+### func \(\*MemoryCheckPointStore\) [Get](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/checkpoint.go#L40>)
 
 ```go
 func (s *MemoryCheckPointStore) Get(_ context.Context, id string) ([]byte, bool, error)
@@ -370,7 +370,7 @@ func (s *MemoryCheckPointStore) Get(_ context.Context, id string) ([]byte, bool,
 Get 读取指定 ID 的 checkpoint：不存在时返回 \(nil, false, nil\)。返回副本，调用方修改不影响存储。
 
 <a name="MemoryCheckPointStore.Set"></a>
-### func \(\*MemoryCheckPointStore\) Set
+### func \(\*MemoryCheckPointStore\) [Set](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/checkpoint.go#L51>)
 
 ```go
 func (s *MemoryCheckPointStore) Set(_ context.Context, id string, data []byte) error
@@ -379,7 +379,7 @@ func (s *MemoryCheckPointStore) Set(_ context.Context, id string, data []byte) e
 Set 写入指定 ID 的 checkpoint；入参字节被复制，调用方后续修改不影响存储。
 
 <a name="MemoryService"></a>
-## type MemoryService
+## type [MemoryService](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/types.go#L69-L78>)
 
 MemoryService 是 agentkit 和 turns 所需的 记忆/压缩能力。
 
@@ -397,7 +397,7 @@ type MemoryService interface {
 ```
 
 <a name="ModelSet"></a>
-## type ModelSet
+## type [ModelSet](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/types.go#L82-L91>)
 
 ModelSet 是按槽位的模型表。Kinds 选择槽位使用的消息表示；Options 提供 按请求的模型选项（thinking/额外 body）。
 
@@ -415,7 +415,7 @@ type ModelSet struct {
 ```
 
 <a name="Request"></a>
-## type Request
+## type [Request](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/types.go#L22-L51>)
 
 Request 是一轮对话的业务上下文。它有意与消息类型无关；turns 通过泛型 RunContext 注入它。
 
@@ -453,7 +453,7 @@ type Request struct {
 ```
 
 <a name="RunContext"></a>
-## type RunContext
+## type [RunContext](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/types.go#L55-L65>)
 
 RunContext\[M\] 会在 Runner.Run 之前注入 ctx。GenModelInput 读取它以 组装模型输入（系统提示词、摘要、记忆、历史、查询）。
 
@@ -472,7 +472,7 @@ type RunContext[M adk.MessageType] struct {
 ```
 
 <a name="RunContextFrom"></a>
-### func RunContextFrom
+### func [RunContextFrom](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/run_context.go#L21>)
 
 ```go
 func RunContextFrom[M adk.MessageType](ctx context.Context) (RunContext[M], bool)
@@ -481,7 +481,7 @@ func RunContextFrom[M adk.MessageType](ctx context.Context) (RunContext[M], bool
 RunContextFrom 提取由 WithRunContext 注入的运行上下文。
 
 <a name="RunMetrics"></a>
-## type RunMetrics
+## type [RunMetrics](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/metrics.go#L19-L31>)
 
 RunMetrics 汇总一次流式运行内的 token 用量与总耗时：
 
@@ -497,7 +497,7 @@ type RunMetrics struct {
 ```
 
 <a name="NewRunMetrics"></a>
-### func NewRunMetrics
+### func [NewRunMetrics](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/metrics.go#L35>)
 
 ```go
 func NewRunMetrics() *RunMetrics
@@ -506,7 +506,7 @@ func NewRunMetrics() *RunMetrics
 NewRunMetrics 以「当下」为起点创建一次运行的用量/耗时采集器（须在加载历史之前调用， 使耗时覆盖整轮回答而非仅模型推理）。
 
 <a name="RunMetrics.AddUsage"></a>
-### func \(\*RunMetrics\) AddUsage
+### func \(\*RunMetrics\) [AddUsage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/metrics.go#L41>)
 
 ```go
 func (m *RunMetrics) AddUsage(usage *model.TokenUsage)
@@ -515,7 +515,7 @@ func (m *RunMetrics) AddUsage(usage *model.TokenUsage)
 AddUsage 累加一次模型调用的 token 用量；usage 为 nil 表示供应商未返回用量（或该回调并非 对话模型），此时保持原值、不报错。
 
 <a name="RunMetrics.Handler"></a>
-### func \(\*RunMetrics\) Handler
+### func \(\*RunMetrics\) [Handler](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/metrics.go#L66>)
 
 ```go
 func (m *RunMetrics) Handler() callbacks.Handler
@@ -524,7 +524,7 @@ func (m *RunMetrics) Handler() callbacks.Handler
 Handler 构造挂在运行层 callbacks 上的回调处理器（一次运行一个实例）： 非流式调用走 OnEnd，流式调用走 OnEndWithStreamOutput；两条路径都只取模型回调输出的 TokenUsage，其余组件类型经转换返回 nil 被忽略，天然只统计对话模型用量（chat 与 agentic 两种回调输出都支持）。
 
 <a name="RunMetrics.Snapshot"></a>
-### func \(\*RunMetrics\) Snapshot
+### func \(\*RunMetrics\) [Snapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/metrics.go#L53>)
 
 ```go
 func (m *RunMetrics) Snapshot() (prompt, completion, total int, elapsedMs int64)
@@ -533,7 +533,7 @@ func (m *RunMetrics) Snapshot() (prompt, completion, total int, elapsedMs int64)
 Snapshot 返回当前累计的 token 用量，以及从运行开始到此刻的耗时（毫秒）。
 
 <a name="Runtime"></a>
-## type Runtime
+## type [Runtime](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/agent.go#L23-L51>)
 
 Runtime 是 agentkit 的装配态：每个对话档位一个 ADK Agent \+ Runner，以及审核评估器、 checkpoint 存储与行为参数。构造后整体只读，可被 turns 并发取用。
 
@@ -544,7 +544,7 @@ type Runtime struct {
 ```
 
 <a name="New"></a>
-### func New
+### func [New](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/agent.go#L54>)
 
 ```go
 func New(ctx context.Context, deps Deps) (*Runtime, error)
@@ -553,7 +553,7 @@ func New(ctx context.Context, deps Deps) (*Runtime, error)
 New 构造 agentkit Runtime：校验依赖、为每个档位构建一个 TypedChatModelAgent 与 Runner。
 
 <a name="Runtime.AgenticHandle"></a>
-### func \(\*Runtime\) AgenticHandle
+### func \(\*Runtime\) [AgenticHandle](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/agent.go#L305>)
 
 ```go
 func (r *Runtime) AgenticHandle(slot modelsai.Slot) (*SlotHandle[*schema.AgenticMessage], bool)
@@ -562,7 +562,7 @@ func (r *Runtime) AgenticHandle(slot modelsai.Slot) (*SlotHandle[*schema.Agentic
 AgenticHandle 返回 responses 档位的构建结果；该档位不是 responses 时返回 false。
 
 <a name="Runtime.ChatHandle"></a>
-### func \(\*Runtime\) ChatHandle
+### func \(\*Runtime\) [ChatHandle](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/agent.go#L296>)
 
 ```go
 func (r *Runtime) ChatHandle(slot modelsai.Slot) (*SlotHandle[*schema.Message], bool)
@@ -571,7 +571,7 @@ func (r *Runtime) ChatHandle(slot modelsai.Slot) (*SlotHandle[*schema.Message], 
 ChatHandle 返回 chat 档位的构建结果；该档位不是 chat 时返回 false。
 
 <a name="Runtime.Checkpoints"></a>
-### func \(\*Runtime\) Checkpoints
+### func \(\*Runtime\) [Checkpoints](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/agent.go#L314>)
 
 ```go
 func (r *Runtime) Checkpoints() adk.CheckPointStore
@@ -580,7 +580,7 @@ func (r *Runtime) Checkpoints() adk.CheckPointStore
 Checkpoints 返回 eino checkpoint 存储。
 
 <a name="Runtime.CompressSession"></a>
-### func \(\*Runtime\) CompressSession
+### func \(\*Runtime\) [CompressSession](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/compaction.go#L103>)
 
 ```go
 func (r *Runtime) CompressSession(ctx context.Context, session *modelsai.AgentSession, evicted []*modelsai.AgentMessage, reason string, slot modelsai.Slot, report contract.CompressReporter) *contract.CompactResult
@@ -591,7 +591,7 @@ CompressSession 执行一次流式上下文压缩：把 evicted 折叠进滚动�
 旧实现从会话存储读取压缩前占用作为度量；agentkit 的 Deps 不持有会话存储，故此签名版本以 tokensBefore=0 记录度量，需要真实占用时使用 CompressSessionWithMetrics。
 
 <a name="Runtime.CompressSessionWithMetrics"></a>
-### func \(\*Runtime\) CompressSessionWithMetrics
+### func \(\*Runtime\) [CompressSessionWithMetrics](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/compaction.go#L109>)
 
 ```go
 func (r *Runtime) CompressSessionWithMetrics(ctx context.Context, session *modelsai.AgentSession, evicted []*modelsai.AgentMessage, reason string, slot modelsai.Slot, metrics contract.CompactionMetrics, report contract.CompressReporter) *contract.CompactResult
@@ -600,7 +600,7 @@ func (r *Runtime) CompressSessionWithMetrics(ctx context.Context, session *model
 CompressSessionWithMetrics 与 CompressSession 语义一致，但接受完整的压缩度量（含压缩前占用）。
 
 <a name="Runtime.ContextLimit"></a>
-### func \(\*Runtime\) ContextLimit
+### func \(\*Runtime\) [ContextLimit](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/agent.go#L346>)
 
 ```go
 func (r *Runtime) ContextLimit(slot modelsai.Slot) int
@@ -609,7 +609,7 @@ func (r *Runtime) ContextLimit(slot modelsai.Slot) int
 ContextLimit 返回档位的上下文窗口容量；未注入容量回调时返回 0。
 
 <a name="Runtime.EvictedForSummary"></a>
-### func \(\*Runtime\) EvictedForSummary
+### func \(\*Runtime\) [EvictedForSummary](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/compaction.go#L39>)
 
 ```go
 func (r *Runtime) EvictedForSummary(session *modelsai.AgentSession, history []*modelsai.AgentMessage) []*modelsai.AgentMessage
@@ -618,7 +618,7 @@ func (r *Runtime) EvictedForSummary(session *modelsai.AgentSession, history []*m
 EvictedForSummary 返回「窗口之外（位于历史末条之前 session.maxContextMessages 条之外） 且尚未被摘要覆盖（Seq \> summary\_upto\_seq）」的消息，供滚动摘要与压缩圈定被挤出的历史。 history 须为按 Seq 升序的完整会话消息；窗口容量非正数时视为不做窗口裁剪、返回 nil。
 
 <a name="Runtime.Kind"></a>
-### func \(\*Runtime\) Kind
+### func \(\*Runtime\) [Kind](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/agent.go#L287>)
 
 ```go
 func (r *Runtime) Kind(slot modelsai.Slot) (llm.APIMode, bool)
@@ -627,7 +627,7 @@ func (r *Runtime) Kind(slot modelsai.Slot) (llm.APIMode, bool)
 Kind 返回档位的消息表示；未知档位返回 false。
 
 <a name="Runtime.Logger"></a>
-### func \(\*Runtime\) Logger
+### func \(\*Runtime\) [Logger](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/agent.go#L338>)
 
 ```go
 func (r *Runtime) Logger() *logging.Logger
@@ -636,7 +636,7 @@ func (r *Runtime) Logger() *logging.Logger
 Logger 返回日志记录器。
 
 <a name="Runtime.Memory"></a>
-### func \(\*Runtime\) Memory
+### func \(\*Runtime\) [Memory](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/agent.go#L330>)
 
 ```go
 func (r *Runtime) Memory() MemoryService
@@ -645,7 +645,7 @@ func (r *Runtime) Memory() MemoryService
 Memory 返回长期记忆/压缩服务。
 
 <a name="Runtime.ModelOptions"></a>
-### func \(\*Runtime\) ModelOptions
+### func \(\*Runtime\) [ModelOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/agent.go#L354>)
 
 ```go
 func (r *Runtime) ModelOptions(slot modelsai.Slot, thinking string) []model.Option
@@ -654,7 +654,7 @@ func (r *Runtime) ModelOptions(slot modelsai.Slot, thinking string) []model.Opti
 ModelOptions 返回档位的每请求模型选项（思考开关 / extra body）。
 
 <a name="Runtime.OptimizePrompt"></a>
-### func \(\*Runtime\) OptimizePrompt
+### func \(\*Runtime\) [OptimizePrompt](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/prompt_optimize.go#L16>)
 
 ```go
 func (r *Runtime) OptimizePrompt(ctx context.Context, query string) (string, error)
@@ -663,7 +663,7 @@ func (r *Runtime) OptimizePrompt(ctx context.Context, query string) (string, err
 OptimizePrompt 使用 flash 槽位把用户查询改写为更清晰的 提示词。它是供提示词优化接口使用的单轮、无状态 辅助函数。
 
 <a name="Runtime.Params"></a>
-### func \(\*Runtime\) Params
+### func \(\*Runtime\) [Params](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/agent.go#L322>)
 
 ```go
 func (r *Runtime) Params() *config.Params
@@ -672,7 +672,7 @@ func (r *Runtime) Params() *config.Params
 Params 返回行为参数读取器。
 
 <a name="Runtime.RecallMemories"></a>
-### func \(\*Runtime\) RecallMemories
+### func \(\*Runtime\) [RecallMemories](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/gen_input.go#L250>)
 
 ```go
 func (r *Runtime) RecallMemories(ctx context.Context, req Request) []contract.MemoryHit
@@ -681,7 +681,7 @@ func (r *Runtime) RecallMemories(ctx context.Context, req Request) []contract.Me
 RecallMemories 实现全新运行使用的长期记忆召回语义。服务缺失、记忆 关闭、无会话或 agent 类型无效时均返回 nil；检索失败会降级为 nil 并记录警告，绝不中断生成。
 
 <a name="Runtime.RefreshSummary"></a>
-### func \(\*Runtime\) RefreshSummary
+### func \(\*Runtime\) [RefreshSummary](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/compaction.go#L64>)
 
 ```go
 func (r *Runtime) RefreshSummary(ctx context.Context, session *modelsai.AgentSession, history []*modelsai.AgentMessage) string
@@ -690,7 +690,7 @@ func (r *Runtime) RefreshSummary(ctx context.Context, session *modelsai.AgentSes
 RefreshSummary 在加载窗口历史后推进滚动摘要：条数达到 memory.summaryMinEvictedMessages 且 Deps.Memory 非 nil 时用 flash 重写摘要并落库，同时把新摘要写回会话副本使本次生成即用新摘要。 摘要失败仅告警、不中断生成、不推进游标；不受 memory.enabled 开关约束（该开关只管长期记忆）。
 
 <a name="Runtime.RefreshSummaryWithMetrics"></a>
-### func \(\*Runtime\) RefreshSummaryWithMetrics
+### func \(\*Runtime\) [RefreshSummaryWithMetrics](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/compaction.go#L70>)
 
 ```go
 func (r *Runtime) RefreshSummaryWithMetrics(ctx context.Context, session *modelsai.AgentSession, history []*modelsai.AgentMessage, tokensBefore int) string
@@ -699,7 +699,7 @@ func (r *Runtime) RefreshSummaryWithMetrics(ctx context.Context, session *models
 RefreshSummaryWithMetrics 与 RefreshSummary 语义一致，额外接受摘要推进前的上下文占用 （tokensBefore）以写入压缩检查点度量；无真实测量时传 0。
 
 <a name="Runtime.RunOptions"></a>
-### func \(\*Runtime\) RunOptions
+### func \(\*Runtime\) [RunOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/agent.go#L266>)
 
 ```go
 func (r *Runtime) RunOptions() []adk.AgentRunOption
@@ -708,7 +708,7 @@ func (r *Runtime) RunOptions() []adk.AgentRunOption
 RunOptions 返回一次 agent run 的工具轮数闸门：只统计本次 run 内已完成的工具轮，达到 agent.maxToolRounds 后以 ErrExceedMaxIterations 中止。人工审批 / 问卷挂起时工具轮并未完成， 续跑会开启新的 run 段并重新计数，因此交互次数不会耗尽额度；纯自主循环仍受该上限约束。
 
 <a name="SlotHandle"></a>
-## type SlotHandle
+## type [SlotHandle](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/types.go#L118-L129>)
 
 SlotHandle\[M\] 是某个槽位构建好的 agent。
 
@@ -728,7 +728,7 @@ type SlotHandle[M adk.MessageType] struct {
 ```
 
 <a name="SlotHandle[M].NewInput"></a>
-### func \(\*SlotHandle\[M\]\) NewInput
+### func \(\*SlotHandle\[M\]\) [NewInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/agentkit/types.go#L133>)
 
 ```go
 func (h *SlotHandle[M]) NewInput(rc RunContext[M]) *adk.TypedAgentInput[M]

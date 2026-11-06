@@ -46,7 +46,7 @@
 
 
 <a name="WithCandidates"></a>
-## func WithCandidates
+## func [WithCandidates](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/retriever.go#L73>)
 
 ```go
 func WithCandidates(candidates int) retriever.Option
@@ -55,7 +55,7 @@ func WithCandidates(candidates int) retriever.Option
 WithCandidates 设置融合后送入重排的候选条数。
 
 <a name="WithDocIDs"></a>
-## func WithDocIDs
+## func [WithDocIDs](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/retriever.go#L52>)
 
 ```go
 func WithDocIDs(docIDs []uint) retriever.Option
@@ -64,7 +64,7 @@ func WithDocIDs(docIDs []uint) retriever.Option
 WithDocIDs 设置限定检索的文档 ID 列表。
 
 <a name="WithFormat"></a>
-## func WithFormat
+## func [WithFormat](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/retriever.go#L59>)
 
 ```go
 func WithFormat(format docconv.Format) retriever.Option
@@ -73,7 +73,7 @@ func WithFormat(format docconv.Format) retriever.Option
 WithFormat 限定检索的知识文档格式分区；空值表示不限定。
 
 <a name="WithFusion"></a>
-## func WithFusion
+## func [WithFusion](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/retriever.go#L80>)
 
 ```go
 func WithFusion(fusion string) retriever.Option
@@ -82,7 +82,7 @@ func WithFusion(fusion string) retriever.Option
 WithFusion 设置融合策略（rrf 或 weighted）。
 
 <a name="WithNamespace"></a>
-## func WithNamespace
+## func [WithNamespace](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/retriever.go#L45>)
 
 ```go
 func WithNamespace(namespaceName string) retriever.Option
@@ -91,7 +91,7 @@ func WithNamespace(namespaceName string) retriever.Option
 WithNamespace 设置检索命名空间。
 
 <a name="WithRetrieveTopK"></a>
-## func WithRetrieveTopK
+## func [WithRetrieveTopK](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/retriever.go#L66>)
 
 ```go
 func WithRetrieveTopK(topK int) retriever.Option
@@ -100,7 +100,7 @@ func WithRetrieveTopK(topK int) retriever.Option
 WithRetrieveTopK 设置重排后保留的最终条数。
 
 <a name="WithWeights"></a>
-## func WithWeights
+## func [WithWeights](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/retriever.go#L87>)
 
 ```go
 func WithWeights(weights retrieval.FusionWeights) retriever.Option
@@ -109,7 +109,7 @@ func WithWeights(weights retrieval.FusionWeights) retriever.Option
 WithWeights 设置 weighted 融合权重。
 
 <a name="ChunkJudgment"></a>
-## type ChunkJudgment
+## type [ChunkJudgment](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/dryrun.go#L41-L50>)
 
 ChunkJudgment 是单个检索分块的相关性判断（index 为分块在检索结果中的下标）。
 
@@ -127,7 +127,7 @@ type ChunkJudgment struct {
 ```
 
 <a name="ChunkOverview"></a>
-## type ChunkOverview
+## type [ChunkOverview](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/overview.go#L75-L80>)
 
 ChunkOverview 是文档分块构建明细的聚合结果。
 
@@ -141,7 +141,7 @@ type ChunkOverview struct {
 ```
 
 <a name="BuildChunkOverview"></a>
-### func BuildChunkOverview
+### func [BuildChunkOverview](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/overview.go#L87>)
 
 ```go
 func BuildChunkOverview(ctx context.Context, db *database.DB, params *config.Params, doc *ai.KnowledgeDocument) (*ChunkOverview, error)
@@ -150,7 +150,7 @@ func BuildChunkOverview(ctx context.Context, db *database.DB, params *config.Par
 BuildChunkOverview 读取文档分块并聚合构建摘要：按 chunk\_index 升序读取分块（仅选取 chunk\_index/heading\_path/content，不载入 embedding），逐块统计字符数/行数/结构单元类型， 并派生标题路径数、原子块数、索引状态与陈旧标记。本函数为包级函数（不挂 Knowledge 方法）， 使 AI 能力未启用时也能读取明细（此时文档通常未索引，返回空分块 \+ Indexed=false）。 params 为 nil 时切片长度与重叠长度记 0；db 或 doc 为 nil 时返回英文错误。
 
 <a name="ChunkOverviewItem"></a>
-## type ChunkOverviewItem
+## type [ChunkOverviewItem](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/overview.go#L59-L72>)
 
 ChunkOverviewItem 是单个分块的构建明细。
 
@@ -172,7 +172,7 @@ type ChunkOverviewItem struct {
 ```
 
 <a name="ChunkOverviewSummary"></a>
-## type ChunkOverviewSummary
+## type [ChunkOverviewSummary](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/overview.go#L27-L56>)
 
 ChunkOverviewSummary 是文档分块构建摘要：读时从知识文档与其分块聚合派生，不持久化。
 
@@ -210,7 +210,7 @@ type ChunkOverviewSummary struct {
 ```
 
 <a name="Collector"></a>
-## type Collector
+## type [Collector](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/collector.go#L16-L23>)
 
 Collector 是单次运行内的知识检索采集器：并发安全地累积 knowledge\_search 工具每次检索命中的 retrieval.RetrievalResult，供 Agent 在流末尾取回并写入引用来源。工具在生成 goroutine 内执行、 收尾阶段随后读取，故以互斥锁保护内部切片。 采集器同时为每次命中去重并分配本次运行内稳定的 1 起来源编号：同一分块（命名空间 \+ 文档 \+ 分块序号）在多次检索中只占一个编号，正文中的 \[n\] 标注因而不受后续检索追加影响。
 
@@ -221,7 +221,7 @@ type Collector struct {
 ```
 
 <a name="NewCollector"></a>
-### func NewCollector
+### func [NewCollector](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/collector.go#L38>)
 
 ```go
 func NewCollector(initial []retrieval.RetrievalResult) *Collector
@@ -230,7 +230,7 @@ func NewCollector(initial []retrieval.RetrievalResult) *Collector
 NewCollector 构造采集器，并把既有的检索命中（续跑时来自运行现场）预置进去； 预置同样经 Add 去重并建立编号索引，使续跑后新命中的编号与已有引用连续。
 
 <a name="Collector.Add"></a>
-### func \(\*Collector\) Add
+### func \(\*Collector\) [Add](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/collector.go#L46>)
 
 ```go
 func (c *Collector) Add(results []retrieval.RetrievalResult) []int
@@ -239,7 +239,7 @@ func (c *Collector) Add(results []retrieval.RetrievalResult) []int
 Add 追加一批检索命中到采集器（并发安全），返回与入参等长的来源编号（1 起）：已在采集器内 的同一分块复用原编号且不重复入库。接收者为 nil 时静默返回 nil。
 
 <a name="Collector.Snapshot"></a>
-### func \(\*Collector\) Snapshot
+### func \(\*Collector\) [Snapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/collector.go#L75>)
 
 ```go
 func (c *Collector) Snapshot() []retrieval.RetrievalResult
@@ -248,7 +248,7 @@ func (c *Collector) Snapshot() []retrieval.RetrievalResult
 Snapshot 返回当前已累积命中的副本（并发安全）；接收者为 nil 或无命中时返回 nil。
 
 <a name="DiagnosisCategory"></a>
-## type DiagnosisCategory
+## type [DiagnosisCategory](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/dryrun.go#L65>)
 
 DiagnosisCategory 是改进建议的封闭归类：模型只能从上列取值中选一个，未知取值由 normalizeDiagnosisCategory 兜底为 DiagnosisCategoryOther，保证前端可以按类别稳定映射图标 与文案，而无需正则匹配自由文本。
 
@@ -274,7 +274,7 @@ const (
 ```
 
 <a name="DiagnosisSuggestion"></a>
-## type DiagnosisSuggestion
+## type [DiagnosisSuggestion](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/dryrun.go#L83-L88>)
 
 DiagnosisSuggestion 是一条改进建议：Category 为封闭归类，Detail 为按请求语言输出的 自由文本（说明问题与应采取的具体动作）。
 
@@ -288,7 +288,7 @@ type DiagnosisSuggestion struct {
 ```
 
 <a name="DryRunEvaluation"></a>
-## type DryRunEvaluation
+## type [DryRunEvaluation](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/dryrun.go#L118-L137>)
 
 DryRunEvaluation 是一次 dry\-run 的评估结果。
 
@@ -316,7 +316,7 @@ type DryRunEvaluation struct {
 ```
 
 <a name="DryRunMeta"></a>
-## type DryRunMeta
+## type [DryRunMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/dryrun.go#L140-L149>)
 
 DryRunMeta 是一次 dry\-run 的调用元信息汇总（检索耗时、各次调用明细、总计与 token 汇总）。
 
@@ -334,7 +334,7 @@ type DryRunMeta struct {
 ```
 
 <a name="DryRunMetrics"></a>
-## type DryRunMetrics
+## type [DryRunMetrics](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/dryrun.go#L29-L38>)
 
 DryRunMetrics 是四项 RAGAS 风格量化指标（均 0..1，1 最优）。
 
@@ -352,7 +352,7 @@ type DryRunMetrics struct {
 ```
 
 <a name="DryRunResult"></a>
-## type DryRunResult
+## type [DryRunResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/dryrun.go#L152-L163>)
 
 DryRunResult 是一次 dry\-run 的完整输出（view 层直接序列化）。
 
@@ -372,7 +372,7 @@ type DryRunResult struct {
 ```
 
 <a name="FaithfulnessClaim"></a>
-## type FaithfulnessClaim
+## type [FaithfulnessClaim](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/dryrun.go#L53-L60>)
 
 FaithfulnessClaim 是答案中的单条声明及支撑判定（chunkIndexes 为支撑该声明的分块下标）。
 
@@ -388,7 +388,7 @@ type FaithfulnessClaim struct {
 ```
 
 <a name="GeneratedKnowledgeDoc"></a>
-## type GeneratedKnowledgeDoc
+## type [GeneratedKnowledgeDoc](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/generated_docs.go#L21-L28>)
 
 GeneratedKnowledgeDoc 是由代码注释派生的生成知识文档的通用载体（叙述页等）：Key/Title 均为稳定键 （Title 作为入库与去重的稳定键），Content 为 Markdown 正文。文档集由调用方从注释抽取模型派生后 传入，本包不自行派生。
 
@@ -404,7 +404,7 @@ type GeneratedKnowledgeDoc struct {
 ```
 
 <a name="Knowledge"></a>
-## type Knowledge
+## type [Knowledge](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/index.go#L29-L37>)
 
 Knowledge 是知识库索引的入口：负责文档切块、向量化落库（knowledge\_chunks）与 文档/分块删除。持有一个 gorm DB、向量化客户端与切片器。
 
@@ -415,7 +415,7 @@ type Knowledge struct {
 ```
 
 <a name="NewKnowledge"></a>
-### func NewKnowledge
+### func [NewKnowledge](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/index.go#L40>)
 
 ```go
 func NewKnowledge(db *database.DB, embed port.Embedder, params *config.Params) (*Knowledge, error)
@@ -424,7 +424,7 @@ func NewKnowledge(db *database.DB, embed port.Embedder, params *config.Params) (
 NewKnowledge 构造 Knowledge；db/embed/params 任一为空时返回英文错误。
 
 <a name="Knowledge.DeleteDocument"></a>
-### func \(\*Knowledge\) DeleteDocument
+### func \(\*Knowledge\) [DeleteDocument](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/index.go#L187>)
 
 ```go
 func (k *Knowledge) DeleteDocument(ctx context.Context, docID uint) error
@@ -433,7 +433,7 @@ func (k *Knowledge) DeleteDocument(ctx context.Context, docID uint) error
 DeleteDocument 删除文档及其分块：先显式删除分块（文档为软删除，DB 级联不生效）， 再软删除文档本身，两步在同一事务内完成。
 
 <a name="Knowledge.IndexDocument"></a>
-### func \(\*Knowledge\) IndexDocument
+### func \(\*Knowledge\) [IndexDocument](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/index.go#L61>)
 
 ```go
 func (k *Knowledge) IndexDocument(ctx context.Context, doc *ai.KnowledgeDocument) error
@@ -442,7 +442,7 @@ func (k *Knowledge) IndexDocument(ctx context.Context, doc *ai.KnowledgeDocument
 IndexDocument 对文档执行切片与向量化，并在单事务内删除该文档旧分块后插入新分块， 最后更新 doc.ChunkCount 与 doc.Hash。分块正文的全文检索表示经 to\_tsvector\('simple', ...\) SQL 表达式写入 search 列。
 
 <a name="Knowledge.Reindex"></a>
-### func \(\*Knowledge\) Reindex
+### func \(\*Knowledge\) [Reindex](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/index.go#L144>)
 
 ```go
 func (k *Knowledge) Reindex(ctx context.Context, doc *ai.KnowledgeDocument) error
@@ -451,7 +451,7 @@ func (k *Knowledge) Reindex(ctx context.Context, doc *ai.KnowledgeDocument) erro
 Reindex 重新切片并重建文档的分块索引。IndexDocument 本身即在事务内先清旧块， 因此 Reindex 直接复用 IndexDocument。
 
 <a name="Knowledge.ReindexNamespace"></a>
-### func \(\*Knowledge\) ReindexNamespace
+### func \(\*Knowledge\) [ReindexNamespace](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/index.go#L155>)
 
 ```go
 func (k *Knowledge) ReindexNamespace(ctx context.Context, namespaceName string, report contract.SyncReporter) (int, error)
@@ -460,7 +460,7 @@ func (k *Knowledge) ReindexNamespace(ctx context.Context, namespaceName string, 
 ReindexNamespace 以当前 embedding 模型为准，重建命名空间下全部知识文档的分块与向量索引： 逐篇读取文档正文（经 crypto 序列化器解密）后复用 indexDocument 重新切片、向量化与落库， 供更换 embedding 模型（维度或语义变化）后让 knowledge\_chunks 与当前模型对齐。仅处理未软删除 的文档，不改文档正文；返回实际重建的文档篇数，中途失败即返回该错误（已处理的文档不回滚， 再次执行按同一全集继续收敛）。report 为进度上报入口（为 nil 时不上报）：查询文档后上报一次 Start\(文档总数\)，每篇成功后上报一次 Step（Action=contract.SyncActionReindex，含标题、耗时与 token 用量）， 结束（含提前失败）时经 defer 上报一次 Finish。namespaceName 为空时返回英文错误。
 
 <a name="Knowledge.SyncGeneratedDocs"></a>
-### func \(\*Knowledge\) SyncGeneratedDocs
+### func \(\*Knowledge\) [SyncGeneratedDocs](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/generated_docs.go#L77>)
 
 ```go
 func (k *Knowledge) SyncGeneratedDocs(ctx context.Context, namespaceName string, format docconv.Format, docs []GeneratedKnowledgeDoc, report contract.SyncReporter) error
@@ -469,7 +469,7 @@ func (k *Knowledge) SyncGeneratedDocs(ctx context.Context, namespaceName string,
 SyncGeneratedDocs 以传入的生成文档集为准，幂等同步指定命名空间下 format 分区的文档：新增文档集 中新出现的条目、更新正文变化的条目、删除库中已有但文档集已移除的条目；正文未变的条目原样保留 （不重复向量化、不产生重复条目）。文档集由调用方从注释抽取模型派生后传入，本方法不再自行派生。 全程逐条幂等，任一步失败即返回错误（已成功处理的条目不回滚，下次触发按同一差异计划继续收敛）。 report 为进度上报入口（为 nil 时不上报）：计划构建后上报一次 Start\(计划总条数\)，每条成功后上报 一次 Step（含动作、标题、耗时与 token 用量），结束（含提前失败）时经 defer 上报一次 Finish。 namespaceName 为空时返回英文错误。
 
 <a name="RetrieveOptions"></a>
-## type RetrieveOptions
+## type [RetrieveOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/retriever.go#L26-L42>)
 
 RetrieveOptions 是 Retriever.Retrieve 的实现专属调用参数，经 retriever.Option 注入。
 
@@ -494,7 +494,7 @@ type RetrieveOptions struct {
 ```
 
 <a name="Retriever"></a>
-## type Retriever
+## type [Retriever](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/retriever.go#L100-L108>)
 
 Retriever 是知识库的混合检索器，实现 eino retriever.Retriever 接口： 向量路（pgvector 余弦距离）与关键词路（tsvector 全文检索）各取 candidates 条， 经 RRF / weighted 融合后送入 LLM 重排取 TopK。重排按调用点声明的 flash 档位经 resolver 解析对话客户端；resolver 缺失（未注入）时跳过重排，直接返回融合排序前 TopK，flash 档位未绑定时返回明确英文错误而不切换到其他档位（见 Retrieve 注释）。 每次检索命中后异步回写命中文档的使用统计（use\_count / last\_used\_at），供知识库 运营判断哪些文档真正被用到。
 
@@ -505,7 +505,7 @@ type Retriever struct {
 ```
 
 <a name="NewRetriever"></a>
-### func NewRetriever
+### func [NewRetriever](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/retriever.go#L112>)
 
 ```go
 func NewRetriever(db *database.DB, embed port.Embedder, resolver port.ChatResolver, params *config.Params, logger *logging.Logger) (*Retriever, error)
@@ -514,7 +514,7 @@ func NewRetriever(db *database.DB, embed port.Embedder, resolver port.ChatResolv
 NewRetriever 构造 Retriever；db/embed/params 任一为空时返回英文错误。resolver 可为 nil，此时检索跳过 LLM 重排（见 Retrieve 的说明）；logger 可为 nil（内部判空后再用）。
 
 <a name="Retriever.DryRun"></a>
-### func \(\*Retriever\) DryRun
+### func \(\*Retriever\) [DryRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/dryrun.go#L172>)
 
 ```go
 func (r *Retriever) DryRun(ctx context.Context, query string, report contract.EvalReporter, languageTag string, opts ...retriever.Option) (*DryRunResult, error)
@@ -523,7 +523,7 @@ func (r *Retriever) DryRun(ctx context.Context, query string, report contract.Ev
 DryRun 执行知识库 RAG dry\-run：混合检索（参数可覆盖）→ 基于上下文生成回答 → RAGAS 风格量化评估 → 改进建议。全流程经 report 实时上报阶段状态与模型增量输出（为 nil 时 不上报）；report 返回错误（SSE 写失败/客户端断开）时立即中止并向上返回该错误。 languageTag 为请求语言标签（BCP\-47），用于要求模型以该语言输出改进建议正文，为空时不 下发语言指令。检索失败或 flash 档位未绑定（重排与评估的声明档位）时返回错误；评估客户端 缺失或检索结果为空时返回带检索结果与 evalError 的结果（evaluation 为空）。结果中的 Meta 汇总检索耗时、各次调用明细、总计耗时与 token。
 
 <a name="Retriever.Retrieve"></a>
-### func \(\*Retriever\) Retrieve
+### func \(\*Retriever\) [Retrieve](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/retriever.go#L162>)
 
 ```go
 func (r *Retriever) Retrieve(ctx context.Context, query string, opts ...retriever.Option) ([]*schema.Document, error)
@@ -532,7 +532,7 @@ func (r *Retriever) Retrieve(ctx context.Context, query string, opts ...retrieve
 Retrieve 执行混合检索：向量路 \+ 关键词路 → 融合 → 内容去重 → LLM 重排。 档位语义：重排声明使用 flash 档位（rerankSlot），该档位未绑定时直接返回英文错误， 不切换到其他档位。降级策略：未注入 resolver（重排未启用）或重排调用/解析失败时， 回退为融合排序前 TopK（英文注释说明降级行为），检索仍可用。
 
 <a name="Retriever.TouchUsage"></a>
-### func \(\*Retriever\) TouchUsage
+### func \(\*Retriever\) [TouchUsage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/usage.go#L19>)
 
 ```go
 func (r *Retriever) TouchUsage(ctx context.Context, ids []uint) error
@@ -541,7 +541,7 @@ func (r *Retriever) TouchUsage(ctx context.Context, ids []uint) error
 TouchUsage 递增给定知识文档的 use\_count 与 last\_used\_at；ids 为空直接返回 nil。 语义与长期记忆的 MemoryStore.TouchUsage 一致，供检索命中后回写使用统计。
 
 <a name="Searcher"></a>
-## type Searcher
+## type [Searcher](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/searcher.go#L20-L29>)
 
 Searcher 是 tools.KnowledgeSearcher 的检索侧实现：持有检索器与本次运行的命名空间/文档限定， 把模型入参 query 转成一次 Retriever.Retrieve 调用，并把命中同时记入采集器与转换为 tools.KnowledgeHit 返回。
 
@@ -559,7 +559,7 @@ type Searcher struct {
 ```
 
 <a name="Searcher.Search"></a>
-### func \(\*Searcher\) Search
+### func \(\*Searcher\) [Search](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/knowledge/searcher.go#L34>)
 
 ```go
 func (s *Searcher) Search(ctx context.Context, query string, format docconv.Format) ([]tools.KnowledgeHit, error)

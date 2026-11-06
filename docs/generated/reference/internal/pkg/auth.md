@@ -58,7 +58,7 @@ var (
 ```
 
 <a name="AuthenticateAccessKey"></a>
-## func AuthenticateAccessKey
+## func [AuthenticateAccessKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/auth/access_key.go#L204-L208>)
 
 ```go
 func AuthenticateAccessKey(ctx context.Context, pool AccessKeyPool, rawToken, expectedMethod string) (string, error)
@@ -81,7 +81,7 @@ AuthenticateAccessKey 执行访问密钥签名鉴权的完整校验流程，gRPC
 - error: 失败时返回上面的原因哨兵，调用方据此映射具体错误码
 
 <a name="HTTPRequestMethod"></a>
-## func HTTPRequestMethod
+## func [HTTPRequestMethod](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/auth/access_key.go#L159>)
 
 ```go
 func HTTPRequestMethod(method, path string) string
@@ -90,7 +90,7 @@ func HTTPRequestMethod(method, path string) string
 HTTPRequestMethod 返回 Web 接口层令牌使用的方法标识，把 HTTP 方法与路径绑定在一起， 避免签名被复用到其他接口。
 
 <a name="SignHTTPAccessKey"></a>
-## func SignHTTPAccessKey
+## func [SignHTTPAccessKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/auth/access_key.go#L165>)
 
 ```go
 func SignHTTPAccessKey(secret, accessKeyID, httpMethod, path string, timestampMs int64) (string, error)
@@ -99,7 +99,7 @@ func SignHTTPAccessKey(secret, accessKeyID, httpMethod, path string, timestampMs
 SignHTTPAccessKey 为一次 Web 接口调用签发 X\-Access\-Key 请求头取值。 与 gRPC 的 AccessKeySecretPerRPCCredentials 共用同一令牌格式与签名原文。
 
 <a name="VerifyAccessKeySignature"></a>
-## func VerifyAccessKeySignature
+## func [VerifyAccessKeySignature](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/auth/access_key.go#L180>)
 
 ```go
 func VerifyAccessKeySignature(secret string, token *AccessKeyToken) (bool, error)
@@ -108,7 +108,7 @@ func VerifyAccessKeySignature(secret string, token *AccessKeyToken) (bool, error
 VerifyAccessKeySignature 校验令牌签名与令牌内容是否匹配。
 
 <a name="AccessKey"></a>
-## type AccessKey
+## type [AccessKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/auth/access_key.go#L60-L69>)
 
 AccessKey 表示单个访问密钥的只读视图。
 
@@ -126,7 +126,7 @@ type AccessKey interface {
 ```
 
 <a name="AccessKeyPool"></a>
-## type AccessKeyPool
+## type [AccessKeyPool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/auth/access_key.go#L72-L79>)
 
 AccessKeyPool 定义访问密钥的查询与状态维护能力。
 
@@ -142,7 +142,7 @@ type AccessKeyPool interface {
 ```
 
 <a name="AccessKeyToken"></a>
-## type AccessKeyToken
+## type [AccessKeyToken](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/auth/access_key.go#L82-L93>)
 
 AccessKeyToken 是访问密钥签名令牌的解析结果，格式与 gRPC 协议一致。
 
@@ -162,7 +162,7 @@ type AccessKeyToken struct {
 ```
 
 <a name="NewAccessKeyToken"></a>
-### func NewAccessKeyToken
+### func [NewAccessKeyToken](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/auth/access_key.go#L137>)
 
 ```go
 func NewAccessKeyToken(secret, accessKeyID, method string, timestampMs int64) (*AccessKeyToken, error)
@@ -171,7 +171,7 @@ func NewAccessKeyToken(secret, accessKeyID, method string, timestampMs int64) (*
 NewAccessKeyToken 为一次请求签发访问密钥签名令牌（含自动生成 nonce）。 method 是方法标识：gRPC 传完整方法名，Web 用 HTTPRequestMethod 生成。
 
 <a name="ParseAccessKeyToken"></a>
-### func ParseAccessKeyToken
+### func [ParseAccessKeyToken](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/auth/access_key.go#L109>)
 
 ```go
 func ParseAccessKeyToken(raw string) (*AccessKeyToken, error)
@@ -180,7 +180,7 @@ func ParseAccessKeyToken(raw string) (*AccessKeyToken, error)
 ParseAccessKeyToken 解析访问密钥签名令牌。 签名值内部含冒号，因此使用 strings.SplitN\(raw, ":", 5\)，仅切出固定五段。
 
 <a name="AccessKeyToken.String"></a>
-### func \(\*AccessKeyToken\) String
+### func \(\*AccessKeyToken\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/auth/access_key.go#L96>)
 
 ```go
 func (t *AccessKeyToken) String() string

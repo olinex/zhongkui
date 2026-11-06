@@ -9,7 +9,7 @@
 
 
 <a name="Registry"></a>
-## func Registry
+## func [Registry](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/collect.go#L170>)
 
 ```go
 func Registry(ctx context.Context, injector do.Injector)
@@ -18,7 +18,7 @@ func Registry(ctx context.Context, injector do.Injector)
 Registry 注册所有 worker 处理器到任务队列与处理器框架。 任务处理器按 taskHandlerSpecs 逐项登记；另注册分布式 TCP 流处理器工厂（IPv4 和 IPv6）， 后者由外部运行时按需实例化，不经过队列。
 
 <a name="TaskTypes"></a>
-## func TaskTypes
+## func [TaskTypes](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/collect.go#L183>)
 
 ```go
 func TaskTypes() []string

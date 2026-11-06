@@ -127,7 +127,7 @@ var (
 ```
 
 <a name="NamespaceExist"></a>
-## func NamespaceExist
+## func [NamespaceExist](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/namespace.go#L199>)
 
 ```go
 func NamespaceExist(namespace string) bool
@@ -142,7 +142,7 @@ NamespaceExist 检查指定的命名空间名称是否存在。 优先查询缓�
 - bool: 如果命名空间存在则返回true，否则返回false
 
 <a name="ReporterConfigKey"></a>
-## func ReporterConfigKey
+## func [ReporterConfigKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/capturer.go#L27>)
 
 ```go
 func ReporterConfigKey(r *reporter_v1.Resource) string
@@ -157,7 +157,7 @@ ReporterConfigKey 生成 reporter 配置在 etcd 中的存储键 格式: \{prefi
 - 配置键字符串
 
 <a name="ReporterConfigMarshalAsBytes"></a>
-## func ReporterConfigMarshalAsBytes
+## func [ReporterConfigMarshalAsBytes](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/capturer.go#L93>)
 
 ```go
 func ReporterConfigMarshalAsBytes(config *reporter_v1.Config) ([]byte, error)
@@ -173,7 +173,7 @@ ReporterConfigMarshalAsBytes 将 reporter 配置对象序列化为字节数组 �
 - error: 序列化过程中的错误
 
 <a name="ReporterStatusDetailKey"></a>
-## func ReporterStatusDetailKey
+## func [ReporterStatusDetailKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/capturer.go#L50>)
 
 ```go
 func ReporterStatusDetailKey(r *reporter_v1.Resource, sessionID string) string
@@ -189,7 +189,7 @@ ReporterStatusDetailKey 生成 reporter 具体状态在 etcd 中的存储键 格
 - 状态详情键字符串
 
 <a name="ReporterStatusListKey"></a>
-## func ReporterStatusListKey
+## func [ReporterStatusListKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/capturer.go#L38>)
 
 ```go
 func ReporterStatusListKey(r *reporter_v1.Resource) string
@@ -204,7 +204,7 @@ ReporterStatusListKey 生成 reporter 状态列表在 etcd 中的存储键 格�
 - 状态列表键字符串
 
 <a name="UnmarshalAsReporterConfig"></a>
-## func UnmarshalAsReporterConfig
+## func [UnmarshalAsReporterConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/capturer.go#L61>)
 
 ```go
 func UnmarshalAsReporterConfig(value []byte) (*reporter_v1.Config, error)
@@ -220,7 +220,7 @@ UnmarshalAsReporterConfig 将字节数组反序列化为 reporter 配置对象 �
 - error: 反序列化过程中的错误
 
 <a name="UnmarshalAsReporterStatus"></a>
-## func UnmarshalAsReporterStatus
+## func [UnmarshalAsReporterStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/capturer.go#L77>)
 
 ```go
 func UnmarshalAsReporterStatus(value []byte) (*reporter_v1.Status, error)
@@ -236,7 +236,7 @@ UnmarshalAsReporterStatus 将字节数组反序列化为 reporter 状态对象 �
 - error: 反序列化过程中的错误
 
 <a name="AccessKey"></a>
-## type AccessKey
+## type [AccessKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/access_key.go#L38-L64>)
 
 AccessKey 表示一个访问键实体，用于 API 认证和授权 每个访问键属于一个用户，包含访问 ID 和密钥对
 
@@ -271,7 +271,7 @@ type AccessKey struct {
 ```
 
 <a name="NewAccessKey"></a>
-### func NewAccessKey
+### func [NewAccessKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/access_key.go#L100>)
 
 ```go
 func NewAccessKey(user *User, enabled bool, description string, expiredAt *time.Time) (*AccessKey, error)
@@ -290,7 +290,7 @@ NewAccessKey 创建一个新的访问键实例 参数:
 - error: 创建过程中发生的错误
 
 <a name="AccessKey.CreateWithLimit"></a>
-### func \(\*AccessKey\) CreateWithLimit
+### func \(\*AccessKey\) [CreateWithLimit](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/access_key.go#L130>)
 
 ```go
 func (a *AccessKey) CreateWithLimit(db *database.DB, maxCount int) error
@@ -306,7 +306,7 @@ CreateWithLimit 在事务中创建访问键，并检查用户已有的访问键�
 - error: 创建过程中发生的错误，如果超出数量限制返回 ErrTooManyAccessKey
 
 <a name="AccessKey.ExpiredAt"></a>
-### func \(\*AccessKey\) ExpiredAt
+### func \(\*AccessKey\) [ExpiredAt](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/access_key.go#L86>)
 
 ```go
 func (a *AccessKey) ExpiredAt() *time.Time
@@ -315,7 +315,7 @@ func (a *AccessKey) ExpiredAt() *time.Time
 ExpiredAt 返回访问键的过期时间 实现 auth.AccessKey 接口
 
 <a name="AccessKey.IsEnabled"></a>
-### func \(\*AccessKey\) IsEnabled
+### func \(\*AccessKey\) [IsEnabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/access_key.go#L74>)
 
 ```go
 func (a *AccessKey) IsEnabled() bool
@@ -324,7 +324,7 @@ func (a *AccessKey) IsEnabled() bool
 IsEnabled 返回访问键是否启用 实现 auth.AccessKey 接口
 
 <a name="AccessKey.Secret"></a>
-### func \(\*AccessKey\) Secret
+### func \(\*AccessKey\) [Secret](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/access_key.go#L80>)
 
 ```go
 func (a *AccessKey) Secret() string
@@ -333,7 +333,7 @@ func (a *AccessKey) Secret() string
 Secret 返回访问键的密钥 实现 auth.AccessKey 接口
 
 <a name="AccessKey.UserID"></a>
-### func \(\*AccessKey\) UserID
+### func \(\*AccessKey\) [UserID](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/access_key.go#L68>)
 
 ```go
 func (a *AccessKey) UserID() string
@@ -342,7 +342,7 @@ func (a *AccessKey) UserID() string
 UserID 返回用户的统一标识符 实现 auth.AccessKey 接口
 
 <a name="AccessKeyPool"></a>
-## type AccessKeyPool
+## type [AccessKeyPool](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/access_key.go#L150-L158>)
 
 AccessKeyPool 管理访问键的缓存和重复检查 用于防止重放攻击和提供访问键的快速查找
 
@@ -353,7 +353,7 @@ type AccessKeyPool struct {
 ```
 
 <a name="NewAccessKeyPool"></a>
-### func NewAccessKeyPool
+### func [NewAccessKeyPool](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/access_key.go#L174>)
 
 ```go
 func NewAccessKeyPool(db *database.DB, cache *redis.Client, ttl time.Duration) *AccessKeyPool
@@ -370,7 +370,7 @@ NewAccessKeyPool 创建一个新的访问键池实例 参数:
 - \*AccessKeyPool: 新创建的访问键池实例
 
 <a name="AccessKeyPool.FirstUsableByUser"></a>
-### func \(\*AccessKeyPool\) FirstUsableByUser
+### func \(\*AccessKeyPool\) [FirstUsableByUser](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/access_key.go#L211>)
 
 ```go
 func (a *AccessKeyPool) FirstUsableByUser(ctx context.Context, userID uint) (*AccessKey, error)
@@ -391,7 +391,7 @@ FirstUsableByUser 返回指定用户下第一条可用的访问密钥。
 - error: 查询过程中发生的错误
 
 <a name="AccessKeyPool.GetKey"></a>
-### func \(\*AccessKeyPool\) GetKey
+### func \(\*AccessKeyPool\) [GetKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/access_key.go#L190>)
 
 ```go
 func (a *AccessKeyPool) GetKey(ctx context.Context, id string) (auth.AccessKey, error)
@@ -408,7 +408,7 @@ GetKey 根据访问键 ID 获取访问键信息 参数:
 - error: 查询过程中发生的错误
 
 <a name="AccessKeyPool.IsDuplicated"></a>
-### func \(\*AccessKeyPool\) IsDuplicated
+### func \(\*AccessKeyPool\) [IsDuplicated](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/access_key.go#L237>)
 
 ```go
 func (a *AccessKeyPool) IsDuplicated(ctx context.Context, id string, timestamp time.Time, nonce string) (bool, error)
@@ -427,7 +427,7 @@ IsDuplicated 检查请求是否重复（防重放攻击） 参数:
 - error: 检查过程中发生的错误
 
 <a name="AccessKeyPool.UpdateLastAccess"></a>
-### func \(\*AccessKeyPool\) UpdateLastAccess
+### func \(\*AccessKeyPool\) [UpdateLastAccess](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/access_key.go#L264>)
 
 ```go
 func (a *AccessKeyPool) UpdateLastAccess(ctx context.Context, id string) error
@@ -443,7 +443,7 @@ UpdateLastAccess 更新访问键的最后访问时间 参数:
 - error: 更新过程中发生的错误
 
 <a name="Capturer"></a>
-## type Capturer
+## type [Capturer](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/capturer.go#L100-L110>)
 
 Capturer 表示一个数据采集器实体 该结构体映射数据库中的 capturer 表，用于存储采集器的元数据信息 采集器通过命名空间、名称和版本唯一标识
 
@@ -462,7 +462,7 @@ type Capturer struct {
 ```
 
 <a name="Capturer.CreateWithConfig"></a>
-### func \(\*Capturer\) CreateWithConfig
+### func \(\*Capturer\) [CreateWithConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/capturer.go#L125>)
 
 ```go
 func (c *Capturer) CreateWithConfig(db *database.DB, client *etcd.EtcdClient, cfg *reporter_v1.Config) error
@@ -484,7 +484,7 @@ CreateWithConfig 创建采集器记录并存储其配置到 etcd 该方法在一
 - 后续需要使用 saga 模式来保证跨系统的事务一致性
 
 <a name="Capturer.DeleteWithConfig"></a>
-### func \(\*Capturer\) DeleteWithConfig
+### func \(\*Capturer\) [DeleteWithConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/capturer.go#L181>)
 
 ```go
 func (c *Capturer) DeleteWithConfig(db *database.DB, client *etcd.EtcdClient) error
@@ -505,7 +505,7 @@ DeleteWithConfig 删除采集器记录及其在 etcd 中的配置 该方法在�
 - 与 CreateWithConfig 类似，存在跨系统事务一致性问题
 
 <a name="Capturer.GetConfig"></a>
-### func \(\*Capturer\) GetConfig
+### func \(\*Capturer\) [GetConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/capturer.go#L211>)
 
 ```go
 func (c *Capturer) GetConfig(ctx context.Context, client *etcd.EtcdClient) (*reporter_v1.Config, error)
@@ -527,7 +527,7 @@ GetConfig 从 etcd 获取采集器的配置 该方法查询 etcd 中存储的采
 - 该方法仅从 etcd 读取配置，不涉及数据库操作
 
 <a name="Capturer.GetStatusList"></a>
-### func \(\*Capturer\) GetStatusList
+### func \(\*Capturer\) [GetStatusList](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/capturer.go#L242>)
 
 ```go
 func (c *Capturer) GetStatusList(ctx context.Context, client *etcd.EtcdClient) ([]*reporter_v1.Status, error)
@@ -550,7 +550,7 @@ GetStatusList 从 etcd 获取采集器的状态列表 该方法查询 etcd 中�
 - 如果没有任何状态记录，返回 \(nil, nil\) 而不是错误
 
 <a name="Capturer.UpdateConfig"></a>
-### func \(\*Capturer\) UpdateConfig
+### func \(\*Capturer\) [UpdateConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/capturer.go#L155>)
 
 ```go
 func (c *Capturer) UpdateConfig(ctx context.Context, client *etcd.EtcdClient, cfg *reporter_v1.Config) error
@@ -567,7 +567,7 @@ UpdateConfig 更新采集器的配置到 etcd 该方法仅更新 etcd 中的配�
 - error: 更新过程中的错误，包括序列化错误和 etcd 操作错误
 
 <a name="Datasource"></a>
-## type Datasource
+## type [Datasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/datasource.go#L20-L40>)
 
 Datasource 表示一个命名空间级的第三方数据源配置，每行对应一张 sqlite vtable。 Name 为命名空间内唯一（与 NamespaceName 组合唯一）的本地身份；注册时作为所在 命名空间池（vtab.Pools）内的裸名 vtable \{name\}，rego 规则直接以该裸名引用。 Type 表明数据源类型（redis | mysql）；Config 为连接配置（含密码等凭据），以加密 形式落库（crypto serializer，BYTEA 列），明文经 ConfigData\(\) 获取。
 
@@ -596,7 +596,7 @@ type Datasource struct {
 ```
 
 <a name="Datasource.ConfigData"></a>
-### func \(\*Datasource\) ConfigData
+### func \(\*Datasource\) [ConfigData](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/datasource.go#L43>)
 
 ```go
 func (d *Datasource) ConfigData() []byte
@@ -605,7 +605,7 @@ func (d *Datasource) ConfigData() []byte
 ConfigData 返回数据源连接配置的明文字节，nil 安全（Config 为空或 nil 时返回 nil）。
 
 <a name="Group"></a>
-## type Group
+## type [Group](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/group.go#L10-L16>)
 
 Group 表示系统中的用户组实体。 组用于对用户进行逻辑分组，便于权限管理和资源分配。 每个组具有唯一的名称和可选的描述信息。
 
@@ -620,7 +620,7 @@ type Group struct {
 ```
 
 <a name="Namespace"></a>
-## type Namespace
+## type [Namespace](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/namespace.go#L147-L151>)
 
 Namespace 表示命名空间模型，命名空间的名称不可修改
 
@@ -633,7 +633,7 @@ type Namespace struct {
 ```
 
 <a name="Namespace.AfterCreate"></a>
-### func \(\*Namespace\) AfterCreate
+### func \(\*Namespace\) [AfterCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/namespace.go#L159>)
 
 ```go
 func (n *Namespace) AfterCreate(_ *database.DB) error
@@ -648,7 +648,7 @@ AfterCreate 在创建命名空间后触发的钩子函数，将命名空间名�
 - error: 操作过程中发生的错误，如果成功则返回nil
 
 <a name="Namespace.AfterDelete"></a>
-### func \(\*Namespace\) AfterDelete
+### func \(\*Namespace\) [AfterDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/namespace.go#L170>)
 
 ```go
 func (n *Namespace) AfterDelete(_ *database.DB) error
@@ -663,7 +663,7 @@ AfterDelete 在删除命名空间后触发的钩子函数，从缓存中移除�
 - error: 操作过程中发生的错误，如果成功则返回nil
 
 <a name="Namespace.AfterUpdate"></a>
-### func \(\*Namespace\) AfterUpdate
+### func \(\*Namespace\) [AfterUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/namespace.go#L182>)
 
 ```go
 func (n *Namespace) AfterUpdate(db *database.DB) error
@@ -678,7 +678,7 @@ AfterUpdate 在更新命名空间后触发的钩子函数，检查命名空间�
 - error: 如果名称被修改则返回错误，否则返回nil
 
 <a name="NamespaceCache"></a>
-## type NamespaceCache
+## type [NamespaceCache](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/namespace.go#L19-L23>)
 
 NamespaceCache 是命名空间缓存结构体，提供线程安全的命名空间名称缓存。 缓存作为性能优化层：命中时直接返回，未命中时回源数据库查询， 从而在无外部缓存（如 Redis）的情况下也能正确处理多实例部署场景。
 
@@ -697,7 +697,7 @@ var (
 ```
 
 <a name="NewNamespaceCache"></a>
-### func NewNamespaceCache
+### func [NewNamespaceCache](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/namespace.go#L27>)
 
 ```go
 func NewNamespaceCache() *NamespaceCache
@@ -706,7 +706,7 @@ func NewNamespaceCache() *NamespaceCache
 NewNamespaceCache 创建并返回一个新的 NamespaceCache 实例 用于需要独立创建缓存对象的场景（如单元测试）
 
 <a name="NamespaceCache.Add"></a>
-### func \(\*NamespaceCache\) Add
+### func \(\*NamespaceCache\) [Add](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/namespace.go#L122>)
 
 ```go
 func (n *NamespaceCache) Add(namespace string)
@@ -717,7 +717,7 @@ Add 向缓存中添加一个命名空间名称 参数：
 - namespace: 要添加的命名空间名称
 
 <a name="NamespaceCache.All"></a>
-### func \(\*NamespaceCache\) All
+### func \(\*NamespaceCache\) [All](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/namespace.go#L100>)
 
 ```go
 func (n *NamespaceCache) All(ctx context.Context) []string
@@ -728,7 +728,7 @@ All 返回缓存中所有的命名空间名称。 如果缓存为空且已设置
 - \[\]string: 命名空间名称的切片
 
 <a name="NamespaceCache.Clear"></a>
-### func \(\*NamespaceCache\) Clear
+### func \(\*NamespaceCache\) [Clear](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/namespace.go#L90>)
 
 ```go
 func (n *NamespaceCache) Clear()
@@ -737,7 +737,7 @@ func (n *NamespaceCache) Clear()
 Clear 清空缓存
 
 <a name="NamespaceCache.Load"></a>
-### func \(\*NamespaceCache\) Load
+### func \(\*NamespaceCache\) [Load](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/namespace.go#L57>)
 
 ```go
 func (n *NamespaceCache) Load(ctx context.Context) error
@@ -752,7 +752,7 @@ Load 从数据库加载所有命名空间名称到缓存中，会完全替换当
 - error: 加载过程中发生的错误，如果成功则返回nil
 
 <a name="NamespaceCache.Reload"></a>
-### func \(\*NamespaceCache\) Reload
+### func \(\*NamespaceCache\) [Reload](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/namespace.go#L69>)
 
 ```go
 func (n *NamespaceCache) Reload(ctx context.Context) error
@@ -767,7 +767,7 @@ Reload 重新从数据库加载所有命名空间名称到缓存中，是 Load �
 - error: 加载过程中发生的错误，如果成功则返回nil
 
 <a name="NamespaceCache.SetDB"></a>
-### func \(\*NamespaceCache\) SetDB
+### func \(\*NamespaceCache\) [SetDB](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/namespace.go#L45>)
 
 ```go
 func (n *NamespaceCache) SetDB(db *database.DB)
@@ -778,7 +778,7 @@ SetDB 设置数据库连接引用，使缓存具备懒加载和回源查询的�
 - db: 数据库连接
 
 <a name="NotificationChannel"></a>
-## type NotificationChannel
+## type [NotificationChannel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/notification.go#L45-L64>)
 
 NotificationChannel 表示一个告警通知渠道，如邮件（email）、Webhook 等。 渠道类型键（Type）与渠道基座定义在 internal/pkg/message，不在本文件定义， 以避免 message 包与 models/core 包之间的 import cycle（message 包依赖内部 pkg，不依赖 models）。 对应表为 notification\_channels。
 
@@ -806,7 +806,7 @@ type NotificationChannel struct {
 ```
 
 <a name="NotificationChannel.ConfigData"></a>
-### func \(\*NotificationChannel\) ConfigData
+### func \(\*NotificationChannel\) [ConfigData](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/notification.go#L67>)
 
 ```go
 func (c *NotificationChannel) ConfigData() []byte
@@ -815,7 +815,7 @@ func (c *NotificationChannel) ConfigData() []byte
 ConfigData 返回渠道配置的明文字节，nil 安全（Config 为空或 nil 时返回 nil）。
 
 <a name="NotificationGroup"></a>
-## type NotificationGroup
+## type [NotificationGroup](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/notification.go#L118-L131>)
 
 NotificationGroup 表示一个通知目标组，将多个通知目标聚合为一个组， 事件规则（TagEventRule）可绑定通知组以批量通知组内目标。 每个命名空间至多一个默认组（IsDefault），由迁移 SQL 中的部分唯一索引 uq\_notification\_groups\_namespace\_default 保证；未绑定通知组的规则使用默认组。 对应表为 notification\_groups。
 
@@ -837,7 +837,7 @@ type NotificationGroup struct {
 ```
 
 <a name="NotificationGroupTarget"></a>
-## type NotificationGroupTarget
+## type [NotificationGroupTarget](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/notification.go#L136-L143>)
 
 NotificationGroupTarget 表示通知组与通知目标的多对多关联记录。 同一目标可加入多个组，同一组内目标不重复（group\_id \+ target\_id 组合唯一）。 对应表为 notification\_group\_targets。
 
@@ -853,7 +853,7 @@ type NotificationGroupTarget struct {
 ```
 
 <a name="NotificationRecord"></a>
-## type NotificationRecord
+## type [NotificationRecord](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/notification.go#L151-L181>)
 
 NotificationRecord 表示一条通知发送记录，记录某事件（EventID）对某目标（TargetID） 的发送尝试与结果，包括所属通知组（GroupID）、发送渠道（ChannelID）与渠道类型快照 （ChannelType）、发送状态（Status）、渠道返回的消息 ID（MessageID）、 通知负载快照（Payload）与实际发送成功时间（NotifiedAt）。 同一事件类型下的同一事件对同一目标至多一条记录（event\_type \+ event\_id \+ target\_id 组合唯一）。 对应表为 notification\_records。
 
@@ -892,7 +892,7 @@ type NotificationRecord struct {
 ```
 
 <a name="NotificationTarget"></a>
-## type NotificationTarget
+## type [NotificationTarget](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/notification.go#L78-L103>)
 
 NotificationTarget 表示一个通知目标，是通知的实际接收者（如某个邮箱地址、 Webhook URL、企业微信群机器人等），归属于某个通知渠道（ChannelID）。 Type 为渠道类型键快照，取值定义在 internal/pkg/message。 对应表为 notification\_targets。
 
@@ -926,7 +926,7 @@ type NotificationTarget struct {
 ```
 
 <a name="NotificationTarget.ConfigData"></a>
-### func \(\*NotificationTarget\) ConfigData
+### func \(\*NotificationTarget\) [ConfigData](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/notification.go#L106>)
 
 ```go
 func (t *NotificationTarget) ConfigData() []byte
@@ -935,7 +935,7 @@ func (t *NotificationTarget) ConfigData() []byte
 ConfigData 返回目标配置的明文字节，nil 安全（Config 为空或 nil 时返回 nil）。
 
 <a name="NotificationTemplate"></a>
-## type NotificationTemplate
+## type [NotificationTemplate](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/notification.go#L190-L211>)
 
 NotificationTemplate 表示一条命名空间级的通知消息模板，描述某事件（Event）对某 渠道类型（ChannelType）在某种语言（Language）下的标题（Title）与正文（Content）； Title 与 Content 为 Go text/template 模板，按事件负载渲染。同一命名空间下 （event \+ channel\_type \+ language）组合唯一：该组合唯一确定一条可用的消息模板， ChannelType 与 Language 支持 "\*" 通配。Source 标记模板行是内置默认模板（default） 还是用户覆盖模板（override）；内置默认模板由事件模板注册表 （internal/notify/template.go）种子生成。对应表为 notification\_templates。
 
@@ -965,7 +965,7 @@ type NotificationTemplate struct {
 ```
 
 <a name="RbacPolicy"></a>
-## type RbacPolicy
+## type [RbacPolicy](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/rbac_policy.go#L12-L46>)
 
 RbacPolicy 表示基于角色的访问控制策略 该结构体遵循Casbin RBAC模型，支持策略\(policy\)和组\(group\)两种类型 数据库表名默认为"rbac\_policies"，通过uniqueIndex:uq\_rbac\_policies\_ptype\_v0\_v1\_v2确保唯一性
 
@@ -1008,7 +1008,7 @@ type RbacPolicy struct {
 ```
 
 <a name="NewGroupPolicy"></a>
-### func NewGroupPolicy
+### func [NewGroupPolicy](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/rbac_policy.go#L59>)
 
 ```go
 func NewGroupPolicy(group, target, action, effect string) *RbacPolicy
@@ -1028,7 +1028,7 @@ NewGroupPolicy 创建新的组策略实例 组策略定义了一个组对特定�
 - \*RbacPolicy: 新创建的组策略实例
 
 <a name="NewUserPolicy"></a>
-### func NewUserPolicy
+### func [NewUserPolicy](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/rbac_policy.go#L79>)
 
 ```go
 func NewUserPolicy(unionID serializer.HexUUID, group, namespace string) *RbacPolicy
@@ -1047,7 +1047,7 @@ NewUserPolicy 创建新的用户策略实例 用户策略定义了用户与组�
 - \*RbacPolicy: 新创建的用户策略实例
 
 <a name="RbacPolicyTemplate"></a>
-## type RbacPolicyTemplate
+## type [RbacPolicyTemplate](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/rbac_policy.go#L91-L101>)
 
 RbacPolicyTemplate 表示RBAC策略模板 用于预定义可用的目标对象和操作组合，确保策略的一致性 数据库表名默认为"rbac\_policy\_templates"，通过uniqueIndex:uq\_rbac\_policy\_templates\_target\_action确保唯一性
 
@@ -1066,7 +1066,7 @@ type RbacPolicyTemplate struct {
 ```
 
 <a name="NewRbacPolicyTemplate"></a>
-### func NewRbacPolicyTemplate
+### func [NewRbacPolicyTemplate](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/rbac_policy.go#L111>)
 
 ```go
 func NewRbacPolicyTemplate(target, action string) *RbacPolicyTemplate
@@ -1084,7 +1084,7 @@ NewRbacPolicyTemplate 创建新的RBAC策略模板实例
 - \*RbacPolicyTemplate: 新创建的策略模板实例
 
 <a name="User"></a>
-## type User
+## type [User](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/user.go#L14-L57>)
 
 User 表示系统用户实体 该结构体映射到数据库中的用户表，包含用户的基本信息和认证凭据
 
@@ -1136,7 +1136,7 @@ type User struct {
 ```
 
 <a name="User.Create"></a>
-### func \(\*User\) Create
+### func \(\*User\) [Create](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/user.go#L99>)
 
 ```go
 func (u *User) Create(db *database.DB, superuser bool) error
@@ -1162,7 +1162,7 @@ Create 创建新用户并分配相应的 RBAC 策略
 5. 错误处理使用 errors.WithStack 包装错误信息，便于调试
 
 <a name="User.ResetPassword"></a>
-### func \(\*User\) ResetPassword
+### func \(\*User\) [ResetPassword](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/user.go#L73>)
 
 ```go
 func (u *User) ResetPassword(db *database.DB, password string) error
@@ -1187,7 +1187,7 @@ ResetPassword 重置用户密码
 4. 错误处理使用 errors.WithStack 包装错误信息，便于调试
 
 <a name="UserPasswordReset"></a>
-## type UserPasswordReset
+## type [UserPasswordReset](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/user_password_reset.go#L12-L25>)
 
 UserPasswordReset 表示用户强制重置密码的记录实体 该结构体映射到数据库中的 user\_password\_resets 表， 存储用户"忘记密码"申请的令牌摘要、过期时间与使用状态。
 

@@ -240,7 +240,7 @@ const AccessKeyPoolTTL = time.Minute
 ```
 
 <a name="CoreModels"></a>
-## func CoreModels
+## func [CoreModels](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L28>)
 
 ```go
 func CoreModels() []any
@@ -249,7 +249,7 @@ func CoreModels() []any
 CoreModels 返回 core 数据库的全部打标模型清单，供迁移一致性检查使用。
 
 <a name="DescribeCryptoConfig"></a>
-## func DescribeCryptoConfig
+## func [DescribeCryptoConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/crypto.go#L45>)
 
 ```go
 func DescribeCryptoConfig() config.ConfigDescriptions
@@ -258,7 +258,7 @@ func DescribeCryptoConfig() config.ConfigDescriptions
 DescribeCryptoConfig 返回加密密钥相关配置项描述。
 
 <a name="DescribeDatabaseConfig"></a>
-## func DescribeDatabaseConfig
+## func [DescribeDatabaseConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L189>)
 
 ```go
 func DescribeDatabaseConfig() config.ConfigDescriptions
@@ -267,7 +267,7 @@ func DescribeDatabaseConfig() config.ConfigDescriptions
 DescribeDatabaseConfig 返回各数据库的配置项描述。
 
 <a name="DescribeEtcdConfig"></a>
-## func DescribeEtcdConfig
+## func [DescribeEtcdConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/etcd.go#L53>)
 
 ```go
 func DescribeEtcdConfig() config.ConfigDescriptions
@@ -276,7 +276,7 @@ func DescribeEtcdConfig() config.ConfigDescriptions
 DescribeEtcdConfig 返回 etcd 配置项的元描述列表。
 
 <a name="DescribeGrpcClientConfig"></a>
-## func DescribeGrpcClientConfig
+## func [DescribeGrpcClientConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/grpc.go#L110>)
 
 ```go
 func DescribeGrpcClientConfig() config.ConfigDescriptions
@@ -285,7 +285,7 @@ func DescribeGrpcClientConfig() config.ConfigDescriptions
 DescribeGrpcClientConfig 返回 reporter gRPC 客户端的配置项描述。
 
 <a name="DescribeGrpcServerConfig"></a>
-## func DescribeGrpcServerConfig
+## func [DescribeGrpcServerConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/grpc.go#L105>)
 
 ```go
 func DescribeGrpcServerConfig() config.ConfigDescriptions
@@ -294,7 +294,7 @@ func DescribeGrpcServerConfig() config.ConfigDescriptions
 DescribeGrpcServerConfig 返回 reporter gRPC 服务端的配置项描述。
 
 <a name="DescribeHealthConfig"></a>
-## func DescribeHealthConfig
+## func [DescribeHealthConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/health.go#L101>)
 
 ```go
 func DescribeHealthConfig() config.ConfigDescriptions
@@ -303,7 +303,7 @@ func DescribeHealthConfig() config.ConfigDescriptions
 DescribeHealthConfig 返回健康探针配置描述。
 
 <a name="DescribeLoggerConfig"></a>
-## func DescribeLoggerConfig
+## func [DescribeLoggerConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L180>)
 
 ```go
 func DescribeLoggerConfig() config.ConfigDescriptions
@@ -312,7 +312,7 @@ func DescribeLoggerConfig() config.ConfigDescriptions
 DescribeLoggerConfig 返回各日志器的配置项描述。
 
 <a name="DescribeMailConfig"></a>
-## func DescribeMailConfig
+## func [DescribeMailConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/mail.go#L48>)
 
 ```go
 func DescribeMailConfig() config.ConfigDescriptions
@@ -321,7 +321,7 @@ func DescribeMailConfig() config.ConfigDescriptions
 DescribeMailConfig 返回系统邮件直发（\[smtp\]）配置的结构化描述信息（供 describe config 渲染）。
 
 <a name="DescribePipelineConfig"></a>
-## func DescribePipelineConfig
+## func [DescribePipelineConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L273>)
 
 ```go
 func DescribePipelineConfig() config.ConfigDescriptions
@@ -330,7 +330,7 @@ func DescribePipelineConfig() config.ConfigDescriptions
 DescribePipelineConfig 返回流水线的配置项描述。
 
 <a name="DescribeRedisConfig"></a>
-## func DescribeRedisConfig
+## func [DescribeRedisConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/redis.go#L71>)
 
 ```go
 func DescribeRedisConfig() config.ConfigDescriptions
@@ -339,7 +339,7 @@ func DescribeRedisConfig() config.ConfigDescriptions
 DescribeRedisConfig 返回缓存与管道 Redis 的配置项描述。
 
 <a name="DescribeS3Config"></a>
-## func DescribeS3Config
+## func [DescribeS3Config](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/s3.go#L55>)
 
 ```go
 func DescribeS3Config() config.ConfigDescriptions
@@ -348,7 +348,7 @@ func DescribeS3Config() config.ConfigDescriptions
 DescribeS3Config 返回 S3 配置项的元描述列表。
 
 <a name="GetScope"></a>
-## func GetScope
+## func [GetScope](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L34>)
 
 ```go
 func GetScope(ctx context.Context) *do.Scope
@@ -357,7 +357,7 @@ func GetScope(ctx context.Context) *do.Scope
 GetScope 从上下文中获取注入器实例。
 
 <a name="InjectAccessKeyPool"></a>
-## func InjectAccessKeyPool
+## func [InjectAccessKeyPool](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/accesskey.go#L33>)
 
 ```go
 func InjectAccessKeyPool(i do.Injector)
@@ -366,7 +366,7 @@ func InjectAccessKeyPool(i do.Injector)
 InjectAccessKeyPool 向依赖注入器注册访问密钥池 provider。
 
 <a name="InjectAi"></a>
-## func InjectAi
+## func [InjectAi](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/ai.go#L38>)
 
 ```go
 func InjectAi(ctx context.Context, i do.Injector)
@@ -375,7 +375,7 @@ func InjectAi(ctx context.Context, i do.Injector)
 InjectAi 向依赖注入器注册 AI 助手运行时 provider。
 
 <a name="InjectApiLogger"></a>
-## func InjectApiLogger
+## func [InjectApiLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L80>)
 
 ```go
 func InjectApiLogger(i do.Injector)
@@ -384,7 +384,7 @@ func InjectApiLogger(i do.Injector)
 InjectApiLogger 向依赖注入器注册 API 日志器 provider。
 
 <a name="InjectCacheRedis"></a>
-## func InjectCacheRedis
+## func [InjectCacheRedis](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/redis.go#L46>)
 
 ```go
 func InjectCacheRedis(i do.Injector)
@@ -393,7 +393,7 @@ func InjectCacheRedis(i do.Injector)
 InjectCacheRedis 向依赖注入器注册缓存 Redis 客户端 provider。
 
 <a name="InjectCaptureClient"></a>
-## func InjectCaptureClient
+## func [InjectCaptureClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/capture.go#L42>)
 
 ```go
 func InjectCaptureClient(i do.Injector)
@@ -402,7 +402,7 @@ func InjectCaptureClient(i do.Injector)
 InjectCaptureClient 向依赖注入器注册抓包客户端 provider。
 
 <a name="InjectCaptureLogger"></a>
-## func InjectCaptureLogger
+## func [InjectCaptureLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L90>)
 
 ```go
 func InjectCaptureLogger(i do.Injector)
@@ -411,7 +411,7 @@ func InjectCaptureLogger(i do.Injector)
 InjectCaptureLogger 向依赖注入器注册抓包日志器 provider。
 
 <a name="InjectCommand"></a>
-## func InjectCommand
+## func [InjectCommand](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/command.go#L15>)
 
 ```go
 func InjectCommand(i do.Injector, cmd *cobra.Command)
@@ -420,7 +420,7 @@ func InjectCommand(i do.Injector, cmd *cobra.Command)
 InjectCommand 向依赖注入器注册给定的 cobra 命令。
 
 <a name="InjectCoreDatabase"></a>
-## func InjectCoreDatabase
+## func [InjectCoreDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L135>)
 
 ```go
 func InjectCoreDatabase(i do.Injector)
@@ -429,7 +429,7 @@ func InjectCoreDatabase(i do.Injector)
 InjectCoreDatabase 向依赖注入器注册 core 数据库 provider。
 
 <a name="InjectDatabaseLogger"></a>
-## func InjectDatabaseLogger
+## func [InjectDatabaseLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L85>)
 
 ```go
 func InjectDatabaseLogger(i do.Injector)
@@ -438,7 +438,7 @@ func InjectDatabaseLogger(i do.Injector)
 InjectDatabaseLogger 向依赖注入器注册数据库日志器 provider。
 
 <a name="InjectDatasourceWatcher"></a>
-## func InjectDatasourceWatcher
+## func [InjectDatasourceWatcher](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/datasource.go#L33>)
 
 ```go
 func InjectDatasourceWatcher(i do.Injector)
@@ -447,7 +447,7 @@ func InjectDatasourceWatcher(i do.Injector)
 InjectDatasourceWatcher 注册数据源变更监听器 provider。
 
 <a name="InjectDefaultLogger"></a>
-## func InjectDefaultLogger
+## func [InjectDefaultLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L75>)
 
 ```go
 func InjectDefaultLogger(i do.Injector)
@@ -456,7 +456,7 @@ func InjectDefaultLogger(i do.Injector)
 InjectDefaultLogger 向依赖注入器注册默认日志器 provider。
 
 <a name="InjectEtcdClient"></a>
-## func InjectEtcdClient
+## func [InjectEtcdClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/etcd.go#L38>)
 
 ```go
 func InjectEtcdClient(ctx context.Context, i do.Injector)
@@ -465,7 +465,7 @@ func InjectEtcdClient(ctx context.Context, i do.Injector)
 InjectEtcdClient 向依赖注入器注册 etcd 客户端 provider。
 
 <a name="InjectEtcdLogger"></a>
-## func InjectEtcdLogger
+## func [InjectEtcdLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L95>)
 
 ```go
 func InjectEtcdLogger(i do.Injector)
@@ -474,7 +474,7 @@ func InjectEtcdLogger(i do.Injector)
 InjectEtcdLogger 向依赖注入器注册 etcd 日志器 provider。
 
 <a name="InjectFeatureRegistry"></a>
-## func InjectFeatureRegistry
+## func [InjectFeatureRegistry](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/features.go#L103>)
 
 ```go
 func InjectFeatureRegistry(i do.Injector)
@@ -483,7 +483,7 @@ func InjectFeatureRegistry(i do.Injector)
 InjectFeatureRegistry 向依赖注入器注册功能开关注册表 provider。
 
 <a name="InjectGin"></a>
-## func InjectGin
+## func [InjectGin](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/web.go#L22>)
 
 ```go
 func InjectGin(i do.Injector)
@@ -492,7 +492,7 @@ func InjectGin(i do.Injector)
 InjectGin 向依赖注入器注册 Gin 引擎 provider。
 
 <a name="InjectGrpcLogger"></a>
-## func InjectGrpcLogger
+## func [InjectGrpcLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L100>)
 
 ```go
 func InjectGrpcLogger(i do.Injector)
@@ -501,7 +501,7 @@ func InjectGrpcLogger(i do.Injector)
 InjectGrpcLogger 向依赖注入器注册 gRPC 日志器 provider。
 
 <a name="InjectHealthServer"></a>
-## func InjectHealthServer
+## func [InjectHealthServer](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/health.go#L49>)
 
 ```go
 func InjectHealthServer(ctx context.Context, i do.Injector)
@@ -510,7 +510,7 @@ func InjectHealthServer(ctx context.Context, i do.Injector)
 InjectHealthServer 注册全局健康探针服务。
 
 <a name="InjectJSEngine"></a>
-## func InjectJSEngine
+## func [InjectJSEngine](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/jsengine.go#L30>)
 
 ```go
 func InjectJSEngine(ctx context.Context, i do.Injector)
@@ -519,7 +519,7 @@ func InjectJSEngine(ctx context.Context, i do.Injector)
 InjectJSEngine 向依赖注入器注册 JS 运行时 provider。
 
 <a name="InjectKeyDerivation"></a>
-## func InjectKeyDerivation
+## func [InjectKeyDerivation](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/crypto.go#L30>)
 
 ```go
 func InjectKeyDerivation(i do.Injector)
@@ -528,7 +528,7 @@ func InjectKeyDerivation(i do.Injector)
 InjectKeyDerivation 向依赖注入器注册密钥派生器 provider，并初始化全局密钥派生器。
 
 <a name="InjectMailSender"></a>
-## func InjectMailSender
+## func [InjectMailSender](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/mail.go#L33>)
 
 ```go
 func InjectMailSender(i do.Injector)
@@ -537,7 +537,7 @@ func InjectMailSender(i do.Injector)
 InjectMailSender 注册系统邮件发送器 provider。
 
 <a name="InjectMessagePool"></a>
-## func InjectMessagePool
+## func [InjectMessagePool](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/message_pool.go#L20>)
 
 ```go
 func InjectMessagePool(i do.Injector)
@@ -546,7 +546,7 @@ func InjectMessagePool(i do.Injector)
 InjectMessagePool 注册消息渠道连接池 provider。 \*message.Pool 自身实现 do.ShutdownerWithContextAndError（Shutdown 转发 CloseAll），故启动期经 MustInvokeMessagePool 预解析后，优雅关闭阶段由 samber/do 直接驱动池自身关闭，无需额外的关闭器 provider。
 
 <a name="InjectObjectCache"></a>
-## func InjectObjectCache
+## func [InjectObjectCache](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/objectcache.go#L36>)
 
 ```go
 func InjectObjectCache(i do.Injector)
@@ -555,7 +555,7 @@ func InjectObjectCache(i do.Injector)
 InjectObjectCache 注册共享的通用对象缓存 provider。
 
 <a name="InjectOtelShutdowner"></a>
-## func InjectOtelShutdowner
+## func [InjectOtelShutdowner](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/otel.go#L38>)
 
 ```go
 func InjectOtelShutdowner(ctx context.Context, i do.Injector)
@@ -564,7 +564,7 @@ func InjectOtelShutdowner(ctx context.Context, i do.Injector)
 InjectOtelShutdowner 向依赖注入器注册 OpenTelemetry 关闭器 provider。
 
 <a name="InjectPipelineClient"></a>
-## func InjectPipelineClient
+## func [InjectPipelineClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L203>)
 
 ```go
 func InjectPipelineClient(i do.Injector)
@@ -573,7 +573,7 @@ func InjectPipelineClient(i do.Injector)
 InjectPipelineClient 向依赖注入器注册流水线客户端 provider（按需创建）。
 
 <a name="InjectPipelineInspector"></a>
-## func InjectPipelineInspector
+## func [InjectPipelineInspector](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L183>)
 
 ```go
 func InjectPipelineInspector(i do.Injector)
@@ -582,7 +582,7 @@ func InjectPipelineInspector(i do.Injector)
 InjectPipelineInspector 向依赖注入器注册流水线巡检器 provider。
 
 <a name="InjectPipelineLogger"></a>
-## func InjectPipelineLogger
+## func [InjectPipelineLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L105>)
 
 ```go
 func InjectPipelineLogger(i do.Injector)
@@ -591,7 +591,7 @@ func InjectPipelineLogger(i do.Injector)
 InjectPipelineLogger 向依赖注入器注册流水线日志器 provider。
 
 <a name="InjectPipelineProcessorFactoriesRegistry"></a>
-## func InjectPipelineProcessorFactoriesRegistry
+## func [InjectPipelineProcessorFactoriesRegistry](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L198>)
 
 ```go
 func InjectPipelineProcessorFactoriesRegistry(i do.Injector)
@@ -600,7 +600,7 @@ func InjectPipelineProcessorFactoriesRegistry(i do.Injector)
 InjectPipelineProcessorFactoriesRegistry 向依赖注入器注册流水线处理器工厂注册表 provider。
 
 <a name="InjectPipelineRedis"></a>
-## func InjectPipelineRedis
+## func [InjectPipelineRedis](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/redis.go#L51>)
 
 ```go
 func InjectPipelineRedis(i do.Injector)
@@ -609,7 +609,7 @@ func InjectPipelineRedis(i do.Injector)
 InjectPipelineRedis 向依赖注入器注册管道 Redis 客户端 provider。
 
 <a name="InjectPipelineRegistry"></a>
-## func InjectPipelineRegistry
+## func [InjectPipelineRegistry](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L193>)
 
 ```go
 func InjectPipelineRegistry(i do.Injector)
@@ -618,7 +618,7 @@ func InjectPipelineRegistry(i do.Injector)
 InjectPipelineRegistry 向依赖注入器注册流水线任务注册表 provider。
 
 <a name="InjectPipelineScheduler"></a>
-## func InjectPipelineScheduler
+## func [InjectPipelineScheduler](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L188>)
 
 ```go
 func InjectPipelineScheduler(ctx context.Context, i do.Injector)
@@ -627,7 +627,7 @@ func InjectPipelineScheduler(ctx context.Context, i do.Injector)
 InjectPipelineScheduler 向依赖注入器注册流水线调度器 provider。
 
 <a name="InjectPipelineServer"></a>
-## func InjectPipelineServer
+## func [InjectPipelineServer](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L208>)
 
 ```go
 func InjectPipelineServer(ctx context.Context, i do.Injector)
@@ -636,7 +636,7 @@ func InjectPipelineServer(ctx context.Context, i do.Injector)
 InjectPipelineServer 向依赖注入器注册流水线服务端 provider。
 
 <a name="InjectRawDatabase"></a>
-## func InjectRawDatabase
+## func [InjectRawDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L140>)
 
 ```go
 func InjectRawDatabase(i do.Injector)
@@ -645,7 +645,7 @@ func InjectRawDatabase(i do.Injector)
 InjectRawDatabase 向依赖注入器注册 raw 数据库 provider。
 
 <a name="InjectRbac"></a>
-## func InjectRbac
+## func [InjectRbac](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/rbac.go#L42>)
 
 ```go
 func InjectRbac(i do.Injector)
@@ -654,7 +654,7 @@ func InjectRbac(i do.Injector)
 InjectRbac 将 RBAC 执行器 provider 注册到依赖注入容器。
 
 <a name="InjectReporterGrpcClient"></a>
-## func InjectReporterGrpcClient
+## func [InjectReporterGrpcClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/grpc.go#L78>)
 
 ```go
 func InjectReporterGrpcClient(i do.Injector)
@@ -663,7 +663,7 @@ func InjectReporterGrpcClient(i do.Injector)
 InjectReporterGrpcClient 向依赖注入器注册 reporter gRPC 客户端 provider。
 
 <a name="InjectReporterGrpcServer"></a>
-## func InjectReporterGrpcServer
+## func [InjectReporterGrpcServer](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/grpc.go#L73>)
 
 ```go
 func InjectReporterGrpcServer(i do.Injector)
@@ -672,7 +672,7 @@ func InjectReporterGrpcServer(i do.Injector)
 InjectReporterGrpcServer 向依赖注入器注册 reporter gRPC 服务端 provider。
 
 <a name="InjectS3"></a>
-## func InjectS3
+## func [InjectS3](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/s3.go#L36>)
 
 ```go
 func InjectS3(i do.Injector)
@@ -681,7 +681,7 @@ func InjectS3(i do.Injector)
 InjectS3 向依赖注入器注册 S3 客户端 provider。
 
 <a name="InjectSQLiteVTabPools"></a>
-## func InjectSQLiteVTabPools
+## func [InjectSQLiteVTabPools](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/sqlitevtab.go#L31>)
 
 ```go
 func InjectSQLiteVTabPools(i do.Injector)
@@ -690,7 +690,7 @@ func InjectSQLiteVTabPools(i do.Injector)
 InjectSQLiteVTabPools 注册 sqlite vtable 池持有者 provider。 \*vtab.Pools 自身实现 do.ShutdownerWithContextAndError（Shutdown 转发 Close 关闭全部命名空间池），故启动期经 MustInvokeSQLiteVTabPools 预解析后， 优雅关闭阶段由 samber/do 直接驱动其关闭，无需额外的关闭器 provider。
 
 <a name="InjectTagEngine"></a>
-## func InjectTagEngine
+## func [InjectTagEngine](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/tagengine.go#L33>)
 
 ```go
 func InjectTagEngine(i do.Injector)
@@ -699,7 +699,7 @@ func InjectTagEngine(i do.Injector)
 InjectTagEngine 向依赖注入器注册标签识别引擎 provider。
 
 <a name="InjectUniversalTranslator"></a>
-## func InjectUniversalTranslator
+## func [InjectUniversalTranslator](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/validator.go#L43>)
 
 ```go
 func InjectUniversalTranslator(ctx context.Context, i do.Injector)
@@ -708,7 +708,7 @@ func InjectUniversalTranslator(ctx context.Context, i do.Injector)
 InjectUniversalTranslator 向依赖注入器注册通用翻译器 provider，并登记校验规则及其多语言翻译。
 
 <a name="InjectViper"></a>
-## func InjectViper
+## func [InjectViper](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/viper.go#L22>)
 
 ```go
 func InjectViper(i do.Injector)
@@ -717,7 +717,7 @@ func InjectViper(i do.Injector)
 InjectViper 向依赖注入器注册 Viper 配置实例 provider。
 
 <a name="InvokeAccessKeyPool"></a>
-## func InvokeAccessKeyPool
+## func [InvokeAccessKeyPool](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/accesskey.go#L38>)
 
 ```go
 func InvokeAccessKeyPool(i do.Injector) (*coremodel.AccessKeyPool, error)
@@ -726,7 +726,7 @@ func InvokeAccessKeyPool(i do.Injector) (*coremodel.AccessKeyPool, error)
 InvokeAccessKeyPool 从依赖注入器解析访问密钥池，错误交由调用方处理。
 
 <a name="InvokeAi"></a>
-## func InvokeAi
+## func [InvokeAi](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/ai.go#L43>)
 
 ```go
 func InvokeAi(ctx context.Context, i do.Injector) (*ai.Runtime, error)
@@ -735,7 +735,7 @@ func InvokeAi(ctx context.Context, i do.Injector) (*ai.Runtime, error)
 InvokeAi 从依赖注入器解析 AI 助手运行时，错误在调用方处理。
 
 <a name="InvokeApiLogger"></a>
-## func InvokeApiLogger
+## func [InvokeApiLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L115>)
 
 ```go
 func InvokeApiLogger(i do.Injector) (*logging.Logger, error)
@@ -744,7 +744,7 @@ func InvokeApiLogger(i do.Injector) (*logging.Logger, error)
 InvokeApiLogger 从依赖注入器解析 API 日志器，错误交由调用方处理。
 
 <a name="InvokeCacheRedis"></a>
-## func InvokeCacheRedis
+## func [InvokeCacheRedis](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/redis.go#L56>)
 
 ```go
 func InvokeCacheRedis(i do.Injector) (*redis.Client, error)
@@ -753,7 +753,7 @@ func InvokeCacheRedis(i do.Injector) (*redis.Client, error)
 InvokeCacheRedis 从依赖注入器解析缓存 Redis 客户端，错误交由调用方处理。
 
 <a name="InvokeCaptureClient"></a>
-## func InvokeCaptureClient
+## func [InvokeCaptureClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/capture.go#L47>)
 
 ```go
 func InvokeCaptureClient(i do.Injector) (*capture.CaptureClient, error)
@@ -762,7 +762,7 @@ func InvokeCaptureClient(i do.Injector) (*capture.CaptureClient, error)
 InvokeCaptureClient 从依赖注入器解析抓包客户端，错误交由调用方处理。
 
 <a name="InvokeCaptureLogger"></a>
-## func InvokeCaptureLogger
+## func [InvokeCaptureLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L125>)
 
 ```go
 func InvokeCaptureLogger(i do.Injector) (*logging.Logger, error)
@@ -771,7 +771,7 @@ func InvokeCaptureLogger(i do.Injector) (*logging.Logger, error)
 InvokeCaptureLogger 从依赖注入器解析抓包日志器，错误交由调用方处理。
 
 <a name="InvokeCommand"></a>
-## func InvokeCommand
+## func [InvokeCommand](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/command.go#L20>)
 
 ```go
 func InvokeCommand(i do.Injector) (*cobra.Command, error)
@@ -780,7 +780,7 @@ func InvokeCommand(i do.Injector) (*cobra.Command, error)
 InvokeCommand 从依赖注入器解析 cobra 命令。
 
 <a name="InvokeCoreDatabase"></a>
-## func InvokeCoreDatabase
+## func [InvokeCoreDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L145>)
 
 ```go
 func InvokeCoreDatabase(i do.Injector) (*database.DB, error)
@@ -789,7 +789,7 @@ func InvokeCoreDatabase(i do.Injector) (*database.DB, error)
 InvokeCoreDatabase 从依赖注入器解析 core 数据库，错误交由调用方处理。
 
 <a name="InvokeDatabase"></a>
-## func InvokeDatabase
+## func [InvokeDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L165>)
 
 ```go
 func InvokeDatabase(i do.Injector, dbName string) (*database.DB, error)
@@ -798,7 +798,7 @@ func InvokeDatabase(i do.Injector, dbName string) (*database.DB, error)
 InvokeDatabase 按数据库名从依赖注入器解析对应数据库，错误交由调用方处理。
 
 <a name="InvokeDatabaseLogger"></a>
-## func InvokeDatabaseLogger
+## func [InvokeDatabaseLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L120>)
 
 ```go
 func InvokeDatabaseLogger(i do.Injector) (*logging.Logger, error)
@@ -807,7 +807,7 @@ func InvokeDatabaseLogger(i do.Injector) (*logging.Logger, error)
 InvokeDatabaseLogger 从依赖注入器解析数据库日志器，错误交由调用方处理。
 
 <a name="InvokeDatasourceWatcher"></a>
-## func InvokeDatasourceWatcher
+## func [InvokeDatasourceWatcher](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/datasource.go#L38>)
 
 ```go
 func InvokeDatasourceWatcher(i do.Injector) (*datasource.Watcher, error)
@@ -816,7 +816,7 @@ func InvokeDatasourceWatcher(i do.Injector) (*datasource.Watcher, error)
 InvokeDatasourceWatcher 取得数据源变更监听器。
 
 <a name="InvokeDefaultLogger"></a>
-## func InvokeDefaultLogger
+## func [InvokeDefaultLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L110>)
 
 ```go
 func InvokeDefaultLogger(i do.Injector) (*logging.Logger, error)
@@ -825,7 +825,7 @@ func InvokeDefaultLogger(i do.Injector) (*logging.Logger, error)
 InvokeDefaultLogger 从依赖注入器解析默认日志器，错误交由调用方处理。
 
 <a name="InvokeEtcdClient"></a>
-## func InvokeEtcdClient
+## func [InvokeEtcdClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/etcd.go#L43>)
 
 ```go
 func InvokeEtcdClient(i do.Injector) (*etcd.EtcdClient, error)
@@ -834,7 +834,7 @@ func InvokeEtcdClient(i do.Injector) (*etcd.EtcdClient, error)
 InvokeEtcdClient 从依赖注入器解析 etcd 客户端，错误由调用方处理。
 
 <a name="InvokeEtcdLogger"></a>
-## func InvokeEtcdLogger
+## func [InvokeEtcdLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L130>)
 
 ```go
 func InvokeEtcdLogger(i do.Injector) (*logging.Logger, error)
@@ -843,7 +843,7 @@ func InvokeEtcdLogger(i do.Injector) (*logging.Logger, error)
 InvokeEtcdLogger 从依赖注入器解析 etcd 日志器，错误交由调用方处理。
 
 <a name="InvokeFeatureRegistry"></a>
-## func InvokeFeatureRegistry
+## func [InvokeFeatureRegistry](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/features.go#L108>)
 
 ```go
 func InvokeFeatureRegistry(i do.Injector) (*features.Registry, error)
@@ -852,7 +852,7 @@ func InvokeFeatureRegistry(i do.Injector) (*features.Registry, error)
 InvokeFeatureRegistry 从依赖注入器解析功能开关注册表，错误在调用方处理。
 
 <a name="InvokeGin"></a>
-## func InvokeGin
+## func [InvokeGin](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/web.go#L27>)
 
 ```go
 func InvokeGin(i do.Injector) (*gin.Engine, error)
@@ -861,7 +861,7 @@ func InvokeGin(i do.Injector) (*gin.Engine, error)
 InvokeGin 从依赖注入器解析 Gin 引擎，错误交由调用方处理。
 
 <a name="InvokeGrpcLogger"></a>
-## func InvokeGrpcLogger
+## func [InvokeGrpcLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L135>)
 
 ```go
 func InvokeGrpcLogger(i do.Injector) (*logging.Logger, error)
@@ -870,7 +870,7 @@ func InvokeGrpcLogger(i do.Injector) (*logging.Logger, error)
 InvokeGrpcLogger 从依赖注入器解析 gRPC 日志器，错误交由调用方处理。
 
 <a name="InvokeHealthServer"></a>
-## func InvokeHealthServer
+## func [InvokeHealthServer](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/health.go#L54>)
 
 ```go
 func InvokeHealthServer(ctx context.Context, i do.Injector) (*health.Server, error)
@@ -879,7 +879,7 @@ func InvokeHealthServer(ctx context.Context, i do.Injector) (*health.Server, err
 InvokeHealthServer 从注入器解析全局健康探针服务。
 
 <a name="InvokeJSEngine"></a>
-## func InvokeJSEngine
+## func [InvokeJSEngine](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/jsengine.go#L35>)
 
 ```go
 func InvokeJSEngine(i do.Injector) (*jsengine.Engine, error)
@@ -888,7 +888,7 @@ func InvokeJSEngine(i do.Injector) (*jsengine.Engine, error)
 InvokeJSEngine 从依赖注入器解析 JS 运行时，错误交由调用方处理。
 
 <a name="InvokeKeyDerivation"></a>
-## func InvokeKeyDerivation
+## func [InvokeKeyDerivation](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/crypto.go#L35>)
 
 ```go
 func InvokeKeyDerivation(i do.Injector) (*key.KeyDerivation, error)
@@ -897,7 +897,7 @@ func InvokeKeyDerivation(i do.Injector) (*key.KeyDerivation, error)
 InvokeKeyDerivation 从依赖注入器解析密钥派生器，错误交由调用方处理。
 
 <a name="InvokeMailSender"></a>
-## func InvokeMailSender
+## func [InvokeMailSender](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/mail.go#L38>)
 
 ```go
 func InvokeMailSender(i do.Injector) (*mail.Sender, error)
@@ -906,7 +906,7 @@ func InvokeMailSender(i do.Injector) (*mail.Sender, error)
 InvokeMailSender 取得系统邮件发送器（用于启动期解析）。
 
 <a name="InvokeMessagePool"></a>
-## func InvokeMessagePool
+## func [InvokeMessagePool](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/message_pool.go#L25>)
 
 ```go
 func InvokeMessagePool(i do.Injector) (*message.Pool, error)
@@ -915,7 +915,7 @@ func InvokeMessagePool(i do.Injector) (*message.Pool, error)
 InvokeMessagePool 取得消息渠道连接池（供通知投递 / 邮件直发 / 测试发送使用）。
 
 <a name="InvokeObjectCache"></a>
-## func InvokeObjectCache
+## func [InvokeObjectCache](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/objectcache.go#L41>)
 
 ```go
 func InvokeObjectCache(i do.Injector) (*s3.ObjectCache, error)
@@ -924,7 +924,7 @@ func InvokeObjectCache(i do.Injector) (*s3.ObjectCache, error)
 InvokeObjectCache 取得共享的通用对象缓存实例。
 
 <a name="InvokePipelineClient"></a>
-## func InvokePipelineClient
+## func [InvokePipelineClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L233>)
 
 ```go
 func InvokePipelineClient(i do.Injector) (*pipeline.Client, error)
@@ -933,7 +933,7 @@ func InvokePipelineClient(i do.Injector) (*pipeline.Client, error)
 InvokePipelineClient 从依赖注入器解析流水线客户端，错误交由调用方处理。
 
 <a name="InvokePipelineInspector"></a>
-## func InvokePipelineInspector
+## func [InvokePipelineInspector](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L213>)
 
 ```go
 func InvokePipelineInspector(i do.Injector) (*pipeline.Inspector, error)
@@ -942,7 +942,7 @@ func InvokePipelineInspector(i do.Injector) (*pipeline.Inspector, error)
 InvokePipelineInspector 从依赖注入器解析流水线巡检器，错误交由调用方处理。
 
 <a name="InvokePipelineLogger"></a>
-## func InvokePipelineLogger
+## func [InvokePipelineLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L140>)
 
 ```go
 func InvokePipelineLogger(i do.Injector) (*logging.Logger, error)
@@ -951,7 +951,7 @@ func InvokePipelineLogger(i do.Injector) (*logging.Logger, error)
 InvokePipelineLogger 从依赖注入器解析流水线日志器，错误交由调用方处理。
 
 <a name="InvokePipelineProcessorFactoriesRegistry"></a>
-## func InvokePipelineProcessorFactoriesRegistry
+## func [InvokePipelineProcessorFactoriesRegistry](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L228>)
 
 ```go
 func InvokePipelineProcessorFactoriesRegistry(i do.Injector) (etl.ProcessorFactories, error)
@@ -960,7 +960,7 @@ func InvokePipelineProcessorFactoriesRegistry(i do.Injector) (etl.ProcessorFacto
 InvokePipelineProcessorFactoriesRegistry 从依赖注入器解析流水线处理器工厂注册表，错误交由调用方处理。
 
 <a name="InvokePipelineRedis"></a>
-## func InvokePipelineRedis
+## func [InvokePipelineRedis](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/redis.go#L66>)
 
 ```go
 func InvokePipelineRedis(i do.Injector) (*redis.Client, error)
@@ -969,7 +969,7 @@ func InvokePipelineRedis(i do.Injector) (*redis.Client, error)
 InvokePipelineRedis 从依赖注入器解析管道 Redis 客户端，错误交由调用方处理。
 
 <a name="InvokePipelineScheduler"></a>
-## func InvokePipelineScheduler
+## func [InvokePipelineScheduler](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L218>)
 
 ```go
 func InvokePipelineScheduler(i do.Injector) (*etcd.Election, error)
@@ -978,7 +978,7 @@ func InvokePipelineScheduler(i do.Injector) (*etcd.Election, error)
 InvokePipelineScheduler 从依赖注入器解析流水线调度器，错误交由调用方处理。
 
 <a name="InvokePipelineServer"></a>
-## func InvokePipelineServer
+## func [InvokePipelineServer](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L268>)
 
 ```go
 func InvokePipelineServer(i do.Injector) (*pipeline.Server, error)
@@ -987,7 +987,7 @@ func InvokePipelineServer(i do.Injector) (*pipeline.Server, error)
 InvokePipelineServer 从依赖注入器解析流水线服务端，错误交由调用方处理。
 
 <a name="InvokePipelineTaskRegistry"></a>
-## func InvokePipelineTaskRegistry
+## func [InvokePipelineTaskRegistry](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L223>)
 
 ```go
 func InvokePipelineTaskRegistry(i do.Injector) (etl.HandlerFuncs, error)
@@ -996,7 +996,7 @@ func InvokePipelineTaskRegistry(i do.Injector) (etl.HandlerFuncs, error)
 InvokePipelineTaskRegistry 从依赖注入器解析流水线任务注册表，错误交由调用方处理。
 
 <a name="InvokeRawDatabase"></a>
-## func InvokeRawDatabase
+## func [InvokeRawDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L155>)
 
 ```go
 func InvokeRawDatabase(i do.Injector) (*database.DB, error)
@@ -1005,7 +1005,7 @@ func InvokeRawDatabase(i do.Injector) (*database.DB, error)
 InvokeRawDatabase 从依赖注入器解析 raw 数据库，错误交由调用方处理。
 
 <a name="InvokeRbac"></a>
-## func InvokeRbac
+## func [InvokeRbac](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/rbac.go#L47>)
 
 ```go
 func InvokeRbac(i do.Injector) (*casbin.Enforcer, error)
@@ -1014,7 +1014,7 @@ func InvokeRbac(i do.Injector) (*casbin.Enforcer, error)
 InvokeRbac 从依赖注入容器获取 RBAC 执行器实例。
 
 <a name="InvokeReporterGrpcClient"></a>
-## func InvokeReporterGrpcClient
+## func [InvokeReporterGrpcClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/grpc.go#L90>)
 
 ```go
 func InvokeReporterGrpcClient(i do.Injector) (*grpc.Client, error)
@@ -1023,7 +1023,7 @@ func InvokeReporterGrpcClient(i do.Injector) (*grpc.Client, error)
 InvokeReporterGrpcClient 从依赖注入器解析 reporter gRPC 客户端，错误交由调用方处理。
 
 <a name="InvokeReporterGrpcServer"></a>
-## func InvokeReporterGrpcServer
+## func [InvokeReporterGrpcServer](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/grpc.go#L85>)
 
 ```go
 func InvokeReporterGrpcServer(i do.Injector) (*grpc.Server, error)
@@ -1032,7 +1032,7 @@ func InvokeReporterGrpcServer(i do.Injector) (*grpc.Server, error)
 InvokeReporterGrpcServer 从依赖注入器解析 reporter gRPC 服务端，错误交由调用方处理。
 
 <a name="InvokeS3"></a>
-## func InvokeS3
+## func [InvokeS3](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/s3.go#L41>)
 
 ```go
 func InvokeS3(i do.Injector) (*s3.S3Client, error)
@@ -1041,7 +1041,7 @@ func InvokeS3(i do.Injector) (*s3.S3Client, error)
 InvokeS3 从依赖注入器解析 S3 客户端，错误由调用方处理。
 
 <a name="InvokeSQLiteVTabPools"></a>
-## func InvokeSQLiteVTabPools
+## func [InvokeSQLiteVTabPools](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/sqlitevtab.go#L36>)
 
 ```go
 func InvokeSQLiteVTabPools(i do.Injector) (*vtab.Pools, error)
@@ -1050,7 +1050,7 @@ func InvokeSQLiteVTabPools(i do.Injector) (*vtab.Pools, error)
 InvokeSQLiteVTabPools 取得 sqlite vtable 池持有者（供第三方注册数据源）。
 
 <a name="InvokeTagEngine"></a>
-## func InvokeTagEngine
+## func [InvokeTagEngine](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/tagengine.go#L38>)
 
 ```go
 func InvokeTagEngine(i do.Injector) (*tagengine.Engine, error)
@@ -1059,7 +1059,7 @@ func InvokeTagEngine(i do.Injector) (*tagengine.Engine, error)
 InvokeTagEngine 从依赖注入器解析标签识别引擎，错误交由调用方处理。
 
 <a name="InvokeUniversalTranslator"></a>
-## func InvokeUniversalTranslator
+## func [InvokeUniversalTranslator](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/validator.go#L48>)
 
 ```go
 func InvokeUniversalTranslator(i do.Injector) (*ut.UniversalTranslator, error)
@@ -1068,7 +1068,7 @@ func InvokeUniversalTranslator(i do.Injector) (*ut.UniversalTranslator, error)
 InvokeUniversalTranslator 从依赖注入器解析通用翻译器，错误交由调用方处理。
 
 <a name="InvokeViper"></a>
-## func InvokeViper
+## func [InvokeViper](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/viper.go#L27>)
 
 ```go
 func InvokeViper(i do.Injector) (*viper.Viper, error)
@@ -1077,7 +1077,7 @@ func InvokeViper(i do.Injector) (*viper.Viper, error)
 InvokeViper 从依赖注入器解析 Viper 配置实例，错误由调用方处理。
 
 <a name="Models"></a>
-## func Models
+## func [Models](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L123>)
 
 ```go
 func Models(dbName string) []any
@@ -1086,7 +1086,7 @@ func Models(dbName string) []any
 Models 按数据库名返回对应的打标模型清单。
 
 <a name="MustInvokeAccessKeyPool"></a>
-## func MustInvokeAccessKeyPool
+## func [MustInvokeAccessKeyPool](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/accesskey.go#L43>)
 
 ```go
 func MustInvokeAccessKeyPool(i do.Injector) *coremodel.AccessKeyPool
@@ -1095,7 +1095,7 @@ func MustInvokeAccessKeyPool(i do.Injector) *coremodel.AccessKeyPool
 MustInvokeAccessKeyPool 从依赖注入器解析访问密钥池；失败时 panic（仅用于启动关键依赖）。
 
 <a name="MustInvokeAi"></a>
-## func MustInvokeAi
+## func [MustInvokeAi](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/ai.go#L48>)
 
 ```go
 func MustInvokeAi(ctx context.Context, i do.Injector) *ai.Runtime
@@ -1104,7 +1104,7 @@ func MustInvokeAi(ctx context.Context, i do.Injector) *ai.Runtime
 MustInvokeAi 从依赖注入器解析 AI 助手运行时；失败时 panic（仅用于启动关键依赖）。
 
 <a name="MustInvokeApiLogger"></a>
-## func MustInvokeApiLogger
+## func [MustInvokeApiLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L150>)
 
 ```go
 func MustInvokeApiLogger(i do.Injector) *logging.Logger
@@ -1113,7 +1113,7 @@ func MustInvokeApiLogger(i do.Injector) *logging.Logger
 MustInvokeApiLogger 从依赖注入器解析 API 日志器，失败时 panic。
 
 <a name="MustInvokeCacheRedis"></a>
-## func MustInvokeCacheRedis
+## func [MustInvokeCacheRedis](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/redis.go#L61>)
 
 ```go
 func MustInvokeCacheRedis(i do.Injector) *redis.Client
@@ -1122,7 +1122,7 @@ func MustInvokeCacheRedis(i do.Injector) *redis.Client
 MustInvokeCacheRedis 从依赖注入器解析缓存 Redis 客户端；失败时 panic（仅用于启动关键依赖）。
 
 <a name="MustInvokeCaptureClient"></a>
-## func MustInvokeCaptureClient
+## func [MustInvokeCaptureClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/capture.go#L52>)
 
 ```go
 func MustInvokeCaptureClient(i do.Injector) *capture.CaptureClient
@@ -1131,7 +1131,7 @@ func MustInvokeCaptureClient(i do.Injector) *capture.CaptureClient
 MustInvokeCaptureClient 从依赖注入器解析抓包客户端，失败时 panic。
 
 <a name="MustInvokeCaptureLogger"></a>
-## func MustInvokeCaptureLogger
+## func [MustInvokeCaptureLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L160>)
 
 ```go
 func MustInvokeCaptureLogger(i do.Injector) *logging.Logger
@@ -1140,7 +1140,7 @@ func MustInvokeCaptureLogger(i do.Injector) *logging.Logger
 MustInvokeCaptureLogger 从依赖注入器解析抓包日志器，失败时 panic。
 
 <a name="MustInvokeCoreDatabase"></a>
-## func MustInvokeCoreDatabase
+## func [MustInvokeCoreDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L150>)
 
 ```go
 func MustInvokeCoreDatabase(i do.Injector) *database.DB
@@ -1149,7 +1149,7 @@ func MustInvokeCoreDatabase(i do.Injector) *database.DB
 MustInvokeCoreDatabase 从依赖注入器解析 core 数据库，失败时 panic。
 
 <a name="MustInvokeDatabase"></a>
-## func MustInvokeDatabase
+## func [MustInvokeDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L177>)
 
 ```go
 func MustInvokeDatabase(i do.Injector, dbName string) *database.DB
@@ -1158,7 +1158,7 @@ func MustInvokeDatabase(i do.Injector, dbName string) *database.DB
 MustInvokeDatabase 按数据库名从依赖注入器解析对应数据库，失败时 panic。
 
 <a name="MustInvokeDatabaseLogger"></a>
-## func MustInvokeDatabaseLogger
+## func [MustInvokeDatabaseLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L155>)
 
 ```go
 func MustInvokeDatabaseLogger(i do.Injector) *logging.Logger
@@ -1167,7 +1167,7 @@ func MustInvokeDatabaseLogger(i do.Injector) *logging.Logger
 MustInvokeDatabaseLogger 从依赖注入器解析数据库日志器，失败时 panic。
 
 <a name="MustInvokeDatasourceWatcher"></a>
-## func MustInvokeDatasourceWatcher
+## func [MustInvokeDatasourceWatcher](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/datasource.go#L43>)
 
 ```go
 func MustInvokeDatasourceWatcher(i do.Injector) *datasource.Watcher
@@ -1176,7 +1176,7 @@ func MustInvokeDatasourceWatcher(i do.Injector) *datasource.Watcher
 MustInvokeDatasourceWatcher panic 版本取得数据源变更监听器。
 
 <a name="MustInvokeDefaultLogger"></a>
-## func MustInvokeDefaultLogger
+## func [MustInvokeDefaultLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L145>)
 
 ```go
 func MustInvokeDefaultLogger(i do.Injector) *logging.Logger
@@ -1185,7 +1185,7 @@ func MustInvokeDefaultLogger(i do.Injector) *logging.Logger
 MustInvokeDefaultLogger 从依赖注入器解析默认日志器，失败时 panic。
 
 <a name="MustInvokeEtcdClient"></a>
-## func MustInvokeEtcdClient
+## func [MustInvokeEtcdClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/etcd.go#L48>)
 
 ```go
 func MustInvokeEtcdClient(i do.Injector) *etcd.EtcdClient
@@ -1194,7 +1194,7 @@ func MustInvokeEtcdClient(i do.Injector) *etcd.EtcdClient
 MustInvokeEtcdClient 从依赖注入器解析 etcd 客户端，失败时 panic（仅用于启动关键依赖）。
 
 <a name="MustInvokeEtcdLogger"></a>
-## func MustInvokeEtcdLogger
+## func [MustInvokeEtcdLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L165>)
 
 ```go
 func MustInvokeEtcdLogger(i do.Injector) *logging.Logger
@@ -1203,7 +1203,7 @@ func MustInvokeEtcdLogger(i do.Injector) *logging.Logger
 MustInvokeEtcdLogger 从依赖注入器解析 etcd 日志器，失败时 panic。
 
 <a name="MustInvokeFeatureRegistry"></a>
-## func MustInvokeFeatureRegistry
+## func [MustInvokeFeatureRegistry](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/features.go#L113>)
 
 ```go
 func MustInvokeFeatureRegistry(i do.Injector) *features.Registry
@@ -1212,7 +1212,7 @@ func MustInvokeFeatureRegistry(i do.Injector) *features.Registry
 MustInvokeFeatureRegistry 从依赖注入器解析功能开关注册表；失败时 panic（仅用于启动关键依赖）。
 
 <a name="MustInvokeGin"></a>
-## func MustInvokeGin
+## func [MustInvokeGin](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/web.go#L32>)
 
 ```go
 func MustInvokeGin(i do.Injector) *gin.Engine
@@ -1221,7 +1221,7 @@ func MustInvokeGin(i do.Injector) *gin.Engine
 MustInvokeGin 从依赖注入器解析 Gin 引擎，失败时 panic。
 
 <a name="MustInvokeGrpcLogger"></a>
-## func MustInvokeGrpcLogger
+## func [MustInvokeGrpcLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L170>)
 
 ```go
 func MustInvokeGrpcLogger(i do.Injector) *logging.Logger
@@ -1230,7 +1230,7 @@ func MustInvokeGrpcLogger(i do.Injector) *logging.Logger
 MustInvokeGrpcLogger 从依赖注入器解析 gRPC 日志器，失败时 panic。
 
 <a name="MustInvokeHealthServer"></a>
-## func MustInvokeHealthServer
+## func [MustInvokeHealthServer](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/health.go#L59>)
 
 ```go
 func MustInvokeHealthServer(ctx context.Context, i do.Injector) *health.Server
@@ -1239,7 +1239,7 @@ func MustInvokeHealthServer(ctx context.Context, i do.Injector) *health.Server
 MustInvokeHealthServer 从注入器解析全局健康探针服务，失败时 panic。
 
 <a name="MustInvokeJSEngine"></a>
-## func MustInvokeJSEngine
+## func [MustInvokeJSEngine](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/jsengine.go#L40>)
 
 ```go
 func MustInvokeJSEngine(i do.Injector) *jsengine.Engine
@@ -1248,7 +1248,7 @@ func MustInvokeJSEngine(i do.Injector) *jsengine.Engine
 MustInvokeJSEngine 从依赖注入器解析 JS 运行时；失败时 panic（仅用于启动关键依赖）。
 
 <a name="MustInvokeKeyDerivation"></a>
-## func MustInvokeKeyDerivation
+## func [MustInvokeKeyDerivation](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/crypto.go#L40>)
 
 ```go
 func MustInvokeKeyDerivation(i do.Injector) *key.KeyDerivation
@@ -1257,7 +1257,7 @@ func MustInvokeKeyDerivation(i do.Injector) *key.KeyDerivation
 MustInvokeKeyDerivation 从依赖注入器解析密钥派生器，失败时 panic。
 
 <a name="MustInvokeMailSender"></a>
-## func MustInvokeMailSender
+## func [MustInvokeMailSender](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/mail.go#L43>)
 
 ```go
 func MustInvokeMailSender(i do.Injector) *mail.Sender
@@ -1266,7 +1266,7 @@ func MustInvokeMailSender(i do.Injector) *mail.Sender
 MustInvokeMailSender panic 版本取得系统邮件发送器。
 
 <a name="MustInvokeMessagePool"></a>
-## func MustInvokeMessagePool
+## func [MustInvokeMessagePool](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/message_pool.go#L31>)
 
 ```go
 func MustInvokeMessagePool(i do.Injector) *message.Pool
@@ -1275,7 +1275,7 @@ func MustInvokeMessagePool(i do.Injector) *message.Pool
 MustInvokeMessagePool panic 版本取得消息渠道连接池 （用于启动期预解析，确保池被实例化后其 Shutdown 在优雅关闭阶段被 samber/do 驱动）。
 
 <a name="MustInvokeObjectCache"></a>
-## func MustInvokeObjectCache
+## func [MustInvokeObjectCache](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/objectcache.go#L46>)
 
 ```go
 func MustInvokeObjectCache(i do.Injector) *s3.ObjectCache
@@ -1284,7 +1284,7 @@ func MustInvokeObjectCache(i do.Injector) *s3.ObjectCache
 MustInvokeObjectCache panic 版本取得共享的通用对象缓存实例。
 
 <a name="MustInvokePipelineClient"></a>
-## func MustInvokePipelineClient
+## func [MustInvokePipelineClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L258>)
 
 ```go
 func MustInvokePipelineClient(i do.Injector) *pipeline.Client
@@ -1293,7 +1293,7 @@ func MustInvokePipelineClient(i do.Injector) *pipeline.Client
 MustInvokePipelineClient 从依赖注入器解析流水线客户端，失败时 panic。
 
 <a name="MustInvokePipelineInspector"></a>
-## func MustInvokePipelineInspector
+## func [MustInvokePipelineInspector](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L238>)
 
 ```go
 func MustInvokePipelineInspector(i do.Injector) *pipeline.Inspector
@@ -1302,7 +1302,7 @@ func MustInvokePipelineInspector(i do.Injector) *pipeline.Inspector
 MustInvokePipelineInspector 从依赖注入器解析流水线巡检器，失败时 panic。
 
 <a name="MustInvokePipelineLogger"></a>
-## func MustInvokePipelineLogger
+## func [MustInvokePipelineLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L175>)
 
 ```go
 func MustInvokePipelineLogger(i do.Injector) *logging.Logger
@@ -1311,7 +1311,7 @@ func MustInvokePipelineLogger(i do.Injector) *logging.Logger
 MustInvokePipelineLogger 从依赖注入器解析流水线日志器，失败时 panic。
 
 <a name="MustInvokePipelineProcessorFactoriesRegistry"></a>
-## func MustInvokePipelineProcessorFactoriesRegistry
+## func [MustInvokePipelineProcessorFactoriesRegistry](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L253>)
 
 ```go
 func MustInvokePipelineProcessorFactoriesRegistry(i do.Injector) etl.ProcessorFactories
@@ -1320,7 +1320,7 @@ func MustInvokePipelineProcessorFactoriesRegistry(i do.Injector) etl.ProcessorFa
 MustInvokePipelineProcessorFactoriesRegistry 从依赖注入器解析流水线处理器工厂注册表，失败时 panic。
 
 <a name="MustInvokePipelineScheduler"></a>
-## func MustInvokePipelineScheduler
+## func [MustInvokePipelineScheduler](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L243>)
 
 ```go
 func MustInvokePipelineScheduler(i do.Injector) *etcd.Election
@@ -1329,7 +1329,7 @@ func MustInvokePipelineScheduler(i do.Injector) *etcd.Election
 MustInvokePipelineScheduler 从依赖注入器解析流水线调度器，失败时 panic。
 
 <a name="MustInvokePipelineServer"></a>
-## func MustInvokePipelineServer
+## func [MustInvokePipelineServer](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L263>)
 
 ```go
 func MustInvokePipelineServer(i do.Injector) *pipeline.Server
@@ -1338,7 +1338,7 @@ func MustInvokePipelineServer(i do.Injector) *pipeline.Server
 MustInvokePipelineServer 从依赖注入器解析流水线服务端，失败时 panic。
 
 <a name="MustInvokePipelineTaskRegistry"></a>
-## func MustInvokePipelineTaskRegistry
+## func [MustInvokePipelineTaskRegistry](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L248>)
 
 ```go
 func MustInvokePipelineTaskRegistry(i do.Injector) etl.HandlerFuncs
@@ -1347,7 +1347,7 @@ func MustInvokePipelineTaskRegistry(i do.Injector) etl.HandlerFuncs
 MustInvokePipelineTaskRegistry 从依赖注入器解析流水线任务注册表，失败时 panic。
 
 <a name="MustInvokeRawDatabase"></a>
-## func MustInvokeRawDatabase
+## func [MustInvokeRawDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L160>)
 
 ```go
 func MustInvokeRawDatabase(i do.Injector) *database.DB
@@ -1356,7 +1356,7 @@ func MustInvokeRawDatabase(i do.Injector) *database.DB
 MustInvokeRawDatabase 从依赖注入器解析 raw 数据库，失败时 panic。
 
 <a name="MustInvokeRbac"></a>
-## func MustInvokeRbac
+## func [MustInvokeRbac](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/rbac.go#L52>)
 
 ```go
 func MustInvokeRbac(i do.Injector) *casbin.Enforcer
@@ -1365,7 +1365,7 @@ func MustInvokeRbac(i do.Injector) *casbin.Enforcer
 MustInvokeRbac 从依赖注入容器获取 RBAC 执行器实例，失败时 panic。
 
 <a name="MustInvokeReporterGrpcClient"></a>
-## func MustInvokeReporterGrpcClient
+## func [MustInvokeReporterGrpcClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/grpc.go#L100>)
 
 ```go
 func MustInvokeReporterGrpcClient(i do.Injector) *grpc.Client
@@ -1374,7 +1374,7 @@ func MustInvokeReporterGrpcClient(i do.Injector) *grpc.Client
 MustInvokeReporterGrpcClient 从依赖注入器解析 reporter gRPC 客户端，失败时 panic。
 
 <a name="MustInvokeReporterGrpcServer"></a>
-## func MustInvokeReporterGrpcServer
+## func [MustInvokeReporterGrpcServer](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/grpc.go#L95>)
 
 ```go
 func MustInvokeReporterGrpcServer(i do.Injector) *grpc.Server
@@ -1383,7 +1383,7 @@ func MustInvokeReporterGrpcServer(i do.Injector) *grpc.Server
 MustInvokeReporterGrpcServer 从依赖注入器解析 reporter gRPC 服务端，失败时 panic。
 
 <a name="MustInvokeS3"></a>
-## func MustInvokeS3
+## func [MustInvokeS3](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/s3.go#L46>)
 
 ```go
 func MustInvokeS3(i do.Injector) *s3.S3Client
@@ -1392,7 +1392,7 @@ func MustInvokeS3(i do.Injector) *s3.S3Client
 MustInvokeS3 从依赖注入器解析 S3 客户端，失败时 panic（仅用于启动关键依赖）。
 
 <a name="MustInvokeSQLiteVTabPools"></a>
-## func MustInvokeSQLiteVTabPools
+## func [MustInvokeSQLiteVTabPools](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/sqlitevtab.go#L42>)
 
 ```go
 func MustInvokeSQLiteVTabPools(i do.Injector) *vtab.Pools
@@ -1401,7 +1401,7 @@ func MustInvokeSQLiteVTabPools(i do.Injector) *vtab.Pools
 MustInvokeSQLiteVTabPools panic 版本取得 sqlite vtable 池持有者 （用于启动期预解析，确保其被实例化后 Shutdown 在优雅关闭阶段被 samber/do 驱动）。
 
 <a name="MustInvokeTagEngine"></a>
-## func MustInvokeTagEngine
+## func [MustInvokeTagEngine](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/tagengine.go#L43>)
 
 ```go
 func MustInvokeTagEngine(i do.Injector) *tagengine.Engine
@@ -1410,7 +1410,7 @@ func MustInvokeTagEngine(i do.Injector) *tagengine.Engine
 MustInvokeTagEngine 从依赖注入器解析标签识别引擎，失败时 panic。
 
 <a name="MustInvokeUniversalTranslator"></a>
-## func MustInvokeUniversalTranslator
+## func [MustInvokeUniversalTranslator](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/validator.go#L53>)
 
 ```go
 func MustInvokeUniversalTranslator(i do.Injector) *ut.UniversalTranslator
@@ -1419,7 +1419,7 @@ func MustInvokeUniversalTranslator(i do.Injector) *ut.UniversalTranslator
 MustInvokeUniversalTranslator 从依赖注入器解析通用翻译器，失败时 panic。
 
 <a name="MustInvokeViper"></a>
-## func MustInvokeViper
+## func [MustInvokeViper](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/viper.go#L32>)
 
 ```go
 func MustInvokeViper(i do.Injector) *viper.Viper
@@ -1428,7 +1428,7 @@ func MustInvokeViper(i do.Injector) *viper.Viper
 MustInvokeViper 从依赖注入器解析 Viper 配置实例，失败时 panic（仅用于启动关键依赖）。
 
 <a name="NewApiLogger"></a>
-## func NewApiLogger
+## func [NewApiLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L45>)
 
 ```go
 func NewApiLogger() do.Provider[*logging.Logger]
@@ -1437,7 +1437,7 @@ func NewApiLogger() do.Provider[*logging.Logger]
 NewApiLogger 返回构建 API 日志器的 provider 工厂。
 
 <a name="NewCacheRedis"></a>
-## func NewCacheRedis
+## func [NewCacheRedis](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/redis.go#L36>)
 
 ```go
 func NewCacheRedis() do.Provider[*redis.Client]
@@ -1446,7 +1446,7 @@ func NewCacheRedis() do.Provider[*redis.Client]
 NewCacheRedis 返回缓存 Redis 客户端的 provider 工厂。
 
 <a name="NewCaptureClient"></a>
-## func NewCaptureClient
+## func [NewCaptureClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/capture.go#L37>)
 
 ```go
 func NewCaptureClient() do.Provider[*capture.CaptureClient]
@@ -1455,7 +1455,7 @@ func NewCaptureClient() do.Provider[*capture.CaptureClient]
 NewCaptureClient 返回构建抓包客户端的 provider 工厂。
 
 <a name="NewCaptureLogger"></a>
-## func NewCaptureLogger
+## func [NewCaptureLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L55>)
 
 ```go
 func NewCaptureLogger() do.Provider[*logging.Logger]
@@ -1464,7 +1464,7 @@ func NewCaptureLogger() do.Provider[*logging.Logger]
 NewCaptureLogger 返回构建抓包日志器的 provider 工厂。
 
 <a name="NewCoreDatabase"></a>
-## func NewCoreDatabase
+## func [NewCoreDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L113>)
 
 ```go
 func NewCoreDatabase() do.Provider[*database.DB]
@@ -1473,7 +1473,7 @@ func NewCoreDatabase() do.Provider[*database.DB]
 NewCoreDatabase 返回构建 core 数据库的 provider 工厂。
 
 <a name="NewDatabaseLogger"></a>
-## func NewDatabaseLogger
+## func [NewDatabaseLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L50>)
 
 ```go
 func NewDatabaseLogger() do.Provider[*logging.Logger]
@@ -1482,7 +1482,7 @@ func NewDatabaseLogger() do.Provider[*logging.Logger]
 NewDatabaseLogger 返回构建数据库日志器的 provider 工厂。
 
 <a name="NewDefaultLogger"></a>
-## func NewDefaultLogger
+## func [NewDefaultLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L40>)
 
 ```go
 func NewDefaultLogger() do.Provider[*logging.Logger]
@@ -1491,7 +1491,7 @@ func NewDefaultLogger() do.Provider[*logging.Logger]
 NewDefaultLogger 返回构建默认日志器的 provider 工厂。
 
 <a name="NewDependencyRegistry"></a>
-## func NewDependencyRegistry
+## func [NewDependencyRegistry](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/status.go#L60>)
 
 ```go
 func NewDependencyRegistry(ctx context.Context, i do.Injector) (*status.Registry, error)
@@ -1514,7 +1514,7 @@ NewDependencyRegistry 构造核心基础设施探测注册表。 探测项全部
 探测自建客户端（db/redis/etcd/grpc）用完后显式 Close，避免连接/协程泄漏。
 
 <a name="NewEtcdClient"></a>
-## func NewEtcdClient
+## func [NewEtcdClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/etcd.go#L33>)
 
 ```go
 func NewEtcdClient(ctx context.Context) do.Provider[*etcd.EtcdClient]
@@ -1523,7 +1523,7 @@ func NewEtcdClient(ctx context.Context) do.Provider[*etcd.EtcdClient]
 NewEtcdClient 返回 etcd 客户端的依赖注入 provider 工厂。
 
 <a name="NewEtcdLogger"></a>
-## func NewEtcdLogger
+## func [NewEtcdLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L60>)
 
 ```go
 func NewEtcdLogger() do.Provider[*logging.Logger]
@@ -1532,7 +1532,7 @@ func NewEtcdLogger() do.Provider[*logging.Logger]
 NewEtcdLogger 返回构建 etcd 日志器的 provider 工厂。
 
 <a name="NewGin"></a>
-## func NewGin
+## func [NewGin](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/web.go#L10>)
 
 ```go
 func NewGin(i do.Injector) (*gin.Engine, error)
@@ -1541,7 +1541,7 @@ func NewGin(i do.Injector) (*gin.Engine, error)
 NewGin 创建 Gin 引擎，并按环境配置调试或发布模式。
 
 <a name="NewGrpcLogger"></a>
-## func NewGrpcLogger
+## func [NewGrpcLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L65>)
 
 ```go
 func NewGrpcLogger() do.Provider[*logging.Logger]
@@ -1550,7 +1550,7 @@ func NewGrpcLogger() do.Provider[*logging.Logger]
 NewGrpcLogger 返回构建 gRPC 日志器的 provider 工厂。
 
 <a name="NewHealthServer"></a>
-## func NewHealthServer
+## func [NewHealthServer](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/health.go#L44>)
 
 ```go
 func NewHealthServer(ctx context.Context) do.Provider[*health.Server]
@@ -1559,7 +1559,7 @@ func NewHealthServer(ctx context.Context) do.Provider[*health.Server]
 NewHealthServer 返回构建全局健康探针服务的 provider 工厂。
 
 <a name="NewObjectCache"></a>
-## func NewObjectCache
+## func [NewObjectCache](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/objectcache.go#L31>)
 
 ```go
 func NewObjectCache() do.Provider[*s3.ObjectCache]
@@ -1568,7 +1568,7 @@ func NewObjectCache() do.Provider[*s3.ObjectCache]
 NewObjectCache 提供共享的通用对象缓存 provider（唯一实例）。
 
 <a name="NewOtelShutdowner"></a>
-## func NewOtelShutdowner
+## func [NewOtelShutdowner](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/otel.go#L33>)
 
 ```go
 func NewOtelShutdowner(ctx context.Context) do.Provider[*OtelShutdowner]
@@ -1577,7 +1577,7 @@ func NewOtelShutdowner(ctx context.Context) do.Provider[*OtelShutdowner]
 NewOtelShutdowner 返回 OpenTelemetry 关闭器的依赖注入 provider 工厂。
 
 <a name="NewPipelineClient"></a>
-## func NewPipelineClient
+## func [NewPipelineClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L173>)
 
 ```go
 func NewPipelineClient() do.Provider[*pipeline.Client]
@@ -1586,7 +1586,7 @@ func NewPipelineClient() do.Provider[*pipeline.Client]
 NewPipelineClient 返回构建流水线客户端的 provider 工厂。
 
 <a name="NewPipelineInspector"></a>
-## func NewPipelineInspector
+## func [NewPipelineInspector](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L153>)
 
 ```go
 func NewPipelineInspector() do.Provider[*pipeline.Inspector]
@@ -1595,7 +1595,7 @@ func NewPipelineInspector() do.Provider[*pipeline.Inspector]
 NewPipelineInspector 返回构建流水线巡检器的 provider 工厂。
 
 <a name="NewPipelineLogger"></a>
-## func NewPipelineLogger
+## func [NewPipelineLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/logger.go#L70>)
 
 ```go
 func NewPipelineLogger() do.Provider[*logging.Logger]
@@ -1604,7 +1604,7 @@ func NewPipelineLogger() do.Provider[*logging.Logger]
 NewPipelineLogger 返回构建流水线日志器的 provider 工厂。
 
 <a name="NewPipelineProcessorFactoriesRegistry"></a>
-## func NewPipelineProcessorFactoriesRegistry
+## func [NewPipelineProcessorFactoriesRegistry](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L168>)
 
 ```go
 func NewPipelineProcessorFactoriesRegistry() do.Provider[etl.ProcessorFactories]
@@ -1613,7 +1613,7 @@ func NewPipelineProcessorFactoriesRegistry() do.Provider[etl.ProcessorFactories]
 NewPipelineProcessorFactoriesRegistry 返回构建流水线处理器工厂注册表的 provider 工厂。
 
 <a name="NewPipelineRedis"></a>
-## func NewPipelineRedis
+## func [NewPipelineRedis](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/redis.go#L41>)
 
 ```go
 func NewPipelineRedis() do.Provider[*redis.Client]
@@ -1622,7 +1622,7 @@ func NewPipelineRedis() do.Provider[*redis.Client]
 NewPipelineRedis 返回管道 Redis 客户端的 provider 工厂。
 
 <a name="NewPipelineScheduler"></a>
-## func NewPipelineScheduler
+## func [NewPipelineScheduler](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L158>)
 
 ```go
 func NewPipelineScheduler(ctx context.Context) do.Provider[*etcd.Election]
@@ -1631,7 +1631,7 @@ func NewPipelineScheduler(ctx context.Context) do.Provider[*etcd.Election]
 NewPipelineScheduler 返回构建流水线调度器的 provider 工厂。
 
 <a name="NewPipelineServer"></a>
-## func NewPipelineServer
+## func [NewPipelineServer](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L178>)
 
 ```go
 func NewPipelineServer(ctx context.Context) do.Provider[*pipeline.Server]
@@ -1640,7 +1640,7 @@ func NewPipelineServer(ctx context.Context) do.Provider[*pipeline.Server]
 NewPipelineServer 返回构建流水线服务端的 provider 工厂。
 
 <a name="NewPipelineTaskRegistry"></a>
-## func NewPipelineTaskRegistry
+## func [NewPipelineTaskRegistry](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L163>)
 
 ```go
 func NewPipelineTaskRegistry() do.Provider[etl.HandlerFuncs]
@@ -1649,7 +1649,7 @@ func NewPipelineTaskRegistry() do.Provider[etl.HandlerFuncs]
 NewPipelineTaskRegistry 返回构建流水线任务注册表的 provider 工厂。
 
 <a name="NewRawDatabase"></a>
-## func NewRawDatabase
+## func [NewRawDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L118>)
 
 ```go
 func NewRawDatabase() do.Provider[*database.DB]
@@ -1658,7 +1658,7 @@ func NewRawDatabase() do.Provider[*database.DB]
 NewRawDatabase 返回构建 raw 数据库的 provider 工厂。
 
 <a name="NewRbac"></a>
-## func NewRbac
+## func [NewRbac](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/rbac.go#L37>)
 
 ```go
 func NewRbac() do.Provider[*casbin.Enforcer]
@@ -1667,7 +1667,7 @@ func NewRbac() do.Provider[*casbin.Enforcer]
 NewRbac 返回基于 casbin 的 RBAC 执行器的依赖注入 provider。
 
 <a name="NewReporterGrpcClient"></a>
-## func NewReporterGrpcClient
+## func [NewReporterGrpcClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/grpc.go#L68>)
 
 ```go
 func NewReporterGrpcClient() do.Provider[*grpc.Client]
@@ -1676,7 +1676,7 @@ func NewReporterGrpcClient() do.Provider[*grpc.Client]
 NewReporterGrpcClient 返回 reporter gRPC 客户端的 provider 工厂。
 
 <a name="NewReporterGrpcServer"></a>
-## func NewReporterGrpcServer
+## func [NewReporterGrpcServer](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/grpc.go#L63>)
 
 ```go
 func NewReporterGrpcServer() do.Provider[*grpc.Server]
@@ -1685,7 +1685,7 @@ func NewReporterGrpcServer() do.Provider[*grpc.Server]
 NewReporterGrpcServer 返回 reporter gRPC 服务端的 provider 工厂。
 
 <a name="NewS3"></a>
-## func NewS3
+## func [NewS3](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/s3.go#L31>)
 
 ```go
 func NewS3() do.Provider[*s3.S3Client]
@@ -1694,7 +1694,7 @@ func NewS3() do.Provider[*s3.S3Client]
 NewS3 返回 S3 客户端的依赖注入 provider 工厂。
 
 <a name="RawModels"></a>
-## func RawModels
+## func [RawModels](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L75>)
 
 ```go
 func RawModels() []any
@@ -1703,7 +1703,7 @@ func RawModels() []any
 RawModels 返回 raw 数据库的全部打标模型清单，供迁移一致性检查使用。
 
 <a name="TaskContext"></a>
-## func TaskContext
+## func [TaskContext](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L22>)
 
 ```go
 func TaskContext(ctx context.Context, i do.Injector) pipeline.ContextFunc
@@ -1712,7 +1712,7 @@ func TaskContext(ctx context.Context, i do.Injector) pipeline.ContextFunc
 TaskContext 创建任务上下文的函数。 返回一个函数，用于构建包含注入器实例的上下文。
 
 <a name="HealthService"></a>
-## type HealthService
+## type [HealthService](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/health.go#L65-L71>)
 
 HealthService 将健康探针服务适配为 runtime.Service， 供 runtime.Group 统一编排（worker）或命令侧 goroutine 启动（web/grpc）。
 
@@ -1724,7 +1724,7 @@ type HealthService struct {
 ```
 
 <a name="NewHealthService"></a>
-### func NewHealthService
+### func [NewHealthService](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/health.go#L74>)
 
 ```go
 func NewHealthService(ctx context.Context, i do.Injector, serviceName string) (*HealthService, error)
@@ -1733,7 +1733,7 @@ func NewHealthService(ctx context.Context, i do.Injector, serviceName string) (*
 NewHealthService 构建以其服务名运行的健康探针服务。
 
 <a name="HealthService.Name"></a>
-### func \(\*HealthService\) Name
+### func \(\*HealthService\) [Name](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/health.go#L98>)
 
 ```go
 func (h *HealthService) Name() string
@@ -1742,7 +1742,7 @@ func (h *HealthService) Name() string
 Name 返回编排器使用的服务名。
 
 <a name="HealthService.Shutdown"></a>
-### func \(\*HealthService\) Shutdown
+### func \(\*HealthService\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/health.go#L93>)
 
 ```go
 func (h *HealthService) Shutdown(_ context.Context) error
@@ -1751,7 +1751,7 @@ func (h *HealthService) Shutdown(_ context.Context) error
 Shutdown 由 Server.Start 的 ctx 取消路径统一完成优雅关闭，无需额外处理。
 
 <a name="HealthService.Start"></a>
-### func \(\*HealthService\) Start
+### func \(\*HealthService\) [Start](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/health.go#L87>)
 
 ```go
 func (h *HealthService) Start(ctx context.Context) error
@@ -1760,7 +1760,7 @@ func (h *HealthService) Start(ctx context.Context) error
 Start 标记完成启动后阻塞运行健康探针服务，直到 ctx 取消。
 
 <a name="OtelShutdowner"></a>
-## type OtelShutdowner
+## type [OtelShutdowner](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/otel.go#L12-L15>)
 
 OtelShutdowner 封装 OpenTelemetry 的关闭函数，供依赖注入器统一管理其生命周期。
 
@@ -1771,7 +1771,7 @@ type OtelShutdowner struct {
 ```
 
 <a name="InvokeOtelShutdowner"></a>
-### func InvokeOtelShutdowner
+### func [InvokeOtelShutdowner](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/otel.go#L43>)
 
 ```go
 func InvokeOtelShutdowner(ctx context.Context, i do.Injector) (*OtelShutdowner, error)
@@ -1780,7 +1780,7 @@ func InvokeOtelShutdowner(ctx context.Context, i do.Injector) (*OtelShutdowner, 
 InvokeOtelShutdowner 从依赖注入器解析 OpenTelemetry 关闭器，错误由调用方处理。
 
 <a name="MustInvokeOtelShutdowner"></a>
-### func MustInvokeOtelShutdowner
+### func [MustInvokeOtelShutdowner](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/otel.go#L48>)
 
 ```go
 func MustInvokeOtelShutdowner(ctx context.Context, i do.Injector) *OtelShutdowner
@@ -1789,7 +1789,7 @@ func MustInvokeOtelShutdowner(ctx context.Context, i do.Injector) *OtelShutdowne
 MustInvokeOtelShutdowner 从依赖注入器解析 OpenTelemetry 关闭器，失败时 panic（仅用于启动关键依赖）。
 
 <a name="OtelShutdowner.Shutdown"></a>
-### func \(\*OtelShutdowner\) Shutdown
+### func \(\*OtelShutdowner\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/otel.go#L18>)
 
 ```go
 func (s *OtelShutdowner) Shutdown(ctx context.Context) error

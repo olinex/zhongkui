@@ -17,7 +17,7 @@
 
 
 <a name="Dial"></a>
-## func Dial
+## func [Dial](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/mcp/mcp.go#L44>)
 
 ```go
 func Dial(ctx context.Context, cfg ConnConfig) (client.MCPClient, error)
@@ -26,7 +26,7 @@ func Dial(ctx context.Context, cfg ConnConfig) (client.MCPClient, error)
 Dial 连接指定远程 MCP 服务器并完成 initialize 握手，返回一个已可用的客户端句柄；调用方 负责在连接不再需要时调用其 Close 释放资源（SSE 为有状态长连接）。传输方式非法、URL 为 空或握手失败时返回英文错误，且不会泄漏已建立的连接。
 
 <a name="LoadTools"></a>
-## func LoadTools
+## func [LoadTools](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/mcp/mcp.go#L105>)
 
 ```go
 func LoadTools(ctx context.Context, cli client.MCPClient, remoteNames []string, headers map[string]string) ([]tool.BaseTool, error)
@@ -35,7 +35,7 @@ func LoadTools(ctx context.Context, cli client.MCPClient, remoteNames []string, 
 LoadTools 从已完成握手的客户端按 remoteNames 取回远端工具，统一以 eino tool.BaseTool 暴露（其 Info 携带远端 tools/list 返回的 JSON schema），使节点 4 对内置与 MCP 工具无差别 消费。remoteNames 为空时返回空切片而不请求远端：eino 的取工具语义把空清单视为「取全部」， 与本处「按名精确取用」的契约相反，故在适配层显式收敛。存在的名字远端不存在时不报错、 直接缺席，由调用方按名单核对。
 
 <a name="ConnConfig"></a>
-## type ConnConfig
+## type [ConnConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/mcp/mcp.go#L30-L39>)
 
 ConnConfig 是连接一个远程 MCP 服务器所需的全部信息；Headers 承载 Authorization 等凭据， 由调用方从密文列解出后在内存中传入，绝不落日志。
 
@@ -53,7 +53,7 @@ type ConnConfig struct {
 ```
 
 <a name="Connection"></a>
-## type Connection
+## type [Connection](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/mcp/conn.go#L30-L33>)
 
 Connection 是已完成握手的 MCP 会话在运行时装配层的句柄：它把「取工具」与「关闭会话」收敛为 两个方法，使 internal/ai 的装配代码无需引用 MCP SDK（SDK 只出现在本包内）。
 
@@ -64,7 +64,7 @@ type Connection struct {
 ```
 
 <a name="DialConn"></a>
-### func DialConn
+### func [DialConn](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/mcp/conn.go#L38>)
 
 ```go
 func DialConn(ctx context.Context, cfg ConnConfig) (*Connection, error)
@@ -73,7 +73,7 @@ func DialConn(ctx context.Context, cfg ConnConfig) (*Connection, error)
 DialConn 连接指定远程 MCP 服务器并完成 initialize 握手，返回本包对外的会话句柄；调用方负责在 会话不再需要时调用 Close 释放资源（SSE 为有状态长连接）。与 Dial 的差别仅在于返回类型：本函数 返回可被非 SDK 代码持有的 Connection，Dial 保留给需要直接操作 SDK 客户端的调用方。
 
 <a name="Connection.Close"></a>
-### func \(\*Connection\) Close
+### func \(\*Connection\) [Close](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/mcp/conn.go#L74>)
 
 ```go
 func (c *Connection) Close() error
@@ -82,7 +82,7 @@ func (c *Connection) Close() error
 Close 关闭本会话并释放底层连接；nil 安全（未连接的句柄返回 nil）。
 
 <a name="Connection.ListAllTools"></a>
-### func \(\*Connection\) ListAllTools
+### func \(\*Connection\) [ListAllTools](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/mcp/conn.go#L58>)
 
 ```go
 func (c *Connection) ListAllTools(ctx context.Context) ([]RemoteTool, error)
@@ -91,7 +91,7 @@ func (c *Connection) ListAllTools(ctx context.Context) ([]RemoteTool, error)
 ListAllTools 列出本会话远端服务器的全部工具（tools/list 全量，SDK 自动翻页），返回工具名与 描述。与 LoadTools 的「按名精确取用」语义相反，本方法语义是「取全部」，且空结果不会被当作 「不请求远端」处理：连通性测试与工具清单同步正是要拿到全部工具（含空清单）这一事实。失败 返回英文错误。
 
 <a name="Connection.LoadTools"></a>
-### func \(\*Connection\) LoadTools
+### func \(\*Connection\) [LoadTools](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/mcp/conn.go#L47>)
 
 ```go
 func (c *Connection) LoadTools(ctx context.Context, remoteNames []string, headers map[string]string) ([]tool.BaseTool, error)
@@ -100,7 +100,7 @@ func (c *Connection) LoadTools(ctx context.Context, remoteNames []string, header
 LoadTools 经本会话按 remoteNames 取回远端工具，语义与包级 LoadTools 一致。
 
 <a name="RemoteTool"></a>
-## type RemoteTool
+## type [RemoteTool](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/mcp/conn.go#L21-L26>)
 
 RemoteTool 是远端 MCP 服务器 tools/list 返回的一个工具的展示信息：服务器侧的工具名与 可读描述。与 eino 的 tool.BaseTool 不同，它只承载展示所需的元信息，供连通性测试与工具 清单同步使用。
 
@@ -114,7 +114,7 @@ type RemoteTool struct {
 ```
 
 <a name="Transport"></a>
-## type Transport
+## type [Transport](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/mcp/enum.go#L12>)
 
 Transport 是远程 MCP 服务器传输方式的取值类型（mcp\_servers.transport 与视图层 transport 字段）。
 

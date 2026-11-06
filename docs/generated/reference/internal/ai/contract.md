@@ -164,7 +164,7 @@ var ErrInvalidAction = errors.New("ai: invalid action")
 ```
 
 <a name="ClientToolInfo"></a>
-## func ClientToolInfo
+## func [ClientToolInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/client_tools.go#L40>)
 
 ```go
 func ClientToolInfo(name string) (*schema.ToolInfo, bool)
@@ -173,7 +173,7 @@ func ClientToolInfo(name string) (*schema.ToolInfo, bool)
 ClientToolInfo 按名取回 client 工具的 schema，未登记时返回 ok=false（装配层据此记英文告警并跳过）。
 
 <a name="IsClientTool"></a>
-## func IsClientTool
+## func [IsClientTool](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/client_tools.go#L47>)
 
 ```go
 func IsClientTool(name string) bool
@@ -182,7 +182,7 @@ func IsClientTool(name string) bool
 IsClientTool 判断工具名是否为已登记的 client 工具：是则本次调用须挂起等待前端审批与执行 （实现不落在本地工具索引中），否则按本地工具派发。
 
 <a name="IsQuestionnaireTool"></a>
-## func IsQuestionnaireTool
+## func [IsQuestionnaireTool](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/client_tools.go#L54>)
 
 ```go
 func IsQuestionnaireTool(name string) bool
@@ -191,7 +191,7 @@ func IsQuestionnaireTool(name string) bool
 IsQuestionnaireTool 判断工具名是否为问卷类 client 工具（当前仅 ask\_user）：此类调用只向用户 提问、无副作用，供上层据此将其豁免人工审核。
 
 <a name="IsValidAction"></a>
-## func IsValidAction
+## func [IsValidAction](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/actions.go#L13>)
 
 ```go
 func IsValidAction(name string) bool
@@ -200,7 +200,7 @@ func IsValidAction(name string) bool
 IsValidAction 判断 name 是否为已知的客户端操作。
 
 <a name="NewApiInvokeToolInfo"></a>
-## func NewApiInvokeToolInfo
+## func [NewApiInvokeToolInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/client_tools.go#L116>)
 
 ```go
 func NewApiInvokeToolInfo() *schema.ToolInfo
@@ -209,7 +209,7 @@ func NewApiInvokeToolInfo() *schema.ToolInfo
 NewApiInvokeToolInfo 构造 api\_invoke 的工具元信息与参数 JSON schema：模型只给能力 ID 与请求体， 不能指定任意 URL；HTTP 方法与路径由后端按能力快照白名单解析并写入挂起现场，前端只执行该 已解析的调用。只读与写入能力共用同一工具，是否可调用由能力的 Invokable 属性决定。
 
 <a name="NewAskUserToolInfo"></a>
-## func NewAskUserToolInfo
+## func [NewAskUserToolInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/client_tools.go#L60>)
 
 ```go
 func NewAskUserToolInfo() *schema.ToolInfo
@@ -218,7 +218,7 @@ func NewAskUserToolInfo() *schema.ToolInfo
 NewAskUserToolInfo 构造 ask\_user 的工具元信息与参数 JSON schema，供模型决定何时调用。参数经 eino 的 ParameterInfo 形式描述（questions 必填，每题含 id / question / options）。
 
 <a name="ParseJSONResponse"></a>
-## func ParseJSONResponse
+## func [ParseJSONResponse](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/text.go#L15>)
 
 ```go
 func ParseJSONResponse[T any](content, label string) (T, error)
@@ -227,7 +227,7 @@ func ParseJSONResponse[T any](content, label string) (T, error)
 ParseJSONResponse 去掉首尾 \`\`\`json 代码围栏后把 content 解析为 T。label 描述调用点 （如 "dry\-run: cannot parse chunk relevance response"）；解析失败时返回的错误文本为 "\<label\> as JSON: \<响应前 200 字符\>"，供各调用点统一容错文案。
 
 <a name="RegisterClientToolInfo"></a>
-## func RegisterClientToolInfo
+## func [RegisterClientToolInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/client_tools.go#L23>)
 
 ```go
 func RegisterClientToolInfo(name string, info *schema.ToolInfo)
@@ -236,7 +236,7 @@ func RegisterClientToolInfo(name string, info *schema.ToolInfo)
 RegisterClientToolInfo 登记一个 client 工具的 schema，应由工具声明所在的 init 期调用。工具名 为空、schema 为 nil、schema 名与工具名不一致或同名重复登记均视为编程缺陷，直接 panic（fail fast），避免非法注册表在生产中以残缺形态运行（风格与 internal/ai/tools 的 Register 一致）。
 
 <a name="ReportFinish"></a>
-## func ReportFinish
+## func [ReportFinish](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/report.go#L20>)
 
 ```go
 func ReportFinish(r SyncReporter)
@@ -245,7 +245,7 @@ func ReportFinish(r SyncReporter)
 ReportFinish 在 r 非空时转发 Finish。
 
 <a name="ReportStart"></a>
-## func ReportStart
+## func [ReportStart](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/report.go#L4>)
 
 ```go
 func ReportStart(r SyncReporter, total int)
@@ -254,7 +254,7 @@ func ReportStart(r SyncReporter, total int)
 ReportStart 在 r 非空时转发 Start。
 
 <a name="ReportStep"></a>
-## func ReportStep
+## func [ReportStep](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/report.go#L12>)
 
 ```go
 func ReportStep(r SyncReporter, item SyncProgressItem)
@@ -263,7 +263,7 @@ func ReportStep(r SyncReporter, item SyncProgressItem)
 ReportStep 在 r 非空时转发 Step。
 
 <a name="ValidateActionRequest"></a>
-## func ValidateActionRequest
+## func [ValidateActionRequest](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/actions.go#L23>)
 
 ```go
 func ValidateActionRequest(request ActionRequest) error
@@ -272,7 +272,7 @@ func ValidateActionRequest(request ActionRequest) error
 ValidateActionRequest 校验操作名及其所需的负载。
 
 <a name="ActionRequest"></a>
-## type ActionRequest
+## type [ActionRequest](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/interaction.go#L74-L87>)
 
 ActionRequest 是 POST /agent/:sessionID/action 的请求体。
 
@@ -294,7 +294,7 @@ type ActionRequest struct {
 ```
 
 <a name="ApprovalDecision"></a>
-## type ApprovalDecision
+## type [ApprovalDecision](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/interaction.go#L58-L71>)
 
 ApprovalDecision 是客户端提交的一条审批决定。
 
@@ -316,7 +316,7 @@ type ApprovalDecision struct {
 ```
 
 <a name="ApprovalDecisions"></a>
-### func ApprovalDecisions
+### func [ApprovalDecisions](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/actions.go#L58>)
 
 ```go
 func ApprovalDecisions(request ActionRequest) ([]ApprovalDecision, error)
@@ -325,7 +325,7 @@ func ApprovalDecisions(request ActionRequest) ([]ApprovalDecision, error)
 ApprovalDecisions 把审批 ActionRequest 转换为规范化决定， 当某条决定缺少中断 ID 时用请求中的 ID 填充。
 
 <a name="ApprovalPayload"></a>
-## type ApprovalPayload
+## type [ApprovalPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/interaction.go#L44-L49>)
 
 ApprovalPayload 是审批交互的持久化负载。
 
@@ -339,7 +339,7 @@ type ApprovalPayload struct {
 ```
 
 <a name="ApprovalRequest"></a>
-## type ApprovalRequest
+## type [ApprovalRequest](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/interrupts.go#L6-L21>)
 
 ApprovalRequest 是后端审批中间件和 api\_invoke 客户端工具 产生的类型化中断负载。它通过 eino schema/gob 注册，以便在检查点/恢复中保留。
 
@@ -363,7 +363,7 @@ type ApprovalRequest struct {
 ```
 
 <a name="AuditLevel"></a>
-## type AuditLevel
+## type [AuditLevel](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/audit.go#L6>)
 
 AuditLevel 是工具调用的审核重要级标识：由评估子系统在挂起前对本次全部待执行调用分类产出， 取值 must / suggest / auto / none，依次对应「必须审核 / 建议审核 / 可自动审核 / 无需审核」。 与会话级审核阀门（ReviewValve）合成后决定调用是否需人工审核。
 
@@ -387,7 +387,7 @@ const (
 ```
 
 <a name="BusinessData"></a>
-## type BusinessData
+## type [BusinessData](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/business_data.go#L6>)
 
 BusinessData 是前端透传的业务数据载体（JSON 对象），作为 Agent 会话中「当前业务现场」 注入 LLM 上下文；注入前必须经清洗与限界，避免空值与超长内容挤占会话上下文预算。 键与值均为 JSON 可序列化类型。
 
@@ -396,7 +396,7 @@ type BusinessData map[string]any
 ```
 
 <a name="CallMeta"></a>
-## type CallMeta
+## type [CallMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/stage.go#L50-L59>)
 
 CallMeta 是一次大模型调用的元信息（阶段、模型名、耗时与 token 用量）。
 
@@ -414,7 +414,7 @@ type CallMeta struct {
 ```
 
 <a name="CallUsage"></a>
-## type CallUsage
+## type [CallUsage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/stage.go#L40-L47>)
 
 CallUsage 是一次大模型调用的 token 用量。
 
@@ -430,7 +430,7 @@ type CallUsage struct {
 ```
 
 <a name="CompactResult"></a>
-## type CompactResult
+## type [CompactResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/memory.go#L24-L35>)
 
 CompactResult 是一次会话压缩的产物：刷新后的摘要、成功落库的长期记忆条数与不影响主结果的 告警（长期记忆抽取/落库失败、记忆开关关闭等）。
 
@@ -450,7 +450,7 @@ type CompactResult struct {
 ```
 
 <a name="CompactionMetrics"></a>
-## type CompactionMetrics
+## type [CompactionMetrics](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/memory.go#L40-L48>)
 
 CompactionMetrics 携带一次摘要推进（CompactStream / Compact 产出）的展示度量，随检查点一并 落库。三种推进原因（rolling / auto / manual）都必须填入真实值：取值与是否展示无关，是否回显交由 读取侧按检查点的 reason 决定。
 
@@ -467,7 +467,7 @@ type CompactionMetrics struct {
 ```
 
 <a name="CompressEvent"></a>
-## type CompressEvent
+## type [CompressEvent](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/tool.go#L57-L85>)
 
 CompressEvent 是一次上下文压缩过程的事件载荷：Type 决定发布的运行事件类型 （compress\_start / compress\_delta / compress\_done），其余字段按事件类型择一有值。
 
@@ -504,7 +504,7 @@ type CompressEvent struct {
 ```
 
 <a name="CompressEventType"></a>
-## type CompressEventType
+## type [CompressEventType](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/tool.go#L5>)
 
 CompressEventType 是一次上下文压缩过程的事件类型：开始（compress\_start）、摘要增量 （compress\_delta）与完成（compress\_done）。仅内部流转使用，不注册枚举类。
 
@@ -526,7 +526,7 @@ const (
 ```
 
 <a name="CompressReporter"></a>
-## type CompressReporter
+## type [CompressReporter](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/tool.go#L88>)
 
 CompressReporter 上报一次上下文压缩事件；返回错误（写失败/客户端断开）时压缩过程应中止。
 
@@ -535,7 +535,7 @@ type CompressReporter func(CompressEvent) error
 ```
 
 <a name="EmbedUsage"></a>
-## type EmbedUsage
+## type [EmbedUsage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/progress.go#L5-L12>)
 
 EmbedUsage 是一次或多次 embedding 调用的 token 用量累计：由能力增强后的向量化链路 逐次汇总，供应商未返回用量时为零值。
 
@@ -551,7 +551,7 @@ type EmbedUsage struct {
 ```
 
 <a name="EvalReporter"></a>
-## type EvalReporter
+## type [EvalReporter](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/stage.go#L90>)
 
 EvalReporter 是评估阶段事件的实时上报回调：返回错误（如 SSE 写失败/客户端断开） 会中止后续阶段，避免产生无谓的大模型调用开销；为 nil 时不上报。
 
@@ -560,7 +560,7 @@ type EvalReporter = func(StageEvent) error
 ```
 
 <a name="EvalStage"></a>
-## type EvalStage
+## type [EvalStage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/stage.go#L4>)
 
 EvalStage 是评估与工具调用流程的阶段标识（检索 \+ 4 次评估调用 \+ 工具调用/结果）。
 
@@ -592,7 +592,7 @@ const (
 ```
 
 <a name="EvalStageStatus"></a>
-## type EvalStageStatus
+## type [EvalStageStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/stage.go#L27>)
 
 EvalStageStatus 是阶段状态标识；带 Delta 的增量事件不携带状态。
 
@@ -614,7 +614,7 @@ const (
 ```
 
 <a name="Interaction"></a>
-## type Interaction
+## type [Interaction](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/interaction.go#L31-L41>)
 
 Interaction 是持久化到 agent\_interactions 的一条业务交互。Payload 是可 JSON 序列化的业务结构 （审批调用、问卷问题 / 答案、下一步）。
 
@@ -633,7 +633,7 @@ type Interaction struct {
 ```
 
 <a name="InteractionKind"></a>
-## type InteractionKind
+## type [InteractionKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/interaction.go#L5>)
 
 InteractionKind 标识一条持久化交互（agent\_interactions.kind）的类型：审批（approval）、问卷 （questionnaire）与推荐的下一步（next\_steps）。取值与 agent\_interactions.kind 列一致。
 
@@ -655,7 +655,7 @@ const (
 ```
 
 <a name="InteractionStatus"></a>
-## type InteractionStatus
+## type [InteractionStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/interaction.go#L18>)
 
 InteractionStatus 是持久化交互（agent\_interactions.status）的生命周期状态：待处理（pending）、 已作答 / 已决策（answered）与已取消（cancelled）。取值与 agent\_interactions.status 列一致。
 
@@ -677,7 +677,7 @@ const (
 ```
 
 <a name="MemoryHit"></a>
-## type MemoryHit
+## type [MemoryHit](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/memory.go#L9-L20>)
 
 MemoryHit 是一条检索到的长期记忆。
 
@@ -697,7 +697,7 @@ type MemoryHit struct {
 ```
 
 <a name="NextStep"></a>
-## type NextStep
+## type [NextStep](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/next_steps.go#L16-L25>)
 
 NextStep 是推荐下一步的一条候选：Title 为简短行动标题（不超过 24 个字符），Reason 为推荐理由 （不超过 64 个字符），Text 为可直接发送给助手的完整诉求（不超过 200 个字符），Recommended 标记 该条是否为最推荐项（同一组内仅首条为 true）。长度约束由 binding 标签声明，经 validator.Check 校验。
 
@@ -715,7 +715,7 @@ type NextStep struct {
 ```
 
 <a name="NextStepsPayload"></a>
-## type NextStepsPayload
+## type [NextStepsPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/interaction.go#L52-L55>)
 
 NextStepsPayload 是下一步的持久化负载。
 
@@ -727,7 +727,7 @@ type NextStepsPayload struct {
 ```
 
 <a name="PendingCall"></a>
-## type PendingCall
+## type [PendingCall](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/audit.go#L42-L61>)
 
 PendingCall 是一条挂起等待人工审批 / 前端执行的工具调用：既作为挂起现场（agent\_runs）中 pending\_calls 的 JSON 形状，也作为交互载荷与接口出参的调用描述，全模块唯一权威定义。
 
@@ -755,7 +755,7 @@ type PendingCall struct {
 ```
 
 <a name="ToPendingCalls"></a>
-### func ToPendingCalls
+### func [ToPendingCalls](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/audit.go#L66>)
 
 ```go
 func ToPendingCalls(pending []PendingCall) []PendingCall
@@ -764,7 +764,7 @@ func ToPendingCalls(pending []PendingCall) []PendingCall
 ToPendingCalls 把挂起现场中的待执行调用转为回传列表：审核重要级与执行归属原样透传； 审批合成结论未随现场持久化，问卷类调用由前端按工具名识别、豁免审批，其余调用保守置为 「需人工审批」，避免回退后未经用户决策即自动执行。
 
 <a name="QuestionnaireAnswer"></a>
-## type QuestionnaireAnswer
+## type [QuestionnaireAnswer](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/questionnaire.go#L24-L33>)
 
 QuestionnaireAnswer 是用户对某题的作答：Answered=false 表示未作答（Answer 为空）；Custom=true 表示用户选择了「其他」并自填文本，此时 Answer 为用户自定义文本。
 
@@ -782,7 +782,7 @@ type QuestionnaireAnswer struct {
 ```
 
 <a name="QuestionnaireAnswers"></a>
-### func QuestionnaireAnswers
+### func [QuestionnaireAnswers](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/actions.go#L85>)
 
 ```go
 func QuestionnaireAnswers(request ActionRequest) ([]QuestionnaireAnswer, error)
@@ -791,7 +791,7 @@ func QuestionnaireAnswers(request ActionRequest) ([]QuestionnaireAnswer, error)
 QuestionnaireAnswers 把问卷 ActionRequest 转换为规范化 答案。非空答案意味着 Answered；未作答的条目会丢弃其 文本。
 
 <a name="QuestionnaireOption"></a>
-## type QuestionnaireOption
+## type [QuestionnaireOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/questionnaire.go#L4-L9>)
 
 QuestionnaireOption 是 ask\_user 问卷中的一个候选答案：Text 为候选答案文本，Detail 为其可选说明。
 
@@ -805,7 +805,7 @@ type QuestionnaireOption struct {
 ```
 
 <a name="QuestionnairePayload"></a>
-## type QuestionnairePayload
+## type [QuestionnairePayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/questionnaire.go#L39-L49>)
 
 QuestionnairePayload 是「一轮」ask\_user 问卷的完整载荷：Questions 为该轮的题目，Answers 为该轮用户的 作答（首次挂起时为空，续跑终态化后承载答案，供历史回显与回退重答）。同一回合内模型可多轮提问（拿到上一轮 答案后再次调用 ask\_user），每一轮各自成一个 questionnaire 块、按 block\_seq 先后并列存储，前端据此把 各轮渲染成各自独立的问答框并把最新一轮沉在底部。它既是 run 现场的回落依据，也是回退（重新回答）接口的出参形态。
 
@@ -824,7 +824,7 @@ type QuestionnairePayload struct {
 ```
 
 <a name="QuestionnairePayload.FullyAnswered"></a>
-### func \(QuestionnairePayload\) FullyAnswered
+### func \(QuestionnairePayload\) [FullyAnswered](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/questionnaire.go#L55>)
 
 ```go
 func (p QuestionnairePayload) FullyAnswered() bool
@@ -833,7 +833,7 @@ func (p QuestionnairePayload) FullyAnswered() bool
 FullyAnswered 报告单轮载荷中的题目是否全部已作答：逐题按 id 取首个匹配答案（与前端 questionnaireAnswerTextOf 的判定一致），答案存在且 Answered=true 视为已作答。多轮提问的各轮各自成一份 载荷，故视图层只需对末轮调用它即可判定 awaiting：末轮仍存在未作答的题目等价于「该轮仍在等用户作答」； 非问卷挂起（末轮在此之前已作答）时它恒为 true、不误判。
 
 <a name="QuestionnaireQuestion"></a>
-## type QuestionnaireQuestion
+## type [QuestionnaireQuestion](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/questionnaire.go#L13-L20>)
 
 QuestionnaireQuestion 是 ask\_user 问卷中的一个提问：ID 为本次问卷内的唯一标识（回传答案据它定位 对应问题），Question 为题面，Options 为 1\~3 条候选答案。
 
@@ -849,7 +849,7 @@ type QuestionnaireQuestion struct {
 ```
 
 <a name="QuestionnaireRequest"></a>
-## type QuestionnaireRequest
+## type [QuestionnaireRequest](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/interrupts.go#L25-L34>)
 
 QuestionnaireRequest 是 ask\_user 客户端工具 产生的类型化中断负载。
 
@@ -867,7 +867,7 @@ type QuestionnaireRequest struct {
 ```
 
 <a name="StageEvent"></a>
-## type StageEvent
+## type [StageEvent](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/stage.go#L63-L86>)
 
 StageEvent 是阶段上报事件：Status 非空时为阶段状态事件（start/done/failed）， Delta 非空时为该阶段的增量输出事件。
 
@@ -899,7 +899,7 @@ type StageEvent struct {
 ```
 
 <a name="SyncProgressItem"></a>
-## type SyncProgressItem
+## type [SyncProgressItem](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/progress.go#L29-L40>)
 
 SyncProgressItem 是一条同步进度明细：由各同步链路在单个条目（或记忆批）完成后上报。
 
@@ -919,7 +919,7 @@ type SyncProgressItem struct {
 ```
 
 <a name="SyncReporter"></a>
-## type SyncReporter
+## type [SyncReporter](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/progress.go#L44-L51>)
 
 SyncReporter 是同步进度上报接口：调用顺序为一次 Start、每条目一次 Step、一次 Finish。 调用方传 nil 表示不上报（内部经 reportStart/reportStep/reportFinish 判空转发）。
 
@@ -935,7 +935,7 @@ type SyncReporter interface {
 ```
 
 <a name="ToolExecOwner"></a>
-## type ToolExecOwner
+## type [ToolExecOwner](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/audit.go#L30>)
 
 ToolExecOwner 标识一次挂起工具调用的执行归属：client 由前端在用户自身凭据下执行，backend 由 后端在恢复时自行执行（builtin / MCP 工具，仅在审核重要级为 must 时挂起等审批）。
 
@@ -955,7 +955,7 @@ const (
 ```
 
 <a name="ToolRequest"></a>
-## type ToolRequest
+## type [ToolRequest](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/tool.go#L19-L37>)
 
 ToolRequest 是一条待执行工具调用请求（对应 SSE tool\_request 事件的载荷）：client 工具由前端 在用户自身凭据下执行，backend 工具由后端在恢复时自行执行。
 
@@ -982,7 +982,7 @@ type ToolRequest struct {
 ```
 
 <a name="ToolRequestReporter"></a>
-## type ToolRequestReporter
+## type [ToolRequestReporter](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/tool.go#L40>)
 
 ToolRequestReporter 上报一条待执行的工具调用请求；返回错误（写失败/客户端断开）时挂起中止。
 
@@ -991,7 +991,7 @@ type ToolRequestReporter func(ToolRequest) error
 ```
 
 <a name="ToolResult"></a>
-## type ToolResult
+## type [ToolResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/tool.go#L44-L53>)
 
 ToolResult 是前端回传的一次客户端工具调用执行结果（对应恢复请求的载荷），按 CallID 与挂起时 下发的 tool\_request 关联。
 
@@ -1009,7 +1009,7 @@ type ToolResult struct {
 ```
 
 <a name="ToolResumeResult"></a>
-## type ToolResumeResult
+## type [ToolResumeResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/contract/interrupts.go#L38-L51>)
 
 ToolResumeResult 是通过 ResumeParams.Targets 传给挂起工具的类型化 恢复数据。
 

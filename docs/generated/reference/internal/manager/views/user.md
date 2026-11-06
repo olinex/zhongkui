@@ -68,7 +68,7 @@ var (
 ```
 
 <a name="RegisterRoutes"></a>
-## func RegisterRoutes
+## func [RegisterRoutes](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/register.go#L13>)
 
 ```go
 func RegisterRoutes(ctx *views.RegisterContext)
@@ -77,7 +77,7 @@ func RegisterRoutes(ctx *views.RegisterContext)
 RegisterRoutes 注册 /api/v1/user 用户接口路由。 用户相关接口，包括公共接口和个人接口。
 
 <a name="UserPasswordForgot"></a>
-## func UserPasswordForgot
+## func [UserPasswordForgot](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L211>)
 
 ```go
 func UserPasswordForgot(c *gin.Context)
@@ -88,7 +88,7 @@ UserPasswordForgot 处理忘记密码申请请求 路由：POST /api/v1/user/pas
 防枚举与限流：为避免攻击者据响应差异批量验证「账号名↔邮箱」配对（撞库前的标准情报收集）， 无论账号是否存在、是否与邮箱匹配，一律返回同一成功响应，差异（未命中 / 落库失败 / 入队失败） 只写入服务端日志；同时对请求来源地址按配置限额做窗口限流（ErrTooManyRequests）。
 
 <a name="UserPasswordLogin"></a>
-## func UserPasswordLogin
+## func [UserPasswordLogin](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L166>)
 
 ```go
 func UserPasswordLogin(c *gin.Context)
@@ -97,7 +97,7 @@ func UserPasswordLogin(c *gin.Context)
 UserPasswordLogin 处理用户密码登录请求 路由：POST /api/v1/user/password/login 功能：验证用户名密码并颁发JWT令牌
 
 <a name="UserPasswordResetByToken"></a>
-## func UserPasswordResetByToken
+## func [UserPasswordResetByToken](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L301>)
 
 ```go
 func UserPasswordResetByToken(c *gin.Context)
@@ -106,7 +106,7 @@ func UserPasswordResetByToken(c *gin.Context)
 UserPasswordResetByToken 处理通过邮件链接令牌重置密码请求 路由：POST /api/v1/user/password/reset 功能：校验令牌存在、未使用且未过期，在同一事务中标记令牌已使用并更新用户密码。
 
 <a name="UserSelfAccessKeyCreate"></a>
-## func UserSelfAccessKeyCreate
+## func [UserSelfAccessKeyCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L553>)
 
 ```go
 func UserSelfAccessKeyCreate(c *gin.Context)
@@ -115,7 +115,7 @@ func UserSelfAccessKeyCreate(c *gin.Context)
 UserSelfAccessKeyCreate 创建访问密钥 路由：POST /api/v1/user/self/access\-key/create 功能：为用户创建新的访问密钥
 
 <a name="UserSelfAccessKeyEnabled"></a>
-## func UserSelfAccessKeyEnabled
+## func [UserSelfAccessKeyEnabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L645>)
 
 ```go
 func UserSelfAccessKeyEnabled(enabled bool) gin.HandlerFunc
@@ -131,7 +131,7 @@ POST /api/v1/user/self/access-key/:id/deactivate - 禁用
 功能：更新访问密钥的启用状态
 
 <a name="UserSelfAccessKeyListGet"></a>
-## func UserSelfAccessKeyListGet
+## func [UserSelfAccessKeyListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L510>)
 
 ```go
 func UserSelfAccessKeyListGet(c *gin.Context)
@@ -140,7 +140,7 @@ func UserSelfAccessKeyListGet(c *gin.Context)
 UserSelfAccessKeyListGet 获取用户访问密钥列表 路由：POST /api/v1/user/self/access\-key/list 功能：获取当前用户的所有访问密钥
 
 <a name="UserSelfAccessKeyRemove"></a>
-## func UserSelfAccessKeyRemove
+## func [UserSelfAccessKeyRemove](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L613>)
 
 ```go
 func UserSelfAccessKeyRemove(c *gin.Context)
@@ -149,7 +149,7 @@ func UserSelfAccessKeyRemove(c *gin.Context)
 UserSelfAccessKeyRemove 删除访问密钥 路由：POST /api/v1/user/self/access\-key/:id/remove 功能：删除指定ID的访问密钥
 
 <a name="UserSelfAuthorizationInfoGet"></a>
-## func UserSelfAuthorizationInfoGet
+## func [UserSelfAuthorizationInfoGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L453>)
 
 ```go
 func UserSelfAuthorizationInfoGet(c *gin.Context)
@@ -158,7 +158,7 @@ func UserSelfAuthorizationInfoGet(c *gin.Context)
 UserSelfAuthorizationInfoGet 获取用户授权信息 路由：POST /api/v1/user/self/authorization\-info/get 功能：获取当前用户的RBAC策略和可访问的命名空间
 
 <a name="UserSelfFrontendConfigGet"></a>
-## func UserSelfFrontendConfigGet
+## func [UserSelfFrontendConfigGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L689>)
 
 ```go
 func UserSelfFrontendConfigGet(c *gin.Context)
@@ -167,7 +167,7 @@ func UserSelfFrontendConfigGet(c *gin.Context)
 UserSelfFrontendConfigGet 获取当前用户的前端页面配置 路由：POST /api/v1/user/self/frontend\-config/get 功能：返回用户保存的配置内容、哈希、版本号与同步开关状态， 前端登录后据此恢复跨主机的页面配置
 
 <a name="UserSelfFrontendConfigSync"></a>
-## func UserSelfFrontendConfigSync
+## func [UserSelfFrontendConfigSync](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L721>)
 
 ```go
 func UserSelfFrontendConfigSync(c *gin.Context)
@@ -181,7 +181,7 @@ UserSelfFrontendConfigSync 同步上传当前用户的前端页面配置 路由�
 响应：返回同步后的最新配置状态（哈希、版本号、配置内容）
 
 <a name="UserSelfFrontendConfigSyncEnabledSet"></a>
-## func UserSelfFrontendConfigSyncEnabledSet
+## func [UserSelfFrontendConfigSyncEnabledSet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L781>)
 
 ```go
 func UserSelfFrontendConfigSyncEnabledSet(c *gin.Context)
@@ -190,7 +190,7 @@ func UserSelfFrontendConfigSyncEnabledSet(c *gin.Context)
 UserSelfFrontendConfigSyncEnabledSet 设置当前用户的前端配置同步开关 路由：POST /api/v1/user/self/frontend\-config/sync\-enabled/set 功能：开启后允许浏览器上传配置，关闭后后端拒绝接收配置上传
 
 <a name="UserSelfJwtRefresh"></a>
-## func UserSelfJwtRefresh
+## func [UserSelfJwtRefresh](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L424>)
 
 ```go
 func UserSelfJwtRefresh(c *gin.Context)
@@ -199,7 +199,7 @@ func UserSelfJwtRefresh(c *gin.Context)
 UserSelfJwtRefresh 处理JWT令牌刷新请求 路由：POST /api/v1/user/jwt/refresh（豁免强制认证与授权，用过期 access token 换发） 功能：刷新当前用户的JWT令牌
 
 <a name="UserSelfPasswordReset"></a>
-## func UserSelfPasswordReset
+## func [UserSelfPasswordReset](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L348>)
 
 ```go
 func UserSelfPasswordReset(c *gin.Context)
@@ -208,7 +208,7 @@ func UserSelfPasswordReset(c *gin.Context)
 UserSelfPasswordReset 处理用户密码重置请求 路由：POST /api/v1/user/self/password/reset 功能：验证旧密码后更新为新密码
 
 <a name="UserSelfProfileChange"></a>
-## func UserSelfProfileChange
+## func [UserSelfProfileChange](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L385>)
 
 ```go
 func UserSelfProfileChange(c *gin.Context)
@@ -217,7 +217,7 @@ func UserSelfProfileChange(c *gin.Context)
 UserSelfProfileChange 处理用户个人资料修改请求 路由：POST /api/v1/user/self/profile/change 功能：更新用户昵称和邮箱，并刷新JWT令牌
 
 <a name="AuthorizationInfoOut"></a>
-## type AuthorizationInfoOut
+## type [AuthorizationInfoOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L115-L119>)
 
 AuthorizationInfoOut 定义用户授权信息的输出结构体 包含RBAC模型、策略列表和命名空间列表
 
@@ -230,7 +230,7 @@ type AuthorizationInfoOut struct {
 ```
 
 <a name="UserAccessKeyCreateIn"></a>
-## type UserAccessKeyCreateIn
+## type [UserAccessKeyCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L107-L111>)
 
 UserAccessKeyCreateIn 定义创建访问密钥的输入结构体 包含访问密钥的启用状态、描述和过期时间
 
@@ -243,7 +243,7 @@ type UserAccessKeyCreateIn struct {
 ```
 
 <a name="UserAccessKeyOut"></a>
-## type UserAccessKeyOut
+## type [UserAccessKeyOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L123-L131>)
 
 UserAccessKeyOut 定义访问密钥的输出结构体 继承BaseItemOut，包含访问密钥的详细信息
 
@@ -260,7 +260,7 @@ type UserAccessKeyOut struct {
 ```
 
 <a name="UserFrontendConfigOut"></a>
-## type UserFrontendConfigOut
+## type [UserFrontendConfigOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L135-L140>)
 
 UserFrontendConfigOut 定义用户前端页面配置的输出结构体 用于查询/同步接口返回用户当前的配置内容与并发校验元数据
 
@@ -274,7 +274,7 @@ type UserFrontendConfigOut struct {
 ```
 
 <a name="UserFrontendConfigSyncEnabledIn"></a>
-## type UserFrontendConfigSyncEnabledIn
+## type [UserFrontendConfigSyncEnabledIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L152-L154>)
 
 UserFrontendConfigSyncEnabledIn 定义前端配置同步开关的输入结构体
 
@@ -285,7 +285,7 @@ type UserFrontendConfigSyncEnabledIn struct {
 ```
 
 <a name="UserFrontendConfigSyncIn"></a>
-## type UserFrontendConfigSyncIn
+## type [UserFrontendConfigSyncIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L145-L149>)
 
 UserFrontendConfigSyncIn 定义前端配置同步上传的输入结构体 携带上一次同步的哈希与版本号，用于乐观锁并发校验： 任一不一致说明其他浏览器已抢先更新，后端拒绝本次写入
 
@@ -298,7 +298,7 @@ type UserFrontendConfigSyncIn struct {
 ```
 
 <a name="UserPasswordForgotIn"></a>
-## type UserPasswordForgotIn
+## type [UserPasswordForgotIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L93-L96>)
 
 UserPasswordForgotIn 定义忘记密码申请的输入结构体 用户在未登录态提交账号名与邮箱地址，后端校验两者与库内一致后才发送重置邮件
 
@@ -310,7 +310,7 @@ type UserPasswordForgotIn struct {
 ```
 
 <a name="UserPasswordLoginIn"></a>
-## type UserPasswordLoginIn
+## type [UserPasswordLoginIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L72-L75>)
 
 UserPasswordLoginIn 定义密码登录的输入结构体 包含用户名和密码信息
 
@@ -322,7 +322,7 @@ type UserPasswordLoginIn struct {
 ```
 
 <a name="UserPasswordResetByTokenIn"></a>
-## type UserPasswordResetByTokenIn
+## type [UserPasswordResetByTokenIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L100-L103>)
 
 UserPasswordResetByTokenIn 定义通过邮件链接令牌重置密码的输入结构体 令牌由 forgot 接口生成并随邮件链接发送，过期或使用后失效
 
@@ -334,7 +334,7 @@ type UserPasswordResetByTokenIn struct {
 ```
 
 <a name="UserPasswordResetIn"></a>
-## type UserPasswordResetIn
+## type [UserPasswordResetIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L86-L89>)
 
 UserPasswordResetIn 定义用户密码重置的输入结构体 包含旧密码和新密码信息
 
@@ -346,7 +346,7 @@ type UserPasswordResetIn struct {
 ```
 
 <a name="UserProfileChangeIn"></a>
-## type UserProfileChangeIn
+## type [UserProfileChangeIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L58-L61>)
 
 UserProfileChangeIn 定义用户个人资料修改的输入结构体 包含用户昵称和邮箱信息
 
@@ -358,7 +358,7 @@ type UserProfileChangeIn struct {
 ```
 
 <a name="UserRegisterIn"></a>
-## type UserRegisterIn
+## type [UserRegisterIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L79-L82>)
 
 UserRegisterIn 定义用户注册的输入结构体 继承UserProfileChangeIn和UserPasswordLoginIn，包含注册所需的所有信息
 
@@ -370,7 +370,7 @@ type UserRegisterIn struct {
 ```
 
 <a name="UserTokenOut"></a>
-## type UserTokenOut
+## type [UserTokenOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/user/user.go#L66-L68>)
 
 UserTokenOut 定义 JWT 令牌的输出结构体 用于登录、令牌刷新等接口在响应体中返回 JWT 令牌， 供前端在 Cookie 不可跨主机读取的场景（如 localhost 与 127.0.0.1）下持久化使用
 

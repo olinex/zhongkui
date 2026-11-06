@@ -160,7 +160,7 @@ const ReporterGrpcName = "reporter"
 ```
 
 <a name="Hostname"></a>
-## func Hostname
+## func [Hostname](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/base/os.go#L6>)
 
 ```go
 func Hostname() string
@@ -169,7 +169,7 @@ func Hostname() string
 Hostname 返回本机主机名，获取失败则返回 "unknown"。
 
 <a name="ModulePath"></a>
-## func ModulePath
+## func [ModulePath](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/base/module.go#L23>)
 
 ```go
 func ModulePath() string
@@ -178,7 +178,7 @@ func ModulePath() string
 ModulePath 返回构建期写入二进制的本项目模块导入路径（如 zhongkuisec.com/zhongkui）。 构建信息不可用时返回空字符串，由调用方自行决定降级或报错，本包不提供文件系统回退。
 
 <a name="NamespaceScope"></a>
-## func NamespaceScope
+## func [NamespaceScope](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/base/namespace.go#L12>)
 
 ```go
 func NamespaceScope(namespaceName string) []string
@@ -191,7 +191,7 @@ NamespaceScope 返回一次跨命名空间操作应覆盖的命名空间集合�
 注意与视图层「可见命名空间」的区别：后者（user.go 的 visibleNamespaces）是从展示列表中 剔除系统命名空间，与本函数方向相反。
 
 <a name="GlobalEnv"></a>
-## type GlobalEnv
+## type [GlobalEnv](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/base/environments.go#L14-L29>)
 
 GlobalEnv 定义平台全局环境配置，字段经 split\_words 映射为 ZKI\_ 前缀环境变量注入。
 
@@ -223,7 +223,7 @@ var (
 ```
 
 <a name="Language"></a>
-## type Language
+## type [Language](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/base/language.go#L62-L66>)
 
 Language 结构体封装了语言标签，提供了语言相关的操作方法 它使用 golang.org/x/text/language 包中的 Tag 类型作为内部表示 这个结构体实现了以下接口:
 
@@ -277,7 +277,7 @@ var (
 ```
 
 <a name="MustParseLanguage"></a>
-### func MustParseLanguage
+### func [MustParseLanguage](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/base/language.go#L111>)
 
 ```go
 func MustParseLanguage(lang string) *Language
@@ -286,7 +286,7 @@ func MustParseLanguage(lang string) *Language
 MustParseLanguage 解析语言字符串并返回 Language 实例 如果解析失败，会 panic 并包含堆栈信息
 
 <a name="ParseLanguage"></a>
-### func ParseLanguage
+### func [ParseLanguage](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/base/language.go#L95>)
 
 ```go
 func ParseLanguage(lang string) (*Language, error)
@@ -322,7 +322,7 @@ fmt.Println(lang.String()) // 输出: "zh-Hans"
 ```
 
 <a name="Language.MarshalJSON"></a>
-### func \(Language\) MarshalJSON
+### func \(Language\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/base/language.go#L378>)
 
 ```go
 func (l Language) MarshalJSON() ([]byte, error)
@@ -360,7 +360,7 @@ jsonData, _ := json.Marshal(cfg)
 ```
 
 <a name="Language.MarshalText"></a>
-### func \(Language\) MarshalText
+### func \(Language\) [MarshalText](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/base/language.go#L308>)
 
 ```go
 func (l Language) MarshalText() ([]byte, error)
@@ -393,7 +393,7 @@ yamlData, _ := yaml.Marshal(cfg)
 ```
 
 <a name="Language.Normalize"></a>
-### func \(\*Language\) Normalize
+### func \(\*Language\) [Normalize](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/base/language.go#L130>)
 
 ```go
 func (l *Language) Normalize() *Language
@@ -413,7 +413,7 @@ Normalize 将当前语言归一化为最近的支持语言（SupportLanguages �
 - 中间件解析 Accept\-Language 后，将请求语言归一化到受支持集合
 
 <a name="Language.Scan"></a>
-### func \(\*Language\) Scan
+### func \(\*Language\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/base/language.go#L400>)
 
 ```go
 func (l *Language) Scan(value any) error
@@ -422,7 +422,7 @@ func (l *Language) Scan(value any) error
 Scan 实现 sql.Scanner，兼容字符串语言标签、字节数组与 NULL。 NULL 将 Language 重置为零值（und）。
 
 <a name="Language.SetDefaults"></a>
-### func \(\*Language\) SetDefaults
+### func \(\*Language\) [SetDefaults](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/base/language.go#L232>)
 
 ```go
 func (l *Language) SetDefaults()
@@ -445,7 +445,7 @@ fmt.Println(cfg.DefaultLang.String()) // 输出: "en"
 ```
 
 <a name="Language.StdTag"></a>
-### func \(\*Language\) StdTag
+### func \(\*Language\) [StdTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/base/language.go#L188>)
 
 ```go
 func (l *Language) StdTag() language.Tag
@@ -467,7 +467,7 @@ fmt.Println(base.String()) // 输出: "zh"
 ```
 
 <a name="Language.String"></a>
-### func \(\*Language\) String
+### func \(\*Language\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/base/language.go#L162>)
 
 ```go
 func (l *Language) String() string
@@ -488,7 +488,7 @@ fmt.Printf("Language: %s\n", lang) // 输出: Language: zh-Hans
 ```
 
 <a name="Language.UnderscoreLocale"></a>
-### func \(\*Language\) UnderscoreLocale
+### func \(\*Language\) [UnderscoreLocale](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/base/language.go#L211>)
 
 ```go
 func (l *Language) UnderscoreLocale() string
@@ -517,7 +517,7 @@ fmt.Println(lang.UnderscoreLocale()) // 输出: "en_US"
 ```
 
 <a name="Language.UnmarshalJSON"></a>
-### func \(\*Language\) UnmarshalJSON
+### func \(\*Language\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/base/language.go#L341>)
 
 ```go
 func (l *Language) UnmarshalJSON(data []byte) error
@@ -556,7 +556,7 @@ fmt.Println(cfg.Language.String()) // 输出: "zh-Hans"
 ```
 
 <a name="Language.UnmarshalText"></a>
-### func \(\*Language\) UnmarshalText
+### func \(\*Language\) [UnmarshalText](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/base/language.go#L266>)
 
 ```go
 func (l *Language) UnmarshalText(data []byte) error
@@ -594,7 +594,7 @@ var cfg struct {
 ```
 
 <a name="Language.Value"></a>
-### func \(Language\) Value
+### func \(Language\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/base/language.go#L388>)
 
 ```go
 func (l Language) Value() (driver.Value, error)

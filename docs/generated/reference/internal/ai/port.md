@@ -16,7 +16,7 @@
 
 
 <a name="EmbedStringsWithUsage"></a>
-## func EmbedStringsWithUsage
+## func [EmbedStringsWithUsage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/port/port.go#L39>)
 
 ```go
 func EmbedStringsWithUsage(ctx context.Context, emb Embedder, texts []string) ([][]float64, contract.EmbedUsage, error)
@@ -25,7 +25,7 @@ func EmbedStringsWithUsage(ctx context.Context, emb Embedder, texts []string) ([
 EmbedStringsWithUsage 向量化文本并尽力取回 token 用量：emb 实现 UsageEmbedder 时调用其带用量 的方法并把 embedding.TokenUsage 转为 contract.EmbedUsage；否则回退 EmbedStrings 并返回零值 contract.EmbedUsage。错误一律经 errors.WithStack 包装。
 
 <a name="FlashChat"></a>
-## func FlashChat
+## func [FlashChat](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/port/port.go#L79>)
 
 ```go
 func FlashChat(resolver ChatResolver) (model.BaseChatModel, error)
@@ -34,7 +34,7 @@ func FlashChat(resolver ChatResolver) (model.BaseChatModel, error)
 FlashChat 按 flash 档位解析对话客户端：resolver 缺失、档位未绑定或解析失败均返回英文错误， 绝不静默切换到其他档位。供严格使用低档位的辅助任务（记忆抽取、检索重排等）复用。
 
 <a name="FlashOrFallbackChat"></a>
-## func FlashOrFallbackChat
+## func [FlashOrFallbackChat](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/port/port.go#L95>)
 
 ```go
 func FlashOrFallbackChat(resolver ChatResolver, runSlot modelsai.Slot) (model.BaseChatModel, error)
@@ -43,7 +43,7 @@ func FlashOrFallbackChat(resolver ChatResolver, runSlot modelsai.Slot) (model.Ba
 FlashOrFallbackChat 优先按 flash 档位解析对话客户端，失败时回退到本次运行档位；两者都失败返回 英文错误。供审核评估、推荐下一步等「优先低成本、允许使用运行档位」的辅助任务复用。
 
 <a name="StreamChat"></a>
-## func StreamChat
+## func [StreamChat](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/port/port.go#L111>)
 
 ```go
 func StreamChat(ctx context.Context, chat ChatGenerator, messages []*schema.Message, onDelta func(string) error) (string, *schema.TokenUsage, time.Duration, error)
@@ -52,7 +52,7 @@ func StreamChat(ctx context.Context, chat ChatGenerator, messages []*schema.Mess
 StreamChat 以流式方式执行一次对话：逐块累积正文，把每个非空正文增量交给 onDelta（可空）， 并返回完整正文、末帧携带的 token 用量（供应商未返回时为 nil）与本次调用耗时。onDelta 返回 错误（如客户端断开）时立即中止并透传该错误，已累积的正文一并返回。
 
 <a name="ChatGenerator"></a>
-## type ChatGenerator
+## type [ChatGenerator](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/port/port.go#L70-L75>)
 
 ChatGenerator 是能力包所需的最小对话接口；\*ChatClient 与 eino 实现均满足。 重排与评估使用非流式 Generate；dry\-run 的流式链路使用 Stream 以实时透传模型输出。
 
@@ -66,7 +66,7 @@ type ChatGenerator interface {
 ```
 
 <a name="ChatModelNamer"></a>
-## type ChatModelNamer
+## type [ChatModelNamer](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/port/port.go#L63-L66>)
 
 ChatModelNamer 是能报告自身模型名的对话客户端的最小接口（\*llm.ChatClient 天然满足）。
 
@@ -78,7 +78,7 @@ type ChatModelNamer interface {
 ```
 
 <a name="ChatResolver"></a>
-## type ChatResolver
+## type [ChatResolver](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/port/port.go#L60>)
 
 ChatResolver 按档位解析对话模型（使用者侧行为契约）：由上层装配方实现，能力包按需调用它 取回对话客户端，从而在同一流程内支持按请求切换模型而不重建装配。
 
@@ -87,7 +87,7 @@ type ChatResolver = func(slot modelsai.Slot) (model.BaseChatModel, error)
 ```
 
 <a name="Embedder"></a>
-## type Embedder
+## type [Embedder](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/port/port.go#L24-L27>)
 
 Embedder 是向量化客户端的最小接口；\*llm.EmbedClient 与 eino 实现均满足。
 
@@ -99,7 +99,7 @@ type Embedder interface {
 ```
 
 <a name="UsageEmbedder"></a>
-## type UsageEmbedder
+## type [UsageEmbedder](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/port/port.go#L31-L34>)
 
 UsageEmbedder 是能报告 token 用量的向量化客户端（\*llm.EmbedClient 天然满足）， 调用方经类型断言取可选能力，不支持时回退无用量路径。
 

@@ -32,7 +32,7 @@ const (
 ```
 
 <a name="AESGCMMode"></a>
-## type AESGCMMode
+## type [AESGCMMode](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/mode/aes_gcm.go#L41-L48>)
 
 AESGCMMode 实现 AES\-GCM 认证加密模式。
 
@@ -57,7 +57,7 @@ type AESGCMMode struct {
 ```
 
 <a name="NewAESGCMMode"></a>
-### func NewAESGCMMode
+### func [NewAESGCMMode](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/mode/aes_gcm.go#L67>)
 
 ```go
 func NewAESGCMMode(cryptoKey, additionalData []byte) (*AESGCMMode, error)
@@ -86,7 +86,7 @@ ciphertext, err := mode.Encrypt([]byte("hello"))
 ```
 
 <a name="AESGCMMode.Decrypt"></a>
-### func \(\*AESGCMMode\) Decrypt
+### func \(\*AESGCMMode\) [Decrypt](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/mode/aes_gcm.go#L133>)
 
 ```go
 func (e *AESGCMMode) Decrypt(ciphertext []byte) ([]byte, error)
@@ -116,7 +116,7 @@ Decrypt 使用 AES\-GCM 解密密文。
 - 使用了错误的密钥
 
 <a name="AESGCMMode.Encrypt"></a>
-### func \(\*AESGCMMode\) Encrypt
+### func \(\*AESGCMMode\) [Encrypt](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/mode/aes_gcm.go#L100>)
 
 ```go
 func (e *AESGCMMode) Encrypt(plaintext []byte) ([]byte, error)
@@ -145,7 +145,7 @@ Encrypt 使用 AES\-GCM 加密明文。
 - nonce 不需要保密，但必须唯一（使用随机数保证）
 
 <a name="Mode"></a>
-## type Mode
+## type [Mode](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/mode/mode.go#L20-L42>)
 
 Mode 定义对称加密算法的统一接口。 所有加密模式实现都必须支持加密和解密操作。
 

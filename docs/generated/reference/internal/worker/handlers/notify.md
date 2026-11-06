@@ -33,7 +33,7 @@ const (
 ```
 
 <a name="NewSendGroupTask"></a>
-## func NewSendGroupTask
+## func [NewSendGroupTask](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/notify/task.go#L106>)
 
 ```go
 func NewSendGroupTask(in notifybase.SendGroupInput) (*asynq.Task, error)
@@ -42,7 +42,7 @@ func NewSendGroupTask(in notifybase.SendGroupInput) (*asynq.Task, error)
 NewSendGroupTask 将通知组发送请求编码为 notify:send:group 异步任务；必填字段缺失返回错误。
 
 <a name="NewSendTargetTask"></a>
-## func NewSendTargetTask
+## func [NewSendTargetTask](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/notify/task.go#L153>)
 
 ```go
 func NewSendTargetTask(in notifybase.SendTargetInput) (*asynq.Task, error)
@@ -51,7 +51,7 @@ func NewSendTargetTask(in notifybase.SendTargetInput) (*asynq.Task, error)
 NewSendTargetTask 将单目标直投请求编码为 notify:send:target 异步任务；必填字段缺失返回错误。
 
 <a name="SendGroupHandler"></a>
-## type SendGroupHandler
+## type [SendGroupHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/notify/task.go#L54-L61>)
 
 SendGroupHandler 通用通知组发送处理器，消费 notify:send:group 任务。 解析载荷后调用 Service.ResolveGroupTargets 将通知组分解为逐目标直投入参，再为每个 目标投递一条 notify:send:target 任务（由 SendTargetHandler 消费完成实际发送与记录写入）； 载荷非法返回错误触发重试。
 
@@ -62,7 +62,7 @@ type SendGroupHandler struct {
 ```
 
 <a name="NewSendGroupHandler"></a>
-### func NewSendGroupHandler
+### func [NewSendGroupHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/notify/task.go#L64>)
 
 ```go
 func NewSendGroupHandler(i do.Injector) *SendGroupHandler
@@ -71,7 +71,7 @@ func NewSendGroupHandler(i do.Injector) *SendGroupHandler
 NewSendGroupHandler 从 do.Injector 解析依赖并创建通用通知组发送处理器。
 
 <a name="SendGroupHandler.Do"></a>
-### func \(\*SendGroupHandler\) Do
+### func \(\*SendGroupHandler\) [Do](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/notify/task.go#L75>)
 
 ```go
 func (h *SendGroupHandler) Do(ctx context.Context, task etl.Task) error
@@ -80,7 +80,7 @@ func (h *SendGroupHandler) Do(ctx context.Context, task etl.Task) error
 Do 消费一条 notify:send:group 任务：解析 SendGroupInput 载荷，解析通知组并扇出为 逐目标直投任务；载荷非法返回错误触发重试。任一目标任务投递失败都会累计并返回非 nil 错误以触发重试，目标级幂等可在重试时去重。
 
 <a name="SendTargetHandler"></a>
-## type SendTargetHandler
+## type [SendTargetHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/notify/task.go#L120-L125>)
 
 SendTargetHandler 单目标直投处理器，消费 notify:send:target 任务。 解析载荷后调用 Service.SendToTarget 不经通知组直接投递单个目标； 载荷非法返回错误触发重试。
 
@@ -91,7 +91,7 @@ type SendTargetHandler struct {
 ```
 
 <a name="NewSendTargetHandler"></a>
-### func NewSendTargetHandler
+### func [NewSendTargetHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/notify/task.go#L128>)
 
 ```go
 func NewSendTargetHandler(i do.Injector) *SendTargetHandler
@@ -100,7 +100,7 @@ func NewSendTargetHandler(i do.Injector) *SendTargetHandler
 NewSendTargetHandler 从 do.Injector 解析依赖并创建单目标直投处理器。
 
 <a name="SendTargetHandler.Do"></a>
-### func \(\*SendTargetHandler\) Do
+### func \(\*SendTargetHandler\) [Do](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/notify/task.go#L136>)
 
 ```go
 func (h *SendTargetHandler) Do(ctx context.Context, task etl.Task) error

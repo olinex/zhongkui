@@ -31,7 +31,7 @@ const Prefix = "health"
 ```
 
 <a name="DescribeConfig"></a>
-## func DescribeConfig
+## func [DescribeConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/health/config.go#L55>)
 
 ```go
 func DescribeConfig() config.ConfigDescriptions
@@ -40,7 +40,7 @@ func DescribeConfig() config.ConfigDescriptions
 DescribeConfig 返回健康探针配置的元信息描述。
 
 <a name="Config"></a>
-## type Config
+## type [Config](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/health/config.go#L36-L47>)
 
 Config 是健康探针的顶层配置：独立 HTTP 探针服务监听地址 \+ 就绪超时 \+ etcd 上报。
 
@@ -60,7 +60,7 @@ type Config struct {
 ```
 
 <a name="ExtractConfig"></a>
-### func ExtractConfig
+### func [ExtractConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/health/config.go#L50>)
 
 ```go
 func ExtractConfig(v *viper.Viper, validate *validator.Validate) (*Config, error)
@@ -69,7 +69,7 @@ func ExtractConfig(v *viper.Viper, validate *validator.Validate) (*Config, error
 ExtractConfig 从 Viper 实例中提取并校验健康探针配置。
 
 <a name="RegistryConfig"></a>
-## type RegistryConfig
+## type [RegistryConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/health/config.go#L25-L33>)
 
 RegistryConfig 定义 etcd 服务状态注册的相关配置。 控制健康探针服务是否将自身运行状态发布到 etcd 服务目录，供 web admin 聚合展示。
 
@@ -86,7 +86,7 @@ type RegistryConfig struct {
 ```
 
 <a name="Server"></a>
-## type Server
+## type [Server](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/health/server.go#L39-L71>)
 
 Server 项目全局统一的健康探针 HTTP 服务。 暴露 /healthz /readyz /startupz 三个 k8s 语义探针端点；就绪信号复用 \*status.Registry； 可选地经 etcd 发布自身运行状态到服务目录。其内存模型参照 manager.RunHttpService （goroutine \+ errCh \+ ctx 取消优雅关闭）。
 
@@ -97,7 +97,7 @@ type Server struct {
 ```
 
 <a name="NewServer"></a>
-### func NewServer
+### func [NewServer](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/health/server.go#L75>)
 
 ```go
 func NewServer(cfg *Config, reg *status.Registry, etcdClient *etcd.EtcdClient) *Server
@@ -106,7 +106,7 @@ func NewServer(cfg *Config, reg *status.Registry, etcdClient *etcd.EtcdClient) *
 NewServer 创建一个健康探针服务。 reg 为就绪探测注册表；etcdClient 可空（为空则跳过 etcd 服务状态上报）。
 
 <a name="Server.Addr"></a>
-### func \(\*Server\) Addr
+### func \(\*Server\) [Addr](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/health/server.go#L164>)
 
 ```go
 func (s *Server) Addr() string
@@ -115,7 +115,7 @@ func (s *Server) Addr() string
 Addr 返回探针服务监听地址（测试用）。
 
 <a name="Server.InstanceID"></a>
-### func \(\*Server\) InstanceID
+### func \(\*Server\) [InstanceID](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/health/server.go#L161>)
 
 ```go
 func (s *Server) InstanceID() string
@@ -124,7 +124,7 @@ func (s *Server) InstanceID() string
 InstanceID 返回当前实例 ID。
 
 <a name="Server.ReportShuttingDown"></a>
-### func \(\*Server\) ReportShuttingDown
+### func \(\*Server\) [ReportShuttingDown](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/health/server.go#L155>)
 
 ```go
 func (s *Server) ReportShuttingDown()
@@ -133,7 +133,7 @@ func (s *Server) ReportShuttingDown()
 ReportShuttingDown 标记服务进入关机，/healthz 与 /readyz 转为失败。
 
 <a name="Server.ReportStarted"></a>
-### func \(\*Server\) ReportStarted
+### func \(\*Server\) [ReportStarted](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/health/server.go#L152>)
 
 ```go
 func (s *Server) ReportStarted()
@@ -142,7 +142,7 @@ func (s *Server) ReportStarted()
 ReportStarted 标记服务完成启动，即 /startupz 与 /readyz 转为就绪前提。
 
 <a name="Server.ServiceName"></a>
-### func \(\*Server\) ServiceName
+### func \(\*Server\) [ServiceName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/health/server.go#L158>)
 
 ```go
 func (s *Server) ServiceName() string
@@ -151,7 +151,7 @@ func (s *Server) ServiceName() string
 ServiceName 返回当前服务名。
 
 <a name="Server.Snapshot"></a>
-### func \(\*Server\) Snapshot
+### func \(\*Server\) [Snapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/health/server.go#L167>)
 
 ```go
 func (s *Server) Snapshot(ctx context.Context) Snapshot
@@ -160,7 +160,7 @@ func (s *Server) Snapshot(ctx context.Context) Snapshot
 Snapshot 计算并返回当前服务状态快照；内部运行就绪探测并发布状态指标。
 
 <a name="Server.Start"></a>
-### func \(\*Server\) Start
+### func \(\*Server\) [Start](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/health/server.go#L105>)
 
 ```go
 func (s *Server) Start(ctx context.Context, logger *logging.Logger, serviceName string) error
@@ -169,7 +169,7 @@ func (s *Server) Start(ctx context.Context, logger *logging.Logger, serviceName 
 Start 启动健康探针服务并阻塞运行，直到 ctx 取消或服务出错返回。 serviceName 用于 etcd 服务目录键与日志标识。启用 etcd 上报时同时启动注册循环， 并在退出时吊销租赁。
 
 <a name="ServiceInfo"></a>
-## type ServiceInfo
+## type [ServiceInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/health/registrar.go#L15-L34>)
 
 ServiceInfo 写入 etcd 服务目录的单实例状态负载。
 
@@ -197,7 +197,7 @@ type ServiceInfo struct {
 ```
 
 <a name="Snapshot"></a>
-## type Snapshot
+## type [Snapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/health/server.go#L23-L33>)
 
 Snapshot 服务运行状态的瞬时快照，供 etcd 上报与测试断言使用。
 

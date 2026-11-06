@@ -79,7 +79,7 @@ const (
 ```
 
 <a name="AESGCMCryptor"></a>
-## type AESGCMCryptor
+## type [AESGCMCryptor](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/cryptor.go#L35-L38>)
 
 AESGCMCryptor 使用 AES\-GCM 认证加密算法进行流式加密和解密。 内部采用分块加密模式：数据达到 chunkSize（64KB）时立即加密写入， 避免大数据量时的内存暴涨。
 
@@ -92,7 +92,7 @@ type AESGCMCryptor struct {
 ```
 
 <a name="NewAESGCMCryptor"></a>
-### func NewAESGCMCryptor
+### func [NewAESGCMCryptor](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/cryptor.go#L42>)
 
 ```go
 func NewAESGCMCryptor(cryptoKey []byte) (*AESGCMCryptor, error)
@@ -101,7 +101,7 @@ func NewAESGCMCryptor(cryptoKey []byte) (*AESGCMCryptor, error)
 NewAESGCMCryptor 创建基于 AES\-GCM 的加密器。 key: AES 密钥，合法长度为 16、24 或 32 字节。
 
 <a name="AESGCMCryptor.ModeID"></a>
-### func \(\*AESGCMCryptor\) ModeID
+### func \(\*AESGCMCryptor\) [ModeID](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/cryptor.go#L52>)
 
 ```go
 func (e *AESGCMCryptor) ModeID() byte
@@ -110,7 +110,7 @@ func (e *AESGCMCryptor) ModeID() byte
 ModeID 返回 AES\-GCM 加密算法的标识字节。
 
 <a name="AESGCMCryptor.WrapReader"></a>
-### func \(\*AESGCMCryptor\) WrapReader
+### func \(\*AESGCMCryptor\) [WrapReader](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/cryptor.go#L67>)
 
 ```go
 func (e *AESGCMCryptor) WrapReader(r io.Reader) (io.ReadCloser, error)
@@ -119,7 +119,7 @@ func (e *AESGCMCryptor) WrapReader(r io.Reader) (io.ReadCloser, error)
 WrapReader 包装 io.Reader，返回一个读取即解密的 ReadCloser。 输入格式为块密文：\[4B 密文长度\]\[12B nonce\]\[密文\]...
 
 <a name="AESGCMCryptor.WrapWriter"></a>
-### func \(\*AESGCMCryptor\) WrapWriter
+### func \(\*AESGCMCryptor\) [WrapWriter](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/cryptor.go#L57>)
 
 ```go
 func (e *AESGCMCryptor) WrapWriter(w io.Writer) (io.WriteCloser, error)
@@ -128,7 +128,7 @@ func (e *AESGCMCryptor) WrapWriter(w io.Writer) (io.WriteCloser, error)
 WrapWriter 包装 io.Writer，返回一个写入即加密的 WriteCloser。 采用分块加密模式，每块格式：\[4B 密文长度\]\[12B nonce\]\[密文\]。 长度前缀使解密端能逐块读取，无需全部缓冲。
 
 <a name="GzipCompressor"></a>
-## type GzipCompressor
+## type [GzipCompressor](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/compress.go#L72-L75>)
 
 GzipCompressor 使用 Gzip 算法进行流式压缩和解压。
 
@@ -139,7 +139,7 @@ type GzipCompressor struct {
 ```
 
 <a name="NewGzipCompressor"></a>
-### func NewGzipCompressor
+### func [NewGzipCompressor](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/compress.go#L78>)
 
 ```go
 func NewGzipCompressor() *GzipCompressor
@@ -148,7 +148,7 @@ func NewGzipCompressor() *GzipCompressor
 NewGzipCompressor 创建默认压缩级别（gzip.DefaultCompression）的 GzipCompressor。
 
 <a name="NewGzipCompressorWithLevel"></a>
-### func NewGzipCompressorWithLevel
+### func [NewGzipCompressorWithLevel](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/compress.go#L85>)
 
 ```go
 func NewGzipCompressorWithLevel(level int) (*GzipCompressor, error)
@@ -157,7 +157,7 @@ func NewGzipCompressorWithLevel(level int) (*GzipCompressor, error)
 NewGzipCompressorWithLevel 创建指定压缩级别的 GzipCompressor。 level: gzip 压缩级别常量，如 gzip.BestSpeed、gzip.BestCompression 等。 如果 level 无效，返回错误。
 
 <a name="GzipCompressor.ModeID"></a>
-### func \(\*GzipCompressor\) ModeID
+### func \(\*GzipCompressor\) [ModeID](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/compress.go#L93>)
 
 ```go
 func (c *GzipCompressor) ModeID() byte
@@ -166,7 +166,7 @@ func (c *GzipCompressor) ModeID() byte
 ModeID 返回 Gzip 压缩算法的标识字节。
 
 <a name="GzipCompressor.WrapReader"></a>
-### func \(\*GzipCompressor\) WrapReader
+### func \(\*GzipCompressor\) [WrapReader](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/compress.go#L105>)
 
 ```go
 func (c *GzipCompressor) WrapReader(r io.Reader) (io.ReadCloser, error)
@@ -175,7 +175,7 @@ func (c *GzipCompressor) WrapReader(r io.Reader) (io.ReadCloser, error)
 WrapReader 包装 io.Reader，返回一个读取即解压的 ReadCloser。
 
 <a name="GzipCompressor.WrapWriter"></a>
-### func \(\*GzipCompressor\) WrapWriter
+### func \(\*GzipCompressor\) [WrapWriter](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/compress.go#L96>)
 
 ```go
 func (c *GzipCompressor) WrapWriter(w io.Writer) (io.WriteCloser, error)
@@ -184,7 +184,7 @@ func (c *GzipCompressor) WrapWriter(w io.Writer) (io.WriteCloser, error)
 WrapWriter 包装 io.Writer，返回一个写入即压缩的 WriteCloser。
 
 <a name="ModeIDer"></a>
-## type ModeIDer
+## type [ModeIDer](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/transform.go#L21-L24>)
 
 ModeIDer 标识算法的类型，用于自描述流头部写入。
 
@@ -196,7 +196,7 @@ type ModeIDer interface {
 ```
 
 <a name="Pipeline"></a>
-## type Pipeline
+## type [Pipeline](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/pipeline.go#L28-L37>)
 
 Pipeline 表示一个流式变换管道，固定按 先压缩\(Compress\) → 后加密\(Encrypt\) 的顺序处理数据。 输出流包含自描述头部，携带压缩算法和加密算法的标识信息。
 
@@ -207,7 +207,7 @@ type Pipeline struct {
 ```
 
 <a name="NewCompressEncryptPipeline"></a>
-### func NewCompressEncryptPipeline
+### func [NewCompressEncryptPipeline](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/pipeline.go#L41>)
 
 ```go
 func NewCompressEncryptPipeline(compressor, cryptor Transform) (*Pipeline, error)
@@ -216,7 +216,7 @@ func NewCompressEncryptPipeline(compressor, cryptor Transform) (*Pipeline, error
 NewCompressEncryptPipeline 创建先压缩后加密的管道。 compressor 和 encryptor 需实现 AlgoIDer 接口，否则返回错误。
 
 <a name="NewZstdAESGCMPipeline"></a>
-### func NewZstdAESGCMPipeline
+### func [NewZstdAESGCMPipeline](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/combine.go#L59>)
 
 ```go
 func NewZstdAESGCMPipeline(cryptoKey []byte) (*Pipeline, error)
@@ -236,7 +236,7 @@ NewZstdAESGCMPipeline 创建使用默认压缩级别的 Zstd\+AES\-GCM 管道。
 - error: 创建失败时返回错误
 
 <a name="NewZstdAESGCMPipelineWithLevel"></a>
-### func NewZstdAESGCMPipelineWithLevel
+### func [NewZstdAESGCMPipelineWithLevel](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/combine.go#L37>)
 
 ```go
 func NewZstdAESGCMPipelineWithLevel(cryptoKey []byte, compressLevel zstd.EncoderLevel) (*Pipeline, error)
@@ -255,7 +255,7 @@ NewZstdAESGCMPipelineWithLevel 创建使用指定压缩级别的 Zstd\+AES\-GCM 
 - error: 压缩器或加密器创建失败时返回错误
 
 <a name="Pipeline.CompressEncrypt"></a>
-### func \(\*Pipeline\) CompressEncrypt
+### func \(\*Pipeline\) [CompressEncrypt](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/pipeline.go#L61>)
 
 ```go
 func (p *Pipeline) CompressEncrypt(w io.Writer) (io.WriteCloser, error)
@@ -264,7 +264,7 @@ func (p *Pipeline) CompressEncrypt(w io.Writer) (io.WriteCloser, error)
 CompressEncrypt 返回一个 WriteCloser： 写入的数据依次经 压缩→加密 后写入 w，并自动在数据头部写入自描述信息。 必须调用 Close\(\) 以确保所有数据刷新到底层 writer。
 
 <a name="Pipeline.DecryptDecompress"></a>
-### func \(\*Pipeline\) DecryptDecompress
+### func \(\*Pipeline\) [DecryptDecompress](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/pipeline.go#L95>)
 
 ```go
 func (p *Pipeline) DecryptDecompress(r io.Reader) (io.ReadCloser, error)
@@ -273,7 +273,7 @@ func (p *Pipeline) DecryptDecompress(r io.Reader) (io.ReadCloser, error)
 DecryptDecompress 返回一个 ReadCloser： 从 r 读取数据时自动识别头部算法信息，依次 解密→解压 后返回明文。 读取完成后调用 Close\(\) 释放资源。
 
 <a name="Transform"></a>
-## type Transform
+## type [Transform](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/transform.go#L13-L18>)
 
 Transform 定义了流式数据变换的抽象接口。 压缩器和加密器均实现此接口，可通过组合构建流式处理管道。
 
@@ -291,7 +291,7 @@ type Transform interface {
 ```
 
 <a name="ZstdCompressor"></a>
-## type ZstdCompressor
+## type [ZstdCompressor](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/compress.go#L30-L33>)
 
 ZstdCompressor 使用 Zstandard 算法进行流式压缩和解压。
 
@@ -302,7 +302,7 @@ type ZstdCompressor struct {
 ```
 
 <a name="NewZstdCompressor"></a>
-### func NewZstdCompressor
+### func [NewZstdCompressor](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/compress.go#L36>)
 
 ```go
 func NewZstdCompressor() (*ZstdCompressor, error)
@@ -311,7 +311,7 @@ func NewZstdCompressor() (*ZstdCompressor, error)
 NewZstdCompressor 创建默认级别的 ZstdCompressor。
 
 <a name="NewZstdCompressorWithLevel"></a>
-### func NewZstdCompressorWithLevel
+### func [NewZstdCompressorWithLevel](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/compress.go#L42>)
 
 ```go
 func NewZstdCompressorWithLevel(level zstd.EncoderLevel) (*ZstdCompressor, error)
@@ -320,7 +320,7 @@ func NewZstdCompressorWithLevel(level zstd.EncoderLevel) (*ZstdCompressor, error
 NewZstdCompressorWithLevel 创建指定压缩级别的 ZstdCompressor。 level: zstd.EncoderLevel，例如 zstd.SpeedDefault、zstd.SpeedBestCompression 等。
 
 <a name="ZstdCompressor.ModeID"></a>
-### func \(\*ZstdCompressor\) ModeID
+### func \(\*ZstdCompressor\) [ModeID](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/compress.go#L47>)
 
 ```go
 func (c *ZstdCompressor) ModeID() byte
@@ -329,7 +329,7 @@ func (c *ZstdCompressor) ModeID() byte
 ModeID 返回 Zstd 压缩算法的标识字节。
 
 <a name="ZstdCompressor.WrapReader"></a>
-### func \(\*ZstdCompressor\) WrapReader
+### func \(\*ZstdCompressor\) [WrapReader](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/compress.go#L59>)
 
 ```go
 func (c *ZstdCompressor) WrapReader(r io.Reader) (io.ReadCloser, error)
@@ -338,7 +338,7 @@ func (c *ZstdCompressor) WrapReader(r io.Reader) (io.ReadCloser, error)
 WrapReader 包装 io.Reader，返回一个读取即解压的 ReadCloser。
 
 <a name="ZstdCompressor.WrapWriter"></a>
-### func \(\*ZstdCompressor\) WrapWriter
+### func \(\*ZstdCompressor\) [WrapWriter](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/combine/compress.go#L50>)
 
 ```go
 func (c *ZstdCompressor) WrapWriter(w io.Writer) (io.WriteCloser, error)

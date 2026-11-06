@@ -15,7 +15,7 @@
 
 
 <a name="BroadcastChange"></a>
-## func BroadcastChange
+## func [BroadcastChange](<https://gitee.com/olinex/zhongkui/blob/master/internal/datasource/notify.go#L35>)
 
 ```go
 func BroadcastChange(ctx context.Context, client *etcd.EtcdClient, namespace, name string) error
@@ -24,7 +24,7 @@ func BroadcastChange(ctx context.Context, client *etcd.EtcdClient, namespace, na
 BroadcastChange 广播数据源变更事件。 每次数据源写路径（增删改/启停）在 DB 提交并向本地池收敛注册后调用， 通知各 worker 进程的 Watcher 同步对应数据源 vtable。 委托 etcd 通用广播层：JSON 序列化 \+ Put \+ 超时上限，失败返回错误但不影响 调用方；未绑定 etcd 客户端时返回 etcd.ErrChangeUnavailable。 注意：DB 提交先于 etcd 发布，保证收到通知的进程读到的必是新配置。
 
 <a name="Reload"></a>
-## func Reload
+## func [Reload](<https://gitee.com/olinex/zhongkui/blob/master/internal/datasource/reload.go#L29>)
 
 ```go
 func Reload(ctx context.Context, db *gorm.DB, pools *vtab.Pools) error
@@ -35,7 +35,7 @@ Reload 扫描全部已启用的第三方数据源并逐个注册到其命名空�
 本函数只注册当前库中启用的数据源，不清理进程重启/Down 期间已不存在的陈旧 vtable （存量注册身份在重新注册/注销时自然收敛）；若后续需要主动 diff 清理，可在此处扩展。
 
 <a name="SyncOne"></a>
-## func SyncOne
+## func [SyncOne](<https://gitee.com/olinex/zhongkui/blob/master/internal/datasource/reload.go#L55>)
 
 ```go
 func SyncOne(ctx context.Context, db *gorm.DB, pools *vtab.Pools, namespace, name string) error
@@ -44,7 +44,7 @@ func SyncOne(ctx context.Context, db *gorm.DB, pools *vtab.Pools, namespace, nam
 SyncOne 按命名空间 \+ 裸名从数据库重读单个数据源并收敛本地池： 记录存在且启用 → pools.Register 覆盖注册（配置解析/建连接失败返回错误）； 记录不存在或停用 → pools.Unregister 幂等注销。 供 worker 进程收到 etcd 数据源变更事件后精准同步单个数据源， 避免全量重载的成本，同时保证停用/删除条目即时从池中移除。
 
 <a name="DatasourceChangeEvent"></a>
-## type DatasourceChangeEvent
+## type [DatasourceChangeEvent](<https://gitee.com/olinex/zhongkui/blob/master/internal/datasource/notify.go#L22-L27>)
 
 DatasourceChangeEvent 数据源变更事件负载。 记录本次写路径影响的数据源身份（命名空间 \+ 裸名），供 Watcher 从 DB 重读 并收敛对应 vtable；解析失败时回退全量重载保证不遗漏。
 
@@ -58,7 +58,7 @@ type DatasourceChangeEvent struct {
 ```
 
 <a name="Watcher"></a>
-## type Watcher
+## type [Watcher](<https://gitee.com/olinex/zhongkui/blob/master/internal/datasource/watch.go#L21-L30>)
 
 Watcher 数据源变更监听器，实现 runtime.Service 生命周期。 监听 etcd 数据源变更键，收到事件后按 \(Namespace, Name\) 从 DB 重读并精准同步 本地池（SyncOne），使 worker 等消费进程在数据源增删改/启停后无需重启即可查询 最新 vtable；事件负载无法解析时回退全量重载保证不遗漏。 底层复用 etcd 通用 Watcher（断线自动重连、ctx 取消退出、单事件回调失败仅告警）， 未绑定 etcd 客户端时直接返回（无监听能力）。 启动前的存量数据源由 datasource.Reload 在进程启动路径加载。
 
@@ -69,7 +69,7 @@ type Watcher struct {
 ```
 
 <a name="NewWatcher"></a>
-### func NewWatcher
+### func [NewWatcher](<https://gitee.com/olinex/zhongkui/blob/master/internal/datasource/watch.go#L36>)
 
 ```go
 func NewWatcher(db *database.DB, pools *vtab.Pools, client *etcd.EtcdClient, logger *logging.Logger) *Watcher
@@ -78,7 +78,7 @@ func NewWatcher(db *database.DB, pools *vtab.Pools, client *etcd.EtcdClient, log
 NewWatcher 创建数据源变更监听器。 依赖注入方向为 provider → datasource.Watcher：db 用于重读数据源配置， pools 用于收敛 vtable，client 用于监听 etcd 变更键（可为 nil，此时无监听能力）， logger 记录同步结果；变更处理逻辑由 datasourceChangeHandler 承担。
 
 <a name="Watcher.Shutdown"></a>
-### func \(\*Watcher\) Shutdown
+### func \(\*Watcher\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/datasource/watch.go#L61>)
 
 ```go
 func (w *Watcher) Shutdown(ctx context.Context) error
@@ -87,7 +87,7 @@ func (w *Watcher) Shutdown(ctx context.Context) error
 Shutdown 停止数据源变更监听。 由 runtime 编排器在 Start 返回后调用，实际停止依赖 Start 的 ctx 取消。
 
 <a name="Watcher.Start"></a>
-### func \(\*Watcher\) Start
+### func \(\*Watcher\) [Start](<https://gitee.com/olinex/zhongkui/blob/master/internal/datasource/watch.go#L51>)
 
 ```go
 func (w *Watcher) Start(ctx context.Context) error

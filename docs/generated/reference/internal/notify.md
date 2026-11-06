@@ -47,7 +47,7 @@ var ErrDeliveryPending = errors.New("notify: delivery slot is pending, retry lat
 ```
 
 <a name="EventFields"></a>
-## func EventFields
+## func [EventFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/template.go#L107>)
 
 ```go
 func EventFields(event string) []string
@@ -56,7 +56,7 @@ func EventFields(event string) []string
 EventFields 返回某事件的可用模板变量名清单：顶层键 \+ 数组元素对象的嵌套键（以供 range 循环内部如 .ConditionName 等引用补全），去重后升序返回。
 
 <a name="EventSampleParams"></a>
-## func EventSampleParams
+## func [EventSampleParams](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/template.go#L97>)
 
 ```go
 func EventSampleParams(event string) (map[string]any, bool)
@@ -65,7 +65,7 @@ func EventSampleParams(event string) (map[string]any, bool)
 EventSampleParams 返回某事件（Event key）的样例渲染参数；未知事件返回 \(nil, false\)。 未注册的事件无样例参数时，试运行接口可回退为空 map 照常渲染。
 
 <a name="RenderDefaultMessage"></a>
-## func RenderDefaultMessage
+## func [RenderDefaultMessage](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/service.go#L388>)
 
 ```go
 func RenderDefaultMessage(lang *base.Language, templateKey string, params map[string]any, contentType string) (*message.RenderedMessage, error)
@@ -74,7 +74,7 @@ func RenderDefaultMessage(lang *base.Language, templateKey string, params map[st
 RenderDefaultMessage 依据模板键与语言渲染 notify 内置默认模板（标题\+正文），供管理端 事件枚举等场景用事件样例参数展示事件的默认模板能力。模板内容同样经模板函数 t 渲染枚举 label（与发送路径一致）。模板键未注册到事件注册表时返回错误。
 
 <a name="SupportedChannels"></a>
-## func SupportedChannels
+## func [SupportedChannels](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/template.go#L198>)
 
 ```go
 func SupportedChannels() []string
@@ -83,7 +83,7 @@ func SupportedChannels() []string
 SupportedChannels 返回注册表支持的渠道类型键的并集（升序），并保证包含 "\*"， 供管理接口枚举可选渠道类型。
 
 <a name="SupportedLanguages"></a>
-## func SupportedLanguages
+## func [SupportedLanguages](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/template.go#L215>)
 
 ```go
 func SupportedLanguages() []string
@@ -92,7 +92,7 @@ func SupportedLanguages() []string
 SupportedLanguages 返回注册表支持的语言键的并集（升序），并保证包含 "\*" 与平台 支持的全部语言（base.SupportLanguages），供管理接口枚举可选语言。
 
 <a name="TemplateSpecs"></a>
-## func TemplateSpecs
+## func [TemplateSpecs](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/template.go#L136>)
 
 ```go
 func TemplateSpecs() map[string]EventTemplateSpec
@@ -101,7 +101,7 @@ func TemplateSpecs() map[string]EventTemplateSpec
 TemplateSpecs 返回事件模板注册表的安全副本（键为事件类型键），调用方可安全修改 而不会污染注册表。事件类型键取决于注册表定义，暴露顺序不作保证：set 语义下顺序不构成 契约，展示顺序由调用方/前端按自身展示键决定。
 
 <a name="ValidateTemplateSyntax"></a>
-## func ValidateTemplateSyntax
+## func [ValidateTemplateSyntax](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/template.go#L91>)
 
 ```go
 func ValidateTemplateSyntax(kind, text string) error
@@ -110,7 +110,7 @@ func ValidateTemplateSyntax(kind, text string) error
 ValidateTemplateSyntax 导出校验单条模板字符串的 Go text/template 语法， 供语法校验接口在保存前对用户模板做权威校验。
 
 <a name="EventTemplateSpec"></a>
-## type EventTemplateSpec
+## type [EventTemplateSpec](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/template.go#L57-L69>)
 
 EventTemplateSpec 描述一个事件（Event）的默认通知模板元信息规格。 标题/正文默认内容不再挂在此处：已迁至 i18n 语言文件（键 notify.\<template\>.title/.content， 见 internal/pkg/translate），发送渲染时若持久化模板行缺位，回退按该键查找。 事件类型键（Event key）由注册表 map 的键承载，故本结构体不重复声明 Event 字段。
 
@@ -131,7 +131,7 @@ type EventTemplateSpec struct {
 ```
 
 <a name="EventSpecOf"></a>
-### func EventSpecOf
+### func [EventSpecOf](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/template.go#L188>)
 
 ```go
 func EventSpecOf(event string) (*EventTemplateSpec, bool)
@@ -140,7 +140,7 @@ func EventSpecOf(event string) (*EventTemplateSpec, bool)
 EventSpecOf 依据事件类型键在注册表中查找并返回对应规格；未找到时返回 \(nil, false\)。
 
 <a name="TemplateSpecOf"></a>
-### func TemplateSpecOf
+### func [TemplateSpecOf](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/template.go#L178>)
 
 ```go
 func TemplateSpecOf(templateKey string) (string, *EventTemplateSpec, bool)
@@ -149,7 +149,7 @@ func TemplateSpecOf(templateKey string) (string, *EventTemplateSpec, bool)
 TemplateSpecOf 依据消息模板键在注册表中查找并返回对应的事件类型键（key）与规格； 未找到时返回 \("", nil, false\)。
 
 <a name="EventTemplateSpec.ContentKey"></a>
-### func \(\*EventTemplateSpec\) ContentKey
+### func \(\*EventTemplateSpec\) [ContentKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/template.go#L77>)
 
 ```go
 func (spec *EventTemplateSpec) ContentKey() string
@@ -158,7 +158,7 @@ func (spec *EventTemplateSpec) ContentKey() string
 ContentKey 返回该事件模板正文在 i18n 语言文件中的键（notify.\<template\>.content）。
 
 <a name="EventTemplateSpec.TitleKey"></a>
-### func \(\*EventTemplateSpec\) TitleKey
+### func \(\*EventTemplateSpec\) [TitleKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/template.go#L72>)
 
 ```go
 func (spec *EventTemplateSpec) TitleKey() string
@@ -167,7 +167,7 @@ func (spec *EventTemplateSpec) TitleKey() string
 TitleKey 返回该事件模板标题在 i18n 语言文件中的键（notify.\<template\>.title）。
 
 <a name="SendGroupInput"></a>
-## type SendGroupInput
+## type [SendGroupInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/service.go#L64-L75>)
 
 SendGroupInput 一次向通知组发送的请求，为 notify:send:group 任务载荷的持久化形态。
 
@@ -187,7 +187,7 @@ type SendGroupInput struct {
 ```
 
 <a name="SendTargetInput"></a>
-## type SendTargetInput
+## type [SendTargetInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/service.go#L79-L90>)
 
 SendTargetInput 一次不经通知组、直接投递单个目标的通知发送请求，为 notify:send:target 任务载荷的持久化形态。TargetID 唯一指定目标（限定在命名空间内）。
 
@@ -207,7 +207,7 @@ type SendTargetInput struct {
 ```
 
 <a name="Service"></a>
-## type Service
+## type [Service](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/service.go#L38-L45>)
 
 Service 通用通知服务：将一次通知请求（事件引用 \+ 通知组 \+ 消息）解析为具体目标， 经渠道基座发送，并维护 notification\_records 发送记录。 通知组未绑定目标、目标无可用渠道等场景静默跳过（记录日志），不视为错误。
 
@@ -218,7 +218,7 @@ type Service struct {
 ```
 
 <a name="NewService"></a>
-### func NewService
+### func [NewService](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/service.go#L48>)
 
 ```go
 func NewService(coreDB *database.DB, logger *logging.Logger, pool *message.Pool) *Service
@@ -227,7 +227,7 @@ func NewService(coreDB *database.DB, logger *logging.Logger, pool *message.Pool)
 NewService 创建通用通知服务。
 
 <a name="Service.RenderPreview"></a>
-### func \(\*Service\) RenderPreview
+### func \(\*Service\) [RenderPreview](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/service.go#L451>)
 
 ```go
 func (s *Service) RenderPreview(ctx context.Context, namespace, event string, channelType, lang string, params map[string]any) (*message.RenderedMessage, error)
@@ -236,7 +236,7 @@ func (s *Service) RenderPreview(ctx context.Context, namespace, event string, ch
 RenderPreview 按事件在指定命名空间下渲染模板预览（供管理端 render\-test 使用）， 直接以事件类型键驱动，不经过目标/消息结构。事件无对应规格时返回描述性错误；存在 持久化模板行时经 renderTemplateText 渲染并回传错误详情（管理端据此返回 400）；无 持久化行时回退到规格默认（renderSpecDefault，注册表内置默认）。lang 空或非法时 归一化到平台默认语言。
 
 <a name="Service.ResolveGroupTargets"></a>
-### func \(\*Service\) ResolveGroupTargets
+### func \(\*Service\) [ResolveGroupTargets](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/service.go#L97>)
 
 ```go
 func (s *Service) ResolveGroupTargets(ctx context.Context, in SendGroupInput) ([]SendTargetInput, error)
@@ -245,7 +245,7 @@ func (s *Service) ResolveGroupTargets(ctx context.Context, in SendGroupInput) ([
 ResolveGroupTargets 解析通知组（显式指定或命名空间默认）并将组内容量分解为逐目标直投 入参列表，供上层编排器为每个目标投递一条 notify:send:target 任务。 流程：解析通知组 \-\> 加载组内启用且所属渠道启用的目标；无组或无目标时记录日志并返回 空列表（不视为错误）。每个目标映射为一个 SendTargetInput（透传命名空间、事件引用与 消息，仅补充 TargetID）。
 
 <a name="Service.SendToTarget"></a>
-### func \(\*Service\) SendToTarget
+### func \(\*Service\) [SendToTarget](<https://gitee.com/olinex/zhongkui/blob/master/internal/notify/service.go#L536>)
 
 ```go
 func (s *Service) SendToTarget(ctx context.Context, in SendTargetInput) error

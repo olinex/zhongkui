@@ -64,7 +64,7 @@ const (
 ```
 
 <a name="GetHandlerParam"></a>
-## func GetHandlerParam
+## func [GetHandlerParam](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/handler.go#L80>)
 
 ```go
 func GetHandlerParam[T any](ctx context.Context) (*T, error)
@@ -73,7 +73,7 @@ func GetHandlerParam[T any](ctx context.Context) (*T, error)
 GetHandlerParam 从上下文中提取指定类型的任务处理器配置 泛型参数 T 为目标配置结构体的类型。函数从 ctx 中按键 ContextHandlerParamName 查找由 HandlerRegistry 注入的配置参数，并反序列化为 \*T。 返回 \(\*T, error\)：成功时返回配置指针，上下文无此键或类型不匹配时返回错误。
 
 <a name="GetProcParam"></a>
-## func GetProcParam
+## func [GetProcParam](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/processor.go#L72>)
 
 ```go
 func GetProcParam[T any](ctx context.Context) (*T, error)
@@ -82,7 +82,7 @@ func GetProcParam[T any](ctx context.Context) (*T, error)
 GetProcParam 从上下文中提取指定类型的处理器配置参数 泛型参数 T 为目标配置结构体的类型，函数从 ctx 中按键 ContextProcParamName 取值并反序列化。 返回 \(\*T, error\)：成功时返回配置指针，上下文无此键或类型不匹配时返回错误。
 
 <a name="HandlerRegister"></a>
-## func HandlerRegister
+## func [HandlerRegister](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/handler.go#L72>)
 
 ```go
 func HandlerRegister(name string, handler Handler)
@@ -99,7 +99,7 @@ func init() {
 ```
 
 <a name="RegisterProcessorFactory"></a>
-## func RegisterProcessorFactory
+## func [RegisterProcessorFactory](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/processor.go#L65>)
 
 ```go
 func RegisterProcessorFactory(name string, factory ProcessorFactory)
@@ -108,7 +108,7 @@ func RegisterProcessorFactory(name string, factory ProcessorFactory)
 RegisterProcessorFactory 注册一个分布式处理器工厂。 在 init\(\) 中调用，将处理器名称与工厂函数关联。
 
 <a name="Chain"></a>
-## type Chain
+## type [Chain](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/chain.go#L13-L19>)
 
 Chain 任务型批量数据处理链。 将任务提取（TaskExtractFunc）、逐项转换（transforms）、批量聚合（buffer）与 批量加载（loads）编排为可复用的数据处理链，是批量任务 Handler 的流水线内核。 复用 Pipeline 的 channel \+ errgroup 编排语义，仅将数据源从通用 ExtractFunc\[T\] 收敛为绑定任务（Task）的 TaskExtractFunc\[T\]，并在 Chain.Run 中完成适配。
 
@@ -119,7 +119,7 @@ type Chain[T any] struct {
 ```
 
 <a name="NewChain"></a>
-### func NewChain
+### func [NewChain](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/chain.go#L24-L30>)
 
 ```go
 func NewChain[T any](bufferCount int, bufferTimeout time.Duration, extract TaskExtractFunc[T], transforms []TaskTransformFunc[T], loads []TaskLoadFunc[T]) *Chain[T]
@@ -128,7 +128,7 @@ func NewChain[T any](bufferCount int, bufferTimeout time.Duration, extract TaskE
 NewChain 创建任务型批量数据处理链。 bufferCount 指定缓冲区大小，bufferTimeout 指定缓冲区超时时间， extract 是数据提取函数，transforms 是数据转换函数列表，loads 是数据加载函数列表。
 
 <a name="Chain[T].Run"></a>
-### func \(\*Chain\[T\]\) Run
+### func \(\*Chain\[T\]\) [Run](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/chain.go#L46>)
 
 ```go
 func (c *Chain[T]) Run(ctx context.Context, task Task) (int, error)
@@ -139,7 +139,7 @@ Run 执行数据处理链，阻塞直到所有阶段完成或任一阶段失败�
 错误语义与 Pipeline.Run 一致：任一阶段返回 error 时，链内 ctx 被取消， 已冲刷的半批与已派发的批量仍会被加载完成（保证已提取数据不丢）。
 
 <a name="ExtractFunc"></a>
-## type ExtractFunc
+## type [ExtractFunc](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/etl.go#L17>)
 
 ExtractFunc 数据提取函数类型。 从数据源提取数据并通过 out 通道输出；返回后由 Pipeline 负责关闭 out。
 
@@ -148,7 +148,7 @@ type ExtractFunc[T any] = func(ctx context.Context, out chan<- T) error
 ```
 
 <a name="Handler"></a>
-## type Handler
+## type [Handler](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/handler.go#L30-L33>)
 
 Handler 任务处理器的接口定义。 所有 worker 实现必须实现 Do 方法来执行任务。 与 Processor 的区别：
 
@@ -163,7 +163,7 @@ type Handler interface {
 ```
 
 <a name="HandlerFunc"></a>
-## type HandlerFunc
+## type [HandlerFunc](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/handler.go#L54>)
 
 HandlerFunc 任务处理函数类型，Handler.Do 的函数形态。 与 Handler 接口一一对应，用于在注册表中按任务类型映射处理函数。
 
@@ -172,7 +172,7 @@ type HandlerFunc = func(ctx context.Context, task Task) error
 ```
 
 <a name="HandlerFuncs"></a>
-## type HandlerFuncs
+## type [HandlerFuncs](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/handler.go#L58>)
 
 HandlerFuncs 是任务处理函数的映射表类型别名。 键为任务类型（模式），用于匹配队列中的任务类型；值为对应的处理函数。
 
@@ -181,7 +181,7 @@ type HandlerFuncs = map[string]HandlerFunc
 ```
 
 <a name="HandlerRegistry"></a>
-### func HandlerRegistry
+### func [HandlerRegistry](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/handler.go#L89>)
 
 ```go
 func HandlerRegistry(params map[string]map[string]any) HandlerFuncs
@@ -190,7 +190,7 @@ func HandlerRegistry(params map[string]map[string]any) HandlerFuncs
 HandlerRegistry 获取带参数注入的全局 handler 注册表副本 通过 Registry.Snapshot 生成副本：params 中命名的 handler 被包装， 在调用前将配置参数注入上下文（键为 ContextHandlerParamName）， 使 handler 内部可通过 GetHandlerParam 获取配置。 返回的是全新创建的映射副本，不会影响全局注册表。
 
 <a name="LiveFunc"></a>
-## type LiveFunc
+## type [LiveFunc](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/handler.go#L37>)
 
 LiveFunc 数据处理函数的类型定义。 用于在数据处理过程执行前后的自定义逻辑。
 
@@ -199,7 +199,7 @@ type LiveFunc = func(ctx context.Context, task Task) error
 ```
 
 <a name="LoadFunc"></a>
-## type LoadFunc
+## type [LoadFunc](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/etl.go#L21>)
 
 LoadFunc 数据加载函数类型。 消费一批聚合后的数据项，返回 error 表示加载失败。
 
@@ -208,7 +208,7 @@ type LoadFunc[T any] = func(ctx context.Context, batch []T) error
 ```
 
 <a name="Pipeline"></a>
-## type Pipeline
+## type [Pipeline](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/etl.go#L166-L177>)
 
 Pipeline 流水线执行器，串联 extract → stages → buffer → loads。 所有阶段由 errgroup 管理：任一阶段出错即取消整条流水线并返回第一个错误。
 
@@ -219,7 +219,7 @@ type Pipeline[T any] struct {
 ```
 
 <a name="NewPipeline"></a>
-### func NewPipeline
+### func [NewPipeline](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/etl.go#L182-L188>)
 
 ```go
 func NewPipeline[T any](extract ExtractFunc[T], stages []Stage[T, T], buffer Stage[T, []T], loads []LoadFunc[T], chanSize int) *Pipeline[T]
@@ -228,7 +228,7 @@ func NewPipeline[T any](extract ExtractFunc[T], stages []Stage[T, T], buffer Sta
 NewPipeline 创建流水线执行器。 extract 为数据提取函数，stages 为逐项转换阶段，buffer 为批量聚合阶段， loads 为批量加载函数列表，chanSize 为阶段间通道的缓冲大小。
 
 <a name="Pipeline[T].Run"></a>
-### func \(\*Pipeline\[T\]\) Run
+### func \(\*Pipeline\[T\]\) [Run](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/etl.go#L203>)
 
 ```go
 func (p *Pipeline[T]) Run(ctx context.Context) (loadedCount int, err error)
@@ -239,7 +239,7 @@ Run 执行流水线，阻塞直到所有阶段完成或任一阶段失败。
 错误语义：任一阶段返回 error 时，errgroup 取消 ctx，上游阶段立即退出； buffer 已冲刷的半批与已派发的批量仍会被加载完成（保证已提取数据不丢）。 返回的 loadedCount 为成功派发给 load 阶段的数据项总数。
 
 <a name="Processor"></a>
-## type Processor
+## type [Processor](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/processor.go#L23-L28>)
 
 Processor 长生命周期后台处理器接口 Processor 与队列 Handler 的区别：
 
@@ -258,7 +258,7 @@ type Processor interface {
 ```
 
 <a name="ProcessorFactories"></a>
-## type ProcessorFactories
+## type [ProcessorFactories](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/processor.go#L58>)
 
 ProcessorFactories 处理器工厂注册表类型别名 键为处理器名称，值为对应的 ProcessorFactory 工厂函数。 通过 RegisterProcessorFactory 注册，通过 ProcessorFactoryRegistry 获取带参数注入的副本。
 
@@ -267,7 +267,7 @@ type ProcessorFactories = map[string]ProcessorFactory
 ```
 
 <a name="ProcessorFactoryRegistry"></a>
-### func ProcessorFactoryRegistry
+### func [ProcessorFactoryRegistry](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/processor.go#L81>)
 
 ```go
 func ProcessorFactoryRegistry(params map[string]map[string]any) ProcessorFactories
@@ -276,7 +276,7 @@ func ProcessorFactoryRegistry(params map[string]map[string]any) ProcessorFactori
 ProcessorFactoryRegistry 获取带参数注入的处理器工厂注册表副本 通过 Registry.Snapshot 生成副本：params 中命名的工厂被包装， 在创建 Processor 时先将配置参数注入上下文（键为 ContextProcParamName）， 并将结果包装为 ProcessorWrapper（Start 时再次注入）。 返回的是全新创建的映射副本，不会影响全局注册表。
 
 <a name="ProcessorFactory"></a>
-## type ProcessorFactory
+## type [ProcessorFactory](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/processor.go#L33>)
 
 ProcessorFactory 处理器工厂函数类型别名 接收 context.Context 作为上下文，创建并返回一个 Processor 实例。 工厂函数在 ProcessorFactoryRegistry 中被调用，调用前上下文已注入配置参数。
 
@@ -285,7 +285,7 @@ type ProcessorFactory func(ctx context.Context) (Processor, error)
 ```
 
 <a name="ProcessorWrapper"></a>
-## type ProcessorWrapper
+## type [ProcessorWrapper](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/processor.go#L38-L42>)
 
 ProcessorWrapper 处理器包装器结构 嵌入 Processor 接口，并额外存储配置参数映射 params。 在 Start 方法中自动将 params 注入到上下文中，使被包装的 Processor 通过 GetProcParam 获取配置。
 
@@ -297,7 +297,7 @@ type ProcessorWrapper struct {
 ```
 
 <a name="ProcessorWrapper.Shutdown"></a>
-### func \(\*ProcessorWrapper\) Shutdown
+### func \(\*ProcessorWrapper\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/processor.go#L51>)
 
 ```go
 func (p *ProcessorWrapper) Shutdown()
@@ -306,7 +306,7 @@ func (p *ProcessorWrapper) Shutdown()
 Shutdown 停止被包装的处理器。
 
 <a name="ProcessorWrapper.Start"></a>
-### func \(\*ProcessorWrapper\) Start
+### func \(\*ProcessorWrapper\) [Start](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/processor.go#L45>)
 
 ```go
 func (p *ProcessorWrapper) Start(ctx context.Context, name string) error
@@ -315,7 +315,7 @@ func (p *ProcessorWrapper) Start(ctx context.Context, name string) error
 Start 将配置参数注入上下文后启动被包装的处理器。
 
 <a name="Registry"></a>
-## type Registry
+## type [Registry](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/registry.go#L12-L15>)
 
 Registry 泛型命名注册表，统一任务 Handler 与常驻 Processor 的注册机制。 提供两个操作：
 
@@ -331,7 +331,7 @@ type Registry[T any] struct {
 ```
 
 <a name="Registry[T].Register"></a>
-### func \(\*Registry\[T\]\) Register
+### func \(\*Registry\[T\]\) [Register](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/registry.go#L23>)
 
 ```go
 func (r *Registry[T]) Register(name string, unit T)
@@ -340,7 +340,7 @@ func (r *Registry[T]) Register(name string, unit T)
 Register 按名称注册单元，同名重复注册时后者覆盖前者。
 
 <a name="Registry[T].Snapshot"></a>
-### func \(\*Registry\[T\]\) Snapshot
+### func \(\*Registry\[T\]\) [Snapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/registry.go#L30>)
 
 ```go
 func (r *Registry[T]) Snapshot(params map[string]map[string]any, wrap func(name string, unit T, param map[string]any) T) map[string]T
@@ -349,7 +349,7 @@ func (r *Registry[T]) Snapshot(params map[string]map[string]any, wrap func(name 
 Snapshot 返回带参数注入的注册表副本。 对 params 中命名的单元，通过 wrap 生成包装后的单元；未命名的单元原样返回。 返回的副本与全局注册表相互独立，不污染已注册单元。
 
 <a name="Stage"></a>
-## type Stage
+## type [Stage](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/etl.go#L30-L33>)
 
 Stage 数据处理阶段接口。 消费 in 通道的数据，处理后将结果写入 out 通道。
 
@@ -367,7 +367,7 @@ type Stage[I, O any] interface {
 ```
 
 <a name="Buffer"></a>
-### func Buffer
+### func [Buffer](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/etl.go#L160>)
 
 ```go
 func Buffer[T any](size int, timeout time.Duration) Stage[T, []T]
@@ -376,7 +376,7 @@ func Buffer[T any](size int, timeout time.Duration) Stage[T, []T]
 Buffer 创建按数量或超时聚合的 Stage。 聚合 T 为 \[\]T 批量输出；size 满或 timeout 到达时发批，ctx 取消时冲刷剩余半批。
 
 <a name="Map"></a>
-### func Map
+### func [Map](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/etl.go#L66>)
 
 ```go
 func Map[I, O any](fn func(ctx context.Context, in I) (O, error)) Stage[I, O]
@@ -385,7 +385,7 @@ func Map[I, O any](fn func(ctx context.Context, in I) (O, error)) Stage[I, O]
 Map 将纯函数包装为 Stage。 fn 对每个输入项做一次转换，适用于无状态的逐项映射（如数据包到模型）。
 
 <a name="Task"></a>
-## type Task
+## type [Task](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/handler.go#L18-L23>)
 
 Task 任务抽象接口，提供任务类型与载荷访问。 由队列实现（如 asynq.Task）满足该契约，使 etl 包不依赖具体队列实现。 这是事件驱动任务（Handler）与分布式常驻任务（Processor）之上的统一任务契约。
 
@@ -399,7 +399,7 @@ type Task interface {
 ```
 
 <a name="TaskExtractFunc"></a>
-## type TaskExtractFunc
+## type [TaskExtractFunc](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/handler.go#L42>)
 
 TaskExtractFunc 任务数据提取函数类型。 从任务中提取数据并通过 out 通道输出（golang 原生类型，替代 rxgo.Item 桥接）。 与通用流水线 ExtractFunc\[T\] 的区别：TaskExtractFunc 绑定任务上下文，由 Chain 驱动。
 
@@ -408,7 +408,7 @@ type TaskExtractFunc[T any] = func(ctx context.Context, task Task, out chan<- T)
 ```
 
 <a name="TaskLoadFunc"></a>
-## type TaskLoadFunc
+## type [TaskLoadFunc](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/handler.go#L50>)
 
 TaskLoadFunc 任务数据加载函数类型。 将一批数据项批量加载到目标存储（如数据库）。
 
@@ -417,7 +417,7 @@ type TaskLoadFunc[T any] = func(ctx context.Context, items []T) error
 ```
 
 <a name="TaskTransformFunc"></a>
-## type TaskTransformFunc
+## type [TaskTransformFunc](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etl/handler.go#L46>)
 
 TaskTransformFunc 任务数据转换函数类型。 对输入数据项进行转换并返回转换后的结果。
 

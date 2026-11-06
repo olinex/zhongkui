@@ -26,7 +26,7 @@ const (
 ```
 
 <a name="NewParseTask"></a>
-## func NewParseTask
+## func [NewParseTask](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/knowledge/task.go#L33>)
 
 ```go
 func NewParseTask(documentID uint) (*asynq.Task, error)
@@ -35,7 +35,7 @@ func NewParseTask(documentID uint) (*asynq.Task, error)
 NewParseTask 把文档 ID 编码为 ai:doc:parse 异步任务；ID 缺失（为零值）返回错误。
 
 <a name="ParseHandler"></a>
-## type ParseHandler
+## type [ParseHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/knowledge/parse.go#L57-L68>)
 
 ParseHandler 知识文档导入解析处理器，消费 knowledge.ParseTask（ai:doc:parse）任务。 流程：读取文档行 \-\> 置 status=parsing 并清空 parse\_error \-\> 经 ObjectCache.Materialize 拉取 解密原件为本地文件 \-\> docconv.Convert 抽取文本 \-\> 落库 content \-\> 经当前知识库索引器切块 向量化 \-\> 置 status=ready；任一步失败置 status=failed 并写入截断后的 parse\_error 后返回错误。
 
@@ -46,7 +46,7 @@ type ParseHandler struct {
 ```
 
 <a name="NewParseHandler"></a>
-### func NewParseHandler
+### func [NewParseHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/knowledge/parse.go#L72>)
 
 ```go
 func NewParseHandler(i do.Injector) *ParseHandler
@@ -55,7 +55,7 @@ func NewParseHandler(i do.Injector) *ParseHandler
 NewParseHandler 从 do.Injector 解析依赖并创建知识文档解析处理器。AI 运行时以回调形式 惰性持有（见 ParseHandler.indexer 的说明），不固化启动时的知识库组件指针。
 
 <a name="ParseHandler.Do"></a>
-### func \(\*ParseHandler\) Do
+### func \(\*ParseHandler\) [Do](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/knowledge/parse.go#L95>)
 
 ```go
 func (h *ParseHandler) Do(ctx context.Context, task etl.Task) error
@@ -64,7 +64,7 @@ func (h *ParseHandler) Do(ctx context.Context, task etl.Task) error
 Do 消费一条 ai:doc:parse 任务：解析载荷后按文档 ID 加载文档行，先置 parsing 再执行解析， 成功置 ready、失败置 failed 并返回错误（不自动重试由投递侧 asynq.MaxRetry\(0\) 保证）。
 
 <a name="ParsePayload"></a>
-## type ParsePayload
+## type [ParsePayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/knowledge/task.go#L27-L30>)
 
 ParsePayload 知识文档解析任务载荷，仅携带目标文档 ID。
 

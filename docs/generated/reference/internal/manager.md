@@ -12,7 +12,7 @@
 
 
 <a name="CollectApiCatalog"></a>
-## func CollectApiCatalog
+## func [CollectApiCatalog](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/catalog.go#L93>)
 
 ```go
 func CollectApiCatalog() []views.ApiDescriptor
@@ -21,7 +21,7 @@ func CollectApiCatalog() []views.ApiDescriptor
 CollectApiCatalog 离线装配全部视图域并返回原生接口目录快照（无需 DB / Redis / Etcd）。
 
 <a name="CollectApiKnowledgeDocs"></a>
-## func CollectApiKnowledgeDocs
+## func [CollectApiKnowledgeDocs](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/catalog.go#L108>)
 
 ```go
 func CollectApiKnowledgeDocs() []views.ApiKnowledgeDoc
@@ -30,7 +30,7 @@ func CollectApiKnowledgeDocs() []views.ApiKnowledgeDoc
 CollectApiKnowledgeDocs 离线装配全部视图域并返回纳入 RAG 的原生接口知识文档。
 
 <a name="CollectCapabilities"></a>
-## func CollectCapabilities
+## func [CollectCapabilities](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/catalog.go#L101>)
 
 ```go
 func CollectCapabilities() []capability.Capability
@@ -39,7 +39,7 @@ func CollectCapabilities() []capability.Capability
 CollectCapabilities 离线装配全部视图域并返回视图层声明的能力快照；供 CLI（能力知识同步） 与文档投影使用，保证与在线路由声明同源。
 
 <a name="RouteRegister"></a>
-## func RouteRegister
+## func [RouteRegister](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/router.go#L106>)
 
 ```go
 func RouteRegister(ctx context.Context, i do.Injector) error
@@ -48,7 +48,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error
 RouteRegister 注册全部 HTTP 路由：初始化全局中间件链后， 按业务域委托各子包的 RegisterRoutes 完成路由注册。
 
 <a name="RunHttpService"></a>
-## func RunHttpService
+## func [RunHttpService](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/service.go#L29>)
 
 ```go
 func RunHttpService(ctx context.Context, i do.Injector) error

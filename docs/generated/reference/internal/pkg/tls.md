@@ -9,7 +9,7 @@
 
 
 <a name="GenerateSelfSignedCert"></a>
-## func GenerateSelfSignedCert
+## func [GenerateSelfSignedCert](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/tls/cert.go#L18>)
 
 ```go
 func GenerateSelfSignedCert(notBefore, notAfter time.Time, dnsNames []string) (keyPEM, certPEM string, err error)
@@ -18,7 +18,7 @@ func GenerateSelfSignedCert(notBefore, notAfter time.Time, dnsNames []string) (k
 GenerateSelfSignedCert 生成一张自签名 TLS 证书及其 PEM 格式私钥。 返回证书 PEM 与私钥 PEM，任一步骤失败时返回错误。
 
 <a name="GenerateTestSignedCert"></a>
-## func GenerateTestSignedCert
+## func [GenerateTestSignedCert](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/tls/cert.go#L61>)
 
 ```go
 func GenerateTestSignedCert() (keyPEM, certPEM string, err error)

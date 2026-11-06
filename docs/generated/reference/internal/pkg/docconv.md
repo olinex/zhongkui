@@ -10,7 +10,7 @@
 
 
 <a name="Convert"></a>
-## func Convert
+## func [Convert](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/docconv/docconv.go#L66>)
 
 ```go
 func Convert(ctx context.Context, format Format, r io.ReaderAt, size int64) (string, error)
@@ -19,7 +19,7 @@ func Convert(ctx context.Context, format Format, r io.ReaderAt, size int64) (str
 Convert 把 r 中 size 字节的文档按 format 转换为 Markdown 文本：markdown/txt 原样返回（去 BOM、 清洗非法 UTF\-8），docx 解析 word/document.xml 转 ATX 标题与 GFM 管道表，pdf 逐页抽取文本。
 
 <a name="Format"></a>
-## type Format
+## type [Format](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/docconv/docconv.go#L18>)
 
 Format 是文档格式的取值类型，其字符串取值即落库值。
 
@@ -57,7 +57,7 @@ const (
 ```
 
 <a name="Detect"></a>
-### func Detect
+### func [Detect](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/docconv/docconv.go#L48>)
 
 ```go
 func Detect(filename string) (Format, error)

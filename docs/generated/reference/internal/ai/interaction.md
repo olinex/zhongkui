@@ -29,7 +29,7 @@ var (
 ```
 
 <a name="CanCancel"></a>
-## func CanCancel
+## func [CanCancel](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/interaction/interaction.go#L145>)
 
 ```go
 func CanCancel(facts InteractionFacts) error
@@ -38,7 +38,7 @@ func CanCancel(facts InteractionFacts) error
 CanCancel 判定当前交互状态是否允许中止：仅运行中（任一子状态）与等待中允许，其余返回 ErrInteractionBusy。需注意本守卫表达的是「UI 上停止按钮是否可用」的等价口径；取消端点在 运行中 / 等待中以外的状态下由端点自行保持幂等语义（例如重复取消不报错），本守卫不负责该语义。
 
 <a name="CanCompact"></a>
-## func CanCompact
+## func [CanCompact](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/interaction/interaction.go#L168>)
 
 ```go
 func CanCompact(facts InteractionFacts) error
@@ -47,7 +47,7 @@ func CanCompact(facts InteractionFacts) error
 CanCompact 判定当前交互状态是否允许发起手动上下文压缩：仅暂停与已锁定允许；压缩本身是一次在途活动， 运行中 / 等待中（含压缩中）返回 ErrInteractionBusy。等待中不压缩——此时应先作答 / 授权，或先回滚。
 
 <a name="CanRerunUserInput"></a>
-## func CanRerunUserInput
+## func [CanRerunUserInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/interaction/interaction.go#L180>)
 
 ```go
 func CanRerunUserInput(facts InteractionFacts) error
@@ -56,7 +56,7 @@ func CanRerunUserInput(facts InteractionFacts) error
 CanRerunUserInput 判定当前交互状态是否允许「回退到某条助手待输入回合（问卷 / 授权）」：仅运行中返回 ErrInteractionBusy；暂停 / 已锁定 / 等待中均允许。等待中回退重开同样是合法操作——回退会截断该锚点 之后的回合并作废更晚的 pending 现场，再以所选回合的现场重新等待用户输入。
 
 <a name="CanRollback"></a>
-## func CanRollback
+## func [CanRollback](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/interaction/interaction.go#L157>)
 
 ```go
 func CanRollback(facts InteractionFacts) error
@@ -65,7 +65,7 @@ func CanRollback(facts InteractionFacts) error
 CanRollback 判定当前交互状态是否允许「回滚到某条用户提问发送前」：仅运行中（无稳定截断对象）返回 ErrInteractionBusy；暂停 / 已锁定 / 等待中均允许。等待中回滚是合法操作——它直接放弃当前待输入回合， 截断时会把该会话的 pending 现场置为已消费。已锁定非死路，回滚使其轮次降到上限以下即自动解锁。
 
 <a name="CanSend"></a>
-## func CanSend
+## func [CanSend](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/interaction/interaction.go#L131>)
 
 ```go
 func CanSend(facts InteractionFacts) error
@@ -74,7 +74,7 @@ func CanSend(facts InteractionFacts) error
 CanSend 判定当前交互状态是否允许发送新提问：仅暂停允许；已锁定返回 ErrInteractionLocked （视图层映射 1305），运行中 / 等待中返回 ErrInteractionBusy（视图层映射 1306）。判定只依据 StateOf 的结果，与前端输入闸门口径同源。
 
 <a name="InteractionFacts"></a>
-## type InteractionFacts
+## type [InteractionFacts](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/interaction/interaction.go#L28-L47>)
 
 InteractionFacts 是状态推导的只读事实快照：由调用方（视图层 / 会话服务）按会话当前事实 填齐后传入，推导函数不查库、不持锁，故同一份事实必得同一份状态。它只承载「既有事实」， 不承载任何可变状态，也不承担缓存职责。
 
@@ -102,7 +102,7 @@ type InteractionFacts struct {
 ```
 
 <a name="InteractionSnapshot"></a>
-## type InteractionSnapshot
+## type [InteractionSnapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/interaction/interaction.go#L52-L63>)
 
 InteractionSnapshot 是状态推导的稳定出参：state / substate / locked / userTurns / maxUserTurns 供会话详情、会话列表、在途运行快照与流式 state 事件共用。故意不带 JSON 标签：序列化形态由 视图层决定，领域层只保证取值口径唯一。已锁定时 Substate 为空串（已锁定无子状态）。
 
@@ -122,7 +122,7 @@ type InteractionSnapshot struct {
 ```
 
 <a name="StateOf"></a>
-### func StateOf
+### func [StateOf](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/interaction/interaction.go#L68>)
 
 ```go
 func StateOf(facts InteractionFacts) InteractionSnapshot

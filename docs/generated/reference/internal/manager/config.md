@@ -42,7 +42,7 @@ const ConfigCtxName = "config"
 ```
 
 <a name="ConfigMiddleware"></a>
-## func ConfigMiddleware
+## func [ConfigMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/config/config.go#L234>)
 
 ```go
 func ConfigMiddleware(cfg *Config) gin.HandlerFunc
@@ -61,7 +61,7 @@ ConfigMiddleware 创建一个将配置注入 Gin 上下文的中间件。
 - gin.HandlerFunc: 可直接注册到 Gin 路由的中间件函数
 
 <a name="DescribeConfig"></a>
-## func DescribeConfig
+## func [DescribeConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/config/config.go#L289>)
 
 ```go
 func DescribeConfig() config.ConfigDescriptions
@@ -70,7 +70,7 @@ func DescribeConfig() config.ConfigDescriptions
 DescribeConfig 返回 API 管理层配置项的元描述列表。
 
 <a name="AuthConfig"></a>
-## type AuthConfig
+## type [AuthConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/config/config.go#L59-L87>)
 
 AuthConfig 定义了 JWT 认证相关的完整配置。
 
@@ -109,7 +109,7 @@ type AuthConfig struct {
 ```
 
 <a name="AuthConfig.ExtractCryptoKey"></a>
-### func \(\*AuthConfig\) ExtractCryptoKey
+### func \(\*AuthConfig\) [ExtractCryptoKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/config/config.go#L91>)
 
 ```go
 func (a *AuthConfig) ExtractCryptoKey(kd *key.KeyDerivation) ([]byte, error)
@@ -118,7 +118,7 @@ func (a *AuthConfig) ExtractCryptoKey(kd *key.KeyDerivation) ([]byte, error)
 ExtractCryptoKey 从密钥派生器派生出 API 管理层专属的子密钥， 用于对敏感配置（如 JWT 密钥）进行加解密。
 
 <a name="AuthConfig.ToJwtRegisterClaims"></a>
-### func \(\*AuthConfig\) ToJwtRegisterClaims
+### func \(\*AuthConfig\) [ToJwtRegisterClaims](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/config/config.go#L103>)
 
 ```go
 func (a *AuthConfig) ToJwtRegisterClaims() jwt.RegisteredClaims
@@ -133,7 +133,7 @@ ToJwtRegisterClaims 将认证配置转换为 JWT 标准注册声明（Registered
 - jwt.RegisteredClaims: 可直接用于 jwt.Token 签名的标准声明
 
 <a name="CORSConfig"></a>
-## type CORSConfig
+## type [CORSConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/config/config.go#L133-L146>)
 
 CORSConfig 定义了跨域资源共享（CORS）策略配置。
 
@@ -157,7 +157,7 @@ type CORSConfig struct {
 ```
 
 <a name="Config"></a>
-## type Config
+## type [Config](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/config/config.go#L185-L210>)
 
 Config 是 API 管理层的顶层配置结构体，聚合了所有子模块的配置。
 
@@ -193,7 +193,7 @@ type Config struct {
 ```
 
 <a name="ExtractConfig"></a>
-### func ExtractConfig
+### func [ExtractConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/config/config.go#L273>)
 
 ```go
 func ExtractConfig(v *viper.Viper, validate *validator.Validate) (*Config, error)
@@ -218,7 +218,7 @@ ExtractConfig 从 Viper 实例中提取并校验 API 管理层的配置。
 - error: 任一步骤失败时返回的错误
 
 <a name="GetConfig"></a>
-### func GetConfig
+### func [GetConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/config/config.go#L252>)
 
 ```go
 func GetConfig(c *gin.Context) *Config
@@ -237,7 +237,7 @@ GetConfig 从 Gin 上下文中提取 API 管理层配置。
 - \*Config: 上下文中的配置对象指针
 
 <a name="MustExtractConfig"></a>
-### func MustExtractConfig
+### func [MustExtractConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/config/config.go#L280>)
 
 ```go
 func MustExtractConfig(v *viper.Viper, validate *validator.Validate) *Config
@@ -246,7 +246,7 @@ func MustExtractConfig(v *viper.Viper, validate *validator.Validate) *Config
 MustExtractConfig 从 Viper 实例中提取并校验 API 管理层配置；提取或校验失败时 panic。 用于初始化阶段快速失败（如路由注册、HTTP 服务启动、worker 处理器构造）， 避免把配置错误推迟到首个请求才暴露。
 
 <a name="CookieConfig"></a>
-## type CookieConfig
+## type [CookieConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/config/config.go#L40-L53>)
 
 CookieConfig 定义了 JWT 令牌在 Cookie 中的存储配置。
 
@@ -270,7 +270,7 @@ type CookieConfig struct {
 ```
 
 <a name="NamespaceConfig"></a>
-## type NamespaceConfig
+## type [NamespaceConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/config/config.go#L120-L127>)
 
 NamespaceConfig 定义了多命名空间（多租户）的识别配置。
 
@@ -288,7 +288,7 @@ type NamespaceConfig struct {
 ```
 
 <a name="PasswordResetConfig"></a>
-## type PasswordResetConfig
+## type [PasswordResetConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/config/config.go#L213-L222>)
 
 PasswordResetConfig 定义了用户强制重置密码的配置（密码重置专属项）。
 
@@ -306,7 +306,7 @@ type PasswordResetConfig struct {
 ```
 
 <a name="SecureConfig"></a>
-## type SecureConfig
+## type [SecureConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/config/config.go#L153-L178>)
 
 SecureConfig 定义了 HTTP 安全响应头的完整配置。
 

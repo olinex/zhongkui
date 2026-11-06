@@ -20,7 +20,7 @@ var ChangeKey = etcd.WithPrefix("ai/") + "change"
 ```
 
 <a name="BroadcastChange"></a>
-## func BroadcastChange
+## func [BroadcastChange](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/change/change.go#L57>)
 
 ```go
 func BroadcastChange(ctx context.Context, client *etcd.EtcdClient, event *ChangeEvent) error
@@ -29,7 +29,7 @@ func BroadcastChange(ctx context.Context, client *etcd.EtcdClient, event *Change
 BroadcastChange 广播 LLM 配置变更事件到 etcd 全局键。 管理端写路径在 DB 事务提交后调用，通知各进程的监听方重读数据库并重建运行时； 委托 etcd 通用广播层（JSON 序列化 \+ Put \+ 超时上限）；未绑定 etcd 客户端时返回 etcd.ErrChangeUnavailable，由写路径告警降级而不影响已提交的业务变更。
 
 <a name="NewWatcher"></a>
-## func NewWatcher
+## func [NewWatcher](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/change/change.go#L73>)
 
 ```go
 func NewWatcher(client *etcd.EtcdClient, onEvent func(ctx context.Context) error, logger *logging.Logger) *etcd.Watcher
@@ -38,7 +38,7 @@ func NewWatcher(client *etcd.EtcdClient, onEvent func(ctx context.Context) error
 NewWatcher 创建 LLM 配置变更监听器：订阅全局变更键，收到任一变更事件即调用 onEvent （订阅方据此重读数据库并整体重建装配态），失败由监听层记录告警且不中断后续事件。 client 为 nil 时返回未连接的监听器，由调用方决定是否启动。
 
 <a name="ChangeEvent"></a>
-## type ChangeEvent
+## type [ChangeEvent](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/change/change.go#L44-L51>)
 
 ChangeEvent 是 LLM 配置变更事件的负载。 记录变更种类、受影响对象的本地标识（如模型名、档位、参数键）与发生时刻， 供监听方记录上下文；监听逻辑统一为整体重建，不依赖负载内容。
 
@@ -54,7 +54,7 @@ type ChangeEvent struct {
 ```
 
 <a name="ChangeKind"></a>
-## type ChangeKind
+## type [ChangeKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/change/change.go#L25>)
 
 ChangeKind 是 LLM 配置变更的种类标识。
 

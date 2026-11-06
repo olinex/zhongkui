@@ -93,7 +93,7 @@ var ErrSampleNotProvisioned = errors.New("no validation samples provisioned for 
 ```
 
 <a name="AllDimensions"></a>
-## func AllDimensions
+## func [AllDimensions](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/registry.go#L153>)
 
 ```go
 func AllDimensions() []string
@@ -102,7 +102,7 @@ func AllDimensions() []string
 AllDimensions 返回全部已注册目标模型的合法标签维度取值（snake\_case 列名）的 跨模型去重并集，按取值升序排序。供本包注册 tagEventDimension 枚举类条目 （见 enum.go，Key/Value 均取维度取值，数据库存储语义）与参数校验使用；维度展示 label 不在 此输出，统一经 tagEventDimension 枚举类按 enum.tagEventDimension.\<取值\> 本地化。
 
 <a name="BuildDetectionQuery"></a>
-## func BuildDetectionQuery
+## func [BuildDetectionQuery](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/event.go#L166>)
 
 ```go
 func BuildDetectionQuery(db *gorm.DB, conds []DetectionCondition, now time.Time) (string, []any, error)
@@ -111,7 +111,7 @@ func BuildDetectionQuery(db *gorm.DB, conds []DetectionCondition, now time.Time)
 BuildDetectionQuery 将全部启用条件组装为单条 UNION ALL SQL，一次查询返回所有命中分组。 每个条件一个 SELECT 分支：按 \(namespace, model, dimension, item\) 分组，SUM\(cnt\) \> threshold 视为命中； 每个分组额外以 arrayDistinct\(arrayFlatten\(groupArray\(ids\)\)\) 去重聚合窗口内各分组的原始记录 ID（ids 列）， 供命中明细回溯到原始记录；时间窗口为 minute \>= now\-window AND minute \<= now， 边界用 database.ToUTCDatetime64 格式化为 UTC 微秒精度字符串。 各分支由 GORM 链式 API 构造（Select/Where/Group/Having），表达式谓词以 clause 表达式树传入， 再通过 db.Raw\("? UNION ALL ?", ...\) 将子查询展开合并为单条 SQL，避免手工拼接整条查询字符串。 条件 model/dimension/item 非空时附加等值过滤；表达式翻译失败的条件跳过。 返回 SQL 与按占位符顺序排列的参数；conds 为空或全部无效时返回错误。
 
 <a name="BuildInput"></a>
-## func BuildInput
+## func [BuildInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/input.go#L42>)
 
 ```go
 func BuildInput(target any) (map[string]any, error)
@@ -120,7 +120,7 @@ func BuildInput(target any) (map[string]any, error)
 BuildInput 构建规则评估的输入文档。 目标模型实现 Inputer 接口时使用其自定义文档；否则将结构体 JSON 序列化 后反序列化为 map 作为输入文档（字段名即 json tag，Crypto 加密字段序列化为 空字符串，不向规则暴露明文）。
 
 <a name="Dimensions"></a>
-## func Dimensions
+## func [Dimensions](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/registry.go#L142>)
 
 ```go
 func Dimensions(typeKey string) []string
@@ -129,7 +129,7 @@ func Dimensions(typeKey string) []string
 Dimensions 返回已注册模型合法标签维度取值列表（snake\_case 列名， 对应 tag\_summings.dimension 的存储值），未注册模型返回 nil。 供接口层作为 dimension 下拉选择的数据源，保证前后端维度配置同步。
 
 <a name="EnsureModelSamples"></a>
-## func EnsureModelSamples
+## func [EnsureModelSamples](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/samples.go#L81>)
 
 ```go
 func EnsureModelSamples(ctx context.Context, db *database.DB, namespace, typeKey string) ([]*tag.TagRuleSample, error)
@@ -138,7 +138,7 @@ func EnsureModelSamples(ctx context.Context, db *database.DB, namespace, typeKey
 EnsureModelSamples 确保目标模型在指定命名空间下已有系统样例，无样例时懒供给并落库， 返回最新样例列表。 懒供给内容：模型零值实例经 BuildInput 得到的输入文档 JSON，作为 name="default" 的样例； 模型有预置样例（如 HttpTransport 的 http\-example）时一并供给。 每个命名空间各自懒供给，样例归属命名空间，租户间相互隔离。 并发幂等：插入遇唯一约束冲突（uq\_tag\_rule\_samples\_namespace\_name\_model\_name）时 忽略错误后重查，保证不重复。 未注册模型返回 ErrModelNotRegistered。
 
 <a name="IsRegistered"></a>
-## func IsRegistered
+## func [IsRegistered](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/registry.go#L125>)
 
 ```go
 func IsRegistered(typeKey string) bool
@@ -147,7 +147,7 @@ func IsRegistered(typeKey string) bool
 IsRegistered 判断模型类型键是否已注册。 接口层校验 TagRule.Model / TagSumming.Model 等模型字段取值时使用。
 
 <a name="ListModelSamples"></a>
-## func ListModelSamples
+## func [ListModelSamples](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/samples.go#L66>)
 
 ```go
 func ListModelSamples(ctx context.Context, db *database.DB, namespace, typeKey string) ([]*tag.TagRuleSample, error)
@@ -156,7 +156,7 @@ func ListModelSamples(ctx context.Context, db *database.DB, namespace, typeKey s
 ListModelSamples 列出目标模型在指定命名空间下的全部系统样例（按 name 排序）。 未注册模型返回 ErrModelNotRegistered。
 
 <a name="ModelKey"></a>
-## func ModelKey
+## func [ModelKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/registry.go#L112>)
 
 ```go
 func ModelKey(typeKey string) string
@@ -165,7 +165,7 @@ func ModelKey(typeKey string) string
 ModelKey 返回目标模型类型键的短展示键（camelCase），作为该模型枚举 Option.Key 的唯一来源。 取类型键（pkgpath.TypeName）末段并将首字母转小写（如 …HttpTransport → httpTransport）； 对已是枚举键的输入幂等（不含 \`.\` 时回退原串再转小驼峰），因此可安全处理 完整类型键 / 枚举键两种入参。与前端 modelTypeKeyToI18nKey 保持同一推导规则，前后端单源一致。
 
 <a name="MustTypeKey"></a>
-## func MustTypeKey
+## func [MustTypeKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/registry.go#L100>)
 
 ```go
 func MustTypeKey(target any) string
@@ -174,7 +174,7 @@ func MustTypeKey(target any) string
 MustTypeKey 计算目标模型实例的类型键，失败即 panic。
 
 <a name="NewTargetInstance"></a>
-## func NewTargetInstance
+## func [NewTargetInstance](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/sample.go#L46>)
 
 ```go
 func NewTargetInstance(typeKey string) (any, error)
@@ -183,7 +183,7 @@ func NewTargetInstance(typeKey string) (any, error)
 NewTargetInstance 基于类型键创建目标模型的新实例（指针）。 供样例反序列化等复用注册目标类型信息的场景使用；未注册模型返回 ErrModelNotRegistered。
 
 <a name="Register"></a>
-## func Register
+## func [Register](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/registry.go#L63>)
 
 ```go
 func Register(target Target)
@@ -192,7 +192,7 @@ func Register(target Target)
 Register 运行时注册一个可打标目标模型。 注册表默认由静态清单（targets）在包初始化时构建；本函数供测试注入自定义 模型或未来运行时扩展使用。目标模型必须具有唯一 ID 字段且类型为 serializer.HexUUID（与 ClickHouse tag\_summings.ids Array\(UUID\) 列对齐）， 否则直接 panic。类型键无法计算或重复注册时同样 panic， 与静态注册语义保持一致，避免静默的未知模型。
 
 <a name="TranslateExpression"></a>
-## func TranslateExpression
+## func [TranslateExpression](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/event.go#L95>)
 
 ```go
 func TranslateExpression(expr string) (clause.Expression, error)
@@ -201,7 +201,7 @@ func TranslateExpression(expr string) (clause.Expression, error)
 TranslateExpression 将标签组合布尔表达式翻译为 GORM clause 表达式树。 每个标签标识符转换为 clause.Expr\{SQL: "has\(tags, ?\)", Vars: \[label\]\}， AND/OR/NOT/括号分别由 clause.And/clause.Or/clause.Not 与嵌套表达式表达， 括号渲染与参数绑定均由 GORM 负责，无需手工拼接 SQL 片段。
 
 <a name="TypeKey"></a>
-## func TypeKey
+## func [TypeKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/registry.go#L85>)
 
 ```go
 func TypeKey(target any) (string, error)
@@ -210,7 +210,7 @@ func TypeKey(target any) (string, error)
 TypeKey 计算目标模型实例的类型键。 类型键格式为 pkgpath.TypeName（如 zhongkuisec.com/zhongkui/internal/models/network.HttpTransport）， 作为数据库规则的模型分组标识（TagRule.Model 等模型字段的取值）。 指针自动解引用。可打标模型须在全局注册表（见 registry.go）中登记。
 
 <a name="TypeKeys"></a>
-## func TypeKeys
+## func [TypeKeys](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/registry.go#L172>)
 
 ```go
 func TypeKeys() []string
@@ -219,7 +219,7 @@ func TypeKeys() []string
 TypeKeys 返回全部已注册目标模型的类型键列表，按类型键升序排序。 供本包注册 tagRuleModel 枚举类条目（见 enum.go，Key 取 ModelKey\(typeKey\)、Value 取完整 类型键）与参数校验使用；模型展示 label 不在此输出，统一经 tagRuleModel 枚举类 按 enum.tagRuleModel.\<ModelKey\> 经统一枚举接口本地化。
 
 <a name="ValidateGroup"></a>
-## func ValidateGroup
+## func [ValidateGroup](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/validate.go#L246>)
 
 ```go
 func ValidateGroup(ctx context.Context, rules []*tag.TagRule) error
@@ -228,7 +228,7 @@ func ValidateGroup(ctx context.Context, rules []*tag.TagRule) error
 ValidateGroup 校验一组规则能否作为一个整体语义编译通过。 用于拦截跨规则冲突（如两条规则同时对 tags 整体赋值，或 一条规则 tags := 与另一条 tags contains 并存）， 在规则增删改/启停/回滚前基于"变更后的组"调用。
 
 <a name="ValidateRego"></a>
-## func ValidateRego
+## func [ValidateRego](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/validate.go#L48>)
 
 ```go
 func ValidateRego(source string) error
@@ -246,7 +246,7 @@ ValidateRego 校验 Rego 规则源码是否符合标签识别契约。
 注意：OPA v1.19.0 的 ast.ParseModule 默认按 Rego v0 语法解析， 而契约要求的 tags contains 属于 Rego v1 语法，因此这里显式指定 RegoV1 模式解析，以支持 contains 规则形式；语义编译同样需显式 RegoV1。
 
 <a name="WithDatasourcePool"></a>
-## func WithDatasourcePool
+## func [WithDatasourcePool](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/builtin.go#L36>)
 
 ```go
 func WithDatasourcePool(ctx context.Context, pool *sqlitevtab.SQLitePool) context.Context
@@ -255,7 +255,7 @@ func WithDatasourcePool(ctx context.Context, pool *sqlitevtab.SQLitePool) contex
 WithDatasourcePool 返回一个绑定了 sqlite 连接池的 ctx，供求值路径（引擎 Recognize、 视图 dry\-run/样例校验）在调用 sqlite.query 前关联正确的命名空间池。
 
 <a name="CustomFunction"></a>
-## type CustomFunction
+## type [CustomFunction](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/builtin.go#L172-L181>)
 
 CustomFunction 描述一个 rego 规则可调用的自定义 OPA 内置函数元信息。 Description 为 i18n 消息键，由接口层按请求语言翻译后输出。
 
@@ -273,7 +273,7 @@ type CustomFunction struct {
 ```
 
 <a name="CustomFunctions"></a>
-### func CustomFunctions
+### func [CustomFunctions](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/builtin.go#L185>)
 
 ```go
 func CustomFunctions() []CustomFunction
@@ -282,7 +282,7 @@ func CustomFunctions() []CustomFunction
 CustomFunctions 返回 rego 规则可调用的自定义 OPA 内置函数元信息列表。 供前端 Rego 编辑器实现自定义函数的关键词高亮、悬停签名提示与自动补全。
 
 <a name="DetectionCondition"></a>
-## type DetectionCondition
+## type [DetectionCondition](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/event.go#L18-L33>)
 
 DetectionCondition 标签事件检测条件的运行时形态，由 core 库 tag\_event\_conditions 行或 dry\-run 请求映射。
 
@@ -306,7 +306,7 @@ type DetectionCondition struct {
 ```
 
 <a name="DetectionHit"></a>
-## type DetectionHit
+## type [DetectionHit](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/event.go#L36-L51>)
 
 DetectionHit 标签事件检测查询结果行，按 \(namespace, model, dimension, item\) 分组聚合。
 
@@ -330,7 +330,7 @@ type DetectionHit struct {
 ```
 
 <a name="Engine"></a>
-## type Engine
+## type [Engine](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L27-L39>)
 
 Engine 基于 OPA 的标签识别引擎。 规则按（Namespace, Model）分组加载并编译缓存，对结构体实例评估产出标签。 引擎可选绑定 etcd 客户端：未绑定时仅提供本地识别与缓存失效能力； 绑定时实现 runtime.Service，可启动协程监听规则变更并对外广播变更事件。 Engine 并发安全，rego.PreparedEvalQuery 可并发评估。
 
@@ -343,7 +343,7 @@ type Engine struct {
 ```
 
 <a name="NewEngine"></a>
-### func NewEngine
+### func [NewEngine](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L52>)
 
 ```go
 func NewEngine(db *database.DB, logger *logging.Logger, client *etcd.EtcdClient, opts ...EngineOption) *Engine
@@ -352,7 +352,7 @@ func NewEngine(db *database.DB, logger *logging.Logger, client *etcd.EtcdClient,
 NewEngine 创建标签识别引擎，绑定 core 数据库读取规则。 可选通过 variadic 选项注入第三方数据源按命名空间池（WithDatasourcePools）等。
 
 <a name="Engine.BroadcastChange"></a>
-### func \(\*Engine\) BroadcastChange
+### func \(\*Engine\) [BroadcastChange](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/notify.go#L35>)
 
 ```go
 func (e *Engine) BroadcastChange(ctx context.Context, namespace, model string) error
@@ -361,7 +361,7 @@ func (e *Engine) BroadcastChange(ctx context.Context, namespace, model string) e
 BroadcastChange 广播规则变更事件。 每次规则写路径（增删改/启停/回滚）在 DB 事务提交后调用， 通知所有进程的引擎失效对应分组缓存并按 DB 最新规则懒重编译。 发布带超时上限，失败返回错误但不影响调用方；未绑定 etcd 客户端时 返回 etcd.ErrChangeUnavailable。 注意：DB 提交先于 etcd 发布，保证收到通知的引擎读到的必是新规则。
 
 <a name="Engine.Invalidate"></a>
-### func \(\*Engine\) Invalidate
+### func \(\*Engine\) [Invalidate](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L162>)
 
 ```go
 func (e *Engine) Invalidate(namespace, model string)
@@ -370,7 +370,7 @@ func (e *Engine) Invalidate(namespace, model string)
 Invalidate 失效指定命名空间下分组的已编译查询缓存。 规则写入路径（创建/更新/删除/启用切换）后必须调用以保证一致性。
 
 <a name="Engine.InvalidateAll"></a>
-### func \(\*Engine\) InvalidateAll
+### func \(\*Engine\) [InvalidateAll](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L167>)
 
 ```go
 func (e *Engine) InvalidateAll()
@@ -379,7 +379,7 @@ func (e *Engine) InvalidateAll()
 InvalidateAll 失效全部分组的已编译查询缓存。
 
 <a name="Engine.Recognize"></a>
-### func \(\*Engine\) Recognize
+### func \(\*Engine\) [Recognize](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L108>)
 
 ```go
 func (e *Engine) Recognize(ctx context.Context, target any) ([]string, error)
@@ -388,7 +388,7 @@ func (e *Engine) Recognize(ctx context.Context, target any) ([]string, error)
 Recognize 对目标结构体实例执行标签识别，返回命中的标签集合（去重排序）。 规则组按目标实例的命名空间隔离加载；无命名空间字段时回退到未归属命名空间规则。 使用组级合并查询进行单次评估，适合高吞吐热路径；不返回命中的规则名。 求值前按目标实例命名空间解析第三方数据源池并绑定到求值 ctx（若引擎已注入 pools）。
 
 <a name="Engine.RecognizeWithDetail"></a>
-### func \(\*Engine\) RecognizeWithDetail
+### func \(\*Engine\) [RecognizeWithDetail](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L132>)
 
 ```go
 func (e *Engine) RecognizeWithDetail(ctx context.Context, target any) (*GroupDetailResult, error)
@@ -397,7 +397,7 @@ func (e *Engine) RecognizeWithDetail(ctx context.Context, target any) (*GroupDet
 RecognizeWithDetail 对目标结构体实例执行标签识别，并返回命中的规则名。 规则组按目标实例的命名空间隔离加载；逐规则评估，用于审计与调试场景。 求值前同样按命名空间解析并绑定第三方数据源池。
 
 <a name="Engine.Shutdown"></a>
-### func \(\*Engine\) Shutdown
+### func \(\*Engine\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/notify.go#L72>)
 
 ```go
 func (e *Engine) Shutdown(ctx context.Context) error
@@ -406,7 +406,7 @@ func (e *Engine) Shutdown(ctx context.Context) error
 Shutdown 停止规则变更监听。 由 runtime 编排器在 Start 返回后调用，实际停止依赖 Start 的 ctx 取消。
 
 <a name="Engine.Start"></a>
-### func \(\*Engine\) Start
+### func \(\*Engine\) [Start](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/notify.go#L62>)
 
 ```go
 func (e *Engine) Start(ctx context.Context) error
@@ -415,7 +415,7 @@ func (e *Engine) Start(ctx context.Context) error
 Start 阻塞运行规则变更监听，直到 ctx 取消。实现 runtime.Service 生命周期。 未构造 watcher 时记录跳过信息并直接返回；否则委托通用 etcd watcher 监听 规则变更，watch 中断自动重连，事件处理由 ruleChangeHandler 完成。
 
 <a name="EngineOption"></a>
-## type EngineOption
+## type [EngineOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L48>)
 
 EngineOption 是 Engine 的函数式配置选项。
 
@@ -424,7 +424,7 @@ type EngineOption func(*Engine)
 ```
 
 <a name="WithDatasourcePools"></a>
-### func WithDatasourcePools
+### func [WithDatasourcePools](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L69>)
 
 ```go
 func WithDatasourcePools(pools *vtab.Pools) EngineOption
@@ -433,7 +433,7 @@ func WithDatasourcePools(pools *vtab.Pools) EngineOption
 WithDatasourcePools 注入按命名空间隔离的第三方数据源池，供求值路径将各命名空间池 绑定到求值 ctx 以供 sqlite.query 查询裸名 vtable。
 
 <a name="GroupDetailResult"></a>
-## type GroupDetailResult
+## type [GroupDetailResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/group.go#L16-L25>)
 
 GroupDetailResult 一个规则组的识别结果，含去重标签集合、耗时、错误与逐规则详情。
 
@@ -451,7 +451,7 @@ type GroupDetailResult struct {
 ```
 
 <a name="InputFieldMeta"></a>
-## type InputFieldMeta
+## type [InputFieldMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/inputmeta.go#L26-L42>)
 
 InputFieldMeta 输入文档单个字段的元信息。 供前端 Rego 编辑器自动补全与字段面板使用：Field 为输入文档中的扁平化字段名 （规则中以 input.\<field\> 引用），Type 为 JSON 类型，GoType 为 Go 类型名， Description 为字段含义（由接口层按请求语言翻译 DescriptionKey 后填充，可为空）， Sensitive 标记敏感字段（secure tag 或 serializer.Crypto 类型）， Items 在 Type 为 array 时给出元素类型。
 
@@ -476,7 +476,7 @@ type InputFieldMeta struct {
 ```
 
 <a name="InputMetadata"></a>
-### func InputMetadata
+### func [InputMetadata](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/inputmeta.go#L55>)
 
 ```go
 func InputMetadata(typeKey string) ([]InputFieldMeta, error)
@@ -485,7 +485,7 @@ func InputMetadata(typeKey string) ([]InputFieldMeta, error)
 InputMetadata 返回已注册模型输入文档的扁平化字段元信息列表（按字段名排序）。 字段集合与 BuildInput 零值实例文档键一致；未注册模型返回 ErrModelNotRegistered。 Description 字段不在此处填充，由接口层按 DescriptionKey 按请求语言翻译后输出。
 
 <a name="InputItemMeta"></a>
-## type InputItemMeta
+## type [InputItemMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/inputmeta.go#L45-L50>)
 
 InputItemMeta 数组元素类型信息。
 
@@ -499,7 +499,7 @@ type InputItemMeta struct {
 ```
 
 <a name="Inputer"></a>
-## type Inputer
+## type [Inputer](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/types.go#L36-L39>)
 
 Inputer 输入文档提供者接口。 目标模型可实现该接口自定义规则可见的输入文档（如字段投影、脱敏）， 未实现时引擎默认将结构体 JSON 序列化作为输入文档。
 
@@ -511,7 +511,7 @@ type Inputer interface {
 ```
 
 <a name="RecognizeDetailResult"></a>
-## type RecognizeDetailResult
+## type [RecognizeDetailResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/types.go#L25-L31>)
 
 RecognizeDetailResult 标签识别详细结果。
 
@@ -526,7 +526,7 @@ type RecognizeDetailResult struct {
 ```
 
 <a name="RecognizeResult"></a>
-## type RecognizeResult
+## type [RecognizeResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/types.go#L17-L22>)
 
 RecognizeResult 标签识别结果。
 
@@ -540,7 +540,7 @@ type RecognizeResult struct {
 ```
 
 <a name="RegoError"></a>
-## type RegoError
+## type [RegoError](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/validate.go#L80-L96>)
 
 RegoError 描述 Rego 规则源码中的一处校验错误，带行号/列号定位。 tagengine 生成的条目 Message/Hint 为 i18n 消息键（如 tagrule.lint\-field\-not\-exist）， 文案维护在 internal/pkg/translate/locales/ 下，由接口层按请求语言统一翻译； OPA 原生消息（如解析/编译错误原文）不是消息键，翻译不命中时原样保留。
 
@@ -565,7 +565,7 @@ type RegoError struct {
 ```
 
 <a name="ExtractRegoErrors"></a>
-### func ExtractRegoErrors
+### func [ExtractRegoErrors](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/validate.go#L255>)
 
 ```go
 func ExtractRegoErrors(err error) []RegoError
@@ -574,7 +574,7 @@ func ExtractRegoErrors(err error) []RegoError
 ExtractRegoErrors 从 OPA 解析/编译错误中提取结构化校验错误列表（带行列号）。 供路由层在组级校验（ValidateGroup）失败后输出带行列号的错误详情。
 
 <a name="InspectRego"></a>
-### func InspectRego
+### func [InspectRego](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/validate.go#L100>)
 
 ```go
 func InspectRego(source string) ([]RegoError, bool)
@@ -583,7 +583,7 @@ func InspectRego(source string) ([]RegoError, bool)
 InspectRego 校验 Rego 规则源码是否符合标签识别契约，返回结构化错误列表与是否合法。 与 ValidateRego 的校验语义一致，但错误带行号/列号，供 validate / dry\-run 接口输出。
 
 <a name="LintInputRefs"></a>
-### func LintInputRefs
+### func [LintInputRefs](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/inputlint.go#L17>)
 
 ```go
 func LintInputRefs(source string, fields []InputFieldMeta) []RegoError
@@ -592,7 +592,7 @@ func LintInputRefs(source string, fields []InputFieldMeta) []RegoError
 LintInputRefs 对 Rego 源码做输入文档字段感知 lint。 解析 Rego 模块 AST，遍历 input.\<field\>（含 input\["field"\]）引用， 引用字段不在 fields 元信息中时产出 warning 级 RegoError（行列定位到该字段）。 按字段名去重；解析失败返回空列表（语法错误由既有校验负责）。
 
 <a name="ValidateRegoRules"></a>
-### func ValidateRegoRules
+### func [ValidateRegoRules](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/validate.go#L230>)
 
 ```go
 func ValidateRegoRules(ctx context.Context, rules []*tag.TagRule) ([]RegoError, bool)
@@ -601,7 +601,7 @@ func ValidateRegoRules(ctx context.Context, rules []*tag.TagRule) ([]RegoError, 
 ValidateRegoRules 校验一组候选规则的 Rego 合法性，作为 validate / dry\-run / 写路径校验统一复用的公共入口：逐条做语法与契约校验（InspectRego）， 全部通过后再对整组做语义编译校验（ValidateGroup），返回结构化错误列表与是否合法。 仅针对规则源码本身，不依赖数据库与验证样例，可对任意候选规则集合（含未落库的 dry\-run 输入）复用；单条校验时传入单元素组即可。
 
 <a name="RuleChangeEvent"></a>
-## type RuleChangeEvent
+## type [RuleChangeEvent](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/notify.go#L22-L27>)
 
 RuleChangeEvent 规则变更事件负载。 记录本次写路径影响的分组（Namespace \+ Model），供引擎精准失效 对应分组缓存，避免全量失效的高成本；解析失败时回退全量失效保证不遗漏。
 
@@ -615,7 +615,7 @@ type RuleChangeEvent struct {
 ```
 
 <a name="RuleDetailResult"></a>
-## type RuleDetailResult
+## type [RuleDetailResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/rule.go#L22-L29>)
 
 RuleDetailResult 单条规则的识别结果，含标签集合、评估耗时与评估错误。
 
@@ -631,7 +631,7 @@ type RuleDetailResult struct {
 ```
 
 <a name="SampleRuntimeError"></a>
-## type SampleRuntimeError
+## type [SampleRuntimeError](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/sample.go#L18-L23>)
 
 SampleRuntimeError 描述一条验证样例的运行期评估错误。
 
@@ -645,7 +645,7 @@ type SampleRuntimeError struct {
 ```
 
 <a name="ValidateGroupRuntime"></a>
-### func ValidateGroupRuntime
+### func [ValidateGroupRuntime](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/sample.go#L66>)
 
 ```go
 func ValidateGroupRuntime(ctx context.Context, db *database.DB, rules []*tag.TagRule) ([]SampleRuntimeError, error)
@@ -659,7 +659,7 @@ ValidateGroupRuntime 对候选规则组执行运行期样例校验（第二层�
 - 正常校验：返回出错样例列表（空表示全部通过）与 nil 错误。
 
 <a name="TagEventRecord"></a>
-## type TagEventRecord
+## type [TagEventRecord](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/event.go#L54-L67>)
 
 TagEventRecord 标签事件记录识别结果，作为检测入库的持久化数据源或 dry\-run 响应返回。
 
@@ -681,7 +681,7 @@ type TagEventRecord struct {
 ```
 
 <a name="Detect"></a>
-### func Detect
+### func [Detect](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/event.go#L292>)
 
 ```go
 func Detect(ctx context.Context, rawDB *database.DB, conds []DetectionCondition, now time.Time) ([]*TagEventRecord, error)
@@ -690,7 +690,7 @@ func Detect(ctx context.Context, rawDB *database.DB, conds []DetectionCondition,
 Detect 执行一次标签事件识别。 条件由调用方传入（本函数不主动读取规则库），按指定时间点 now 查询聚合统计并聚合为标签事件结果； 供定时检测（worker 消费 tag:event:detect）与接口层 dry\-run 模式复用。 非法表达式条件被静默跳过，全部条件无效时返回空结果而非错误。
 
 <a name="GroupEvents"></a>
-### func GroupEvents
+### func [GroupEvents](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/event.go#L205>)
 
 ```go
 func GroupEvents(conds []DetectionCondition, hits []DetectionHit, now time.Time) []*TagEventRecord
@@ -699,7 +699,7 @@ func GroupEvents(conds []DetectionCondition, hits []DetectionHit, now time.Time)
 GroupEvents 将检测命中的分组按规则/条件聚合为标签事件。 match\_all=false：任一条件命中即触发，每个 \(条件, 命中分组\) 生成一条事件（Hits 仅含该分组）； match\_all=true：仅当规则下所有启用条件均至少有一个命中分组时触发一次，Hits 汇总全部命中分组。
 
 <a name="TagEventRecordHit"></a>
-## type TagEventRecordHit
+## type [TagEventRecordHit](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/event.go#L70-L89>)
 
 TagEventRecordHit 标签事件记录中的单条命中分组信息。
 
@@ -727,7 +727,7 @@ type TagEventRecordHit struct {
 ```
 
 <a name="Target"></a>
-## type Target
+## type [Target](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/registry.go#L32-L39>)
 
 Target 表示一个已注册的可打标目标模型。 目标模型在全局注册表中登记后，其类型键（pkgpath.TypeName 完整路径） 方可作为 TagRule.Model / TagSumming.Model / TagEventCondition.Model 等 模型字段的合法取值；展示 label 不再由注册表人工维护，统一经 tagRuleModel 枚举类（Key 取 ModelKey，见 enum.go）按 enum.tagRuleModel.\<ModelKey\> 推导。 每个目标模型必须具有唯一 ID 字段且类型为 serializer.HexUUID（共享类型锚点）， 与 ClickHouse tag\_summings.ids（Array\(UUID\)）列类型保持一致，保证打标结果 跨模型统一以 UUID 锚定数据行。
 
@@ -743,7 +743,7 @@ type Target struct {
 ```
 
 <a name="TargetInfo"></a>
-### func TargetInfo
+### func [TargetInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/registry.go#L131>)
 
 ```go
 func TargetInfo(typeKey string) (*Target, bool)

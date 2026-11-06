@@ -25,7 +25,7 @@
 
 
 <a name="HttpTransportDetailGet"></a>
-## func HttpTransportDetailGet
+## func [HttpTransportDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_http_transport.go#L825>)
 
 ```go
 func HttpTransportDetailGet(c *gin.Context)
@@ -34,7 +34,7 @@ func HttpTransportDetailGet(c *gin.Context)
 HttpTransportDetailGet 处理 HTTP 传输详情查询请求 以 namespace \+ id 精确定位单条记录；列表投影后行详情/收藏样例/堆栈下钻等 消费方经此接口补齐全量字段
 
 <a name="HttpTransportListGet"></a>
-## func HttpTransportListGet
+## func [HttpTransportListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_http_transport.go#L472>)
 
 ```go
 func HttpTransportListGet(c *gin.Context)
@@ -43,7 +43,7 @@ func HttpTransportListGet(c *gin.Context)
 HttpTransportListGet 处理 HTTP 传输列表查询请求 通过 HttpTransportListGetSearchIn 应用过滤、排序与分页，查询 raw 库（ClickHouse）中的传输数据， 以局部扫描容器承载 gorm 模型与 total 列，再映射为独立 Out 结构（含全部字段）
 
 <a name="HttpTransportStackListGet"></a>
-## func HttpTransportStackListGet
+## func [HttpTransportStackListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_http_transport.go#L523>)
 
 ```go
 func HttpTransportStackListGet(c *gin.Context)
@@ -52,7 +52,7 @@ func HttpTransportStackListGet(c *gin.Context)
 HttpTransportStackListGet 处理 HTTP 传输关联网络堆栈列表查询请求 以 HttpTransport 携带的 traceId（\+ namespace/sessionId/时间范围）为键， 查询 raw 库（ClickHouse）中该 TCP 流的全部 NetworkStack 记录； 前端借助 HttpTransport.AppTailer 的 payload offset 与记录的 payloadStartOffset/payloadEndOffset 相交，定位请求/响应各自的数据包。
 
 <a name="Ipv4TcpDetailGet"></a>
-## func Ipv4TcpDetailGet
+## func [Ipv4TcpDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv4_tcp.go#L320>)
 
 ```go
 func Ipv4TcpDetailGet(c *gin.Context)
@@ -61,7 +61,7 @@ func Ipv4TcpDetailGet(c *gin.Context)
 Ipv4TcpDetailGet 处理 IPv4 TCP 包详情查询请求 以 namespace \+ id 精确定位单条记录；列表投影后行详情/收藏样例/堆栈下钻等 消费方经此接口补齐全量字段
 
 <a name="Ipv4TcpListGet"></a>
-## func Ipv4TcpListGet
+## func [Ipv4TcpListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv4_tcp.go#L166>)
 
 ```go
 func Ipv4TcpListGet(c *gin.Context)
@@ -70,7 +70,7 @@ func Ipv4TcpListGet(c *gin.Context)
 Ipv4TcpListGet 处理 IPv4 TCP 包列表查询请求 通过 Ipv4TcpListGetSearchIn 应用过滤、排序与分页，查询 raw 库（ClickHouse）中的包数据， 以局部扫描容器承载 gorm 模型与 total 列，再映射为独立 Out 结构（含全部字段）
 
 <a name="Ipv6TcpDetailGet"></a>
-## func Ipv6TcpDetailGet
+## func [Ipv6TcpDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv6_tcp.go#L256>)
 
 ```go
 func Ipv6TcpDetailGet(c *gin.Context)
@@ -79,7 +79,7 @@ func Ipv6TcpDetailGet(c *gin.Context)
 Ipv6TcpDetailGet 处理 IPv6 TCP 包详情查询请求 以 namespace \+ id 精确定位单条记录；列表投影后行详情/收藏样例/堆栈下钻等 消费方经此接口补齐全量字段
 
 <a name="Ipv6TcpListGet"></a>
-## func Ipv6TcpListGet
+## func [Ipv6TcpListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv6_tcp.go#L133>)
 
 ```go
 func Ipv6TcpListGet(c *gin.Context)
@@ -88,7 +88,7 @@ func Ipv6TcpListGet(c *gin.Context)
 Ipv6TcpListGet 处理 IPv6 TCP 包列表查询请求 通过 Ipv6TcpListGetSearchIn 应用过滤、排序与分页，查询 raw 库（ClickHouse）中的包数据， 以局部扫描容器承载 gorm 模型与 total 列，再映射为独立 Out 结构（含全部字段）
 
 <a name="RegisterRoutes"></a>
-## func RegisterRoutes
+## func [RegisterRoutes](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/register.go#L26>)
 
 ```go
 func RegisterRoutes(ctx *views.RegisterContext)
@@ -97,7 +97,7 @@ func RegisterRoutes(ctx *views.RegisterContext)
 RegisterRoutes 注册 /api/v1/traffic 原始流量审计接口路由到共享注册上下文。
 
 <a name="HttpTransportDetailGetIn"></a>
-## type HttpTransportDetailGetIn
+## type [HttpTransportDetailGetIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_http_transport.go#L815-L820>)
 
 HttpTransportDetailGetIn HTTP 传输详情查询入参 按命名空间 \+ 行唯一 ID 精确查询单条 HTTP 传输记录
 
@@ -111,7 +111,7 @@ type HttpTransportDetailGetIn struct {
 ```
 
 <a name="HttpTransportListGetListItemOut"></a>
-## type HttpTransportListGetListItemOut
+## type [HttpTransportListGetListItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_http_transport.go#L24-L425>)
 
 HttpTransportListGetListItemOut HTTP 传输列表输出项 独立扁平结构体，逐一镜像 network.HttpTransport 的全部顶层 json 字段 （body 已转存 S3，单条返回字节量可控），BaseTotalOut 承接 COUNT\(\*\) OVER\(\) 的总数
 
@@ -521,7 +521,7 @@ type HttpTransportListGetListItemOut struct {
 ```
 
 <a name="NewHttpTransportListGetListItemOut"></a>
-### func NewHttpTransportListGetListItemOut
+### func [NewHttpTransportListGetListItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_http_transport.go#L571>)
 
 ```go
 func NewHttpTransportListGetListItemOut(p *network.HttpTransport) *HttpTransportListGetListItemOut
@@ -530,7 +530,7 @@ func NewHttpTransportListGetListItemOut(p *network.HttpTransport) *HttpTransport
 NewHttpTransportListGetListItemOut 将 network.HttpTransport 映射为独立 Out 结构。 模型字段均为共享/第三方类型，逐字段直接复制，无类型转换。
 
 <a name="Ipv4TcpDetailGetIn"></a>
-## type Ipv4TcpDetailGetIn
+## type [Ipv4TcpDetailGetIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv4_tcp.go#L310-L315>)
 
 Ipv4TcpDetailGetIn IPv4 TCP 包详情查询入参 按命名空间 \+ 行唯一 ID 精确查询单条 IPv4 TCP 包记录
 
@@ -544,7 +544,7 @@ type Ipv4TcpDetailGetIn struct {
 ```
 
 <a name="Ipv4TcpListGetListItemOut"></a>
-## type Ipv4TcpListGetListItemOut
+## type [Ipv4TcpListGetListItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv4_tcp.go#L46-L161>)
 
 Ipv4TcpListGetListItemOut IPv4 TCP 包列表输出项 独立扁平结构体，逐一镜像 network.PacketIPv4TCP 的全部顶层 json 字段 （payload 已转存 S3，单条返回字节量可控），BaseTotalOut 承接 COUNT\(\*\) OVER\(\) 的总数
 
@@ -668,7 +668,7 @@ type Ipv4TcpListGetListItemOut struct {
 ```
 
 <a name="Ipv6TcpDetailGetIn"></a>
-## type Ipv6TcpDetailGetIn
+## type [Ipv6TcpDetailGetIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv6_tcp.go#L246-L251>)
 
 Ipv6TcpDetailGetIn IPv6 TCP 包详情查询入参 按命名空间 \+ 行唯一 ID 精确查询单条 IPv6 TCP 包记录
 
@@ -682,7 +682,7 @@ type Ipv6TcpDetailGetIn struct {
 ```
 
 <a name="Ipv6TcpListGetListItemOut"></a>
-## type Ipv6TcpListGetListItemOut
+## type [Ipv6TcpListGetListItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv6_tcp.go#L22-L128>)
 
 Ipv6TcpListGetListItemOut IPv6 TCP 包列表输出项 独立扁平结构体，逐一镜像 network.PacketIPv6TCP 的全部顶层 json 字段 （payload 已转存 S3，单条返回字节量可控），BaseTotalOut 承接 COUNT\(\*\) OVER\(\) 的总数
 
@@ -797,7 +797,7 @@ type Ipv6TcpListGetListItemOut struct {
 ```
 
 <a name="LayerInfoOut"></a>
-## type LayerInfoOut
+## type [LayerInfoOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv4_tcp.go#L34-L41>)
 
 LayerInfoOut 视图层网络层信息镜像结构（对应 network.LayerInfo）。 独立定义以遵守视图层 In/Out 结构体不得引用模型层结构体的强约束。
 
@@ -813,7 +813,7 @@ type LayerInfoOut struct {
 ```
 
 <a name="NetworkStackListGetListItemOut"></a>
-## type NetworkStackListGetListItemOut
+## type [NetworkStackListGetListItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_http_transport.go#L430-L467>)
 
 NetworkStackListGetListItemOut 网络堆栈列表输出项 独立扁平结构体，逐一镜像 network.NetworkStack 的全部顶层 json 字段 （含载荷字节偏移），BaseTotalOut 承接 COUNT\(\*\) OVER\(\) 的总数
 
@@ -859,7 +859,7 @@ type NetworkStackListGetListItemOut struct {
 ```
 
 <a name="TcpOptionOut"></a>
-## type TcpOptionOut
+## type [TcpOptionOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv4_tcp.go#L23-L30>)
 
 TcpOptionOut 视图层 TCP 选项镜像结构（对应 network.TCPOption）。 独立定义以遵守视图层 In/Out 结构体不得引用模型层结构体的强约束， JSON 输出与模型保持一致的字段名与类型。
 

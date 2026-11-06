@@ -14,7 +14,7 @@
 
 
 <a name="MapMarkdown"></a>
-## func MapMarkdown
+## func [MapMarkdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/capability/capability.go#L59>)
 
 ```go
 func MapMarkdown(items []Capability) string
@@ -23,7 +23,7 @@ func MapMarkdown(items []Capability) string
 MapMarkdown 生成能力地图，用于人类文档投影与 RAG 能力分区的整体索引；不再常驻模型上下文。 调用方需按业务域分组并稳定排序（见 views.CapabilityItems），本函数只负责渲染；无能力时返回空串。
 
 <a name="Access"></a>
-## type Access
+## type [Access](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/capability/capability.go#L11>)
 
 Access 表示能力对业务数据的访问性质。
 
@@ -43,7 +43,7 @@ const (
 ```
 
 <a name="Access.Valid"></a>
-### func \(Access\) Valid
+### func \(Access\) [Valid](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/capability/capability.go#L21>)
 
 ```go
 func (a Access) Valid() bool
@@ -52,7 +52,7 @@ func (a Access) Valid() bool
 Valid 报告访问性质是否合法。
 
 <a name="Capability"></a>
-## type Capability
+## type [Capability](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/capability/capability.go#L26-L45>)
 
 Capability 描述一条「用户意图 → 原生接口」的能力。
 
@@ -80,7 +80,7 @@ type Capability struct {
 ```
 
 <a name="Lookup"></a>
-### func Lookup
+### func [Lookup](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/capability/capability.go#L48>)
 
 ```go
 func Lookup(items []Capability, id string) (Capability, bool)
@@ -89,7 +89,7 @@ func Lookup(items []Capability, id string) (Capability, bool)
 Lookup 按能力 ID 查找能力，未命中返回 false。
 
 <a name="KnowledgeDoc"></a>
-## type KnowledgeDoc
+## type [KnowledgeDoc](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/capability/capability.go#L108-L113>)
 
 KnowledgeDoc 是能力分区入 RAG 的一篇生成文档：Title 为同步与去重的稳定键，Content 为正文。
 
@@ -103,7 +103,7 @@ type KnowledgeDoc struct {
 ```
 
 <a name="KnowledgeDocs"></a>
-### func KnowledgeDocs
+### func [KnowledgeDocs](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/capability/capability.go#L118>)
 
 ```go
 func KnowledgeDocs(items []Capability) []KnowledgeDoc

@@ -16,7 +16,7 @@
 
 
 <a name="Group"></a>
-## type Group
+## type [Group](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/runtime/group.go#L11-L14>)
 
 Group 统一编排多个 Service 的启动与关闭生命周期。
 
@@ -27,7 +27,7 @@ type Group struct {
 ```
 
 <a name="NewGroup"></a>
-### func NewGroup
+### func [NewGroup](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/runtime/group.go#L17>)
 
 ```go
 func NewGroup(services ...Service) *Group
@@ -36,7 +36,7 @@ func NewGroup(services ...Service) *Group
 NewGroup 创建服务编排组。
 
 <a name="Group.Add"></a>
-### func \(\*Group\) Add
+### func \(\*Group\) [Add](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/runtime/group.go#L24>)
 
 ```go
 func (g *Group) Add(services ...Service)
@@ -45,7 +45,7 @@ func (g *Group) Add(services ...Service)
 Add 追加服务到编排组，可在 Run 调用前多次追加。
 
 <a name="Group.Run"></a>
-### func \(\*Group\) Run
+### func \(\*Group\) [Run](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/runtime/group.go#L35>)
 
 ```go
 func (g *Group) Run(ctx context.Context) error
@@ -56,7 +56,7 @@ Run 并行启动全部服务，并统一管理生命周期。 每个服务在独
 返回值：首个非 nil 错误（已带 "\[name\]" 协程标识，errgroupx 包装）， 全部服务正常退出时返回 nil。
 
 <a name="Named"></a>
-## type Named
+## type [Named](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/runtime/service.go#L31-L35>)
 
 Named 可选接口，为服务提供名称，用于日志与错误上下文标识。
 
@@ -69,7 +69,7 @@ type Named interface {
 ```
 
 <a name="Service"></a>
-## type Service
+## type [Service](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/runtime/service.go#L23-L28>)
 
 Service 统一的服务生命周期接口。 Start 阻塞运行服务主体逻辑，直到 ctx 取消或服务内部错误返回； Shutdown 在 Start 返回后由编排器调用，执行优雅关闭。
 
@@ -89,7 +89,7 @@ type Service interface {
 ```
 
 <a name="NewElectionService"></a>
-### func NewElectionService
+### func [NewElectionService](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/runtime/service.go#L69>)
 
 ```go
 func NewElectionService(election *etcd.Election) Service
@@ -98,7 +98,7 @@ func NewElectionService(election *etcd.Election) Service
 NewElectionService 包装基于 etcd 选举的调度器为统一 Service。 适配 etcd.Election 的无参 Shutdown 语义，选举退出后由编排器触发关闭。
 
 <a name="NewPipelineService"></a>
-### func NewPipelineService
+### func [NewPipelineService](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/runtime/service.go#L44>)
 
 ```go
 func NewPipelineService(server *pipeline.Server) Service
@@ -107,7 +107,7 @@ func NewPipelineService(server *pipeline.Server) Service
 NewPipelineService 包装任务队列服务器为统一 Service。 适配 pipeline.Server 的无参 Shutdown 语义，Start 返回后由编排器触发关闭。
 
 <a name="NewProcessorService"></a>
-### func NewProcessorService
+### func [NewProcessorService](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/runtime/service.go#L95>)
 
 ```go
 func NewProcessorService(name string, processor etl.Processor) Service

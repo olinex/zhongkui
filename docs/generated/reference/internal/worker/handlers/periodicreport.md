@@ -46,7 +46,7 @@ const (
 ```
 
 <a name="CleanupHandler"></a>
-## type CleanupHandler
+## type [CleanupHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/periodicreport/cleanup.go#L26-L37>)
 
 CleanupHandler 消费 periodic\-report:run:cleanup 定时任务：把到期计划停用， 再按各计划保留天数清理已结束的运行记录及其报告对象与运行会话。
 
@@ -57,7 +57,7 @@ type CleanupHandler struct {
 ```
 
 <a name="NewCleanupHandler"></a>
-### func NewCleanupHandler
+### func [NewCleanupHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/periodicreport/cleanup.go#L43>)
 
 ```go
 func NewCleanupHandler(i do.Injector) *CleanupHandler
@@ -66,7 +66,7 @@ func NewCleanupHandler(i do.Injector) *CleanupHandler
 NewCleanupHandler 从 do.Injector 解析依赖并创建报告生命周期清理处理器。
 
 <a name="CleanupHandler.Do"></a>
-### func \(\*CleanupHandler\) Do
+### func \(\*CleanupHandler\) [Do](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/periodicreport/cleanup.go#L66>)
 
 ```go
 func (h *CleanupHandler) Do(ctx context.Context, task etl.Task) error
@@ -75,7 +75,7 @@ func (h *CleanupHandler) Do(ctx context.Context, task etl.Task) error
 Do 消费一条 periodic\-report:run:cleanup 任务：解析游标载荷后以当前时间执行清理。清理以当前时刻而非 触发时间点计算截止时间，任务天然幂等；单项失败不中断整体流程，最终返回首个错误。
 
 <a name="DispatchHandler"></a>
-## type DispatchHandler
+## type [DispatchHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/periodicreport/dispatch.go#L32-L43>)
 
 DispatchHandler 消费 periodic\-report:plan:dispatch 定时任务：扫描已启用、未到期且待计算或已到期的 报告计划，为待计算计划写入下次执行时间，为到期计划投递 periodic\-report:plan:run 并推进下次执行时间。
 
@@ -86,7 +86,7 @@ type DispatchHandler struct {
 ```
 
 <a name="NewDispatchHandler"></a>
-### func NewDispatchHandler
+### func [NewDispatchHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/periodicreport/dispatch.go#L50>)
 
 ```go
 func NewDispatchHandler(i do.Injector) *DispatchHandler
@@ -95,7 +95,7 @@ func NewDispatchHandler(i do.Injector) *DispatchHandler
 NewDispatchHandler 从 do.Injector 解析依赖并创建报告计划分发处理器。调度时区属于启动期 关键配置，提取或解析失败直接 panic。
 
 <a name="DispatchHandler.Do"></a>
-### func \(\*DispatchHandler\) Do
+### func \(\*DispatchHandler\) [Do](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/periodicreport/dispatch.go#L81>)
 
 ```go
 func (h *DispatchHandler) Do(ctx context.Context, _ etl.Task) error
@@ -104,7 +104,7 @@ func (h *DispatchHandler) Do(ctx context.Context, _ etl.Task) error
 Do 消费一条 periodic\-report:plan:dispatch 任务。任务载荷无需使用：每轮均以当前时刻扫描到期计划。 对 next\_run\_at 为 NULL 的计划只计算并写回下次执行时间，不投递；对已到期计划投递 periodic\-report:plan:run，再以 CAS 把 next\_run\_at 推进到当前时刻之后的第一个触发点（最多补一次， 不补历史积压）。每次运行使用独立会话，同一计划的多份报告可以并发生成，无需按计划串行拦截。 单计划失败只记录告警，不中断整轮。
 
 <a name="PeriodicReportRunner"></a>
-## type PeriodicReportRunner
+## type [PeriodicReportRunner](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/periodicreport/run.go#L50-L53>)
 
 PeriodicReportRunner 执行一次 Agent 生成，生产实现包装 AI 运行时；测试注入假实现。
 
@@ -116,7 +116,7 @@ type PeriodicReportRunner interface {
 ```
 
 <a name="RunHandler"></a>
-## type RunHandler
+## type [RunHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/periodicreport/run.go#L228-L245>)
 
 RunHandler 消费 periodic\-report:plan:run 任务：按触发时间点加载计划与技能，调用 Agent 生成报告并 上传对象存储，最终把运行记录收敛为成功或失败。
 
@@ -127,7 +127,7 @@ type RunHandler struct {
 ```
 
 <a name="NewRunHandler"></a>
-### func NewRunHandler
+### func [NewRunHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/periodicreport/run.go#L252>)
 
 ```go
 func NewRunHandler(i do.Injector) *RunHandler
@@ -136,7 +136,7 @@ func NewRunHandler(i do.Injector) *RunHandler
 NewRunHandler 从 do.Injector 解析依赖并创建报告生成处理器。AI 运行时以回调形式惰性持有， 每次任务执行时取当前快照，不固化启动瞬间的组件指针。
 
 <a name="RunHandler.Do"></a>
-### func \(\*RunHandler\) Do
+### func \(\*RunHandler\) [Do](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/periodicreport/run.go#L287>)
 
 ```go
 func (h *RunHandler) Do(ctx context.Context, task etl.Task) error
@@ -145,7 +145,7 @@ func (h *RunHandler) Do(ctx context.Context, task etl.Task) error
 Do 消费一条 periodic\-report:plan:run 任务。 流程：解析触发时间与计划 ID \-\> 加载计划 \-\> 幂等创建运行记录 \-\> 校验计划与技能资格 \-\> 调用 Agent 生成 \-\> 上传对象 \-\> 收敛运行记录。计划不存在、重复投递与资格校验失败均返回 nil （任务无需重试）；生成、上传或落库失败返回带堆栈的错误。
 
 <a name="RunInput"></a>
-## type RunInput
+## type [RunInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/periodicreport/run.go#L56-L71>)
 
 RunInput 是一次报告生成的输入。
 
@@ -169,7 +169,7 @@ type RunInput struct {
 ```
 
 <a name="RunOutput"></a>
-## type RunOutput
+## type [RunOutput](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/periodicreport/run.go#L74-L83>)
 
 RunOutput 是一次报告生成的结果。
 
