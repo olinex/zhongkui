@@ -76,7 +76,7 @@ func Export(ctx context.Context, opts Options) error
 Export 执行完整导出流程：叙述档生成、投影页、参考档生成、参考索引、文档总目录与导航文件。 所有输出文件均幂等覆盖，目录按需创建；只写生成域，不触碰策展目录。
 
 <a name="RenderPackage"></a>
-## func [RenderPackage](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/render.go#L94>)
+## func [RenderPackage](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/render.go#L116>)
 
 ```go
 func RenderPackage(projectRoot, importPath string, narrative bool) (string, error)
@@ -261,7 +261,7 @@ func SchemaKnowledgeDocuments(projectRoot string) ([]KnowledgeDocument, error)
 SchemaKnowledgeDocuments 生成数据表分区的知识文档集：每张已迁移表一篇，正文与数据表参考页 同源，仅去掉指向仓库文件的相对链接（RAG 正文中的相对链接不可达）。返回顺序按域与表名稳定 排序，保证 zki sync schema 幂等。
 
 <a name="NarrativeDocument"></a>
-## type [NarrativeDocument](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/export.go#L222-L235>)
+## type [NarrativeDocument](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/export.go#L224-L237>)
 
 NarrativeDocument 是供入 RAG 的叙述页文档：由包注释渲染而来，Content 与落盘叙述档正文同源。
 
@@ -283,7 +283,7 @@ type NarrativeDocument struct {
 ```
 
 <a name="GeneratedNarrativeDocuments"></a>
-### func [GeneratedNarrativeDocuments](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/export.go#L240>)
+### func [GeneratedNarrativeDocuments](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/export.go#L242>)
 
 ```go
 func GeneratedNarrativeDocuments(projectRoot string) ([]NarrativeDocument, error)

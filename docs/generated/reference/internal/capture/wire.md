@@ -5,18 +5,32 @@
 ## Index
 
 - [Constants](<#constants>)
+- [func BuildXdpCollectionSpec\(cbpfInsns \[\]pcap.BPFInstruction\) \(\*ebpf.CollectionSpec, error\)](<#BuildXdpCollectionSpec>)
+- [func CompileBPFProgramJIT\(filterExpr string\) \(\*ebpf.CollectionSpec, error\)](<#CompileBPFProgramJIT>)
 - [type LibpcapWire](<#LibpcapWire>)
   - [func \(l \*LibpcapWire\) Name\(\) string](<#LibpcapWire.Name>)
   - [func \(l \*LibpcapWire\) ZeroCopyReadPacketData\(\) \*RawPacket](<#LibpcapWire.ZeroCopyReadPacketData>)
 - [type RawPacket](<#RawPacket>)
   - [func \(r \*RawPacket\) HasNext\(\) bool](<#RawPacket.HasNext>)
 - [type Wire](<#Wire>)
+  - [func NewAfpacketWire\(config \*reporter\_v1.Config\) \(Wire, error\)](<#NewAfpacketWire>)
   - [func NewLibpcapWire\(config \*reporter\_v1.Config\) \(Wire, error\)](<#NewLibpcapWire>)
   - [func NewPlatformWire\(config \*reporter\_v1.Config\) \(Wire, error\)](<#NewPlatformWire>)
   - [func NewWire\(ctx context.Context, config \*reporter\_v1.Config, logger \*logging.Logger\) \(Wire, error\)](<#NewWire>)
+  - [func NewXdpWire\(config \*reporter\_v1.Config\) \(Wire, error\)](<#NewXdpWire>)
 
 
 ## Constants
+
+<a name="InterfaceBufferMB"></a>
+
+```go
+const (
+
+    // InterfaceBufferMB 单张网卡 AF_PACKET 接收环缓冲区大小（MB），用于计算接收块数量
+    InterfaceBufferMB = 64
+)
+```
 
 <a name="LibpcapWireName"></a>libpcap 抓包实现相关常量。
 
@@ -26,6 +40,24 @@ const (
     LibpcapWireName = "libpcap"
 )
 ```
+
+<a name="BuildXdpCollectionSpec"></a>
+## func [BuildXdpCollectionSpec](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/wire/linux_ebpf_asm.go#L460>)
+
+```go
+func BuildXdpCollectionSpec(cbpfInsns []pcap.BPFInstruction) (*ebpf.CollectionSpec, error)
+```
+
+BuildXdpCollectionSpec 基于 cBPF 指令构建完整的 XDP \+ AF\_XDP eBPF CollectionSpec
+
+<a name="CompileBPFProgramJIT"></a>
+## func [CompileBPFProgramJIT](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/wire/linux_ebpf_asm.go#L444>)
+
+```go
+func CompileBPFProgramJIT(filterExpr string) (*ebpf.CollectionSpec, error)
+```
+
+CompileBPFProgramJIT 使用纯 Go eBPF 汇编器将过滤表达式编译为 \*ebpf.CollectionSpec 完全不需要 clang 外部调用，支持热编译热加载
 
 <a name="LibpcapWire"></a>
 ## type [LibpcapWire](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/wire/libpcap.go#L21-L23>)
@@ -101,6 +133,15 @@ type Wire interface {
 }
 ```
 
+<a name="NewAfpacketWire"></a>
+### func [NewAfpacketWire](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/wire/linux_afpacket.go#L45>)
+
+```go
+func NewAfpacketWire(config *reporter_v1.Config) (Wire, error)
+```
+
+NewAfpacketWire 基于 AF\_PACKET（TPACKET\_V2）创建抓包实现，按配置设置 snaplen、 轮询超时、混杂模式与接收环缓冲区，并开启 PACKET\_IGNORE\_OUTGOING。
+
 <a name="NewLibpcapWire"></a>
 ### func [NewLibpcapWire](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/wire/libpcap.go#L26>)
 
@@ -111,13 +152,13 @@ func NewLibpcapWire(config *reporter_v1.Config) (Wire, error)
 NewLibpcapWire 根据配置创建 libpcap 抓包实例，设置缓冲区、立即模式、快照长度与混杂模式等参数。
 
 <a name="NewPlatformWire"></a>
-### func [NewPlatformWire](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/wire/darwin.go#L10>)
+### func [NewPlatformWire](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/wire/linux.go#L12>)
 
 ```go
 func NewPlatformWire(config *reporter_v1.Config) (Wire, error)
 ```
 
-NewPlatformWire 在 Darwin 平台创建基于 libpcap 的抓包实例。
+NewPlatformWire 尝试创建平台原生抓包实现。 降级顺序：XDP（AF\_XDP \+ Native → AF\_XDP \+ Generic）→ afpacket。
 
 <a name="NewWire"></a>
 ### func [NewWire](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/wire/base.go#L73>)
@@ -127,3 +168,12 @@ func NewWire(ctx context.Context, config *reporter_v1.Config, logger *logging.Lo
 ```
 
 NewWire 创建平台专用抓包设备，平台实现不可用时回退到 libpcap 实现。
+
+<a name="NewXdpWire"></a>
+### func [NewXdpWire](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/wire/linux_xdp.go#L80>)
+
+```go
+func NewXdpWire(config *reporter_v1.Config) (Wire, error)
+```
+
+NewXdpWire 依据配置创建基于 AF\_XDP \+ XDP 的抓包实现：依次尝试 Native XDP 与 Generic XDP 两种模式，均失败则返回错误，由调用方降级到其他抓包后端。

@@ -5,11 +5,15 @@
 ## Index
 
 - [Variables](<#variables>)
+- [func FindPhysicalEthernetNics\(\) \[\]string](<#FindPhysicalEthernetNics>)
+- [func FindXdpCapableNics\(n int\) \[\]string](<#FindXdpCapableNics>)
 - [func GenerateFallbackPcap\(outputPath string, numPackets int\) error](<#GenerateFallbackPcap>)
 - [func LoopbackName\(\) string](<#LoopbackName>)
 - [func OpenInterface\(name string\) \(\*pcap.Handle, error\)](<#OpenInterface>)
 - [func OpenLoopback\(\) \(\*pcap.Handle, error\)](<#OpenLoopback>)
 - [func PrintResultsTable\(\)](<#PrintResultsTable>)
+- [func ProbeAFXdpSupport\(ifaceName string\) bool](<#ProbeAFXdpSupport>)
+- [func SetupVethPair\(\) \(capIface, sendIface string, cleanup func\(\), err error\)](<#SetupVethPair>)
 - [type CaptureMetrics](<#CaptureMetrics>)
   - [func \(m \*CaptureMetrics\) Compute\(\)](<#CaptureMetrics.Compute>)
   - [func \(m \*CaptureMetrics\) ReportToBenchmark\(b \*testing.B\)](<#CaptureMetrics.ReportToBenchmark>)
@@ -28,6 +32,24 @@
 ```go
 var TestPcapData []byte
 ```
+
+<a name="FindPhysicalEthernetNics"></a>
+## func [FindPhysicalEthernetNics](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/phys_nic.go#L39>)
+
+```go
+func FindPhysicalEthernetNics() []string
+```
+
+FindPhysicalEthernetNics 返回所有物理有线网卡名称列表。 排除虚拟网卡（veth、bridge 等）、loopback 和无线网卡。
+
+<a name="FindXdpCapableNics"></a>
+## func [FindXdpCapableNics](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/phys_nic.go#L88>)
+
+```go
+func FindXdpCapableNics(n int) []string
+```
+
+FindXdpCapableNics 返回最多 n 个支持 AF\_XDP 的物理有线网卡。 先找出物理网卡，再逐个探测 AF\_XDP 支持。
 
 <a name="GenerateFallbackPcap"></a>
 ## func [GenerateFallbackPcap](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/packgen.go#L15>)
@@ -73,6 +95,24 @@ func PrintResultsTable()
 ```
 
 PrintResultsTable 以表格形式打印所有收集到的基准指标。
+
+<a name="ProbeAFXdpSupport"></a>
+## func [ProbeAFXdpSupport](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/phys_nic.go#L65>)
+
+```go
+func ProbeAFXdpSupport(ifaceName string) bool
+```
+
+ProbeAFXdpSupport 探测指定网卡是否支持 AF\_XDP。 创建 AF\_XDP socket 并尝试 bind，成功表示支持。 此探测轻量级，不分配 UMEM，不加载 eBPF 程序。
+
+<a name="SetupVethPair"></a>
+## func [SetupVethPair](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/veth.go#L16>)
+
+```go
+func SetupVethPair() (capIface, sendIface string, cleanup func(), err error)
+```
+
+SetupVethPair 创建 veth pair 用于 XDP 基线测试。 返回捕获端网卡名、发包端网卡名、清理函数和错误。 调用者应在测试结束时执行 cleanup 函数。
 
 <a name="CaptureMetrics"></a>
 ## type [CaptureMetrics](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/metrics.go#L15-L34>)

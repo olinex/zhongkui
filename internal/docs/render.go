@@ -42,6 +42,28 @@ const narrativeTextTemplate = `{{- range . -}}
 {{- end -}}
 {{- end -}}`
 
+// docsBuildContext 固定文档生成使用的构建上下文为 Linux/amd64：文档描述生产部署形态，
+// 且避免 macOS 开发机与 Linux CI 因构建约束不同而生成出不一致的参考页。
+var docsBuildContext = func() build.Context {
+	ctx := build.Default
+	ctx.GOOS = "linux"
+	ctx.GOARCH = "amd64"
+	ctx.CgoEnabled = true
+	return ctx
+}()
+
+// packagesEnv 返回固定为 Linux/amd64 的 go/packages 环境，与 docsBuildContext 保持同一平台。
+func packagesEnv() []string {
+	return append(os.Environ(), "GOOS=linux", "GOARCH=amd64", "CGO_ENABLED=1")
+}
+
+// sourceRepo 是参考页源码链接使用的仓库地址与默认分支。显式指定而不依赖本地 git 元数据，
+// 避免浅克隆缺少 origin/HEAD 或默认分支不同导致生成结果随环境漂移。
+const (
+	sourceRepoRemote        = "https://gitee.com/olinex/zhongkui"
+	sourceRepoDefaultBranch = "master"
+)
+
 // referenceTemplate 是参考档模板：仅输出索引与各符号小节，不含包注释正文。
 const referenceTemplate = `{{- if or (len .Consts) (len .Vars) (len .Funcs) (len .Types) -}}
 {{- header (add .Level 1) "Index" -}}
@@ -132,6 +154,7 @@ func packageDir(projectRoot, importPath string) (string, error) {
 	cfg := &packages.Config{
 		Mode: packages.NeedName | packages.NeedFiles,
 		Dir:  projectRoot,
+		Env:  packagesEnv(),
 	}
 	pkgs, err := packages.Load(cfg, importPath)
 	if err != nil {
@@ -153,12 +176,16 @@ func renderDir(dir string, narrative bool) (string, error) {
 	// 保持 gomarkdoc 日志安静，避免污染 CLI 输出。
 	log := logger.New(logger.ErrorLevel)
 
-	buildPkg, err := build.ImportDir(dir, build.ImportComment)
+	buildPkg, err := docsBuildContext.ImportDir(dir, build.ImportComment)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 
-	pkg, err := lang.NewPackageFromBuild(log, buildPkg)
+	pkg, err := lang.NewPackageFromBuild(log, buildPkg,
+		lang.PackageWithRepositoryOverrides(&lang.Repo{
+			Remote:        sourceRepoRemote,
+			DefaultBranch: sourceRepoDefaultBranch,
+		}))
 	if err != nil {
 		return "", errors.WithStack(err)
 	}

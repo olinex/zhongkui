@@ -171,10 +171,12 @@ type refPackage struct {
 
 // discoverPackages 借助 go/packages 发现 ./internal/... 与 ./cmd/... 下的全部包，
 // 排除 testdata 目录、生成的 protobuf 包以及不含 Go 源码的包。
+// 包发现固定按 Linux/amd64 进行，与 docsBuildContext 保持一致，避免结果随开发机平台变化。
 func discoverPackages(projectRoot string) ([]refPackage, error) {
 	cfg := &packages.Config{
 		Mode: packages.NeedName | packages.NeedFiles,
 		Dir:  projectRoot,
+		Env:  packagesEnv(),
 	}
 	pkgs, err := packages.Load(cfg, "./internal/...", "./cmd/...")
 	if err != nil {
