@@ -93,6 +93,10 @@ yarn-error.log*
 
 # Trae
 .trae/
+.trae-html-share-packages/
+
+# 本地 ClickHouse 开发配置（由 make run-dev-deps 挂载，不入库）
+config/clickhouse/
 
 # develop
 ./tmp
