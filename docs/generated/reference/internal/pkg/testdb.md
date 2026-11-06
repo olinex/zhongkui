@@ -5,11 +5,12 @@
 ## Index
 
 - [func Core\(t testing.TB\) \*database.DB](<#Core>)
+- [func IntegrationEnabled\(\) bool](<#IntegrationEnabled>)
 - [func Raw\(t testing.TB\) \*database.DB](<#Raw>)
 
 
 <a name="Core"></a>
-## func [Core](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/testdb/testdb.go#L56>)
+## func [Core](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/testdb/testdb.go#L79>)
 
 ```go
 func Core(t testing.TB) *database.DB
@@ -17,8 +18,17 @@ func Core(t testing.TB) *database.DB
 
 Core 返回已迁移的共享 PostgreSQL 测试库（core\_test）的事务句柄。 每次调用开启一个独立事务，并在下次调用前回滚上一个为同一测试开启的事务， 使每次（goconvey 重放父 Convey 时）都从干净基线开始。 迁移种子/基线数据仅初始化一次并保持提交，测试自身的写入随回滚丢弃， 从而在不清空基线的前提下保证包内单测隔离，同时满足参照完整性，并避免重放入户写冲突。
 
+<a name="IntegrationEnabled"></a>
+## func [IntegrationEnabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/testdb/testdb.go#L45>)
+
+```go
+func IntegrationEnabled() bool
+```
+
+IntegrationEnabled 报告是否已启用依赖外部服务的集成测试。
+
 <a name="Raw"></a>
-## func [Raw](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/testdb/testdb.go#L94>)
+## func [Raw](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/testdb/testdb.go#L118>)
 
 ```go
 func Raw(t testing.TB) *database.DB
