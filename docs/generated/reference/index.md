@@ -5,6 +5,7 @@
 
 - [main 参考](cmd/commentlint.md) — 来源 `zhongkuisec.com/zhongkui/cmd/commentlint`
 - [main 参考](cmd/licensecheck.md) — 来源 `zhongkuisec.com/zhongkui/cmd/licensecheck`
+- [main 参考](cmd/nic_probe.md) — 来源 `zhongkuisec.com/zhongkui/cmd/nic_probe`
 - [main 参考](cmd/template.md) — 来源 `zhongkuisec.com/zhongkui/cmd/template`
 - [main 参考](cmd/zki.md) — 来源 `zhongkuisec.com/zhongkui/cmd/zki`
 - [ai 参考](internal/ai.md) — 来源 `zhongkuisec.com/zhongkui/internal/ai`
