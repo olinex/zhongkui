@@ -6,6 +6,11 @@
 // 每个测试进程内对每个测试库执行一次"确保数据库存在 + 运行迁移"；core_test 之后
 // 每个测试在独立事务（savepoint 嵌套）中运行并在结束时回滚，保留迁移基线数据，
 // 保证包内单测隔离且参照完整；raw_test（ClickHouse）每次调用前对业务表做 TRUNCATE。
+//
+// 默认情况下（未设置 ZKI_TEST_INTEGRATION）所有依赖外部服务的用例会被跳过，
+// 因此 `go test ./...` 无需 PostgreSQL/ClickHouse 即可运行；设置
+// ZKI_TEST_INTEGRATION=1 后才执行真实数据库测试。测试 DSN 的解析优先级仍为
+// 环境变量（ZKI_DATABASE_CORE_TEST_DSN / ZKI_DATABASE_RAW_TEST_DSN）> config.toml。
 package testdb
 
 import (
@@ -31,7 +36,25 @@ import (
 const (
 	coreDSNEnv = "ZKI_DATABASE_CORE_TEST_DSN"
 	rawDSNEnv  = "ZKI_DATABASE_RAW_TEST_DSN"
+
+	// integrationEnv 为集成测试总开关：非空且不为 "0" 时启用真实数据库测试。
+	integrationEnv = "ZKI_TEST_INTEGRATION"
 )
+
+// IntegrationEnabled 报告是否已启用依赖外部服务的集成测试。
+func IntegrationEnabled() bool {
+	v := os.Getenv(integrationEnv)
+	return v != "" && v != "0"
+}
+
+// skipIfDisabled 在集成测试开关关闭时跳过当前用例，避免默认 go test 连接外部服务。
+func skipIfDisabled(t testing.TB) {
+	t.Helper()
+	if IntegrationEnabled() {
+		return
+	}
+	t.Skipf("integration test skipped: external services (PostgreSQL/ClickHouse) required; set %s=1 and configure %s / %s (or config.toml) to run it", integrationEnv, coreDSNEnv, rawDSNEnv)
+}
 
 var (
 	coreOnce    sync.Once
@@ -55,6 +78,7 @@ var (
 // 从而在不清空基线的前提下保证包内单测隔离，同时满足参照完整性，并避免重放入户写冲突。
 func Core(t testing.TB) *database.DB {
 	t.Helper()
+	skipIfDisabled(t)
 	coreOnce.Do(func() {
 		coreDB, coreInitErr = open(base.CoreTestDbName, "postgres")
 		if coreInitErr == nil {
@@ -93,6 +117,7 @@ func seedDefaultNamespace(db *database.DB) error {
 // 连接或迁移失败时以 Fatal 终止测试。
 func Raw(t testing.TB) *database.DB {
 	t.Helper()
+	skipIfDisabled(t)
 	rawOnce.Do(func() {
 		rawDB, rawInitErr = open(base.RawTestDbName, "clickhouse")
 	})
