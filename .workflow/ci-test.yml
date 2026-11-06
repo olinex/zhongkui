@@ -1,0 +1,98 @@
+version: "1.0"
+name: 测试、构建、上传、发布、部署到自有主机
+displayName: 测试扫描
+stages:
+- name: 测试
+  displayName: 测试
+  strategy: naturally
+  trigger: auto
+  steps:
+  - step: ut@golang
+    name: ""
+    displayName: 后端代码检测
+    golangVersion: "1.27"
+    commands:
+    - "# 默认使用goproxy.cn用户可手动调整"
+    - export GOPROXY=https://goproxy.cn
+    - "# 默认的单元测试命令"
+    - "# 输出测试报告目录到当前工作目录，可自动上传并展示"
+    - mkdir -p .cicd
+    - "# 未使用Go Mod的用户需要打开一下注释"
+    - "# export GOFLAGS=-mod=vendor"
+    - make ci-report
+    report:
+      path: .cicd/golang-report
+      file: report.jsonl
+      index: index.html
+    checkpoints: {}
+    caches:
+    - /go/pkg/mod
+    notify: []
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "2"
+        memory: "4"
+- name: 扫描
+  displayName: 扫描
+  strategy: fast
+  trigger: auto
+  steps:
+  - step: sc@betterleaks
+    name: 0b5393df-daba-4a22-9094-6b0ca6585769
+    displayName: Betterleaks 密钥扫描
+    scanPath: ./
+    redact: "true"
+    failOnFindings: "true"
+    configPath: ""
+    baselinePath: ""
+    maxFileMb: "0"
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "2"
+        memory: "4"
+  - step: sc@kingfisher
+    name: 7048220d-8038-4c0a-90b9-2579224faa1d
+    displayName: Kingfisher 密钥扫描
+    scanPath: ./
+    confidence: medium
+    redact: "true"
+    failOnFindings: "true"
+    exclude: ""
+    jobs: "0"
+    maxFileMb: "256"
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "2"
+        memory: "4"
+  - step: sc@titus
+    name: b54b5263-b7fb-4c40-8f4c-e73e3fd98402
+    displayName: Titus 密钥扫描
+    scanPath: ./
+    failOnFindings: "false"
+    workers: "0"
+    maxFileMb: "10"
+    ignoreFile: ""
+    ruleset: default
+    includeNoisy: "false"
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "2"
+        memory: "4"
+  - step: sc@opensca
+    name: e5226da5-7483-48ee-b746-c04c8357bfd7
+    displayName: OpenSCA 开源组件检测
+    detectPath: ./
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "2"
+        memory: "4"
+triggers:
+  trigger: manual
+notify: []
+strategy:
+  blocking: true
