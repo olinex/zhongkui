@@ -132,7 +132,7 @@
 
 
 <a name="AgentAbort"></a>
-## func AgentAbort
+## func [AgentAbort](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent_stream.go#L270>)
 
 ```go
 func AgentAbort(c *gin.Context)
@@ -141,7 +141,7 @@ func AgentAbort(c *gin.Context)
 AgentAbort 处理中止当前回合的请求（路由 POST /agent/:sessionID/abort）。 turns.Manager.Abort 立即停止 TurnLoop、以 turn.completed\(cancelled\) 收敛缓冲并作废挂起现场； 无在途回合时幂等。
 
 <a name="AgentAction"></a>
-## func AgentAction
+## func [AgentAction](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent_stream.go#L130>)
 
 ```go
 func AgentAction(c *gin.Context)
@@ -150,7 +150,7 @@ func AgentAction(c *gin.Context)
 AgentAction 处理审批 / 问卷动作的请求（SSE，路由 POST /agent/:sessionID/action）。 请求体直接绑定 contract.ActionRequest；动作到 ResumeParams 的映射、校验与 pending 现场认领全部由 turns.Manager.Action 完成，本接口只负责续跑与转发。
 
 <a name="AgentChat"></a>
-## func AgentChat
+## func [AgentChat](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent_stream.go#L44>)
 
 ```go
 func AgentChat(c *gin.Context)
@@ -159,7 +159,7 @@ func AgentChat(c *gin.Context)
 AgentChat 处理启动（或抢占）一轮对话的请求（SSE，路由 POST /agent/:sessionID/chat）。 校验命名空间 / AI 功能 / 属主 / 会话归属后，按会话锁定状态拒绝已达轮次上限的会话；请求可选指定 本轮技能（SkillID），非 0 时须存在、属于当前命名空间且已启用，否则以 400 拒绝（绝不静默忽略）； 随后把请求装配为 turns.ChatInput 交给 turns.Manager.Chat，运行在独立 goroutine 中执行，本接口只 负责订阅并转发事件。客户端断开只 detach 订阅，回合继续执行并写入会话缓冲。
 
 <a name="AgentEvents"></a>
-## func AgentEvents
+## func [AgentEvents](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent_stream.go#L225>)
 
 ```go
 func AgentEvents(c *gin.Context)
@@ -168,7 +168,7 @@ func AgentEvents(c *gin.Context)
 AgentEvents 处理运行中重连订阅的请求（SSE，路由 GET /agent/:sessionID/events?after=）。 先回放缓冲中序号 \> after 的消息，再转发后续实时消息；无在途回合时回放后即结束。
 
 <a name="AgentInteractionReopen"></a>
-## func AgentInteractionReopen
+## func [AgentInteractionReopen](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent_stream.go#L180>)
 
 ```go
 func AgentInteractionReopen(c *gin.Context)
@@ -177,7 +177,7 @@ func AgentInteractionReopen(c *gin.Context)
 AgentInteractionReopen 处理「重新审批 / 重新回答」请求（路由 POST /agent/:sessionID/interaction/reopen）。 与「重新提问」不同，这里不重跑整轮回答：把会话回退到该次交互挂起的状态——删除该交互之后的回答与 更晚交互、把交互重置为待处理、并以挂起时的图现场重建现场，使前端刷新后重新展示批准 / 拒绝按钮 或待作答问卷，用户可重选决策 / 重新作答。依次校验命名空间 / AI 功能 / 属主 / 会话归属（404 语义同 详情接口）→ 交互状态守卫（仅 \`运行中\` 以 409 \+ 1306 拒绝；\`暂停\` / \`已锁定\` / \`等待中\` 放行）→ 绑定请求体 → 执行回退。目标交互不可回退（快照缺失 / 回退点已被摘要覆盖）返回 404，避免泄露现场 存在性。
 
 <a name="AgentMemoryBatchDelete"></a>
-## func AgentMemoryBatchDelete
+## func [AgentMemoryBatchDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/memory.go#L216>)
 
 ```go
 func AgentMemoryBatchDelete(c *gin.Context)
@@ -186,7 +186,7 @@ func AgentMemoryBatchDelete(c *gin.Context)
 AgentMemoryBatchDelete 批量软删除长期记忆。 逐条按 \(id, namespace\) 确认记忆存在（不存在记录失败明细），再软删；返回批量结果汇总。
 
 <a name="AgentMemoryDetailGet"></a>
-## func AgentMemoryDetailGet
+## func [AgentMemoryDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/memory.go#L185>)
 
 ```go
 func AgentMemoryDetailGet(c *gin.Context)
@@ -195,7 +195,7 @@ func AgentMemoryDetailGet(c *gin.Context)
 AgentMemoryDetailGet 处理长期记忆详情查询的请求。 记忆不存在或不属于当前命名空间时返回 404。
 
 <a name="AgentMemoryListGet"></a>
-## func AgentMemoryListGet
+## func [AgentMemoryListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/memory.go#L129>)
 
 ```go
 func AgentMemoryListGet(c *gin.Context)
@@ -204,7 +204,7 @@ func AgentMemoryListGet(c *gin.Context)
 AgentMemoryListGet 处理长期记忆列表查询的请求。 仅返回当前命名空间内属于当前用户的记忆，支持分页、keyword/agentKind/kind/status 过滤、排序与 字段投影；查询构建与总数统计统一委托 utils.BuildSearchCountQuery，视图层不自写过滤 SQL。
 
 <a name="AgentMemorySetStatus"></a>
-## func AgentMemorySetStatus
+## func [AgentMemorySetStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/memory.go#L254>)
 
 ```go
 func AgentMemorySetStatus(c *gin.Context)
@@ -213,7 +213,7 @@ func AgentMemorySetStatus(c *gin.Context)
 AgentMemorySetStatus 处理启停长期记忆的请求。 记忆不存在或不属于当前命名空间时返回 404；目标状态经枚举校验（active/archived）。
 
 <a name="AgentMessageListGet"></a>
-## func AgentMessageListGet
+## func [AgentMessageListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L769>)
 
 ```go
 func AgentMessageListGet(c *gin.Context)
@@ -222,7 +222,7 @@ func AgentMessageListGet(c *gin.Context)
 AgentMessageListGet 处理获取 AI 助手会话消息列表的请求。 会话不存在或不属于当前命名空间时返回 404；消息按创建时间升序返回（与对话顺序一致）。
 
 <a name="AgentMessageTruncate"></a>
-## func AgentMessageTruncate
+## func [AgentMessageTruncate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L833>)
 
 ```go
 func AgentMessageTruncate(c *gin.Context)
@@ -231,7 +231,7 @@ func AgentMessageTruncate(c *gin.Context)
 AgentMessageTruncate 处理从某一轮用户消息起截断会话消息的请求（路由 POST /session/:id/messages/truncate）。 供前端「回退 / 删除到某一轮对话」使用：按 UserMessageIndex（仅计用户消息）定位该轮提问，删除其 自身及之后的全部消息（含助手回复）。会话不存在 / 归属不符返回 404；目标用户消息不存在（序号越界） 同样返回 404，避免泄露会话内容细节。 状态守卫（口径来源见 interaction.CanRollback）：回滚是一次「改动有效轮次」的既成事实操作，\`暂停\` / \`已锁定\` / \`等待中\` 均允许发起——等待中回滚会直接放弃当前待输入回合（store 在同一事务内把该会话的 pending 现场 置为已消费）；只有 \`运行中\` 无稳定截断对象，一律以 409 \+ 业务码 1306 拒绝（守卫在绑定请求体与调用 store 之前生效，绝不产生半截截断）。 截断同时作废该会话的挂起现场（见 store）；内存中的回合再显式中止一次，作为「读取事实」与「执行截断」 之间竞态窗口的兜底（并发发送可能恰在守卫判定后启动一次回合）——否则客户端刷新 / 重开抽屉时会探测到 这个仍在「运行中」的回合并续播已删除的内容。中止为尽力而为，失败不影响截断结果。
 
 <a name="AgentPromptOptimize"></a>
-## func AgentPromptOptimize
+## func [AgentPromptOptimize](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L745>)
 
 ```go
 func AgentPromptOptimize(c *gin.Context)
@@ -240,7 +240,7 @@ func AgentPromptOptimize(c *gin.Context)
 AgentPromptOptimize 处理优化用户提问的请求（路由 POST /prompt/optimize）。 单轮、非流式的轻量能力：以参数 agent.promptOptimizeSystemPrompt 驱动 flash 档位模型把当前诉求 改写为更清晰、更易被正确理解的提问，成功时回传改写文本供前端整体替换输入框。依次校验命名空间与 AI 功能；绑定请求体后诉求裁剪为空返回 400（本地化），模型调用失败或返回空内容以统一错误封套返回。
 
 <a name="AgentRender"></a>
-## func AgentRender
+## func [AgentRender](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent_stream.go#L98>)
 
 ```go
 func AgentRender(c *gin.Context)
@@ -249,7 +249,7 @@ func AgentRender(c *gin.Context)
 AgentRender 处理会话历史回放的请求（SSE，路由 GET /agent/:sessionID/render）。 输出历史快照、已作答交互与当前挂起卡片后结束连接；前端随后可经 /events 订阅后续增量。
 
 <a name="AgentSessionBranch"></a>
-## func AgentSessionBranch
+## func [AgentSessionBranch](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L886>)
 
 ```go
 func AgentSessionBranch(c *gin.Context)
@@ -258,7 +258,7 @@ func AgentSessionBranch(c *gin.Context)
 AgentSessionBranch 处理以某一轮对话为结尾创建会话分支的请求（路由 POST /session/:id/branch）。 供前端「分支」使用：以第 UserMessageIndex 轮用户提问为结尾，把该轮及其之前的全部消息复制到 新会话（新会话归属同一命名空间与属主，标题为空时沿用源会话标题），源会话不受影响。依次校验 命名空间、AI 功能、属主与会话归属（会话不存在 / 归属不符返回 404，避免泄露资源存在性）， 绑定请求体后调用 service；目标用户消息不存在（序号越界）同样返回 404，避免泄露会话内容细节。
 
 <a name="AgentSessionCompact"></a>
-## func AgentSessionCompact
+## func [AgentSessionCompact](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L650>)
 
 ```go
 func AgentSessionCompact(c *gin.Context)
@@ -267,7 +267,7 @@ func AgentSessionCompact(c *gin.Context)
 AgentSessionCompact 处理压缩 AI 助手会话上下文并抽取长期记忆的请求（SSE，路由 POST /session/:id/compact）。 口径：入参以选中的助手回答为折叠边界——折叠「当前滚动摘要游标 summary\_upto\_seq（下界）之后、到该 助手回答 seq（上界）为止」的尚未摘要消息并把游标推进到该答案，更晚的消息保持原文；边界为 0 时折叠 全部尚未摘要消息（全量语义）。压缩进度以 message.compress 事件下发：开始（running）、 摘要增量（draft）与完成 / 失败；失败仅降级为「未产生摘要」，不中断 SSE。 处理顺序严格：校验命名空间 / AI 功能 / 属主 / 会话归属（404 语义同详情接口）→ 交互状态守卫（仅 暂停 / 已锁定 可发起，运行中 / 等待中 → 409\+1306）→ 绑定请求体 → 解析边界 seq（消息不存在 → 本地化 404）→ 读未摘要消息并选出折叠集合 → 构造 SSE 写手并同步执行压缩。所有可能返回 JSON 错误的 步骤都在写出 SSE 响应头之前完成。
 
 <a name="AgentSessionCreate"></a>
-## func AgentSessionCreate
+## func [AgentSessionCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L406>)
 
 ```go
 func AgentSessionCreate(c *gin.Context)
@@ -276,7 +276,7 @@ func AgentSessionCreate(c *gin.Context)
 AgentSessionCreate 处理创建 AI 助手会话的请求。 新会话归属当前请求命名空间，初始状态为 active；会话主题由首个用户问题经 LLM 生成，失败时 按其截断兜底，绝不阻断创建。可选档位字段经校验后作为该会话的缺省档位落库，可选 Agent 类型 字段经校验后作为该会话的归属落库（缺省 knowledge）；可选审核阀门字段经校验后作为该会话的 审核阀门落库（缺省经 defaults 库以 each 兜底）；三类字段的非法取值均以 400 \+ 英文错误拒绝 （不静默回落）。
 
 <a name="AgentSessionDelete"></a>
-## func AgentSessionDelete
+## func [AgentSessionDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L607>)
 
 ```go
 func AgentSessionDelete(c *gin.Context)
@@ -285,7 +285,7 @@ func AgentSessionDelete(c *gin.Context)
 AgentSessionDelete 处理删除 AI 助手会话的请求。 会话不存在或不属于当前命名空间时返回 404；删除会话时其消息在同一事务内级联删除。
 
 <a name="AgentSessionDetailGet"></a>
-## func AgentSessionDetailGet
+## func [AgentSessionDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L504>)
 
 ```go
 func AgentSessionDetailGet(c *gin.Context)
@@ -294,7 +294,7 @@ func AgentSessionDetailGet(c *gin.Context)
 AgentSessionDetailGet 处理获取 AI 助手会话详情的请求。 会话不存在或不属于当前命名空间时返回 404。
 
 <a name="AgentSessionListGet"></a>
-## func AgentSessionListGet
+## func [AgentSessionListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L465>)
 
 ```go
 func AgentSessionListGet(c *gin.Context)
@@ -303,7 +303,7 @@ func AgentSessionListGet(c *gin.Context)
 AgentSessionListGet 处理获取 AI 助手会话列表的请求。 仅返回当前命名空间内的会话，按更新时间倒序（最近活跃在前）。
 
 <a name="AgentSessionRename"></a>
-## func AgentSessionRename
+## func [AgentSessionRename](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L535>)
 
 ```go
 func AgentSessionRename(c *gin.Context)
@@ -312,7 +312,7 @@ func AgentSessionRename(c *gin.Context)
 AgentSessionRename 处理重命名 AI 助手会话的请求。 会话不存在或不属于当前命名空间时返回 404。
 
 <a name="AgentSessionValveSet"></a>
-## func AgentSessionValveSet
+## func [AgentSessionValveSet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L567>)
 
 ```go
 func AgentSessionValveSet(c *gin.Context)
@@ -321,7 +321,7 @@ func AgentSessionValveSet(c *gin.Context)
 AgentSessionValveSet 处理更新 AI 助手会话审核阀门的请求（路由 /session/:id/valve）。 依次校验命名空间、会话 ID、AI 功能与会话归属（404 语义同其它接口，避免泄露资源存在性）， 绑定请求体（阀门取值经 enum=reviewValve 绑定标签校验，非法取值以 400 拒绝、不落库）， 随后更新该会话的审核阀门并返回更新后的会话项（与详情/列表出参同构）。
 
 <a name="AgentSkillBatchDelete"></a>
-## func AgentSkillBatchDelete
+## func [AgentSkillBatchDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/skill.go#L514>)
 
 ```go
 func AgentSkillBatchDelete(c *gin.Context)
@@ -330,7 +330,7 @@ func AgentSkillBatchDelete(c *gin.Context)
 AgentSkillBatchDelete 批量软删除 AI 技能。 逐条按 \(id, namespace\) 确认技能存在（不存在记录失败明细），再软删；返回批量结果汇总。
 
 <a name="AgentSkillCreate"></a>
-## func AgentSkillCreate
+## func [AgentSkillCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/skill.go#L372>)
 
 ```go
 func AgentSkillCreate(c *gin.Context)
@@ -339,7 +339,7 @@ func AgentSkillCreate(c *gin.Context)
 AgentSkillCreate 处理创建 AI 技能的请求。 新建技能默认启用；周期能力、输入字段与固定参数由用户提交，周期技能必须包含 nowTime 输入字段， 且固定参数必须包含 timeOffset 与 timeWindow（timeWindow 须大于 0）。 同命名空间下已存在同名技能返回 400（aiSkillNameExists）。名称 / 描述 / 正文与输入字段结构的 必填、长度与空白约束由 binding 统一校验。
 
 <a name="AgentSkillDetailGet"></a>
-## func AgentSkillDetailGet
+## func [AgentSkillDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/skill.go#L333>)
 
 ```go
 func AgentSkillDetailGet(c *gin.Context)
@@ -348,7 +348,7 @@ func AgentSkillDetailGet(c *gin.Context)
 AgentSkillDetailGet 处理 AI 技能详情查询的请求。 技能不存在或不属于当前命名空间时返回 404。
 
 <a name="AgentSkillListGet"></a>
-## func AgentSkillListGet
+## func [AgentSkillListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/skill.go#L225>)
 
 ```go
 func AgentSkillListGet(c *gin.Context)
@@ -357,7 +357,7 @@ func AgentSkillListGet(c *gin.Context)
 AgentSkillListGet 处理 AI 技能列表查询的请求。 返回当前命名空间的自定义技能与全局内置技能（内置技能由代码注册表声明、fixture 注入注册行， 跨命名空间可见但只读），支持分页、keyword / source / enabled 过滤、排序与字段投影；与项目其它 列表接口一致，查询构建与总数统计统一委托 utils.BuildSearchCountQuery，视图层不自写过滤 SQL。 列表不返回加密正文；只读语义由 source='builtin' 直接表达，不再单独下发布尔标记。
 
 <a name="AgentSkillOptionsGet"></a>
-## func AgentSkillOptionsGet
+## func [AgentSkillOptionsGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/skill.go#L285>)
 
 ```go
 func AgentSkillOptionsGet(c *gin.Context)
@@ -366,7 +366,7 @@ func AgentSkillOptionsGet(c *gin.Context)
 AgentSkillOptionsGet 处理技能选择器选项查询的请求。 先返回 agent\_skills 中位于系统命名空间且已启用的内置技能注册行（按 id 升序，即 fixture 注入顺序；代码侧正文缺失的行按编程缺陷跳过），再返回当前命名空间已启用的自定义技能（按创建 时间倒序）。本接口只服务聊天框选择器，不返回技能正文；管理页仍走 AgentSkillListGet，内置 技能按 source='builtin' 在管理列表可见且只读。
 
 <a name="AgentSkillSetEnabled"></a>
-## func AgentSkillSetEnabled
+## func [AgentSkillSetEnabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/skill.go#L560>)
 
 ```go
 func AgentSkillSetEnabled(c *gin.Context)
@@ -375,7 +375,7 @@ func AgentSkillSetEnabled(c *gin.Context)
 AgentSkillSetEnabled 处理启停 AI 技能的请求。 技能不存在或不属于当前命名空间时返回 404；停用的技能不参与运行时装配。
 
 <a name="AgentSkillUpdate"></a>
-## func AgentSkillUpdate
+## func [AgentSkillUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/skill.go#L414>)
 
 ```go
 func AgentSkillUpdate(c *gin.Context)
@@ -384,7 +384,7 @@ func AgentSkillUpdate(c *gin.Context)
 AgentSkillUpdate 处理更新 AI 技能的请求。 按 \(id, namespace\) 定位技能，不存在返回 404；其余写入错误与创建同口径映射。名称、描述、 正文与周期能力、输入字段、固定参数全部整体覆盖，周期技能同样必须包含 nowTime 输入字段， 且固定参数必须包含 timeOffset 与 timeWindow（timeWindow 须大于 0）。
 
 <a name="AgentStatusGet"></a>
-## func AgentStatusGet
+## func [AgentStatusGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L928>)
 
 ```go
 func AgentStatusGet(c *gin.Context)
@@ -393,7 +393,7 @@ func AgentStatusGet(c *gin.Context)
 AgentStatusGet 处理获取 AI 助手状态的请求（不强制启用，始终 200）。 从运行时快照读取 AI 能力是否启用、各档位绑定的模型与可用性、生效的参数覆盖数量； 未启用时给出明确原因（按请求语言本地化）。启用时额外查询数据库 knowledge\_chunks.embedding 与 agent\_memories.embedding 两列的实际维度并与绑定模型维度对比，不一致时提示风险；请求体携带 可选 SessionID 时再附上该会话当前回合状态快照（供刷新后前端发现在跑 / 挂起待输入）。
 
 <a name="KnowledgeDocumentBatchDelete"></a>
-## func KnowledgeDocumentBatchDelete
+## func [KnowledgeDocumentBatchDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L410>)
 
 ```go
 func KnowledgeDocumentBatchDelete(c *gin.Context)
@@ -402,7 +402,7 @@ func KnowledgeDocumentBatchDelete(c *gin.Context)
 KnowledgeDocumentBatchDelete 批量删除知识库文档。 逐条按 \(id, namespace\) 确认文档存在（不存在记录失败明细），再经知识库索引删除 文档及其分块；AI 功能未启用时直接删除文档行（无索引可清理）。导入文档（含 ObjectKey） 在删除行/索引后同步清理 S3 原件，失败计入批量失败明细（不静默忽略），保证「DB 行 ↔ S3 原件」共存亡。
 
 <a name="KnowledgeDocumentChunksGet"></a>
-## func KnowledgeDocumentChunksGet
+## func [KnowledgeDocumentChunksGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L597>)
 
 ```go
 func KnowledgeDocumentChunksGet(c *gin.Context)
@@ -411,7 +411,7 @@ func KnowledgeDocumentChunksGet(c *gin.Context)
 KnowledgeDocumentChunksGet 处理获取知识库文档分块明细的请求。 按 \(id, namespace\) 定位文档（不存在返回 404），随后读取该文档分块并聚合构建摘要： 分块统计、切片参数、向量模型与维度、索引新鲜度均在此给出。读路径不依赖 AI 能力是否启用 （未启用时文档通常未索引，返回空分块与 indexed=false）。
 
 <a name="KnowledgeDocumentCreate"></a>
-## func KnowledgeDocumentCreate
+## func [KnowledgeDocumentCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L226>)
 
 ```go
 func KnowledgeDocumentCreate(c *gin.Context)
@@ -420,7 +420,7 @@ func KnowledgeDocumentCreate(c *gin.Context)
 KnowledgeDocumentCreate 处理创建知识库文档的请求。 先落库保存文档，随后调用知识库索引将其切块向量化；AI 功能未启用时返回 400， 文档保留（chunkCount=0），待启用后经 reindex 接口重建索引。
 
 <a name="KnowledgeDocumentDetailGet"></a>
-## func KnowledgeDocumentDetailGet
+## func [KnowledgeDocumentDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L264>)
 
 ```go
 func KnowledgeDocumentDetailGet(c *gin.Context)
@@ -429,7 +429,7 @@ func KnowledgeDocumentDetailGet(c *gin.Context)
 KnowledgeDocumentDetailGet 处理获取知识库文档详情的请求。 仅允许访问当前命名空间内的文档，不存在时返回 404。
 
 <a name="KnowledgeDocumentDownload"></a>
-## func KnowledgeDocumentDownload
+## func [KnowledgeDocumentDownload](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L866>)
 
 ```go
 func KnowledgeDocumentDownload(c *gin.Context)
@@ -438,7 +438,7 @@ func KnowledgeDocumentDownload(c *gin.Context)
 KnowledgeDocumentDownload 处理下载知识库文档原件的请求。 按 \(id, namespace\) 定位文档：不存在或非导入文档（ObjectKey 为空）返回 404。经 ObjectCache.Open 取明文读取流并流式拷贝到响应，不整文件缓冲、不落地。响应设置 Content\-Disposition（RFC 5987 编码原始文件名）与按格式的 Content\-Type。 该接口返回二进制流，不经 views.StructMetaGinHandler 的统一 JSON 响应封装：统一响应会把 结果包成 \{code,data\} JSON，破坏二进制内容与下载文件名，故照 plaintext.S3PlaintextGet 的 既有先例直接写响应体（不改变框架响应语义，因为此接口无 JSON 出参）。
 
 <a name="KnowledgeDocumentListGet"></a>
-## func KnowledgeDocumentListGet
+## func [KnowledgeDocumentListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L154>)
 
 ```go
 func KnowledgeDocumentListGet(c *gin.Context)
@@ -447,7 +447,7 @@ func KnowledgeDocumentListGet(c *gin.Context)
 KnowledgeDocumentListGet 处理获取知识库文档列表的请求。 基于统一搜索基座 BuildSearchCountQuery 支持分页、排序与过滤（标题/创建/更新时间）， 仅返回当前命名空间内的文档。
 
 <a name="KnowledgeDocumentReindex"></a>
-## func KnowledgeDocumentReindex
+## func [KnowledgeDocumentReindex](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L463>)
 
 ```go
 func KnowledgeDocumentReindex(c *gin.Context)
@@ -459,7 +459,7 @@ KnowledgeDocumentReindex 处理重新索引知识库文档的请求。 按 \(id,
 - 手动录入文档：同步切块向量化并返回最新分块数与内容摘要（status 为 ready）。
 
 <a name="KnowledgeDocumentUpdate"></a>
-## func KnowledgeDocumentUpdate
+## func [KnowledgeDocumentUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L344>)
 
 ```go
 func KnowledgeDocumentUpdate(c *gin.Context)
@@ -471,7 +471,7 @@ KnowledgeDocumentUpdate 处理更新知识库文档的请求。 按 \(id, namesp
 - 手动录入文档：标题/正文均可改，正文变更后同步重建索引（AI 未启用时仅更新文档）。
 
 <a name="KnowledgeDocumentUpload"></a>
-## func KnowledgeDocumentUpload
+## func [KnowledgeDocumentUpload](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L755>)
 
 ```go
 func KnowledgeDocumentUpload(c *gin.Context)
@@ -480,7 +480,7 @@ func KnowledgeDocumentUpload(c *gin.Context)
 KnowledgeDocumentUpload 处理导入知识库文档（multipart/form\-data）的请求。 字段：title（可选，缺省取文件名去扩展名）、file（必填，必须为最后一个表单部分）。 处理顺序：请求体限流 → 流式解析表单 → docconv.Detect 做唯一权威格式校验 → AI 启用校验 → 插入 pending 文档行 → 流式加密上传原件并统计字节数 → 回填 size\_bytes/object\_key → 投递解析任务。任一步失败按「DB 行 ↔ S3 原件共存亡」回滚已产生的副作用，并返回按请求语言本地化的错误。
 
 <a name="KnowledgeSystemDocumentChunksGet"></a>
-## func KnowledgeSystemDocumentChunksGet
+## func [KnowledgeSystemDocumentChunksGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L669>)
 
 ```go
 func KnowledgeSystemDocumentChunksGet(c *gin.Context)
@@ -489,7 +489,7 @@ func KnowledgeSystemDocumentChunksGet(c *gin.Context)
 KnowledgeSystemDocumentChunksGet 处理获取系统命名空间知识库文档分块明细的请求。 与 KnowledgeDocumentChunksGet 同构，数据范围恒为内置系统命名空间（base.SystemNamespace）， 不存在时返回 404；纯只读接口。
 
 <a name="KnowledgeSystemDocumentDetailGet"></a>
-## func KnowledgeSystemDocumentDetailGet
+## func [KnowledgeSystemDocumentDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L305>)
 
 ```go
 func KnowledgeSystemDocumentDetailGet(c *gin.Context)
@@ -498,7 +498,7 @@ func KnowledgeSystemDocumentDetailGet(c *gin.Context)
 KnowledgeSystemDocumentDetailGet 处理获取系统命名空间知识库文档详情的请求。 与 KnowledgeDocumentDetailGet 同构，数据范围恒为内置系统命名空间（base.SystemNamespace）， 不存在时返回 404；纯只读接口。
 
 <a name="KnowledgeSystemDocumentListGet"></a>
-## func KnowledgeSystemDocumentListGet
+## func [KnowledgeSystemDocumentListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L192>)
 
 ```go
 func KnowledgeSystemDocumentListGet(c *gin.Context)
@@ -507,7 +507,7 @@ func KnowledgeSystemDocumentListGet(c *gin.Context)
 KnowledgeSystemDocumentListGet 处理获取系统命名空间知识库文档列表的请求。 与 KnowledgeDocumentListGet 同构，唯一区别是数据范围恒为内置系统命名空间 （base.SystemNamespace），不取自客户端命名空间，故为纯只读接口。
 
 <a name="PeriodicReportFeedListGet"></a>
-## func PeriodicReportFeedListGet
+## func [PeriodicReportFeedListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L922>)
 
 ```go
 func PeriodicReportFeedListGet(c *gin.Context)
@@ -516,7 +516,7 @@ func PeriodicReportFeedListGet(c *gin.Context)
 PeriodicReportFeedListGet 处理报告中心信息流查询的请求。 只返回当前用户关注计划的成功运行记录，支持排序、分页与字段投影；查询构建与总数统计统一委托 utils.BuildSearchCountQuery。planName 按 plan\_id 第二趟批量回填，未关注任何计划时直接返回空列表。
 
 <a name="PeriodicReportPlanCreate"></a>
-## func PeriodicReportPlanCreate
+## func [PeriodicReportPlanCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L495>)
 
 ```go
 func PeriodicReportPlanCreate(c *gin.Context)
@@ -525,7 +525,7 @@ func PeriodicReportPlanCreate(c *gin.Context)
 PeriodicReportPlanCreate 处理创建报告计划的请求。 校验与落库由领域层完成；下次执行时间留空，由分发器按 cron 计算。
 
 <a name="PeriodicReportPlanDelete"></a>
-## func PeriodicReportPlanDelete
+## func [PeriodicReportPlanDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L611>)
 
 ```go
 func PeriodicReportPlanDelete(c *gin.Context)
@@ -534,7 +534,7 @@ func PeriodicReportPlanDelete(c *gin.Context)
 PeriodicReportPlanDelete 处理删除报告计划的请求。 按 \(id, namespace\) 定位并软删除计划，分发器不再选取已删除计划。
 
 <a name="PeriodicReportPlanListGet"></a>
-## func PeriodicReportPlanListGet
+## func [PeriodicReportPlanListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L431>)
 
 ```go
 func PeriodicReportPlanListGet(c *gin.Context)
@@ -543,7 +543,7 @@ func PeriodicReportPlanListGet(c *gin.Context)
 PeriodicReportPlanListGet 处理报告计划列表查询的请求。 仅返回当前命名空间内的计划，支持 keyword（计划名称模糊）与 enabled 过滤、排序、分页与字段投影； 查询构建与总数统计统一委托 utils.BuildSearchCountQuery。skillName 不落库，按 skill\_id 第二趟批量回填。
 
 <a name="PeriodicReportPlanRun"></a>
-## func PeriodicReportPlanRun
+## func [PeriodicReportPlanRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L636>)
 
 ```go
 func PeriodicReportPlanRun(c *gin.Context)
@@ -552,7 +552,7 @@ func PeriodicReportPlanRun(c *gin.Context)
 PeriodicReportPlanRun 处理立即执行报告计划的请求。 计划不存在返回 404；计划已过期返回 400（periodicReportPlanExpired）；否则立即投递一条生成任务。
 
 <a name="PeriodicReportPlanToggle"></a>
-## func PeriodicReportPlanToggle
+## func [PeriodicReportPlanToggle](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L575>)
 
 ```go
 func PeriodicReportPlanToggle(c *gin.Context)
@@ -561,7 +561,7 @@ func PeriodicReportPlanToggle(c *gin.Context)
 PeriodicReportPlanToggle 处理启停报告计划的请求。 按 \(id, namespace\) 定位计划，不存在返回 404；启用时清空下次执行时间，交由分发器重新计算。
 
 <a name="PeriodicReportPlanUpdate"></a>
-## func PeriodicReportPlanUpdate
+## func [PeriodicReportPlanUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L535>)
 
 ```go
 func PeriodicReportPlanUpdate(c *gin.Context)
@@ -570,7 +570,7 @@ func PeriodicReportPlanUpdate(c *gin.Context)
 PeriodicReportPlanUpdate 处理更新报告计划的请求。 按 \(id, namespace\) 定位计划，不存在返回 404；更新会清空下次执行时间，交由分发器重新计算。
 
 <a name="PeriodicReportRunDelete"></a>
-## func PeriodicReportRunDelete
+## func [PeriodicReportRunDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L774>)
 
 ```go
 func PeriodicReportRunDelete(c *gin.Context)
@@ -579,7 +579,7 @@ func PeriodicReportRunDelete(c *gin.Context)
 PeriodicReportRunDelete 处理删除报告运行记录的请求。 按 \(id, namespace\) 定位记录：先删除对象存储中的报告正文（对象已不存在视为已删除），再软删除 运行记录。运行中与已结束的记录都允许删除；删除后生成任务的结果不再回写该记录。
 
 <a name="PeriodicReportRunDetailGet"></a>
-## func PeriodicReportRunDetailGet
+## func [PeriodicReportRunDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L724>)
 
 ```go
 func PeriodicReportRunDetailGet(c *gin.Context)
@@ -588,7 +588,7 @@ func PeriodicReportRunDetailGet(c *gin.Context)
 PeriodicReportRunDetailGet 处理报告运行详情查询的请求。 运行记录不存在或跨命名空间返回 404；无产出时正文为空；对象缺失返回 404 （periodicReportRunObjectMissing），其余读取失败返回意外错误。
 
 <a name="PeriodicReportRunListGet"></a>
-## func PeriodicReportRunListGet
+## func [PeriodicReportRunListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L671>)
 
 ```go
 func PeriodicReportRunListGet(c *gin.Context)
@@ -597,7 +597,7 @@ func PeriodicReportRunListGet(c *gin.Context)
 PeriodicReportRunListGet 处理报告运行记录列表查询的请求。 仅返回当前命名空间内的运行记录，支持 planID / status 过滤、排序、分页与字段投影； 查询构建与总数统计统一委托 utils.BuildSearchCountQuery。
 
 <a name="PeriodicReportSkillOptionsGet"></a>
-## func PeriodicReportSkillOptionsGet
+## func [PeriodicReportSkillOptionsGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L404>)
 
 ```go
 func PeriodicReportSkillOptionsGet(c *gin.Context)
@@ -606,7 +606,7 @@ func PeriodicReportSkillOptionsGet(c *gin.Context)
 PeriodicReportSkillOptionsGet 处理报告技能选项查询的请求。 只返回当前命名空间内可周期执行的自定义技能（含时间窗口字段），供前端渲染计划创建表单。
 
 <a name="PeriodicReportWatchListGet"></a>
-## func PeriodicReportWatchListGet
+## func [PeriodicReportWatchListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L812>)
 
 ```go
 func PeriodicReportWatchListGet(c *gin.Context)
@@ -615,7 +615,7 @@ func PeriodicReportWatchListGet(c *gin.Context)
 PeriodicReportWatchListGet 处理关注计划候选列表查询的请求。 仅返回当前命名空间内的报告计划，支持 keyword / enabled 过滤、排序、分页与字段投影； 查询构建与总数统计统一委托 utils.BuildSearchCountQuery。watched 不落库，按当前用户的 关注关系第二趟回填。
 
 <a name="PeriodicReportWatchSet"></a>
-## func PeriodicReportWatchSet
+## func [PeriodicReportWatchSet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L891>)
 
 ```go
 func PeriodicReportWatchSet(c *gin.Context)
@@ -624,7 +624,7 @@ func PeriodicReportWatchSet(c *gin.Context)
 PeriodicReportWatchSet 处理设置计划关注状态的请求。 关注时校验计划属于当前命名空间（不存在 404）；幂等设置，重复关注不会重复插入。
 
 <a name="RegisterRoutes"></a>
-## func RegisterRoutes
+## func [RegisterRoutes](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/register.go#L24>)
 
 ```go
 func RegisterRoutes(ctx *views.RegisterContext)
@@ -643,7 +643,7 @@ RegisterRoutes 注册 /api/v1/ai AI 助手（RAG \+ Agent）接口。 分组挂�
 知识库文档导入需 S3 原件存储与解析任务异步投递，故在父组挂 S3（原件读写）、对象缓存 （原件加密上传/下载/清理）与管道投递客户端（asynq 解析任务与报告计划任务入队）中间件供 子路由共享。报告计划由分发器按 next\_run\_at 调度，视图层不再读写 etcd。
 
 <a name="RetrievalDryRunStream"></a>
-## func RetrievalDryRunStream
+## func [RetrievalDryRunStream](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/dryrun.go#L90>)
 
 ```go
 func RetrievalDryRunStream(c *gin.Context)
@@ -652,7 +652,7 @@ func RetrievalDryRunStream(c *gin.Context)
 RetrievalDryRunStream 处理知识库检索试运行请求（SSE，路由 /retrieval/dry\-run）： 混合检索 → 基于上下文生成回答 → RAGAS 风格量化评估。所有校验在建 SSE writer 之前 完成，失败仍以普通 JSON 错误响应；writer 就绪后阶段事件以 stage 事件、模型增量以 带 stage 的 delta 事件实时推送，成功以 done 事件（完整结果含 meta）收尾，致命 错误以 error 事件结束。
 
 <a name="RetrievalOptions"></a>
-## func RetrievalOptions
+## func [RetrievalOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/dryrun.go#L67>)
 
 ```go
 func RetrievalOptions(c *gin.Context)
@@ -661,7 +661,7 @@ func RetrievalOptions(c *gin.Context)
 RetrievalOptions 处理检索试运行参数默认值请求：从 AI 运行时参数解析器（当前 AI 组件 携带的参数解析器，即注册表默认值叠加 agent\_params 覆盖值）读取 retrieval.\* 键， 返回 topK/candidates/fusion/weights 默认值供前端对话框预填展示。
 
 <a name="AgentCancelOut"></a>
-## type AgentCancelOut
+## type [AgentCancelOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L246-L249>)
 
 AgentCancelOut 定义中止某会话当前回合的输出。
 
@@ -673,7 +673,7 @@ type AgentCancelOut struct {
 ```
 
 <a name="AgentChatIn"></a>
-## type AgentChatIn
+## type [AgentChatIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L204-L219>)
 
 AgentChatIn 定义启动（或抢占）一轮对话的请求输入。
 
@@ -697,7 +697,7 @@ type AgentChatIn struct {
 ```
 
 <a name="AgentInteractionReopenIn"></a>
-## type AgentInteractionReopenIn
+## type [AgentInteractionReopenIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent_stream.go#L166-L171>)
 
 AgentInteractionReopenIn 定义「重新审批 / 重新回答」的请求输入：审批回退按调用 ID 定位，问卷回退 按根中断 ID 定位，二者至少提供其一。
 
@@ -711,7 +711,7 @@ type AgentInteractionReopenIn struct {
 ```
 
 <a name="AgentLiveRunOut"></a>
-## type AgentLiveRunOut
+## type [AgentLiveRunOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L222-L243>)
 
 AgentLiveRunOut 定义一轮会话的实时生命周期快照（turns.Manager.State）。
 
@@ -741,7 +741,7 @@ type AgentLiveRunOut struct {
 ```
 
 <a name="AgentMemoryBatchIn"></a>
-## type AgentMemoryBatchIn
+## type [AgentMemoryBatchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/memory.go#L81-L84>)
 
 AgentMemoryBatchIn 定义批量删除长期记忆的请求输入；Ids 接受标量或数组。
 
@@ -753,7 +753,7 @@ type AgentMemoryBatchIn struct {
 ```
 
 <a name="AgentMemoryDetailOut"></a>
-## type AgentMemoryDetailOut
+## type [AgentMemoryDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/memory.go#L53-L78>)
 
 AgentMemoryDetailOut 定义长期记忆详情的输出结构。
 
@@ -787,7 +787,7 @@ type AgentMemoryDetailOut struct {
 ```
 
 <a name="AgentMemoryItemOut"></a>
-## type AgentMemoryItemOut
+## type [AgentMemoryItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/memory.go#L23-L44>)
 
 AgentMemoryItemOut 定义长期记忆列表项的输出结构（独立于内部模型层，逐字段映射）。
 
@@ -817,7 +817,7 @@ type AgentMemoryItemOut struct {
 ```
 
 <a name="AgentMemoryListOut"></a>
-## type AgentMemoryListOut
+## type [AgentMemoryListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/memory.go#L47-L50>)
 
 AgentMemoryListOut 定义长期记忆列表输出（嵌入 BaseTotalOut 支持分页总数）。
 
@@ -829,7 +829,7 @@ type AgentMemoryListOut struct {
 ```
 
 <a name="AgentMemoryStatusIn"></a>
-## type AgentMemoryStatusIn
+## type [AgentMemoryStatusIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/memory.go#L87-L90>)
 
 AgentMemoryStatusIn 定义启停长期记忆的请求输入。
 
@@ -841,7 +841,7 @@ type AgentMemoryStatusIn struct {
 ```
 
 <a name="AgentMessageCompressOut"></a>
-## type AgentMessageCompressOut
+## type [AgentMessageCompressOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L166-L176>)
 
 AgentMessageCompressOut 定义消息所锚定的历史压缩记录展示项：仅承载前端回显所需的最小字段， 不含摘要全文与游标本身。
 
@@ -860,7 +860,7 @@ type AgentMessageCompressOut struct {
 ```
 
 <a name="AgentMessageItemOut"></a>
-## type AgentMessageItemOut
+## type [AgentMessageItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L134-L162>)
 
 AgentMessageItemOut 定义 AI 助手会话消息的输出项结构。正文由消息的原生载荷（eino 消息 JSON） 解码得到，仅含正文的行回落为 Content；时间线由 /agent/:sessionID/render 重建， 本出参只承担会话消息的只读展示。
 
@@ -897,7 +897,7 @@ type AgentMessageItemOut struct {
 ```
 
 <a name="AgentMessageListOut"></a>
-## type AgentMessageListOut
+## type [AgentMessageListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L179>)
 
 AgentMessageListOut 定义 AI 助手会话消息列表输出。
 
@@ -906,7 +906,7 @@ type AgentMessageListOut []AgentMessageItemOut
 ```
 
 <a name="AgentMessageTruncateIn"></a>
-## type AgentMessageTruncateIn
+## type [AgentMessageTruncateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L182-L186>)
 
 AgentMessageTruncateIn 定义截断 AI 助手会话消息的请求输入。
 
@@ -919,7 +919,7 @@ type AgentMessageTruncateIn struct {
 ```
 
 <a name="AgentPromptOptimizeIn"></a>
-## type AgentPromptOptimizeIn
+## type [AgentPromptOptimizeIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L730-L733>)
 
 AgentPromptOptimizeIn 定义提示词优化的请求输入。
 
@@ -931,7 +931,7 @@ type AgentPromptOptimizeIn struct {
 ```
 
 <a name="AgentPromptOptimizeOut"></a>
-## type AgentPromptOptimizeOut
+## type [AgentPromptOptimizeOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L736-L739>)
 
 AgentPromptOptimizeOut 定义提示词优化的输出。
 
@@ -943,7 +943,7 @@ type AgentPromptOptimizeOut struct {
 ```
 
 <a name="AgentSessionBranchIn"></a>
-## type AgentSessionBranchIn
+## type [AgentSessionBranchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L189-L193>)
 
 AgentSessionBranchIn 定义会话分支的请求输入。
 
@@ -956,7 +956,7 @@ type AgentSessionBranchIn struct {
 ```
 
 <a name="AgentSessionCompactIn"></a>
-## type AgentSessionCompactIn
+## type [AgentSessionCompactIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L196-L201>)
 
 AgentSessionCompactIn 定义会话压缩的请求输入。
 
@@ -970,7 +970,7 @@ type AgentSessionCompactIn struct {
 ```
 
 <a name="AgentSessionCreateIn"></a>
-## type AgentSessionCreateIn
+## type [AgentSessionCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L104-L115>)
 
 AgentSessionCreateIn 定义创建 AI 助手会话的请求输入。
 
@@ -990,7 +990,7 @@ type AgentSessionCreateIn struct {
 ```
 
 <a name="AgentSessionItemOut"></a>
-## type AgentSessionItemOut
+## type [AgentSessionItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L63-L98>)
 
 AgentSessionItemOut 定义 AI 助手会话的输出项结构。
 
@@ -1034,7 +1034,7 @@ type AgentSessionItemOut struct {
 ```
 
 <a name="AgentSessionListOut"></a>
-## type AgentSessionListOut
+## type [AgentSessionListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L101>)
 
 AgentSessionListOut 定义 AI 助手会话列表输出。
 
@@ -1043,7 +1043,7 @@ type AgentSessionListOut []AgentSessionItemOut
 ```
 
 <a name="AgentSessionRenameIn"></a>
-## type AgentSessionRenameIn
+## type [AgentSessionRenameIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L124-L129>)
 
 AgentSessionRenameIn 定义重命名 AI 助手会话的请求输入。
 
@@ -1057,7 +1057,7 @@ type AgentSessionRenameIn struct {
 ```
 
 <a name="AgentSessionValveIn"></a>
-## type AgentSessionValveIn
+## type [AgentSessionValveIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L118-L121>)
 
 AgentSessionValveIn 定义更新 AI 助手会话审核阀门的请求输入。
 
@@ -1069,7 +1069,7 @@ type AgentSessionValveIn struct {
 ```
 
 <a name="AgentSkillBatchIn"></a>
-## type AgentSkillBatchIn
+## type [AgentSkillBatchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/skill.go#L168-L171>)
 
 AgentSkillBatchIn 定义批量删除 AI 技能的请求输入；Ids 接受标量或数组。
 
@@ -1081,7 +1081,7 @@ type AgentSkillBatchIn struct {
 ```
 
 <a name="AgentSkillCreateIn"></a>
-## type AgentSkillCreateIn
+## type [AgentSkillCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/skill.go#L136-L149>)
 
 AgentSkillCreateIn 定义创建 AI 技能的请求输入。 名称须非空、首尾无空白且不超过 64 个字符；描述不超过 256 个字符；正文须含非空白内容且 不超过 32768 个字符。上述约束统一由 binding 校验，存储层不再重复校验。
 
@@ -1103,7 +1103,7 @@ type AgentSkillCreateIn struct {
 ```
 
 <a name="AgentSkillDetailOut"></a>
-## type AgentSkillDetailOut
+## type [AgentSkillDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/skill.go#L93-L118>)
 
 AgentSkillDetailOut 定义 AI 技能详情的输出结构（含解密后的技能正文）。
 
@@ -1137,7 +1137,7 @@ type AgentSkillDetailOut struct {
 ```
 
 <a name="AgentSkillItemOut"></a>
-## type AgentSkillItemOut
+## type [AgentSkillItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/skill.go#L39-L66>)
 
 AgentSkillItemOut 定义 AI 技能列表项的输出结构（独立于模型层，逐字段映射）。 列表不返回加密正文，正文仅在详情与创建 / 更新结果中给出。
 
@@ -1173,7 +1173,7 @@ type AgentSkillItemOut struct {
 ```
 
 <a name="AgentSkillListOut"></a>
-## type AgentSkillListOut
+## type [AgentSkillListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/skill.go#L69-L72>)
 
 AgentSkillListOut 定义 AI 技能列表输出（嵌入 BaseTotalOut 支持分页总数）。
 
@@ -1185,7 +1185,7 @@ type AgentSkillListOut struct {
 ```
 
 <a name="AgentSkillOptionListOut"></a>
-## type AgentSkillOptionListOut
+## type [AgentSkillOptionListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/skill.go#L87-L90>)
 
 AgentSkillOptionListOut 定义技能选择器选项列表输出：内置技能在前、当前命名空间已启用 自定义技能在后；不返回技能正文。
 
@@ -1197,7 +1197,7 @@ type AgentSkillOptionListOut struct {
 ```
 
 <a name="AgentSkillOptionOut"></a>
-## type AgentSkillOptionOut
+## type [AgentSkillOptionOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/skill.go#L76-L83>)
 
 AgentSkillOptionOut 定义技能选择器的选项输出：内置与自定义技能统一以 agent\_skills 行 ID 作为选择标识，选择器与聊天请求都以 ID 表达一次技能选择。
 
@@ -1213,7 +1213,7 @@ type AgentSkillOptionOut struct {
 ```
 
 <a name="AgentSkillStatusIn"></a>
-## type AgentSkillStatusIn
+## type [AgentSkillStatusIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/skill.go#L174-L177>)
 
 AgentSkillStatusIn 定义启停 AI 技能的请求输入。
 
@@ -1225,7 +1225,7 @@ type AgentSkillStatusIn struct {
 ```
 
 <a name="AgentSkillUpdateIn"></a>
-## type AgentSkillUpdateIn
+## type [AgentSkillUpdateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/skill.go#L152-L165>)
 
 AgentSkillUpdateIn 定义更新 AI 技能的请求输入（全部定义字段整体覆盖）。
 
@@ -1247,7 +1247,7 @@ type AgentSkillUpdateIn struct {
 ```
 
 <a name="AgentSlotStatusOut"></a>
-## type AgentSlotStatusOut
+## type [AgentSlotStatusOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L258-L279>)
 
 AgentSlotStatusOut 定义单个档位的绑定模型与可用性输出项。
 
@@ -1277,7 +1277,7 @@ type AgentSlotStatusOut struct {
 ```
 
 <a name="AgentStatusIn"></a>
-## type AgentStatusIn
+## type [AgentStatusIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L252-L255>)
 
 AgentStatusIn 定义查询 AI 助手状态的请求输入。
 
@@ -1289,7 +1289,7 @@ type AgentStatusIn struct {
 ```
 
 <a name="AgentStatusOut"></a>
-## type AgentStatusOut
+## type [AgentStatusOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/agent.go#L282-L317>)
 
 AgentStatusOut 定义 AI 助手状态输出。
 
@@ -1333,7 +1333,7 @@ type AgentStatusOut struct {
 ```
 
 <a name="DryRunIn"></a>
-## type DryRunIn
+## type [DryRunIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/dryrun.go#L18-L31>)
 
 DryRunIn 定义知识库检索试运行请求输入。
 
@@ -1355,7 +1355,7 @@ type DryRunIn struct {
 ```
 
 <a name="DryRunOut"></a>
-## type DryRunOut
+## type [DryRunOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/dryrun.go#L42>)
 
 DryRunOut 定义知识库检索试运行响应输出（与 knowledge.DryRunResult 同构）。
 
@@ -1364,7 +1364,7 @@ type DryRunOut = knowledge.DryRunResult
 ```
 
 <a name="KnowledgeDocumentBatchIn"></a>
-## type KnowledgeDocumentBatchIn
+## type [KnowledgeDocumentBatchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L146-L149>)
 
 KnowledgeDocumentBatchIn 批量删除知识库文档的请求输入结构。 Ids 接受标量（单个 ID）或数组（多个 ID）。
 
@@ -1376,7 +1376,7 @@ type KnowledgeDocumentBatchIn struct {
 ```
 
 <a name="KnowledgeDocumentChunkOut"></a>
-## type KnowledgeDocumentChunkOut
+## type [KnowledgeDocumentChunkOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L570-L583>)
 
 KnowledgeDocumentChunkOut 定义单个知识分块的输出结构。
 
@@ -1398,7 +1398,7 @@ type KnowledgeDocumentChunkOut struct {
 ```
 
 <a name="KnowledgeDocumentChunksOut"></a>
-## type KnowledgeDocumentChunksOut
+## type [KnowledgeDocumentChunksOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L586-L591>)
 
 KnowledgeDocumentChunksOut 定义知识库文档分块明细的输出结构（文档级摘要 \+ 逐块明细）。
 
@@ -1412,7 +1412,7 @@ type KnowledgeDocumentChunksOut struct {
 ```
 
 <a name="KnowledgeDocumentCreateIn"></a>
-## type KnowledgeDocumentCreateIn
+## type [KnowledgeDocumentCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L73-L78>)
 
 KnowledgeDocumentCreateIn 定义创建知识库文档的请求输入。
 
@@ -1426,7 +1426,7 @@ type KnowledgeDocumentCreateIn struct {
 ```
 
 <a name="KnowledgeDocumentDetailOut"></a>
-## type KnowledgeDocumentDetailOut
+## type [KnowledgeDocumentDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L92-L121>)
 
 KnowledgeDocumentDetailOut 定义知识库文档详情的输出结构。
 
@@ -1464,7 +1464,7 @@ type KnowledgeDocumentDetailOut struct {
 ```
 
 <a name="KnowledgeDocumentIndexSummaryOut"></a>
-## type KnowledgeDocumentIndexSummaryOut
+## type [KnowledgeDocumentIndexSummaryOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L534-L567>)
 
 KnowledgeDocumentIndexSummaryOut 定义知识库文档索引摘要的输出结构： 全部字段在读取时从文档与其分块聚合派生（含 overlap 造成的重复计数），不落库。
 
@@ -1506,7 +1506,7 @@ type KnowledgeDocumentIndexSummaryOut struct {
 ```
 
 <a name="KnowledgeDocumentItemOut"></a>
-## type KnowledgeDocumentItemOut
+## type [KnowledgeDocumentItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L41-L64>)
 
 KnowledgeDocumentItemOut 定义知识库文档列表的输出项结构（独立于模型层）。
 
@@ -1538,7 +1538,7 @@ type KnowledgeDocumentItemOut struct {
 ```
 
 <a name="KnowledgeDocumentListOut"></a>
-## type KnowledgeDocumentListOut
+## type [KnowledgeDocumentListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L67-L70>)
 
 KnowledgeDocumentListOut 定义知识库文档列表的输出项，嵌入 BaseTotalOut 支持分页总数。
 
@@ -1550,7 +1550,7 @@ type KnowledgeDocumentListOut struct {
 ```
 
 <a name="KnowledgeDocumentReindexOut"></a>
-## type KnowledgeDocumentReindexOut
+## type [KnowledgeDocumentReindexOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L124-L133>)
 
 KnowledgeDocumentReindexOut 定义重新索引的输出结构。
 
@@ -1568,7 +1568,7 @@ type KnowledgeDocumentReindexOut struct {
 ```
 
 <a name="KnowledgeDocumentUpdateIn"></a>
-## type KnowledgeDocumentUpdateIn
+## type [KnowledgeDocumentUpdateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L81-L89>)
 
 KnowledgeDocumentUpdateIn 定义更新知识库文档的请求输入。
 
@@ -1585,7 +1585,7 @@ type KnowledgeDocumentUpdateIn struct {
 ```
 
 <a name="KnowledgeDocumentUploadOut"></a>
-## type KnowledgeDocumentUploadOut
+## type [KnowledgeDocumentUploadOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L137-L142>)
 
 KnowledgeDocumentUploadOut 定义导入知识库文档（multipart 上传）的输出结构。 客户端据此拿到新建文档 ID 与初始状态并开始轮询解析进度。
 
@@ -1599,7 +1599,7 @@ type KnowledgeDocumentUploadOut struct {
 ```
 
 <a name="PeriodicReportFeedItemOut"></a>
-## type PeriodicReportFeedItemOut
+## type [PeriodicReportFeedItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L186-L201>)
 
 PeriodicReportFeedItemOut 定义报告中心信息流的条目输出。
 
@@ -1623,7 +1623,7 @@ type PeriodicReportFeedItemOut struct {
 ```
 
 <a name="PeriodicReportFeedListOut"></a>
-## type PeriodicReportFeedListOut
+## type [PeriodicReportFeedListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L205-L208>)
 
 PeriodicReportFeedListOut 定义报告中心信息流列表项输出（嵌入 BaseTotalOut 支持分页总数）。 字段与 search.toml 的 PeriodicReportFeedListGet.selectFields 一一对应。
 
@@ -1635,7 +1635,7 @@ type PeriodicReportFeedListOut struct {
 ```
 
 <a name="PeriodicReportPlanCreateIn"></a>
-## type PeriodicReportPlanCreateIn
+## type [PeriodicReportPlanCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L102-L117>)
 
 PeriodicReportPlanCreateIn 定义创建报告计划的请求输入：字段格式与保留天数范围由视图层 binding 与 default 标签统一校验，技能资格、cron 与输入偏置由领域层校验。
 
@@ -1659,7 +1659,7 @@ type PeriodicReportPlanCreateIn struct {
 ```
 
 <a name="PeriodicReportPlanItemOut"></a>
-## type PeriodicReportPlanItemOut
+## type [PeriodicReportPlanItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L63-L91>)
 
 PeriodicReportPlanItemOut 定义报告计划列表项的输出结构（独立于模型层，逐字段映射）。
 
@@ -1696,7 +1696,7 @@ type PeriodicReportPlanItemOut struct {
 ```
 
 <a name="PeriodicReportPlanListOut"></a>
-## type PeriodicReportPlanListOut
+## type [PeriodicReportPlanListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L95-L98>)
 
 PeriodicReportPlanListOut 定义报告计划列表项输出（嵌入 BaseTotalOut 支持分页总数）。 字段与 search.toml 的 PeriodicReportPlanListGet.selectFields 一一对应。
 
@@ -1708,7 +1708,7 @@ type PeriodicReportPlanListOut struct {
 ```
 
 <a name="PeriodicReportPlanToggleIn"></a>
-## type PeriodicReportPlanToggleIn
+## type [PeriodicReportPlanToggleIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L138-L141>)
 
 PeriodicReportPlanToggleIn 定义启停报告计划的请求输入。
 
@@ -1720,7 +1720,7 @@ type PeriodicReportPlanToggleIn struct {
 ```
 
 <a name="PeriodicReportPlanUpdateIn"></a>
-## type PeriodicReportPlanUpdateIn
+## type [PeriodicReportPlanUpdateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L120-L135>)
 
 PeriodicReportPlanUpdateIn 定义更新报告计划的请求输入（可编辑字段整体覆盖）。
 
@@ -1744,7 +1744,7 @@ type PeriodicReportPlanUpdateIn struct {
 ```
 
 <a name="PeriodicReportRunDetailOut"></a>
-## type PeriodicReportRunDetailOut
+## type [PeriodicReportRunDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L172-L176>)
 
 PeriodicReportRunDetailOut 定义报告运行详情输出：在列表项基础上补充报告正文。
 
@@ -1757,7 +1757,7 @@ type PeriodicReportRunDetailOut struct {
 ```
 
 <a name="PeriodicReportRunItemOut"></a>
-## type PeriodicReportRunItemOut
+## type [PeriodicReportRunItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L144-L169>)
 
 PeriodicReportRunItemOut 定义报告运行记录列表项的输出结构（独立于模型层，逐字段映射）。
 
@@ -1791,7 +1791,7 @@ type PeriodicReportRunItemOut struct {
 ```
 
 <a name="PeriodicReportRunListOut"></a>
-## type PeriodicReportRunListOut
+## type [PeriodicReportRunListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L180-L183>)
 
 PeriodicReportRunListOut 定义报告运行记录列表项输出（嵌入 BaseTotalOut 支持分页总数）。 字段与 search.toml 的 PeriodicReportRunListGet.selectFields 一一对应。
 
@@ -1803,7 +1803,7 @@ type PeriodicReportRunListOut struct {
 ```
 
 <a name="PeriodicReportSkillInputFieldOut"></a>
-## type PeriodicReportSkillInputFieldOut
+## type [PeriodicReportSkillInputFieldOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L31-L40>)
 
 PeriodicReportSkillInputFieldOut 定义报告可用技能输入字段的输出结构（独立于模型层，逐字段映射）。
 
@@ -1821,7 +1821,7 @@ type PeriodicReportSkillInputFieldOut struct {
 ```
 
 <a name="PeriodicReportSkillOptionListOut"></a>
-## type PeriodicReportSkillOptionListOut
+## type [PeriodicReportSkillOptionListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L57-L60>)
 
 PeriodicReportSkillOptionListOut 定义报告技能选项列表输出。
 
@@ -1833,7 +1833,7 @@ type PeriodicReportSkillOptionListOut struct {
 ```
 
 <a name="PeriodicReportSkillOptionOut"></a>
-## type PeriodicReportSkillOptionOut
+## type [PeriodicReportSkillOptionOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L43-L54>)
 
 PeriodicReportSkillOptionOut 定义可作为周期性报告来源的技能选项输出。
 
@@ -1853,7 +1853,7 @@ type PeriodicReportSkillOptionOut struct {
 ```
 
 <a name="PeriodicReportWatchListOut"></a>
-## type PeriodicReportWatchListOut
+## type [PeriodicReportWatchListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L230-L233>)
 
 PeriodicReportWatchListOut 定义关注计划候选列表项输出（嵌入 BaseTotalOut 支持分页总数）。
 
@@ -1865,7 +1865,7 @@ type PeriodicReportWatchListOut struct {
 ```
 
 <a name="PeriodicReportWatchPlanItemOut"></a>
-## type PeriodicReportWatchPlanItemOut
+## type [PeriodicReportWatchPlanItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L212-L227>)
 
 PeriodicReportWatchPlanItemOut 定义关注计划候选列表项输出（独立于模型层，逐字段映射）。 字段与 search.toml 的 PeriodicReportWatchListGet.selectFields 一一对应。
 
@@ -1889,7 +1889,7 @@ type PeriodicReportWatchPlanItemOut struct {
 ```
 
 <a name="PeriodicReportWatchSetIn"></a>
-## type PeriodicReportWatchSetIn
+## type [PeriodicReportWatchSetIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L236-L241>)
 
 PeriodicReportWatchSetIn 定义设置计划关注状态的请求输入。
 
@@ -1903,7 +1903,7 @@ type PeriodicReportWatchSetIn struct {
 ```
 
 <a name="RetrievalOptionsOut"></a>
-## type RetrievalOptionsOut
+## type [RetrievalOptionsOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/dryrun.go#L53-L62>)
 
 RetrievalOptionsOut 定义检索试运行参数默认值响应。
 
@@ -1921,7 +1921,7 @@ type RetrievalOptionsOut struct {
 ```
 
 <a name="RetrievalWeightsIn"></a>
-## type RetrievalWeightsIn
+## type [RetrievalWeightsIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/dryrun.go#L34-L39>)
 
 RetrievalWeightsIn weighted 融合权重输入（视图层独立定义，不直接引用检索层权重类型）。
 
@@ -1935,7 +1935,7 @@ type RetrievalWeightsIn struct {
 ```
 
 <a name="RetrievalWeightsOut"></a>
-## type RetrievalWeightsOut
+## type [RetrievalWeightsOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/dryrun.go#L45-L50>)
 
 RetrievalWeightsOut weighted 融合权重（视图层独立定义，避免直接序列化检索层权重类型）。
 
@@ -1949,7 +1949,7 @@ type RetrievalWeightsOut struct {
 ```
 
 <a name="SkillInputFieldIn"></a>
-## type SkillInputFieldIn
+## type [SkillInputFieldIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/skill.go#L122-L131>)
 
 SkillInputFieldIn 定义用户填写的技能输入字段：结构约束由 binding 校验，周期 nowTime 契约 与固定参数约束由模型层统一校验。
 
@@ -1967,7 +1967,7 @@ type SkillInputFieldIn struct {
 ```
 
 <a name="SkillInputFieldOut"></a>
-## type SkillInputFieldOut
+## type [SkillInputFieldOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/skill.go#L26-L35>)
 
 SkillInputFieldOut 定义技能输入字段的输出结构（独立于模型层，逐字段映射）。
 

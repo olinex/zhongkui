@@ -85,7 +85,7 @@ var RootCmd = &cobra.Command{
 ```
 
 <a name="Execute"></a>
-## func Execute
+## func [Execute](<https://gitee.com/olinex/zhongkui/blob/master/cmd/template/main.go#L382>)
 
 ```go
 func Execute()

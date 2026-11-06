@@ -21,7 +21,7 @@ const MailSendTask = "mail:send"
 ```
 
 <a name="NewMailSendTask"></a>
-## func NewMailSendTask
+## func [NewMailSendTask](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/mail/task.go#L80>)
 
 ```go
 func NewMailSendTask(in MailSendInput) (*asynq.Task, error)
@@ -30,7 +30,7 @@ func NewMailSendTask(in MailSendInput) (*asynq.Task, error)
 NewMailSendTask 将系统级邮件直发请求编码为 mail:send 异步任务；必填字段缺失或邮箱非法返回错误。
 
 <a name="MailSendHandler"></a>
-## type MailSendHandler
+## type [MailSendHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/mail/task.go#L50-L55>)
 
 MailSendHandler 系统级邮件直发处理器，消费 mail:send 任务。 解析邮件载荷后调用 Sender.Send 按系统 smtp 配置直接投递； 载荷非法返回错误触发重试。
 
@@ -41,7 +41,7 @@ type MailSendHandler struct {
 ```
 
 <a name="NewMailSendHandler"></a>
-### func NewMailSendHandler
+### func [NewMailSendHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/mail/task.go#L58>)
 
 ```go
 func NewMailSendHandler(i do.Injector) *MailSendHandler
@@ -50,7 +50,7 @@ func NewMailSendHandler(i do.Injector) *MailSendHandler
 NewMailSendHandler 从 do.Injector 解析依赖并创建系统级邮件直发处理器。
 
 <a name="MailSendHandler.Do"></a>
-### func \(\*MailSendHandler\) Do
+### func \(\*MailSendHandler\) [Do](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/mail/task.go#L64>)
 
 ```go
 func (h *MailSendHandler) Do(ctx context.Context, task etl.Task) error
@@ -59,7 +59,7 @@ func (h *MailSendHandler) Do(ctx context.Context, task etl.Task) error
 Do 消费一条 mail:send 任务：解析 MailSendInput 载荷并调用 Sender.Send 直接投递； 载荷非法或投递失败返回错误触发重试。
 
 <a name="MailSendInput"></a>
-## type MailSendInput
+## type [MailSendInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/mail/task.go#L30-L37>)
 
 MailSendInput 系统级邮件直发任务载荷。
 

@@ -8,7 +8,7 @@
 
 
 <a name="MigrationFor"></a>
-## func MigrationFor
+## func [MigrationFor](<https://gitee.com/olinex/zhongkui/blob/master/internal/migrations/collect.go#L14>)
 
 ```go
 func MigrationFor(dbName string) embed.FS

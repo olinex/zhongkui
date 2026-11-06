@@ -48,7 +48,7 @@ var BuiltinSkills = []BuiltinSkill{
 ```
 
 <a name="BuiltinSkillNames"></a>
-## func BuiltinSkillNames
+## func [BuiltinSkillNames](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/skill/builtin.go#L53>)
 
 ```go
 func BuiltinSkillNames() []string
@@ -57,7 +57,7 @@ func BuiltinSkillNames() []string
 BuiltinSkillNames 返回代码注册表中的内置技能名（声明顺序），供守卫测试与诊断使用。
 
 <a name="ValidateInputFields"></a>
-## func ValidateInputFields
+## func [ValidateInputFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/skill/contract.go#L32>)
 
 ```go
 func ValidateInputFields(fields []modelsai.SkillInputField) error
@@ -66,7 +66,7 @@ func ValidateInputFields(fields []modelsai.SkillInputField) error
 ValidateInputFields 校验技能输入字段声明：字段名非空，类型只能是 date / number / string / enum / boolean。供技能创建 / 更新与周期性报告运行期命令边界统一调用。
 
 <a name="BuiltinSkill"></a>
-## type BuiltinSkill
+## type [BuiltinSkill](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/skill/builtin.go#L26-L31>)
 
 BuiltinSkill 是一条内置技能的代码侧定义：Name 与 agent\_skills 系统命名空间注册行对齐， Content 是模型指引正文（Markdown 文本，不落库）。展示描述以数据库行的明文 description 为准。
 
@@ -80,7 +80,7 @@ type BuiltinSkill struct {
 ```
 
 <a name="LookupBuiltin"></a>
-### func LookupBuiltin
+### func [LookupBuiltin](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/skill/builtin.go#L43>)
 
 ```go
 func LookupBuiltin(name string) (BuiltinSkill, bool)
@@ -89,7 +89,7 @@ func LookupBuiltin(name string) (BuiltinSkill, bool)
 LookupBuiltin 按名查询内置技能的代码侧定义，未登记时返回 ok=false。
 
 <a name="CreateInput"></a>
-## type CreateInput
+## type [CreateInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/skill/store.go#L41-L54>)
 
 CreateInput 是创建技能时的输入内容：名称、描述、正文与用户声明的周期能力、输入字段、 固定参数；字段的必填性、长度、空白与周期 nowTime 契约由视图层统一校验，本类型只承载已校验的值。
 
@@ -111,7 +111,7 @@ type CreateInput struct {
 ```
 
 <a name="Store"></a>
-## type Store
+## type [Store](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/skill/store.go#L76-L79>)
 
 Store 提供 AI 技能（AgentSkill）的持久化 CRUD，全部操作基于 GORM（database.DB）。 所有读写都以命名空间为隔离维度，正文仅在详情与创建/更新结果中返回；列表查询由视图层 统一经 utils.BuildSearchCountQuery 完成，存储层不承担搜索与分页。
 
@@ -122,7 +122,7 @@ type Store struct {
 ```
 
 <a name="NewStore"></a>
-### func NewStore
+### func [NewStore](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/skill/store.go#L82>)
 
 ```go
 func NewStore(db *database.DB) (*Store, error)
@@ -131,7 +131,7 @@ func NewStore(db *database.DB) (*Store, error)
 NewStore 构造 Store；db 为空时返回英文错误。
 
 <a name="Store.Create"></a>
-### func \(\*Store\) Create
+### func \(\*Store\) [Create](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/skill/store.go#L92>)
 
 ```go
 func (s *Store) Create(ctx context.Context, namespace string, in CreateInput) (*modelsai.AgentSkill, error)
@@ -140,7 +140,7 @@ func (s *Store) Create(ctx context.Context, namespace string, in CreateInput) (*
 Create 在给定命名空间下创建一条启用的技能；同命名空间下已存在同名未删除技能时返回 ErrSkillNameExists。输入字段的必填、长度、空白与周期 nowTime 契约由视图层校验完成， 本方法只做落库。
 
 <a name="Store.Delete"></a>
-### func \(\*Store\) Delete
+### func \(\*Store\) [Delete](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/skill/store.go#L195>)
 
 ```go
 func (s *Store) Delete(ctx context.Context, namespace string, ids []uint) error
@@ -149,7 +149,7 @@ func (s *Store) Delete(ctx context.Context, namespace string, ids []uint) error
 Delete 软删除给定命名空间下的若干技能；ids 为空时返回 ErrEmptySkillIDs。
 
 <a name="Store.Get"></a>
-### func \(\*Store\) Get
+### func \(\*Store\) [Get](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/skill/store.go#L133>)
 
 ```go
 func (s *Store) Get(ctx context.Context, namespace string, id uint) (*modelsai.AgentSkill, error)
@@ -158,7 +158,7 @@ func (s *Store) Get(ctx context.Context, namespace string, id uint) (*modelsai.A
 Get 按 ID 查询给定命名空间下的一条自定义技能（含解密后的正文）；未找到时返回 ErrSkillNotFound。 内置技能不属于任何租户命名空间，故一律按不存在处理（其读取走内置专用方法）。
 
 <a name="Store.GetByID"></a>
-### func \(\*Store\) GetByID
+### func \(\*Store\) [GetByID](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/skill/store.go#L244>)
 
 ```go
 func (s *Store) GetByID(ctx context.Context, id uint) (*modelsai.AgentSkill, error)
@@ -167,7 +167,7 @@ func (s *Store) GetByID(ctx context.Context, id uint) (*modelsai.AgentSkill, err
 GetByID 按 ID 查询一条技能（含解密后的正文，内置行 Content 为 nil）；未找到时返回 ErrSkillNotFound。内置与自定义技能都以该 ID 作为选择标识。
 
 <a name="Store.IsBuiltinSkill"></a>
-### func \(\*Store\) IsBuiltinSkill
+### func \(\*Store\) [IsBuiltinSkill](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/skill/store.go#L257>)
 
 ```go
 func (s *Store) IsBuiltinSkill(ctx context.Context, id uint) (bool, error)
@@ -176,7 +176,7 @@ func (s *Store) IsBuiltinSkill(ctx context.Context, id uint) (bool, error)
 IsBuiltinSkill 报告给定 ID 是否为内置技能；不存在时返回 false（由调用方按不存在处理）。
 
 <a name="Store.ListEnabledBuiltinSkills"></a>
-### func \(\*Store\) ListEnabledBuiltinSkills
+### func \(\*Store\) [ListEnabledBuiltinSkills](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/skill/store.go#L231>)
 
 ```go
 func (s *Store) ListEnabledBuiltinSkills(ctx context.Context) ([]modelsai.AgentSkill, error)
@@ -185,7 +185,7 @@ func (s *Store) ListEnabledBuiltinSkills(ctx context.Context) ([]modelsai.AgentS
 ListEnabledBuiltinSkills 返回全部已启用的内置技能注册行（按 id 升序，即 fixture 注入顺序）， 供选择器与运行时装配使用；行只含名称、明文描述与启停状态，技能正文由代码注册表按名提供 （内置行 Content 为 nil）。
 
 <a name="Store.SetEnabled"></a>
-### func \(\*Store\) SetEnabled
+### func \(\*Store\) [SetEnabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/skill/store.go#L209>)
 
 ```go
 func (s *Store) SetEnabled(ctx context.Context, namespace string, id uint, enabled bool) error
@@ -194,7 +194,7 @@ func (s *Store) SetEnabled(ctx context.Context, namespace string, id uint, enabl
 SetEnabled 设置一条技能的启停状态：内置技能可按 ID 全局启停，自定义技能须归属给定命名空间； 技能不存在或自定义技能跨命名空间时返回 ErrSkillNotFound。
 
 <a name="Store.Update"></a>
-### func \(\*Store\) Update
+### func \(\*Store\) [Update](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/skill/store.go#L151>)
 
 ```go
 func (s *Store) Update(ctx context.Context, namespace string, id uint, in UpdateInput) (*modelsai.AgentSkill, error)
@@ -203,7 +203,7 @@ func (s *Store) Update(ctx context.Context, namespace string, id uint, in Update
 Update 更新给定命名空间下的一条技能并返回更新后的技能（含解密后的正文）：先按 ID 确保 技能存在且归属该命名空间；改为同命名空间下已存在的其他技能名称时返回 ErrSkillNameExists。 名称、描述、正文与周期能力、输入字段、固定参数按整体覆盖落库，显式刷新 updated\_at。 输入字段的必填、长度、空白与周期 nowTime 契约由视图层校验完成。
 
 <a name="UpdateInput"></a>
-## type UpdateInput
+## type [UpdateInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/skill/store.go#L58-L71>)
 
 UpdateInput 是更新技能时的输入内容：名称、描述、正文与用户声明的周期能力、输入字段、 固定参数整体覆盖；字段校验同样由视图层负责，本类型只承载已校验的值。
 

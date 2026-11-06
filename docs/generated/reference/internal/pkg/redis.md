@@ -31,7 +31,7 @@ const (
 ```
 
 <a name="DescribeConfig"></a>
-## func DescribeConfig
+## func [DescribeConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/redis/config.go#L220>)
 
 ```go
 func DescribeConfig(names ...string) config.ConfigDescriptions
@@ -44,7 +44,7 @@ DescribeConfig 返回Redis配置的描述信息 参数:
 返回值: config.ConfigDescriptions \- 配置描述信息
 
 <a name="Client"></a>
-## type Client
+## type [Client](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/redis/client.go#L24-L30>)
 
 Client 是 go\-redis/v9 库中 redis.Client 的类型别名。 这提供了对所有Redis操作的直接访问，同时保持类型安全性和与底层go\-redis库的兼容性。
 
@@ -66,7 +66,7 @@ type Client struct {
 ```
 
 <a name="NewClient"></a>
-### func NewClient
+### func [NewClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/redis/client.go#L61>)
 
 ```go
 func NewClient(cfg *Config) *Client
@@ -108,7 +108,7 @@ client := redis.NewClient(config)
 - 返回的客户端在不再需要时应使用client.Close\(\)正确关闭以释放资源
 
 <a name="Client.Shutdown"></a>
-### func \(\*Client\) Shutdown
+### func \(\*Client\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/redis/client.go#L84>)
 
 ```go
 func (c *Client) Shutdown() error
@@ -117,7 +117,7 @@ func (c *Client) Shutdown() error
 Shutdown 关闭底层 Redis 客户端连接，重复调用安全（已关闭时直接返回 nil）。
 
 <a name="Config"></a>
-## type Config
+## type [Config](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/redis/config.go#L25-L157>)
 
 Config 定义了Redis客户端的配置参数 该结构体支持两种Redis连接模式：普通单节点模式和Sentinel高可用模式 配置可以通过Viper从配置文件、环境变量或命令行参数加载
 
@@ -258,7 +258,7 @@ type Config struct {
 ```
 
 <a name="ExtractConfig"></a>
-### func ExtractConfig
+### func [ExtractConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/redis/config.go#L230>)
 
 ```go
 func ExtractConfig(viper *viper.Viper, validate *validator.Validate, name string) (*Config, error)
@@ -272,7 +272,7 @@ ExtractConfig 从Viper配置中提取Redis配置 参数:
 返回值: \(\*Config, error\) \- 提取的Redis配置和可能的错误
 
 <a name="Config.ToOptions"></a>
-### func \(\*Config\) ToOptions
+### func \(\*Config\) [ToOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/redis/config.go#L163>)
 
 ```go
 func (c *Config) ToOptions() *redis.Options
@@ -281,7 +281,7 @@ func (c *Config) ToOptions() *redis.Options
 ToOptions 将Config转换为redis.Options 用于创建普通Redis客户端连接 返回值: \*redis.Options \- 配置好的Redis选项，可以直接用于创建Redis客户端 注意: 此方法仅适用于Type为"normal"的配置
 
 <a name="Config.ToSentinelOptions"></a>
-### func \(\*Config\) ToSentinelOptions
+### func \(\*Config\) [ToSentinelOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/redis/config.go#L189>)
 
 ```go
 func (c *Config) ToSentinelOptions() *redis.FailoverOptions
@@ -290,7 +290,7 @@ func (c *Config) ToSentinelOptions() *redis.FailoverOptions
 ToSentinelOptions 将Config转换为redis.FailoverOptions 用于创建Redis Sentinel高可用客户端连接 返回值: \*redis.FailoverOptions \- 配置好的Redis Sentinel选项，可以直接用于创建Redis Sentinel客户端 注意: 此方法仅适用于Type为"sentinel"的配置
 
 <a name="FixedWindowLimiter"></a>
-## type FixedWindowLimiter
+## type [FixedWindowLimiter](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/redis/ratelimit.go#L27-L34>)
 
 FixedWindowLimiter 基于 Redis 的固定窗口计数器限流器。
 
@@ -303,7 +303,7 @@ type FixedWindowLimiter struct {
 ```
 
 <a name="NewFixedWindowLimiter"></a>
-### func NewFixedWindowLimiter
+### func [NewFixedWindowLimiter](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/redis/ratelimit.go#L42>)
 
 ```go
 func NewFixedWindowLimiter(client *Client, limit int, window time.Duration) *FixedWindowLimiter
@@ -318,7 +318,7 @@ NewFixedWindowLimiter 创建固定窗口限流器。
 - window：窗口时长
 
 <a name="FixedWindowLimiter.Allow"></a>
-### func \(\*FixedWindowLimiter\) Allow
+### func \(\*FixedWindowLimiter\) [Allow](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/redis/ratelimit.go#L55>)
 
 ```go
 func (l *FixedWindowLimiter) Allow(ctx context.Context, key string) (bool, error)

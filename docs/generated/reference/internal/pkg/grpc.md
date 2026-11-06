@@ -129,7 +129,7 @@ var (
 ```
 
 <a name="DescribeClientConfig"></a>
-## func DescribeClientConfig
+## func [DescribeClientConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/client_config.go#L358>)
 
 ```go
 func DescribeClientConfig(names ...string) config.ConfigDescriptions
@@ -146,7 +146,7 @@ DescribeClientConfig 生成gRPC客户端设置的配置描述。 用于配置选
 - config.ConfigDescriptions: 配置选项的结构化描述，包含字段名称、类型、默认值和说明
 
 <a name="DescribeServerConfig"></a>
-## func DescribeServerConfig
+## func [DescribeServerConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server_config.go#L264>)
 
 ```go
 func DescribeServerConfig(names ...string) config.ConfigDescriptions
@@ -163,7 +163,7 @@ DescribeServerConfig 生成gRPC服务器设置的配置描述。 用于配置选
 - config.ConfigDescriptions: 配置选项的结构化描述
 
 <a name="ExtractUserID"></a>
-## func ExtractUserID
+## func [ExtractUserID](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/authorize.go#L28>)
 
 ```go
 func ExtractUserID(ctx context.Context) string
@@ -180,7 +180,7 @@ ExtractUserID 从上下文中提取用户ID 该函数用于在gRPC处理函数�
 注意: 调用此函数前必须确保上下文已通过身份验证并包含用户ID
 
 <a name="StreamClientInterceptor"></a>
-## func StreamClientInterceptor
+## func [StreamClientInterceptor](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/client_config.go#L63>)
 
 ```go
 func StreamClientInterceptor(ctx context.Context, desc *g.StreamDesc, cc *g.ClientConn, method string, streamer g.Streamer, opts ...g.CallOption) (g.ClientStream, error)
@@ -203,7 +203,7 @@ StreamClientInterceptor 是gRPC客户端的流式拦截器。 该拦截器在处
 - error: 调用过程中发生的错误
 
 <a name="AccessKeyAuthenticator"></a>
-## type AccessKeyAuthenticator
+## type [AccessKeyAuthenticator](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/authenticator.go#L37-L40>)
 
 AccessKeyAuthenticator 基于访问密钥\(AccessKey\)的认证器实现。 它通过验证请求中携带的签名令牌来确认请求者的身份。
 
@@ -216,7 +216,7 @@ type AccessKeyAuthenticator struct {
 ```
 
 <a name="NewAccessKeyAuthenticator"></a>
-### func NewAccessKeyAuthenticator
+### func [NewAccessKeyAuthenticator](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/authenticator.go#L49>)
 
 ```go
 func NewAccessKeyAuthenticator(pool auth.AccessKeyPool) *AccessKeyAuthenticator
@@ -233,7 +233,7 @@ NewAccessKeyAuthenticator 创建并返回一个新的基于访问密钥的认证
 - \*AccessKeyAuthenticator: 新创建的认证器实例
 
 <a name="AccessKeyAuthenticator.Handle"></a>
-### func \(\*AccessKeyAuthenticator\) Handle
+### func \(\*AccessKeyAuthenticator\) [Handle](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/authenticator.go#L60>)
 
 ```go
 func (a *AccessKeyAuthenticator) Handle(ctx context.Context, method, token string) (string, error)
@@ -244,7 +244,7 @@ Handle 执行基于访问密钥的身份验证处理。
 认证令牌格式为：accessKeyID:timestamp:nonce:base64\(method\):signature 校验流程（解析、方法比对、防重放、密钥状态、签名校验、最后访问时间更新）统一由 auth.AuthenticateAccessKey 完成；本方法仅将失败原因映射为既有 gRPC 错误码。
 
 <a name="AccessKeySecretPerRPCCredentials"></a>
-## type AccessKeySecretPerRPCCredentials
+## type [AccessKeySecretPerRPCCredentials](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/credentials.go#L19-L22>)
 
 AccessKeySecretPerRPCCredentials 实现了 gRPC 的 PerRPCCredentials 接口 用于基于访问密钥和密钥进行身份验证
 
@@ -256,7 +256,7 @@ type AccessKeySecretPerRPCCredentials struct {
 ```
 
 <a name="NewAccessKeySecretPerRPCCredentials"></a>
-### func NewAccessKeySecretPerRPCCredentials
+### func [NewAccessKeySecretPerRPCCredentials](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/credentials.go#L30>)
 
 ```go
 func NewAccessKeySecretPerRPCCredentials(id, secret string) *AccessKeySecretPerRPCCredentials
@@ -270,7 +270,7 @@ NewAccessKeySecretPerRPCCredentials 创建并返回一个新的 AccessKeySecretP
 返回值: \*AccessKeySecretPerRPCCredentials 实例
 
 <a name="AccessKeySecretPerRPCCredentials.GetRequestMetadata"></a>
-### func \(\*AccessKeySecretPerRPCCredentials\) GetRequestMetadata
+### func \(\*AccessKeySecretPerRPCCredentials\) [GetRequestMetadata](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/credentials.go#L47>)
 
 ```go
 func (pc *AccessKeySecretPerRPCCredentials) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error)
@@ -287,7 +287,7 @@ GetRequestMetadata 实现 PerRPCCredentials 接口，生成请求的认证元数
 - error: 错误信息，如果生成过程中出现错误
 
 <a name="AccessKeySecretPerRPCCredentials.RequireTransportSecurity"></a>
-### func \(\*AccessKeySecretPerRPCCredentials\) RequireTransportSecurity
+### func \(\*AccessKeySecretPerRPCCredentials\) [RequireTransportSecurity](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/credentials.go#L101>)
 
 ```go
 func (pc *AccessKeySecretPerRPCCredentials) RequireTransportSecurity() bool
@@ -296,7 +296,7 @@ func (pc *AccessKeySecretPerRPCCredentials) RequireTransportSecurity() bool
 RequireTransportSecurity 实现 PerRPCCredentials 接口 返回 true 表示要求使用 TLS 传输安全 对于访问密钥认证，必须使用安全传输以防止密钥泄露
 
 <a name="AuthClientConfig"></a>
-## type AuthClientConfig
+## type [AuthClientConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/client_config.go#L145-L166>)
 
 AuthClientConfig 定义gRPC客户端的身份验证配置。 支持基于访问密钥的身份验证协议，用于向gRPC服务器提供身份凭证。
 
@@ -326,7 +326,7 @@ type AuthClientConfig struct {
 ```
 
 <a name="AuthClientConfig.ToOption"></a>
-### func \(\*AuthClientConfig\) ToOption
+### func \(\*AuthClientConfig\) [ToOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/client_config.go#L183>)
 
 ```go
 func (a *AuthClientConfig) ToOption() (option g.DialOption, err error)
@@ -346,7 +346,7 @@ ToOption 将AuthClientConfig转换为gRPC客户端的身份验证连接选项。
 - err: 转换过程中发生的错误，如协议不支持或配置无效
 
 <a name="AuthRouter"></a>
-## type AuthRouter
+## type [AuthRouter](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/authorize.go#L34-L41>)
 
 AuthRouter 是gRPC身份验证路由器 负责管理和路由不同的身份验证器，支持多种认证协议
 
@@ -357,7 +357,7 @@ type AuthRouter struct {
 ```
 
 <a name="NewAuthRouter"></a>
-### func NewAuthRouter
+### func [NewAuthRouter](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/authorize.go#L49>)
 
 ```go
 func NewAuthRouter(config *AuthServerConfig) *AuthRouter
@@ -372,7 +372,7 @@ NewAuthRouter 创建新的身份验证路由器 参数:
 - \*AuthRouter: 新创建的身份验证路由器实例
 
 <a name="AuthRouter.Get"></a>
-### func \(\*AuthRouter\) Get
+### func \(\*AuthRouter\) [Get](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/authorize.go#L83>)
 
 ```go
 func (a *AuthRouter) Get(name string) Authenticator
@@ -387,7 +387,7 @@ Get 根据名称获取身份验证器 该方法用于根据验证器名称查找
 - Authenticator: 找到的身份验证器，如果未找到则返回nil
 
 <a name="AuthRouter.Register"></a>
-### func \(\*AuthRouter\) Register
+### func \(\*AuthRouter\) [Register](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/authorize.go#L66>)
 
 ```go
 func (a *AuthRouter) Register(authenticators map[string]Authenticator) error
@@ -404,7 +404,7 @@ Register 注册身份验证器到路由器 该方法用于注册一个或多个�
 注意: 该方法只能调用一次，重复调用会返回错误
 
 <a name="AuthServerConfig"></a>
-## type AuthServerConfig
+## type [AuthServerConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server_config.go#L98-L102>)
 
 AuthServerConfig 定义gRPC服务器的身份验证配置。 当前支持基于访问密钥的身份验证。
 
@@ -417,7 +417,7 @@ type AuthServerConfig struct {
 ```
 
 <a name="AuthServerConfig.ToOptions"></a>
-### func \(\*AuthServerConfig\) ToOptions
+### func \(\*AuthServerConfig\) [ToOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server_config.go#L115>)
 
 ```go
 func (a *AuthServerConfig) ToOptions(authenticators map[string]Authenticator) (g.ServerOption, g.ServerOption, error)
@@ -436,7 +436,7 @@ ToOptions 将身份验证配置转换为gRPC拦截器选项。 创建身份验�
 - error: 路由器注册期间遇到的任何错误
 
 <a name="AuthWrapperPerRPCCredentials"></a>
-## type AuthWrapperPerRPCCredentials
+## type [AuthWrapperPerRPCCredentials](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/credentials.go#L107-L110>)
 
 AuthWrapperPerRPCCredentials 是一个包装器，用于在现有 PerRPCCredentials 基础上添加认证协议标识 主要用于在认证头中添加协议类型信息，便于服务器端识别认证方式
 
@@ -447,7 +447,7 @@ type AuthWrapperPerRPCCredentials struct {
 ```
 
 <a name="NewAuthWrapperPerRPCCredentials"></a>
-### func NewAuthWrapperPerRPCCredentials
+### func [NewAuthWrapperPerRPCCredentials](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/credentials.go#L118>)
 
 ```go
 func NewAuthWrapperPerRPCCredentials(protocol string, inner credentials.PerRPCCredentials) *AuthWrapperPerRPCCredentials
@@ -461,7 +461,7 @@ NewAuthWrapperPerRPCCredentials 创建并返回一个新的 AuthWrapperPerRPCCre
 返回值: \*AuthWrapperPerRPCCredentials 实例
 
 <a name="AuthWrapperPerRPCCredentials.GetRequestMetadata"></a>
-### func \(\*AuthWrapperPerRPCCredentials\) GetRequestMetadata
+### func \(\*AuthWrapperPerRPCCredentials\) [GetRequestMetadata](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/credentials.go#L134>)
 
 ```go
 func (a *AuthWrapperPerRPCCredentials) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error)
@@ -478,7 +478,7 @@ GetRequestMetadata 实现 PerRPCCredentials 接口，生成请求的认证元数
 - error: 错误信息，如果生成过程中出现错误
 
 <a name="AuthWrapperPerRPCCredentials.RequireTransportSecurity"></a>
-### func \(\*AuthWrapperPerRPCCredentials\) RequireTransportSecurity
+### func \(\*AuthWrapperPerRPCCredentials\) [RequireTransportSecurity](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/credentials.go#L154>)
 
 ```go
 func (a *AuthWrapperPerRPCCredentials) RequireTransportSecurity() bool
@@ -487,7 +487,7 @@ func (a *AuthWrapperPerRPCCredentials) RequireTransportSecurity() bool
 RequireTransportSecurity 实现 PerRPCCredentials 接口 返回被包装实例的传输安全要求 包装器不改变原始实例的传输安全要求
 
 <a name="Authenticator"></a>
-## type Authenticator
+## type [Authenticator](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/authenticator.go#L18-L30>)
 
 Authenticator 定义gRPC认证器接口，用于处理请求的身份验证。 不同的认证协议可以实现该接口，提供不同的认证逻辑。 当认证成功时返回用户ID，失败时返回相应的gRPC错误状态。
 
@@ -508,7 +508,7 @@ type Authenticator interface {
 ```
 
 <a name="BaseConfig"></a>
-## type BaseConfig
+## type [BaseConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server_config.go#L27-L36>)
 
 BaseConfig 定义gRPC服务器的基本网络配置。 指定服务器监听传入连接的主机和端口。
 
@@ -526,7 +526,7 @@ type BaseConfig struct {
 ```
 
 <a name="Client"></a>
-## type Client
+## type [Client](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/client.go#L14-L16>)
 
 Client 是gRPC客户端连接的类型别名。 它是对google.golang.org/grpc.ClientConn的包装，提供与gRPC服务器的连接。 通过该连接可以调用远程服务的方法。
 
@@ -537,7 +537,7 @@ type Client struct {
 ```
 
 <a name="NewClient"></a>
-### func NewClient
+### func [NewClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/client.go#L56>)
 
 ```go
 func NewClient(cfg *ClientConfig, extraOpts ...g.DialOption) (*Client, error)
@@ -581,7 +581,7 @@ defer client.Close()
 ```
 
 <a name="Client.Shutdown"></a>
-### func \(\*Client\) Shutdown
+### func \(\*Client\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/client.go#L78>)
 
 ```go
 func (c *Client) Shutdown() error
@@ -590,7 +590,7 @@ func (c *Client) Shutdown() error
 Shutdown 关闭底层 gRPC 连接。
 
 <a name="ClientConfig"></a>
-## type ClientConfig
+## type [ClientConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/client_config.go#L249-L274>)
 
 ClientConfig 是gRPC客户端的主要配置结构。 将所有配置方面：网络连接、TLS安全、身份验证、保活和服务配置组合成一个全面的配置。 该结构体提供了从配置到gRPC连接选项的完整转换能力。
 
@@ -624,7 +624,7 @@ type ClientConfig struct {
 ```
 
 <a name="ExtractClientConfig"></a>
-### func ExtractClientConfig
+### func [ExtractClientConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/client_config.go#L374>)
 
 ```go
 func ExtractClientConfig(viper *viper.Viper, validate *validator.Validate, name string) (*ClientConfig, error)
@@ -643,7 +643,7 @@ ExtractClientConfig 从Viper配置中提取指定名称的gRPC客户端配置。
 - error: 提取过程中发生的错误，如配置不存在或反序列化失败
 
 <a name="ClientConfig.ToOptions"></a>
-### func \(\*ClientConfig\) ToOptions
+### func \(\*ClientConfig\) [ToOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/client_config.go#L291>)
 
 ```go
 func (c *ClientConfig) ToOptions() (lis string, options []g.DialOption, err error)
@@ -660,7 +660,7 @@ ToOptions 将完整的客户端配置转换为gRPC连接选项和监听地址。
 - err: 配置转换过程中发生的错误，如TLS证书加载失败或JSON序列化错误
 
 <a name="HealthServerConfig"></a>
-## type HealthServerConfig
+## type [HealthServerConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server_config.go#L185-L194>)
 
 HealthServerConfig 定义gRPC服务器的健康检查服务配置。 这启用gRPC健康检查协议，允许外部系统监控服务器健康状态。
 
@@ -678,7 +678,7 @@ type HealthServerConfig struct {
 ```
 
 <a name="KeepaliveClientConfig"></a>
-## type KeepaliveClientConfig
+## type [KeepaliveClientConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/client_config.go#L211-L227>)
 
 KeepaliveClientConfig 定义gRPC客户端的保活和连接管理配置。 这些设置控制客户端如何维护与服务器的连接健康状态，防止连接因空闲或网络问题而断开。
 
@@ -703,7 +703,7 @@ type KeepaliveClientConfig struct {
 ```
 
 <a name="KeepaliveClientConfig.ToOption"></a>
-### func \(\*KeepaliveClientConfig\) ToOption
+### func \(\*KeepaliveClientConfig\) [ToOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/client_config.go#L234>)
 
 ```go
 func (k *KeepaliveClientConfig) ToOption() g.DialOption
@@ -716,7 +716,7 @@ ToOption 将KeepaliveClientConfig转换为gRPC客户端的保活连接选项。 
 - g.DialOption: gRPC连接选项，用于配置客户端的保活参数
 
 <a name="KeepaliveServerConfig"></a>
-## type KeepaliveServerConfig
+## type [KeepaliveServerConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server_config.go#L125-L158>)
 
 KeepaliveServerConfig 定义gRPC服务器的保活和连接管理设置。 这些设置控制连接健康检查、超时和生命周期管理。
 
@@ -758,7 +758,7 @@ type KeepaliveServerConfig struct {
 ```
 
 <a name="KeepaliveServerConfig.ToOptions"></a>
-### func \(\*KeepaliveServerConfig\) ToOptions
+### func \(\*KeepaliveServerConfig\) [ToOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server_config.go#L166>)
 
 ```go
 func (k *KeepaliveServerConfig) ToOptions() (g.ServerOption, g.ServerOption)
@@ -772,7 +772,7 @@ ToOptions 将保活配置转换为gRPC ServerOptions。 创建两个选项：一
 - g.ServerOption: 强制执行策略选项（最短时间、无流时允许）
 
 <a name="Server"></a>
-## type Server
+## type [Server](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server.go#L16-L27>)
 
 Server 是gRPC服务器的包装器，提供统一的服务器管理接口 它封装了gRPC服务器的生命周期管理、健康检查和服务注册功能
 
@@ -783,7 +783,7 @@ type Server struct {
 ```
 
 <a name="NewServer"></a>
-### func NewServer
+### func [NewServer](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server.go#L97>)
 
 ```go
 func NewServer(authenticators map[string]Authenticator, cfg *ServerConfig, extraOpts ...g.ServerOption) (*Server, error)
@@ -800,7 +800,7 @@ NewServer 创建一个新的gRPC服务器实例 该方法根据配置初始化gR
 - error: 如果初始化失败，返回相应的错误
 
 <a name="Server.GetServiceInfo"></a>
-### func \(\*Server\) GetServiceInfo
+### func \(\*Server\) [GetServiceInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server.go#L33>)
 
 ```go
 func (s *Server) GetServiceInfo() map[string]g.ServiceInfo
@@ -811,7 +811,7 @@ GetServiceInfo 返回服务器上注册的所有服务的信息 该方法包装�
 - map\[string\]g.ServiceInfo: 服务名称到服务信息的映射
 
 <a name="Server.GracefulStop"></a>
-### func \(\*Server\) GracefulStop
+### func \(\*Server\) [GracefulStop](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server.go#L40>)
 
 ```go
 func (s *Server) GracefulStop()
@@ -820,7 +820,7 @@ func (s *Server) GracefulStop()
 GracefulStop 优雅地停止gRPC服务器 服务器将停止接受新连接，并等待现有请求完成 该方法包装了底层gRPC服务器的GracefulStop方法
 
 <a name="Server.RegisterService"></a>
-### func \(\*Server\) RegisterService
+### func \(\*Server\) [RegisterService](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server.go#L49>)
 
 ```go
 func (s *Server) RegisterService(desc *g.ServiceDesc, impl any)
@@ -832,7 +832,7 @@ RegisterService 在gRPC服务器上注册一个服务 该方法用于将gRPC服�
 - impl: 服务实现实例，必须实现描述符中定义的所有方法
 
 <a name="Server.Serve"></a>
-### func \(\*Server\) Serve
+### func \(\*Server\) [Serve](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server.go#L57>)
 
 ```go
 func (s *Server) Serve() error
@@ -843,7 +843,7 @@ Serve 启动gRPC服务器并开始接受连接 该方法会阻塞，直到服务
 - error: 如果服务器启动失败，返回相应的错误
 
 <a name="Server.ServeHTTP"></a>
-### func \(\*Server\) ServeHTTP
+### func \(\*Server\) [ServeHTTP](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server.go#L66>)
 
 ```go
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request)
@@ -855,7 +855,7 @@ ServeHTTP 允许gRPC服务器处理HTTP请求 这支持gRPC\-Web或其他需要H
 - r: HTTP请求对象
 
 <a name="Server.SetServingStatus"></a>
-### func \(\*Server\) SetServingStatus
+### func \(\*Server\) [SetServingStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server.go#L81>)
 
 ```go
 func (s *Server) SetServingStatus(status healthpb.HealthCheckResponse_ServingStatus)
@@ -866,7 +866,7 @@ SetServingStatus 设置健康检查服务的状态 该方法用于更新服务�
 - status: 健康状态枚举值，如SERVING、NOT\_SERVING等
 
 <a name="Server.Stop"></a>
-### func \(\*Server\) Stop
+### func \(\*Server\) [Stop](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server.go#L73>)
 
 ```go
 func (s *Server) Stop()
@@ -875,7 +875,7 @@ func (s *Server) Stop()
 Stop 立即停止gRPC服务器 与GracefulStop不同，Stop会立即中断所有活动连接 该方法包装了底层gRPC服务器的Stop方法
 
 <a name="ServerConfig"></a>
-## type ServerConfig
+## type [ServerConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server_config.go#L198-L216>)
 
 ServerConfig 是gRPC服务器的主要配置结构。 将所有配置方面：网络、TLS、身份验证、保活和健康检查组合成一个全面的配置。
 
@@ -902,7 +902,7 @@ type ServerConfig struct {
 ```
 
 <a name="ExtractServerConfig"></a>
-### func ExtractServerConfig
+### func [ExtractServerConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server_config.go#L279>)
 
 ```go
 func ExtractServerConfig(viper *viper.Viper, validate *validator.Validate, name string) (*ServerConfig, error)
@@ -921,7 +921,7 @@ ExtractServerConfig 从Viper配置源提取gRPC服务器配置。 此函数从Vi
 - error: 配置提取或解组期间遇到的任何错误
 
 <a name="ServerConfig.ToOptions"></a>
-### func \(\*ServerConfig\) ToOptions
+### func \(\*ServerConfig\) [ToOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server_config.go#L230>)
 
 ```go
 func (c *ServerConfig) ToOptions(authenticators map[string]Authenticator) (lis net.Listener, options []g.ServerOption, err error)
@@ -942,7 +942,7 @@ ToOptions 将完整的服务器配置转换为gRPC服务器选项。 创建网�
 - error: 配置转换或监听器创建期间遇到的任何错误
 
 <a name="TlsClientConfig"></a>
-## type TlsClientConfig
+## type [TlsClientConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/client_config.go#L72-L92>)
 
 TlsClientConfig 定义用于保护gRPC客户端连接的TLS配置。 支持内联证书字符串和文件路径两种方式加载证书，用于建立安全的gRPC连接。
 
@@ -971,7 +971,7 @@ type TlsClientConfig struct {
 ```
 
 <a name="TlsClientConfig.ToOption"></a>
-### func \(\*TlsClientConfig\) ToOption
+### func \(\*TlsClientConfig\) [ToOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/client_config.go#L106>)
 
 ```go
 func (t *TlsClientConfig) ToOption() (option g.DialOption, err error)
@@ -987,7 +987,7 @@ ToOption 将TlsClientConfig转换为gRPC客户端的TLS连接选项。 根据配
 - err: 转换过程中发生的错误，如证书加载失败或配置无效
 
 <a name="TlsServerConfig"></a>
-## type TlsServerConfig
+## type [TlsServerConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server_config.go#L40-L60>)
 
 TlsServerConfig 定义用于保护gRPC服务器连接的TLS配置。 支持内联证书/密钥字符串和文件路径两种方式。
 
@@ -1016,7 +1016,7 @@ type TlsServerConfig struct {
 ```
 
 <a name="TlsServerConfig.ToOption"></a>
-### func \(\*TlsServerConfig\) ToOption
+### func \(\*TlsServerConfig\) [ToOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/server_config.go#L73>)
 
 ```go
 func (t *TlsServerConfig) ToOption() (option g.ServerOption, err error)
@@ -1032,7 +1032,7 @@ ToOption 将TLS配置转换为gRPC ServerOption。 返回一个credentials.Serve
 - error: 证书加载或验证期间遇到的任何错误
 
 <a name="WrapperServerStream"></a>
-## type WrapperServerStream
+## type [WrapperServerStream](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/stream.go#L13-L16>)
 
 WrapperServerStream 是 gRPC ServerStream 的包装器 主要作用是在流上下文\(Context\)中注入用户ID信息 这样在流处理过程中可以通过上下文获取用户身份信息
 
@@ -1043,7 +1043,7 @@ type WrapperServerStream struct {
 ```
 
 <a name="NewWrapperServerStream"></a>
-### func NewWrapperServerStream
+### func [NewWrapperServerStream](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/stream.go#L24>)
 
 ```go
 func NewWrapperServerStream(userID string, inner g.ServerStream) *WrapperServerStream
@@ -1057,7 +1057,7 @@ NewWrapperServerStream 创建新的包装器流 参数:
 返回: 包装后的 ServerStream
 
 <a name="WrapperServerStream.Context"></a>
-### func \(\*WrapperServerStream\) Context
+### func \(\*WrapperServerStream\) [Context](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/stream.go#L52>)
 
 ```go
 func (ss *WrapperServerStream) Context() context.Context
@@ -1066,7 +1066,7 @@ func (ss *WrapperServerStream) Context() context.Context
 Context 返回包装后的上下文 核心功能：在底层上下文中注入用户ID信息 这样在流处理过程中可以通过 ExtractUserID 函数获取用户身份
 
 <a name="WrapperServerStream.RecvMsg"></a>
-### func \(\*WrapperServerStream\) RecvMsg
+### func \(\*WrapperServerStream\) [RecvMsg](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/stream.go#L64>)
 
 ```go
 func (ss *WrapperServerStream) RecvMsg(m any) error
@@ -1075,7 +1075,7 @@ func (ss *WrapperServerStream) RecvMsg(m any) error
 RecvMsg 从客户端接收消息 这是对底层 ServerStream RecvMsg 方法的包装
 
 <a name="WrapperServerStream.SendHeader"></a>
-### func \(\*WrapperServerStream\) SendHeader
+### func \(\*WrapperServerStream\) [SendHeader](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/stream.go#L39>)
 
 ```go
 func (ss *WrapperServerStream) SendHeader(md metadata.MD) error
@@ -1084,7 +1084,7 @@ func (ss *WrapperServerStream) SendHeader(md metadata.MD) error
 SendHeader 发送响应头信息 这是对底层 ServerStream SendHeader 方法的包装
 
 <a name="WrapperServerStream.SendMsg"></a>
-### func \(\*WrapperServerStream\) SendMsg
+### func \(\*WrapperServerStream\) [SendMsg](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/stream.go#L58>)
 
 ```go
 func (ss *WrapperServerStream) SendMsg(m any) error
@@ -1093,7 +1093,7 @@ func (ss *WrapperServerStream) SendMsg(m any) error
 SendMsg 发送消息到客户端 这是对底层 ServerStream SendMsg 方法的包装
 
 <a name="WrapperServerStream.SetHeader"></a>
-### func \(\*WrapperServerStream\) SetHeader
+### func \(\*WrapperServerStream\) [SetHeader](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/stream.go#L33>)
 
 ```go
 func (ss *WrapperServerStream) SetHeader(md metadata.MD) error
@@ -1102,7 +1102,7 @@ func (ss *WrapperServerStream) SetHeader(md metadata.MD) error
 SetHeader 设置响应头信息 这是对底层 ServerStream SetHeader 方法的包装
 
 <a name="WrapperServerStream.SetTrailer"></a>
-### func \(\*WrapperServerStream\) SetTrailer
+### func \(\*WrapperServerStream\) [SetTrailer](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/grpc/stream.go#L45>)
 
 ```go
 func (ss *WrapperServerStream) SetTrailer(md metadata.MD)

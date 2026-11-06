@@ -20,7 +20,7 @@
 
 
 <a name="Build"></a>
-## func Build
+## func [Build](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/registry.go#L120>)
 
 ```go
 func Build(ctx context.Context, name string, deps Deps) (tool.BaseTool, error)
@@ -29,7 +29,7 @@ func Build(ctx context.Context, name string, deps Deps) (tool.BaseTool, error)
 Build 按名解析内置工具的实现并注入依赖，返回可被节点 4 消费的 eino tool.BaseTool。键未 注册实现即视为编程缺陷（元信息注册表与实现注册表漂移），返回英文错误；是否告警还是中止 由调用方决定，本包只负责快速暴露缺陷。
 
 <a name="Names"></a>
-## func Names
+## func [Names](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/registry.go#L133>)
 
 ```go
 func Names() []string
@@ -38,7 +38,7 @@ func Names() []string
 Names 返回已注册实现的内置工具名（字典序），供守卫测试与诊断使用。
 
 <a name="Register"></a>
-## func Register
+## func [Register](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/registry.go#L104>)
 
 ```go
 func Register(name string, builder Builder)
@@ -47,7 +47,7 @@ func Register(name string, builder Builder)
 Register 登记一个内置工具的实现，应由实现所在的 init 期调用。名称空、构造器为 nil 或 同名重复登记均视为编程缺陷，直接 panic（fail fast），避免非法注册表在生产中以残缺形态 运行。
 
 <a name="WithKnowledgeRuntime"></a>
-## func WithKnowledgeRuntime
+## func [WithKnowledgeRuntime](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/knowledge.go#L77>)
 
 ```go
 func WithKnowledgeRuntime(ctx context.Context, rt KnowledgeRuntime) context.Context
@@ -56,7 +56,7 @@ func WithKnowledgeRuntime(ctx context.Context, rt KnowledgeRuntime) context.Cont
 WithKnowledgeRuntime 把知识检索运行期检索器与截断长度写入 ctx，供 knowledge\_search 在工具 循环中取回。
 
 <a name="WithMemoryRuntime"></a>
-## func WithMemoryRuntime
+## func [WithMemoryRuntime](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/memory.go#L72>)
 
 ```go
 func WithMemoryRuntime(ctx context.Context, rt MemoryRuntime) context.Context
@@ -65,7 +65,7 @@ func WithMemoryRuntime(ctx context.Context, rt MemoryRuntime) context.Context
 WithMemoryRuntime 把记忆运行期写入器与归属信息写入 ctx，供 memory\_write 在工具循环中取回。
 
 <a name="Builder"></a>
-## type Builder
+## type [Builder](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/registry.go#L96>)
 
 Builder 是内置工具的构造器：按名取其实现，注入依赖后返回可被节点 4 消费的 eino tool.BaseTool（其 Info 提供含 JSON schema 的 \*schema.ToolInfo）。
 
@@ -74,7 +74,7 @@ type Builder func(ctx context.Context, deps Deps) (tool.BaseTool, error)
 ```
 
 <a name="Deps"></a>
-## type Deps
+## type [Deps](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/registry.go#L84-L92>)
 
 Deps 是构建内置工具时可注入的运行期依赖：数据库句柄、日志记录器与进程内 JS 运行时。 构造由调用方（运行时装配）持有并复用，实现不得修改其内容。
 
@@ -91,7 +91,7 @@ type Deps struct {
 ```
 
 <a name="KnowledgeHit"></a>
-## type KnowledgeHit
+## type [KnowledgeHit](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/knowledge.go#L40-L57>)
 
 KnowledgeHit 是知识检索工具的一次命中条目。
 
@@ -117,7 +117,7 @@ type KnowledgeHit struct {
 ```
 
 <a name="KnowledgeRuntime"></a>
-## type KnowledgeRuntime
+## type [KnowledgeRuntime](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/knowledge.go#L68-L73>)
 
 KnowledgeRuntime 是 knowledge\_search 运行期所需的上下文快照。由 Agent 节点 4 在派发工具前经 WithKnowledgeRuntime 注入 ctx。
 
@@ -131,7 +131,7 @@ type KnowledgeRuntime struct {
 ```
 
 <a name="KnowledgeSearcher"></a>
-## type KnowledgeSearcher
+## type [KnowledgeSearcher](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/knowledge.go#L61-L64>)
 
 KnowledgeSearcher 是知识检索器接口：由上层（internal/ai）的适配器实现， 内部调用 Retriever.Retrieve（命名空间与文档限定由适配器持有，模型入参不参与）。
 
@@ -143,7 +143,7 @@ type KnowledgeSearcher interface {
 ```
 
 <a name="MemoryRuntime"></a>
-## type MemoryRuntime
+## type [MemoryRuntime](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/memory.go#L58-L69>)
 
 MemoryRuntime 是 memory\_write 运行期所需的上下文快照：写入器与本次运行的归属信息。由 Agent 节点 4 在派发工具前经 WithMemoryRuntime 注入 ctx。
 
@@ -163,7 +163,7 @@ type MemoryRuntime struct {
 ```
 
 <a name="MemoryWriteInput"></a>
-## type MemoryWriteInput
+## type [MemoryWriteInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/memory.go#L32-L47>)
 
 MemoryWriteInput 是 memory\_write 工具交给写入器的入参，字段即落库所需的归属与内容。本包只做 轻量校验，缺省与规范化（如 kind 缺省 fact、正文规范化与去重）一律由写入器实现（internal/ai 的适配器）负责。
 
@@ -187,7 +187,7 @@ type MemoryWriteInput struct {
 ```
 
 <a name="MemoryWriter"></a>
-## type MemoryWriter
+## type [MemoryWriter](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/tools/memory.go#L51-L54>)
 
 MemoryWriter 是记忆写入器接口：把一条记忆落库并返回其 ID。语义由 internal/ai 的适配器实现 （向量化、精确哈希去重与语义合并等）。工具不感知实现细节。
 

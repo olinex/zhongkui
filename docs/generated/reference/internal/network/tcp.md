@@ -48,7 +48,7 @@ const (
 ```
 
 <a name="InitMetrics"></a>
-## func InitMetrics
+## func [InitMetrics](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/tcp/otel.go#L68>)
 
 ```go
 func InitMetrics()
@@ -57,7 +57,7 @@ func InitMetrics()
 InitMetrics 初始化 TCP 流重组的 OpenTelemetry 指标，仅执行一次。
 
 <a name="Reassembler"></a>
-## type Reassembler
+## type [Reassembler](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/tcp/reassembler.go#L25-L45>)
 
 Reassembler 表示一个TCP流重组器，用于从TCP数据包流中重组完整的应用层消息。 该结构体使用泛型设计，支持不同类型的TCP数据包实现，如IPv4 TCP和IPv6 TCP。 Reassembler 负责管理 TCP 连接的两端（客户端和服务端），处理三次握手、四次挥手、 乱序包重组及应用层协议识别等功能。
 
@@ -84,7 +84,7 @@ type Reassembler[P TCPPacket] struct {
 ```
 
 <a name="Reassembler[P].Close"></a>
-### func \(\*Reassembler\[P\]\) Close
+### func \(\*Reassembler\[P\]\) [Close](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/tcp/reassembler.go#L92>)
 
 ```go
 func (r *Reassembler[P]) Close()
@@ -93,7 +93,7 @@ func (r *Reassembler[P]) Close()
 Close 关闭流并释放客户端与服务端两侧的缓冲区资源。
 
 <a name="Reassembler[P].Meta"></a>
-### func \(\*Reassembler\[P\]\) Meta
+### func \(\*Reassembler\[P\]\) [Meta](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/tcp/reassembler.go#L76>)
 
 ```go
 func (r *Reassembler[P]) Meta() *detectors.StreamMeta
@@ -102,7 +102,7 @@ func (r *Reassembler[P]) Meta() *detectors.StreamMeta
 Meta 返回当前流的元数据，包含 TraceID、四元组、双方 ISN 与被动指纹等信息。
 
 <a name="Reassembler[P].String"></a>
-### func \(\*Reassembler\[P\]\) String
+### func \(\*Reassembler\[P\]\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/tcp/reassembler.go#L98>)
 
 ```go
 func (r *Reassembler[P]) String() string
@@ -111,7 +111,7 @@ func (r *Reassembler[P]) String() string
 String 返回TCP Reassembler的字符串表示。
 
 <a name="ReassemblerNode"></a>
-## type ReassemblerNode
+## type [ReassemblerNode](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/tcp/node.go#L19-L36>)
 
 ReassemblerNode 表示重组器节点，用于在双向链表中管理TCP流的重组器实例。 每个节点对应一个TCP连接流，包含重组器实例和LRU链表指针。 节点使用双向链表结构实现LRU（最近最少使用）缓存策略，提高流查找效率。
 
@@ -127,7 +127,7 @@ type ReassemblerNode[P TCPPacket] struct {
 ```
 
 <a name="Router"></a>
-## type Router
+## type [Router](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/tcp/router.go#L30-L35>)
 
 Router 是TCP包重组路由器，用于管理多个TCP重组器并将TCP包路由到相关的重组器中。 路由器使用基于元数据的哈希映射和双向链表实现高效的流管理和LRU缓存策略。
 
@@ -142,7 +142,7 @@ type Router[P TCPPacket] struct {
 ```
 
 <a name="NewRouter"></a>
-### func NewRouter
+### func [NewRouter](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/tcp/router.go#L52>)
 
 ```go
 func NewRouter[P TCPPacket](maxReassemblerSize, maxOutOrderPacketSize int, noticeTimeout time.Duration) Router[P]
@@ -167,7 +167,7 @@ NewRouter 创建并初始化一个新的TCP包重组路由器。 该函数创建
 - maxOutOrderPacketSize: 根据网络延迟和乱序程度设置
 
 <a name="Router[P].Run"></a>
-### func \(\*Router\[P\]\) Run
+### func \(\*Router\[P\]\) [Run](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/tcp/router.go#L225>)
 
 ```go
 func (r *Router[P]) Run(ctx context.Context, logger *logging.Logger, srcChan <-chan P, dstChan chan<- any) error
@@ -220,7 +220,7 @@ Run 启动路由器的主循环，处理来自源通道的TCP数据包。 这是
 3. 每个重组器节点有自己的清理逻辑，确保资源释放
 
 <a name="Side"></a>
-## type Side
+## type [Side](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/tcp/side.go#L102-L170>)
 
 Side 表示TCP流的一端（客户端或服务端），包含该端的连接状态、缓冲区和数据。 该结构体使用泛型设计，支持不同类型的TCP数据包实现，如IPv4 TCP和IPv6 TCP。 Side负责管理TCP连接的状态转换、序列号跟踪、乱序包缓冲和数据包重组等功能， 是TCP流重组和状态管理的核心组件。
 
@@ -247,7 +247,7 @@ type Side[P TCPPacket] struct {
 ```
 
 <a name="Side[P].UpdateComsumed"></a>
-### func \(\*Side\[P\]\) UpdateComsumed
+### func \(\*Side\[P\]\) [UpdateComsumed](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/tcp/side.go#L435>)
 
 ```go
 func (s *Side[P]) UpdateComsumed() (consumed uint64, startPayloadOffset, endPayloadOffset uint64, startTimestamp, endTimestamp time.Time)
@@ -256,7 +256,7 @@ func (s *Side[P]) UpdateComsumed() (consumed uint64, startPayloadOffset, endPayl
 UpdateComsumed 记账自上次调用以来已被消费（读取器取走）的字节数， 返回本次消费量、段的起止载荷偏移与起止时间戳；无可可靠计算的消费量时返回 0。
 
 <a name="TCPPacket"></a>
-## type TCPPacket
+## type [TCPPacket](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/tcp/packet.go#L22-L112>)
 
 TCPPacket 是TCP数据包的通用接口，封装了网络层捕获的TCP数据包信息。 该接口支持泛型设计，可适配不同的TCP数据包实现，如IPv4 TCP和IPv6 TCP。 接口定义了TCP数据包的核心属性和方法，用于在网络数据包处理流水线中进行 数据包解析、流重组、应用层协议识别等操作。
 
@@ -355,7 +355,7 @@ type TCPPacket interface {
 ```
 
 <a name="TCPState"></a>
-## type TCPState
+## type [TCPState](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/tcp/side.go#L19>)
 
 TCPState 表示TCP连接的状态，遵循标准TCP状态机。 该枚举类型定义了TCP连接生命周期中的关键状态，用于跟踪和管理TCP连接的建立、数据传输和终止过程。 状态转换遵循RFC 793定义的TCP状态机规范，确保TCP协议的可靠性和正确性。
 

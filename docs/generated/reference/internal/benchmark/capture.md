@@ -30,7 +30,7 @@ var TestPcapData []byte
 ```
 
 <a name="GenerateFallbackPcap"></a>
-## func GenerateFallbackPcap
+## func [GenerateFallbackPcap](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/packgen.go#L15>)
 
 ```go
 func GenerateFallbackPcap(outputPath string, numPackets int) error
@@ -39,7 +39,7 @@ func GenerateFallbackPcap(outputPath string, numPackets int) error
 GenerateFallbackPcap 生成包含指定数量 TCP 数据包的兜底 pcap 文件。
 
 <a name="LoopbackName"></a>
-## func LoopbackName
+## func [LoopbackName](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/replay.go#L70>)
 
 ```go
 func LoopbackName() string
@@ -48,7 +48,7 @@ func LoopbackName() string
 LoopbackName 返回系统中第一个环回网卡名称，未找到时返回空字符串。
 
 <a name="OpenInterface"></a>
-## func OpenInterface
+## func [OpenInterface](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/replay.go#L109>)
 
 ```go
 func OpenInterface(name string) (*pcap.Handle, error)
@@ -57,7 +57,7 @@ func OpenInterface(name string) (*pcap.Handle, error)
 OpenInterface 在指定网卡上打开用于发包的 pcap handle。
 
 <a name="OpenLoopback"></a>
-## func OpenLoopback
+## func [OpenLoopback](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/replay.go#L100>)
 
 ```go
 func OpenLoopback() (*pcap.Handle, error)
@@ -66,7 +66,7 @@ func OpenLoopback() (*pcap.Handle, error)
 OpenLoopback 在环回网卡上打开用于发包的 pcap handle。
 
 <a name="PrintResultsTable"></a>
-## func PrintResultsTable
+## func [PrintResultsTable](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/metrics.go#L65>)
 
 ```go
 func PrintResultsTable()
@@ -75,7 +75,7 @@ func PrintResultsTable()
 PrintResultsTable 以表格形式打印所有收集到的基准指标。
 
 <a name="CaptureMetrics"></a>
-## type CaptureMetrics
+## type [CaptureMetrics](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/metrics.go#L15-L34>)
 
 CaptureMetrics 单次抓包基准测试的性能指标集合。
 
@@ -103,7 +103,7 @@ type CaptureMetrics struct {
 ```
 
 <a name="CaptureMetrics.Compute"></a>
-### func \(\*CaptureMetrics\) Compute
+### func \(\*CaptureMetrics\) [Compute](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/metrics.go#L42>)
 
 ```go
 func (m *CaptureMetrics) Compute()
@@ -112,7 +112,7 @@ func (m *CaptureMetrics) Compute()
 Compute 根据持续时间与计数计算 PPS、BPS、丢包数与丢包率。
 
 <a name="CaptureMetrics.ReportToBenchmark"></a>
-### func \(\*CaptureMetrics\) ReportToBenchmark
+### func \(\*CaptureMetrics\) [ReportToBenchmark](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/metrics.go#L54>)
 
 ```go
 func (m *CaptureMetrics) ReportToBenchmark(b *testing.B)
@@ -121,7 +121,7 @@ func (m *CaptureMetrics) ReportToBenchmark(b *testing.B)
 ReportToBenchmark 将指标上报给基准测试框架并追加到全局结果集。
 
 <a name="PcapPacket"></a>
-## type PcapPacket
+## type [PcapPacket](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/replay.go#L14-L19>)
 
 PcapPacket 单个 pcap 数据包及其捕获时间戳。
 
@@ -135,7 +135,7 @@ type PcapPacket struct {
 ```
 
 <a name="LoadPcap"></a>
-### func LoadPcap
+### func [LoadPcap](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/replay.go#L22>)
 
 ```go
 func LoadPcap(path string) ([]PcapPacket, error)
@@ -144,7 +144,7 @@ func LoadPcap(path string) ([]PcapPacket, error)
 LoadPcap 从指定路径的 pcap 文件读取全部数据包。
 
 <a name="LoadPcapFromBytes"></a>
-### func LoadPcapFromBytes
+### func [LoadPcapFromBytes](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/replay.go#L49>)
 
 ```go
 func LoadPcapFromBytes(data []byte) ([]PcapPacket, error)
@@ -153,7 +153,7 @@ func LoadPcapFromBytes(data []byte) ([]PcapPacket, error)
 LoadPcapFromBytes 从内存字节读取全部 pcap 数据包。
 
 <a name="ReplayResult"></a>
-## type ReplayResult
+## type [ReplayResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/replay.go#L86-L97>)
 
 ReplayResult 回放结果：数据包列表、起止时间与发送统计。
 
@@ -173,7 +173,7 @@ type ReplayResult struct {
 ```
 
 <a name="ReplayToLoopback"></a>
-### func ReplayToLoopback
+### func [ReplayToLoopback](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/replay.go#L118>)
 
 ```go
 func ReplayToLoopback(handle *pcap.Handle, packets []PcapPacket, topspeed bool) (*ReplayResult, error)
@@ -182,7 +182,7 @@ func ReplayToLoopback(handle *pcap.Handle, packets []PcapPacket, topspeed bool) 
 ReplayToLoopback 将数据包回放到环回网卡，topspeed 为 true 时全速发送，否则按原始时间间隔发送。
 
 <a name="SlowReplayToLoopback"></a>
-### func SlowReplayToLoopback
+### func [SlowReplayToLoopback](<https://gitee.com/olinex/zhongkui/blob/master/internal/benchmark/capture/replay.go#L155>)
 
 ```go
 func SlowReplayToLoopback(handle *pcap.Handle, packets []PcapPacket, interval time.Duration) (*ReplayResult, error)

@@ -14,7 +14,7 @@
 
 
 <a name="Group"></a>
-## type Group
+## type [Group](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/errgroupx/group.go#L17-L24>)
 
 Group 是对 errgroup.Group 的封装，为每个协程提供错误溯源能力。 当 f 返回非 nil 错误时，错误信息会自动包装为 "goroutine\#N: \<original\>" 格式， 其中 N 为 Go 方法的调用序号（从 0 开始）。
 
@@ -25,7 +25,7 @@ type Group struct {
 ```
 
 <a name="WithContext"></a>
-### func WithContext
+### func [WithContext](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/errgroupx/group.go#L28>)
 
 ```go
 func WithContext(ctx context.Context) (*Group, context.Context)
@@ -34,7 +34,7 @@ func WithContext(ctx context.Context) (*Group, context.Context)
 WithContext 返回一个新的 Group 和关联的 context。 context 会在第一个协程返回非 nil 错误时被取消。
 
 <a name="Group.Go"></a>
-### func \(\*Group\) Go
+### func \(\*Group\) [Go](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/errgroupx/group.go#L51>)
 
 ```go
 func (g *Group) Go(f func() error)
@@ -43,7 +43,7 @@ func (g *Group) Go(f func() error)
 Go 启动一个协程运行 f，自动分配递增的索引标识。 如果 f 返回错误，错误会被包装为 "goroutine\#N: \<original\>" 格式， 使用 %w 保留原始错误链，因此 errors.Is / errors.As 仍然可用。 与 GoPrefix 的差异仅在标识格式：Go 使用匿名序号，GoPrefix 使用自定义前缀。
 
 <a name="Group.GoNamed"></a>
-### func \(\*Group\) GoNamed
+### func \(\*Group\) [GoNamed](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/errgroupx/group.go#L64>)
 
 ```go
 func (g *Group) GoNamed(name string, f func() error)
@@ -52,7 +52,7 @@ func (g *Group) GoNamed(name string, f func() error)
 GoNamed 启动一个协程运行 f，使用自定义名称标识。 如果 f 返回错误，错误会被包装为 "\[name\]: \<original\>" 格式。 适用于希望用语义化名称（而非序号）标识协程的场景。
 
 <a name="Group.GoPrefix"></a>
-### func \(\*Group\) GoPrefix
+### func \(\*Group\) [GoPrefix](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/errgroupx/group.go#L37>)
 
 ```go
 func (g *Group) GoPrefix(prefix string, f func() error)
@@ -61,7 +61,7 @@ func (g *Group) GoPrefix(prefix string, f func() error)
 GoPrefix 启动一个协程运行 f，使用自定义前缀加递增序号的组合标识。 如果 f 返回错误，错误会被包装为 "\[prefix\#N\]: \<original\>" 格式， 使用 %w 保留原始错误链，因此 errors.Is / errors.As 仍然可用。 与 Go 的差异仅在标识格式：Go 使用匿名序号，GoPrefix 在前缀之外仍带序号。
 
 <a name="Group.SetLimit"></a>
-### func \(\*Group\) SetLimit
+### func \(\*Group\) [SetLimit](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/errgroupx/group.go#L75>)
 
 ```go
 func (g *Group) SetLimit(n int)
@@ -70,7 +70,7 @@ func (g *Group) SetLimit(n int)
 SetLimit 设置并发运行的协程数量上限。 传递 \<= 0 的值表示不限制。
 
 <a name="Group.Wait"></a>
-### func \(\*Group\) Wait
+### func \(\*Group\) [Wait](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/errgroupx/group.go#L80>)
 
 ```go
 func (g *Group) Wait() error

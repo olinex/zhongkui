@@ -27,7 +27,7 @@ var (
 ```
 
 <a name="PrintVersion"></a>
-## func PrintVersion
+## func [PrintVersion](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/version/version.go#L114>)
 
 ```go
 func PrintVersion(verbose bool) string
@@ -36,7 +36,7 @@ func PrintVersion(verbose bool) string
 PrintVersion 以格式化方式输出版本信息
 
 <a name="Short"></a>
-## func Short
+## func [Short](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/version/version.go#L109>)
 
 ```go
 func Short() string

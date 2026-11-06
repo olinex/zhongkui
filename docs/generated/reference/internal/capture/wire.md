@@ -28,7 +28,7 @@ const (
 ```
 
 <a name="LibpcapWire"></a>
-## type LibpcapWire
+## type [LibpcapWire](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/wire/libpcap.go#L21-L23>)
 
 LibpcapWire 基于 libpcap 的抓包实现，封装 pcap.Handle。
 
@@ -39,7 +39,7 @@ type LibpcapWire struct {
 ```
 
 <a name="LibpcapWire.Name"></a>
-### func \(\*LibpcapWire\) Name
+### func \(\*LibpcapWire\) [Name](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/wire/libpcap.go#L67>)
 
 ```go
 func (l *LibpcapWire) Name() string
@@ -48,7 +48,7 @@ func (l *LibpcapWire) Name() string
 Name 返回抓包实现的名称。
 
 <a name="LibpcapWire.ZeroCopyReadPacketData"></a>
-### func \(\*LibpcapWire\) ZeroCopyReadPacketData
+### func \(\*LibpcapWire\) [ZeroCopyReadPacketData](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/wire/libpcap.go#L72>)
 
 ```go
 func (l *LibpcapWire) ZeroCopyReadPacketData() *RawPacket
@@ -57,7 +57,7 @@ func (l *LibpcapWire) ZeroCopyReadPacketData() *RawPacket
 ZeroCopyReadPacketData 零拷贝读取一个数据包，返回原始包数据与捕获信息。
 
 <a name="RawPacket"></a>
-## type RawPacket
+## type [RawPacket](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/wire/base.go#L18-L25>)
 
 RawPacket 单个原始抓包数据包，携带数据、捕获信息与读取错误。
 
@@ -73,7 +73,7 @@ type RawPacket struct {
 ```
 
 <a name="RawPacket.HasNext"></a>
-### func \(\*RawPacket\) HasNext
+### func \(\*RawPacket\) [HasNext](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/wire/base.go#L28>)
 
 ```go
 func (r *RawPacket) HasNext() bool
@@ -82,7 +82,7 @@ func (r *RawPacket) HasNext() bool
 模仿 gopacket 的 packetsToChannel
 
 <a name="Wire"></a>
-## type Wire
+## type [Wire](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/wire/base.go#L59-L70>)
 
 Wire 定义底层抓包设备的统一接口，屏蔽各平台实现差异。
 
@@ -102,7 +102,7 @@ type Wire interface {
 ```
 
 <a name="NewLibpcapWire"></a>
-### func NewLibpcapWire
+### func [NewLibpcapWire](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/wire/libpcap.go#L26>)
 
 ```go
 func NewLibpcapWire(config *reporter_v1.Config) (Wire, error)
@@ -111,7 +111,7 @@ func NewLibpcapWire(config *reporter_v1.Config) (Wire, error)
 NewLibpcapWire 根据配置创建 libpcap 抓包实例，设置缓冲区、立即模式、快照长度与混杂模式等参数。
 
 <a name="NewPlatformWire"></a>
-### func NewPlatformWire
+### func [NewPlatformWire](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/wire/darwin.go#L10>)
 
 ```go
 func NewPlatformWire(config *reporter_v1.Config) (Wire, error)
@@ -120,7 +120,7 @@ func NewPlatformWire(config *reporter_v1.Config) (Wire, error)
 NewPlatformWire 在 Darwin 平台创建基于 libpcap 的抓包实例。
 
 <a name="NewWire"></a>
-### func NewWire
+### func [NewWire](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/wire/base.go#L73>)
 
 ```go
 func NewWire(ctx context.Context, config *reporter_v1.Config, logger *logging.Logger) (Wire, error)

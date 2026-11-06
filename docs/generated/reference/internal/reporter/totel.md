@@ -34,7 +34,7 @@ const (
 ```
 
 <a name="EndSpan"></a>
-## func EndSpan
+## func [EndSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/reporter/totel/otel.go#L143>)
 
 ```go
 func EndSpan(span trace.Span, errPtr *error)
@@ -43,7 +43,7 @@ func EndSpan(span trace.Span, errPtr *error)
 EndSpan 安全结束 span，并在发生错误时记录错误状态。
 
 <a name="InitMetrics"></a>
-## func InitMetrics
+## func [InitMetrics](<https://gitee.com/olinex/zhongkui/blob/master/internal/reporter/totel/otel.go#L44>)
 
 ```go
 func InitMetrics()
@@ -52,7 +52,7 @@ func InitMetrics()
 InitMetrics 初始化 Reporter 服务的 OpenTelemetry 指标，仅执行一次。
 
 <a name="RecordFeedbackRequest"></a>
-## func RecordFeedbackRequest
+## func [RecordFeedbackRequest](<https://gitee.com/olinex/zhongkui/blob/master/internal/reporter/totel/otel.go#L129>)
 
 ```go
 func RecordFeedbackRequest(ctx context.Context)
@@ -61,7 +61,7 @@ func RecordFeedbackRequest(ctx context.Context)
 RecordFeedbackRequest 记录一次 Feedback 请求。
 
 <a name="RecordFeedbackTaskEnqueued"></a>
-## func RecordFeedbackTaskEnqueued
+## func [RecordFeedbackTaskEnqueued](<https://gitee.com/olinex/zhongkui/blob/master/internal/reporter/totel/otel.go#L134>)
 
 ```go
 func RecordFeedbackTaskEnqueued(ctx context.Context)
@@ -70,7 +70,7 @@ func RecordFeedbackTaskEnqueued(ctx context.Context)
 RecordFeedbackTaskEnqueued 记录一次 Feedback 触发的异步任务入队。
 
 <a name="RecordWatchConnection"></a>
-## func RecordWatchConnection
+## func [RecordWatchConnection](<https://gitee.com/olinex/zhongkui/blob/master/internal/reporter/totel/otel.go#L117>)
 
 ```go
 func RecordWatchConnection(ctx context.Context)
@@ -79,7 +79,7 @@ func RecordWatchConnection(ctx context.Context)
 RecordWatchConnection 记录一次 Watch 连接建立。
 
 <a name="RecordWatchEvent"></a>
-## func RecordWatchEvent
+## func [RecordWatchEvent](<https://gitee.com/olinex/zhongkui/blob/master/internal/reporter/totel/otel.go#L122>)
 
 ```go
 func RecordWatchEvent(ctx context.Context, eventType string)
@@ -88,7 +88,7 @@ func RecordWatchEvent(ctx context.Context, eventType string)
 RecordWatchEvent 记录一次 Watch 配置变更事件。
 
 <a name="StartFeedbackSpan"></a>
-## func StartFeedbackSpan
+## func [StartFeedbackSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/reporter/totel/otel.go#L107>)
 
 ```go
 func StartFeedbackSpan(ctx context.Context) (context.Context, trace.Span)
@@ -97,7 +97,7 @@ func StartFeedbackSpan(ctx context.Context) (context.Context, trace.Span)
 StartFeedbackSpan 在 Feedback 流式接口中创建 span。
 
 <a name="StartRunSpan"></a>
-## func StartRunSpan
+## func [StartRunSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/reporter/totel/otel.go#L90>)
 
 ```go
 func StartRunSpan(ctx context.Context) (context.Context, trace.Span)
@@ -106,7 +106,7 @@ func StartRunSpan(ctx context.Context) (context.Context, trace.Span)
 StartRunSpan 在 ReporterService.Run 中创建 span。
 
 <a name="StartWatchSpan"></a>
-## func StartWatchSpan
+## func [StartWatchSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/reporter/totel/otel.go#L96>)
 
 ```go
 func StartWatchSpan(ctx context.Context, resourceKey string) (context.Context, trace.Span)

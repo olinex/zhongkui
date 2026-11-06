@@ -19,7 +19,7 @@
 
 
 <a name="Exists"></a>
-## func Exists
+## func [Exists](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/enum/enum.go#L164>)
 
 ```go
 func Exists(name string) bool
@@ -28,7 +28,7 @@ func Exists(name string) bool
 Exists 判断枚举类是否已注册。
 
 <a name="Register"></a>
-## func Register
+## func [Register](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/enum/enum.go#L91>)
 
 ```go
 func Register(t Type)
@@ -42,7 +42,7 @@ Register 注册枚举类，条目在注册时快照。 校验规则（违规直�
 - 类内 value 非空且互相唯一。
 
 <a name="RegisterSource"></a>
-## func RegisterSource
+## func [RegisterSource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/enum/enum.go#L107>)
 
 ```go
 func RegisterSource(name string, entries func() []Entry)
@@ -51,7 +51,7 @@ func RegisterSource(name string, entries func() []Entry)
 RegisterSource 注册一个取值空间取自业务注册表的枚举类：条目不在注册时快照，而在每次读取 （Get / List）时经 entries 从业务注册表实时派生。适用于来源注册表由同一包内多个 init\(\) 依次 填充的场景（如渠道工厂、数据源插件），使条目完整性不取决于包内 init 的文件顺序；取值空间在 运行生命周期内仍固定（无动态枚举）。类名唯一性、非空与 entries 非 nil 的约束同 Register， 违规直接 panic。
 
 <a name="Entry"></a>
-## type Entry
+## type [Entry](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/enum/enum.go#L20-L25>)
 
 Entry 枚举条目：key 为类内唯一标识（i18n 定位依据），value 为数据库存储值。 key 与 value 可以相同（多数枚举），也可以在"富枚举"场景下分离 （如目标模型类：key=httpTransport、value=完整类型键）。
 
@@ -65,7 +65,7 @@ type Entry struct {
 ```
 
 <a name="EntriesOf"></a>
-### func EntriesOf
+### func [EntriesOf](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/enum/enum.go#L37>)
 
 ```go
 func EntriesOf[T ~string](values []T) []Entry
@@ -74,7 +74,7 @@ func EntriesOf[T ~string](values []T) []Entry
 EntriesOf 把「key 与 value 相同」的取值序列转为枚举条目列表（多数枚举类即此形态）， 使按类声明取值空间的枚举类在注册时直接复用同一份取值序列，无需在注册处重抄一遍字面量。
 
 <a name="Type"></a>
-## type Type
+## type [Type](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/enum/enum.go#L28-L33>)
 
 Type 枚举类：name 全局唯一，Entries 内 key/value 各自唯一。
 
@@ -88,7 +88,7 @@ type Type struct {
 ```
 
 <a name="Get"></a>
-### func Get
+### func [Get](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/enum/enum.go#L155>)
 
 ```go
 func Get(name string) (*Type, bool)
@@ -97,7 +97,7 @@ func Get(name string) (*Type, bool)
 Get 按类名返回枚举类（条目已就绪），未注册返回 false。
 
 <a name="List"></a>
-### func List
+### func [List](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/enum/enum.go#L170>)
 
 ```go
 func List() []*Type
@@ -106,7 +106,7 @@ func List() []*Type
 List 返回全部已注册枚举类（条目已就绪），按类名排序（输出顺序稳定）。
 
 <a name="Type.EntryByKey"></a>
-### func \(\*Type\) EntryByKey
+### func \(\*Type\) [EntryByKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/enum/enum.go#L52>)
 
 ```go
 func (t *Type) EntryByKey(key string) (Entry, bool)
@@ -115,7 +115,7 @@ func (t *Type) EntryByKey(key string) (Entry, bool)
 EntryByKey 按 key 查找条目，未命中返回 false。
 
 <a name="Type.EntryByValue"></a>
-### func \(\*Type\) EntryByValue
+### func \(\*Type\) [EntryByValue](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/enum/enum.go#L62>)
 
 ```go
 func (t *Type) EntryByValue(value string) (Entry, bool)
@@ -124,7 +124,7 @@ func (t *Type) EntryByValue(value string) (Entry, bool)
 EntryByValue 按 value 查找条目，未命中返回 false。
 
 <a name="Type.LabelKey"></a>
-### func \(\*Type\) LabelKey
+### func \(\*Type\) [LabelKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/enum/enum.go#L47>)
 
 ```go
 func (t *Type) LabelKey(key string) string
@@ -133,7 +133,7 @@ func (t *Type) LabelKey(key string) string
 LabelKey 返回类内 key 对应的 i18n label 键（enum.\<类名\>.\<key\>）。 label 键共享顶层 enum. 前缀，同一类的键集中在 enum.\<类名\>. 下。
 
 <a name="Type.Resolve"></a>
-### func \(\*Type\) Resolve
+### func \(\*Type\) [Resolve](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/enum/enum.go#L74>)
 
 ```go
 func (t *Type) Resolve(kv string) (Entry, bool)

@@ -19,7 +19,7 @@
 
 
 <a name="Config"></a>
-## type Config
+## type [Config](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/resourcepool/config.go#L13-L32>)
 
 Config 资源池配置，是 go\-commons\-pool 的 ObjectPoolConfig 面的友好包装， 提供贴合本项目需求的默认值并映射到底层引擎配置。
 
@@ -47,7 +47,7 @@ type Config struct {
 ```
 
 <a name="NewDefaultConfig"></a>
-### func NewDefaultConfig
+### func [NewDefaultConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/resourcepool/config.go#L37>)
 
 ```go
 func NewDefaultConfig() *Config
@@ -56,7 +56,7 @@ func NewDefaultConfig() *Config
 NewDefaultConfig 返回适合长连接复用的默认资源池配置： 开启 testOnBorrow/testOnCreate/blockWhenExhausted，设定合理的连接上限与 闲置驱逐阈值，使空闲连接在超时后被定时回收、失效连接在借出时自动重建。
 
 <a name="Key"></a>
-## type Key
+## type [Key](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/resourcepool/resourcepool.go#L40>)
 
 Key 资源池标识。上层决定其编码内容（如渠道类型 \+ 规范化配置）， 语义上不同的配置应映射到不同 Key，以维护相互独立的连接池。
 
@@ -65,7 +65,7 @@ type Key string
 ```
 
 <a name="Lifespan"></a>
-## type Lifespan
+## type [Lifespan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/resourcepool/resourcepool.go#L27-L36>)
 
 Lifespan 可选生命周期钩子接口。被池化的资源类型可实现该接口，以便资源池在 创建、校验与销毁时驱动其底层外部资源（如 SMTP 长连接）的开闭与探活。 未实现该接口的资源类型按「纯对象复用 \+ 始终可用（Validate 恒 true）」处理， Destroy 时若类型同时实现 io.Closer 则调用其 Close。
 
@@ -83,7 +83,7 @@ type Lifespan interface {
 ```
 
 <a name="Make"></a>
-## type Make
+## type [Make](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/resourcepool/resourcepool.go#L44>)
 
 Make 依据 Key 惰性构建一个资源对象。资源池仅在首次需要时调用（不预热）， 后续复用池中已有对象。返回的 T 若实现 Lifespan，其 Open 会被立即调用。
 
@@ -92,7 +92,7 @@ type Make[T any] func(key Key) (T, error)
 ```
 
 <a name="Manager"></a>
-## type Manager
+## type [Manager](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/resourcepool/pool.go#L19-L26>)
 
 Manager 泛型资源池管理器：按不透明 Key 惰性维护一组独立的 go\-commons\-pool 对象池，统一驱动 Lifespan 生命周期钩子，并对外提供 Acquire/Release/ Invalidate/CloseAll。Manager 是进程级共享的，多个使用方可并发访问（线程安全）。
 
@@ -103,7 +103,7 @@ type Manager[T any] struct {
 ```
 
 <a name="NewManager"></a>
-### func NewManager
+### func [NewManager](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/resourcepool/pool.go#L29>)
 
 ```go
 func NewManager[T any](make Make[T], cfg *Config) *Manager[T]
@@ -112,7 +112,7 @@ func NewManager[T any](make Make[T], cfg *Config) *Manager[T]
 NewManager 创建资源池管理器。cfg 为 nil 时使用 NewDefaultConfig。
 
 <a name="Manager[T].Acquire"></a>
-### func \(\*Manager\[T\]\) Acquire
+### func \(\*Manager\[T\]\) [Acquire](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/resourcepool/pool.go#L84>)
 
 ```go
 func (m *Manager[T]) Acquire(ctx context.Context, key Key) (T, error)
@@ -121,7 +121,7 @@ func (m *Manager[T]) Acquire(ctx context.Context, key Key) (T, error)
 Acquire 从与 key 关联的池中借出并返回一个经校验可用的资源对象。 同一对象在同一时刻最多被一个调用方独占；池空且允许阻塞时等待直到有对象可用 或 ctx 被取消。返回非 nil 错误表示借出失败（含新建时 Open 失败）。
 
 <a name="Manager[T].Clear"></a>
-### func \(\*Manager\[T\]\) Clear
+### func \(\*Manager\[T\]\) [Clear](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/resourcepool/pool.go#L117>)
 
 ```go
 func (m *Manager[T]) Clear(ctx context.Context, key Key)
@@ -130,7 +130,7 @@ func (m *Manager[T]) Clear(ctx context.Context, key Key)
 Clear 销毁指定 Key 池中全部闲置对象（借出的对象不受影响）。 用于资源"已过期"的场景（如数据源被覆盖/注销）：闲置实例立即销毁， 借出的实例由调用方结合版本校验在归还时选择 Invalidate 而非 Release， 使下次借出必然经 Make 重建新实例。
 
 <a name="Manager[T].CloseAll"></a>
-### func \(\*Manager\[T\]\) CloseAll
+### func \(\*Manager\[T\]\) [CloseAll](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/resourcepool/pool.go#L124>)
 
 ```go
 func (m *Manager[T]) CloseAll(ctx context.Context)
@@ -139,7 +139,7 @@ func (m *Manager[T]) CloseAll(ctx context.Context)
 CloseAll 关闭全部对象池并销毁存活（闲置）对象，释放底层外部资源。
 
 <a name="Manager[T].Invalidate"></a>
-### func \(\*Manager\[T\]\) Invalidate
+### func \(\*Manager\[T\]\) [Invalidate](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/resourcepool/pool.go#L107>)
 
 ```go
 func (m *Manager[T]) Invalidate(ctx context.Context, key Key, v T)
@@ -148,7 +148,7 @@ func (m *Manager[T]) Invalidate(ctx context.Context, key Key, v T)
 Invalidate 将资源对象从池中失效并销毁（不回收复用）。
 
 <a name="Manager[T].Release"></a>
-### func \(\*Manager\[T\]\) Release
+### func \(\*Manager\[T\]\) [Release](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/resourcepool/pool.go#L100>)
 
 ```go
 func (m *Manager[T]) Release(ctx context.Context, key Key, v T)

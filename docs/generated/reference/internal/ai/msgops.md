@@ -33,7 +33,7 @@
 
 
 <a name="APIModeOf"></a>
-## func APIModeOf
+## func [APIModeOf](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/kind.go#L16>)
 
 ```go
 func APIModeOf[M adk.MessageType]() llm.APIMode
@@ -42,7 +42,7 @@ func APIModeOf[M adk.MessageType]() llm.APIMode
 APIModeOf 返回 M 所对应的模型接口形态：\*schema.AgenticMessage 走 responses， 其余（\*schema.Message）走 chat。取值直接复用 llm.APIMode，本包不另行声明。
 
 <a name="AssistantDeltaText"></a>
-## func AssistantDeltaText
+## func [AssistantDeltaText](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/extract.go#L63>)
 
 ```go
 func AssistantDeltaText[M adk.MessageType](msg M) string
@@ -53,7 +53,7 @@ AssistantDeltaText 返回一个流式分片中的 assistant 文本。
 流式分片与完整消息共用同一套文本字段（\*schema.Message.Content / AssistantGenMultiContent、\*schema.AgenticMessage.AssistantGenText）， 因此当前直接委托 AssistantText；保留独立入口是为了让流式调用点语义 明确，并为后续按分片处理留出扩展点。
 
 <a name="AssistantText"></a>
-## func AssistantText
+## func [AssistantText](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/extract.go#L34>)
 
 ```go
 func AssistantText[M adk.MessageType](msg M) string
@@ -64,7 +64,7 @@ AssistantText 返回消息中由模型生成的 assistant 文本。
 对 \*schema.Message：优先返回 Content；为空时拼接 AssistantGenMultiContent 中的文本分片（不含用户输入与工具结果）。 对 \*schema.AgenticMessage：拼接全部 AssistantGenText 块的文本，不含 reasoning、用户输入与函数工具结果。msg 为 nil 时返回空串。
 
 <a name="ConcatChunks"></a>
-## func ConcatChunks
+## func [ConcatChunks](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/variant.go#L122>)
 
 ```go
 func ConcatChunks[M adk.MessageType](chunks []M) (M, error)
@@ -73,7 +73,7 @@ func ConcatChunks[M adk.MessageType](chunks []M) (M, error)
 ConcatChunks 使用 eino schema 辅助函数合并流式消息分片。
 
 <a name="DecodeForModel"></a>
-## func DecodeForModel
+## func [DecodeForModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/convert.go#L17>)
 
 ```go
 func DecodeForModel[M adk.MessageType](payload []byte, stored llm.APIMode) (M, error)
@@ -82,7 +82,7 @@ func DecodeForModel[M adk.MessageType](payload []byte, stored llm.APIMode) (M, e
 DecodeForModel 把持久化的原生消息负载解码为 M。存储的类型 可能与 M 不同（例如某个槽位的 api\_mode 变更后）；消息会经由 文本/工具调用/工具结果字段转换，从而让历史在 跨表示时仍可用。
 
 <a name="DrainToolResult"></a>
-## func DrainToolResult
+## func [DrainToolResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/variant.go#L73>)
 
 ```go
 func DrainToolResult[M adk.MessageType](mv *adk.TypedMessageVariant[M]) (content, id, name string)
@@ -91,7 +91,7 @@ func DrainToolResult[M adk.MessageType](mv *adk.TypedMessageVariant[M]) (content
 DrainToolResult 消费工具结果变体，返回其文本和调用 ID。
 
 <a name="HasContent"></a>
-## func HasContent
+## func [HasContent](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/extract.go#L102>)
 
 ```go
 func HasContent[M adk.MessageType](msg M) bool
@@ -102,7 +102,7 @@ HasContent 表示消息是否携带值得持久化的内容。
 对 \*schema.Message：Content、ReasoningContent、ToolCalls、 MultiContent 或 AssistantGenMultiContent 任一非空即返回 true。 对 \*schema.AgenticMessage：ContentBlocks 非空即返回 true（每个块自身 已是结构化内容）。nil 消息与未知类型返回 false。该判断只回答「是否有 内容」，不校验内容是否有效。
 
 <a name="IsNil"></a>
-## func IsNil
+## func [IsNil](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/variant.go#L16>)
 
 ```go
 func IsNil[M adk.MessageType](msg M) bool
@@ -111,7 +111,7 @@ func IsNil[M adk.MessageType](msg M) bool
 IsNil 表示泛型消息值是否为 nil。
 
 <a name="NewAssistant"></a>
-## func NewAssistant
+## func [NewAssistant](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/construct.go#L51>)
 
 ```go
 func NewAssistant[M adk.MessageType](text string, calls []ToolCall) M
@@ -120,7 +120,7 @@ func NewAssistant[M adk.MessageType](text string, calls []ToolCall) M
 NewAssistant 构造一条 assistant 消息，可附带函数 工具调用。
 
 <a name="NewSystem"></a>
-## func NewSystem
+## func [NewSystem](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/construct.go#L42>)
 
 ```go
 func NewSystem[M adk.MessageType](text string) M
@@ -129,7 +129,7 @@ func NewSystem[M adk.MessageType](text string) M
 NewSystem 为 M 构造一条系统消息。
 
 <a name="NewToolResult"></a>
-## func NewToolResult
+## func [NewToolResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/construct.go#L128>)
 
 ```go
 func NewToolResult[M adk.MessageType](id, name, content string) M
@@ -138,7 +138,7 @@ func NewToolResult[M adk.MessageType](id, name, content string) M
 NewToolResult 为 M 构造一条工具结果消息。
 
 <a name="NewUser"></a>
-## func NewUser
+## func [NewUser](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/construct.go#L34>)
 
 ```go
 func NewUser[M adk.MessageType](text string) M
@@ -147,7 +147,7 @@ func NewUser[M adk.MessageType](text string) M
 NewUser 为 M 构造一条用户消息。
 
 <a name="NormalizeForSession"></a>
-## func NormalizeForSession
+## func [NormalizeForSession](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/normalize.go#L24>)
 
 ```go
 func NormalizeForSession[M adk.MessageType](msg M) M
@@ -156,7 +156,7 @@ func NormalizeForSession[M adk.MessageType](msg M) M
 NormalizeForSession 返回可安全交给服务商持久化的消息。 Agentic 模型实现会把 Responses API 的条目 ID/状态附加到 内容块上；重放服务商原生输出条目时需要这些 ID。 仅用于流式的元数据会被丢弃。
 
 <a name="NormalizeMessagesForModelInput"></a>
-## func NormalizeMessagesForModelInput
+## func [NormalizeMessagesForModelInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/normalize.go#L37>)
 
 ```go
 func NormalizeMessagesForModelInput[M adk.MessageType](messages []M) []M
@@ -165,7 +165,7 @@ func NormalizeMessagesForModelInput[M adk.MessageType](messages []M) []M
 NormalizeMessagesForModelInput 在把存储的消息传回同类 Runner/ChatModel 之前对其进行预处理。
 
 <a name="ReasoningText"></a>
-## func ReasoningText
+## func [ReasoningText](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/extract.go#L72>)
 
 ```go
 func ReasoningText[M adk.MessageType](msg M) string
@@ -176,7 +176,7 @@ ReasoningText 返回消息或流式分片中的 reasoning（思考过程）文�
 对 \*schema.Message：返回 ReasoningContent。 对 \*schema.AgenticMessage：拼接全部 Reasoning 块的 Text；不含正文与 工具调用。msg 为 nil 或未知类型时返回空串。
 
 <a name="ReplaceAssistantText"></a>
-## func ReplaceAssistantText
+## func [ReplaceAssistantText](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/construct.go#L85>)
 
 ```go
 func ReplaceAssistantText[M adk.MessageType](msg M, text string) M
@@ -185,7 +185,7 @@ func ReplaceAssistantText[M adk.MessageType](msg M, text string) M
 ReplaceAssistantText 返回把 assistant 生成正文替换为 text 的消息副本：思考、工具调用、 多模态分片与块元数据原样保留。用于剥离模型输出中仅供机器读取的段落后再持久化。 msg 为 nil 或未知表示时原样返回。
 
 <a name="RoleLabel"></a>
-## func RoleLabel
+## func [RoleLabel](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/extract.go#L250>)
 
 ```go
 func RoleLabel[M adk.MessageType](msg M) string
@@ -196,7 +196,7 @@ RoleLabel 返回便于阅读的角色标签，用于历史与工具块的 captio
 对 \*schema.Message：User→You、Assistant→Agent、Tool→Tool、 System→System，其余非空角色原样返回。 对 \*schema.AgenticMessage：User 角色若实际承载工具结果则显示为 Tool， 否则为 You；Assistant→Agent、System→System，其余非空角色原样返回。 nil 消息与未知类型统一回退为 Agent，保证展示层永远有标签。
 
 <a name="Text"></a>
-## func Text
+## func [Text](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/extract.go#L17>)
 
 ```go
 func Text[M adk.MessageType](msg M) string
@@ -207,7 +207,7 @@ Text 返回消息中面向用户的文本，用于历史回放与通用展示。
 对 \*schema.Message：优先返回 Content；Content 为空时依次拼接 UserInputMultiContent 与 AssistantGenMultiContent 中的文本分片。 对 \*schema.AgenticMessage：按 ContentBlocks 的顺序拼接用户输入文本、 助手生成文本与函数工具结果文本（以换行分隔）。 msg 为 nil 或未知类型时返回空串；本函数不区分角色。
 
 <a name="UnmarshalMessage"></a>
-## func UnmarshalMessage
+## func [UnmarshalMessage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/variant.go#L163>)
 
 ```go
 func UnmarshalMessage[M adk.MessageType](data []byte) (M, error)
@@ -216,7 +216,7 @@ func UnmarshalMessage[M adk.MessageType](data []byte) (M, error)
 UnmarshalMessage 把一行 JSON 消息反序列化为 M。
 
 <a name="UserText"></a>
-## func UserText
+## func [UserText](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/extract.go#L127>)
 
 ```go
 func UserText[M adk.MessageType](msg M) string
@@ -227,7 +227,7 @@ UserText 仅对 user 角色的消息返回文本。
 对 \*schema.Message：role 必须为 schema.User，返回 messageText。 对 \*schema.AgenticMessage：role 必须为 AgenticRoleTypeUser，拼接全部 UserInputText 块并以换行分隔。非 user 角色、nil 消息与未知类型返回 空串；工具结果消息（agentic 的 user 角色可能承载工具结果）不会在这里 被误当成用户提问，因为其块类型不是 UserInputText。
 
 <a name="VariantIsToolResult"></a>
-## func VariantIsToolResult
+## func [VariantIsToolResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/variant.go#L53>)
 
 ```go
 func VariantIsToolResult[M adk.MessageType](mv *adk.TypedMessageVariant[M]) bool
@@ -236,7 +236,7 @@ func VariantIsToolResult[M adk.MessageType](mv *adk.TypedMessageVariant[M]) bool
 VariantIsToolResult 表示消息变体是否携带工具输出。
 
 <a name="VariantRoleLabel"></a>
-## func VariantRoleLabel
+## func [VariantRoleLabel](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/variant.go#L22>)
 
 ```go
 func VariantRoleLabel[M adk.MessageType](mv *adk.TypedMessageVariant[M]) string
@@ -245,7 +245,7 @@ func VariantRoleLabel[M adk.MessageType](mv *adk.TypedMessageVariant[M]) string
 VariantRoleLabel 返回展示标签，且不会消费流。
 
 <a name="ToolCall"></a>
-## type ToolCall
+## type [ToolCall](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/construct.go#L12-L21>)
 
 ToolCall 包含跨表示和流式分片使用的通用函数工具 调用字段。
 
@@ -263,7 +263,7 @@ type ToolCall struct {
 ```
 
 <a name="ToolCalls"></a>
-### func ToolCalls
+### func [ToolCalls](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/extract.go#L158>)
 
 ```go
 func ToolCalls[M adk.MessageType](msg M) []ToolCall
@@ -274,7 +274,7 @@ ToolCalls 从消息或流式分片中提取函数工具调用，并归一化为 
 对 \*schema.Message：读取 m.ToolCalls，保留原始顺序；Index 取 ToolCall.Index（nil 时按 0 处理）。 对 \*schema.AgenticMessage：读取 FunctionToolCall 内容块，保留块顺序； Index 取块的 StreamingMeta.Index（无流式元数据时按 0 处理）。 不存在的调用返回 nil；未知类型返回 nil。调用方不应假设 Index 唯一， 流式分片下同一调用可能跨多个分片、由上层按 Index 归并。
 
 <a name="ToolResult"></a>
-## type ToolResult
+## type [ToolResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/construct.go#L24-L31>)
 
 ToolResult 包含通用的函数工具结果字段。
 
@@ -290,7 +290,7 @@ type ToolResult struct {
 ```
 
 <a name="ToolResults"></a>
-### func ToolResults
+### func [ToolResults](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/msgops/extract.go#L211>)
 
 ```go
 func ToolResults[M adk.MessageType](msg M) []ToolResult

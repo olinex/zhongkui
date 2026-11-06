@@ -55,7 +55,7 @@ const (
 ```
 
 <a name="EndSpan"></a>
-## func EndSpan
+## func [EndSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/totel/otel.go#L249>)
 
 ```go
 func EndSpan(span trace.Span, errPtr *error)
@@ -64,7 +64,7 @@ func EndSpan(span trace.Span, errPtr *error)
 EndSpan 安全结束 span，并在发生错误时记录错误状态。
 
 <a name="InitMetrics"></a>
-## func InitMetrics
+## func [InitMetrics](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/totel/otel.go#L62>)
 
 ```go
 func InitMetrics()
@@ -73,7 +73,7 @@ func InitMetrics()
 InitMetrics 初始化抓包链路的 OpenTelemetry 指标，仅执行一次。
 
 <a name="RecordDumpError"></a>
-## func RecordDumpError
+## func [RecordDumpError](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/totel/otel.go#L235>)
 
 ```go
 func RecordDumpError(ctx context.Context)
@@ -82,7 +82,7 @@ func RecordDumpError(ctx context.Context)
 RecordDumpError 记录一次 dump 错误。
 
 <a name="RecordSegmentDumped"></a>
-## func RecordSegmentDumped
+## func [RecordSegmentDumped](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/totel/otel.go#L223>)
 
 ```go
 func RecordSegmentDumped(ctx context.Context, packetCount int, byteCount int)
@@ -91,7 +91,7 @@ func RecordSegmentDumped(ctx context.Context, packetCount int, byteCount int)
 RecordSegmentDumped 记录一次 dump 数据段完成。
 
 <a name="RecordSegmentUploaded"></a>
-## func RecordSegmentUploaded
+## func [RecordSegmentUploaded](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/totel/otel.go#L230>)
 
 ```go
 func RecordSegmentUploaded(ctx context.Context, size int64)
@@ -100,7 +100,7 @@ func RecordSegmentUploaded(ctx context.Context, size int64)
 RecordSegmentUploaded 记录一次 S3 上传完成。
 
 <a name="RecordUploadError"></a>
-## func RecordUploadError
+## func [RecordUploadError](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/totel/otel.go#L240>)
 
 ```go
 func RecordUploadError(ctx context.Context)
@@ -109,7 +109,7 @@ func RecordUploadError(ctx context.Context)
 RecordUploadError 记录一次 upload 错误。
 
 <a name="StartCaptureSpan"></a>
-## func StartCaptureSpan
+## func [StartCaptureSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/totel/otel.go#L179>)
 
 ```go
 func StartCaptureSpan(ctx context.Context) (context.Context, trace.Span)
@@ -118,7 +118,7 @@ func StartCaptureSpan(ctx context.Context) (context.Context, trace.Span)
 StartCaptureSpan 在 capturer.capture 中创建 span。
 
 <a name="StartDumpOneSpan"></a>
-## func StartDumpOneSpan
+## func [StartDumpOneSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/totel/otel.go#L191>)
 
 ```go
 func StartDumpOneSpan(ctx context.Context, filePath string) (context.Context, trace.Span)
@@ -127,7 +127,7 @@ func StartDumpOneSpan(ctx context.Context, filePath string) (context.Context, tr
 StartDumpOneSpan 在 dumpOne 中创建 span。
 
 <a name="StartDumpSpan"></a>
-## func StartDumpSpan
+## func [StartDumpSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/totel/otel.go#L185>)
 
 ```go
 func StartDumpSpan(ctx context.Context) (context.Context, trace.Span)
@@ -136,7 +136,7 @@ func StartDumpSpan(ctx context.Context) (context.Context, trace.Span)
 StartDumpSpan 在 dump 循环中创建 span。
 
 <a name="StartFeedbackSpan"></a>
-## func StartFeedbackSpan
+## func [StartFeedbackSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/totel/otel.go#L144>)
 
 ```go
 func StartFeedbackSpan(ctx context.Context, sessionID string) (context.Context, trace.Span)
@@ -145,7 +145,7 @@ func StartFeedbackSpan(ctx context.Context, sessionID string) (context.Context, 
 StartFeedbackSpan 在 feedback 流中创建 span。
 
 <a name="StartPacketHandlerSpan"></a>
-## func StartPacketHandlerSpan
+## func [StartPacketHandlerSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/totel/otel.go#L167>)
 
 ```go
 func StartPacketHandlerSpan(ctx context.Context, device string, configVersion int64) (context.Context, trace.Span)
@@ -154,7 +154,7 @@ func StartPacketHandlerSpan(ctx context.Context, device string, configVersion in
 StartPacketHandlerSpan 在 uploadPacketHandler 中创建 span。
 
 <a name="StartRunSpan"></a>
-## func StartRunSpan
+## func [StartRunSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/totel/otel.go#L122>)
 
 ```go
 func StartRunSpan(ctx context.Context, resource string) (context.Context, trace.Span)
@@ -163,7 +163,7 @@ func StartRunSpan(ctx context.Context, resource string) (context.Context, trace.
 StartRunSpan 在 CaptureClient.Run 中创建 span。
 
 <a name="StartUploadFileSpan"></a>
-## func StartUploadFileSpan
+## func [StartUploadFileSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/totel/otel.go#L202>)
 
 ```go
 func StartUploadFileSpan(ctx context.Context) (context.Context, trace.Span)
@@ -172,7 +172,7 @@ func StartUploadFileSpan(ctx context.Context) (context.Context, trace.Span)
 StartUploadFileSpan 在 upload 循环中创建 span。
 
 <a name="StartUploadOneSpan"></a>
-## func StartUploadOneSpan
+## func [StartUploadOneSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/totel/otel.go#L208>)
 
 ```go
 func StartUploadOneSpan(ctx context.Context, objectKey string) (context.Context, trace.Span)
@@ -181,7 +181,7 @@ func StartUploadOneSpan(ctx context.Context, objectKey string) (context.Context,
 StartUploadOneSpan 在 uploadOne 中创建 span。
 
 <a name="StartUploadSpan"></a>
-## func StartUploadSpan
+## func [StartUploadSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/totel/otel.go#L155>)
 
 ```go
 func StartUploadSpan(ctx context.Context, resource, sessionID string) (context.Context, trace.Span)
@@ -190,7 +190,7 @@ func StartUploadSpan(ctx context.Context, resource, sessionID string) (context.C
 StartUploadSpan 在 upload 生命周期管理中创建 span。
 
 <a name="StartWatchSpan"></a>
-## func StartWatchSpan
+## func [StartWatchSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/totel/otel.go#L133>)
 
 ```go
 func StartWatchSpan(ctx context.Context, resource string) (context.Context, trace.Span)

@@ -63,7 +63,7 @@ const MaxTagRuleVersions = 30
 ```
 
 <a name="AndTerm"></a>
-## type AndTerm
+## type [AndTerm](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_rule.go#L48-L50>)
 
 AndTerm 表示一个 AND 项，由多个用 AND 连接的因子组成 例如: "A AND B AND C"
 
@@ -74,7 +74,7 @@ type AndTerm struct {
 ```
 
 <a name="AndTerm.String"></a>
-### func \(\*AndTerm\) String
+### func \(\*AndTerm\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_rule.go#L53>)
 
 ```go
 func (t *AndTerm) String() string
@@ -83,7 +83,7 @@ func (t *AndTerm) String() string
 String 将 AndTerm 序列化为标准化的字符串表示
 
 <a name="Atom"></a>
-## type Atom
+## type [Atom](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_rule.go#L92-L95>)
 
 Atom 表示一个原子项，可以是标签标识符或括号内的布尔表达式 例如: "tag\_name" 或 "\(A OR B\)" Label 为值类型 string，标识符分支未匹配时保持零值空串，与 Expr 分支由 nil 区分
 
@@ -95,7 +95,7 @@ type Atom struct {
 ```
 
 <a name="Atom.String"></a>
-### func \(\*Atom\) String
+### func \(\*Atom\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_rule.go#L98>)
 
 ```go
 func (a *Atom) String() string
@@ -104,7 +104,7 @@ func (a *Atom) String() string
 String 将 Atom 序列化为标准化的字符串表示
 
 <a name="BoolExpr"></a>
-## type BoolExpr
+## type [BoolExpr](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_rule.go#L25-L27>)
 
 BoolExpr 表示一个布尔表达式，由多个用 OR 连接的子项组成 例如: "A AND B OR C AND D"
 
@@ -115,7 +115,7 @@ type BoolExpr struct {
 ```
 
 <a name="ParseBoolExpr"></a>
-### func ParseBoolExpr
+### func [ParseBoolExpr](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_rule.go#L211>)
 
 ```go
 func ParseBoolExpr(expr string) (*BoolExpr, error)
@@ -124,7 +124,7 @@ func ParseBoolExpr(expr string) (*BoolExpr, error)
 ParseBoolExpr 解析标签组合布尔表达式，返回语法树。 供 tagengine 将条件表达式翻译为 ClickHouse 查询谓词复用，与 ExprValidate 使用同一解析器。
 
 <a name="BoolExpr.String"></a>
-### func \(\*BoolExpr\) String
+### func \(\*BoolExpr\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_rule.go#L31>)
 
 ```go
 func (e *BoolExpr) String() string
@@ -133,7 +133,7 @@ func (e *BoolExpr) String() string
 String 将 BoolExpr 序列化为标准化的字符串表示 去除多余的空格，使用统一的格式
 
 <a name="NotFactor"></a>
-## type NotFactor
+## type [NotFactor](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_rule.go#L70-L73>)
 
 NotFactor 表示一个 NOT 因子，包含可选的 NOT 操作符和一个原子项 例如: "NOT A" 或 "A"
 
@@ -145,7 +145,7 @@ type NotFactor struct {
 ```
 
 <a name="NotFactor.String"></a>
-### func \(\*NotFactor\) String
+### func \(\*NotFactor\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_rule.go#L76>)
 
 ```go
 func (f *NotFactor) String() string
@@ -154,7 +154,7 @@ func (f *NotFactor) String() string
 String 将 NotFactor 序列化为标准化的字符串表示
 
 <a name="TagEventCondition"></a>
-## type TagEventCondition
+## type [TagEventCondition](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_rule.go#L118-L142>)
 
 TagEventCondition 表示标签事件条件，是标签事件规则（TagEventRule）中单条触发条件的判定逻辑。 在时间窗口（Window）内，若标签组合表达式（Expression）的命中次数达到阈值（Threshold）， 则触发该条件对应的事件。 Expression 为标签标识符的布尔组合（AND / OR / NOT / 括号），其中的标签由 TagRule 识别产生，与具体标签维度（risk / asset / behavior）解耦。 条件与规则为多对一关系，命名空间由所属 TagEventRule 承载，条件自身不冗余存储。 例如: "在5分钟内，如果标签A和标签B同时出现超过3次，则触发事件"
 
@@ -187,7 +187,7 @@ type TagEventCondition struct {
 ```
 
 <a name="TagEventCondition.ExprValidate"></a>
-### func \(\*TagEventCondition\) ExprValidate
+### func \(\*TagEventCondition\) [ExprValidate](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_rule.go#L147>)
 
 ```go
 func (c *TagEventCondition) ExprValidate() (string, error)
@@ -196,7 +196,7 @@ func (c *TagEventCondition) ExprValidate() (string, error)
 ExprValidate 验证标签事件条件中的标签组合表达式语法是否正确 使用布尔表达式解析器检查表达式是否可以被正确解析 返回精炼后的表达式字符串（去除无意义的空格和回车）和错误信息
 
 <a name="TagEventRecord"></a>
-## type TagEventRecord
+## type [TagEventRecord](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_record.go#L37-L60>)
 
 TagEventRecord 表示一条标签事件记录，由标签事件规则（TagEventRule）触发产生。 记录触发时的规则快照（规则名称、MatchAll）、抑制指纹（DedupKey）与 事件状态（Status），并关联一组命中明细（TagEventRecordHit）。 对应表为 tag\_event\_records。
 
@@ -228,7 +228,7 @@ type TagEventRecord struct {
 ```
 
 <a name="TagEventRecordHit"></a>
-## type TagEventRecordHit
+## type [TagEventRecordHit](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_record.go#L65-L93>)
 
 TagEventRecordHit 表示一条标签事件记录的一条命中明细，记录某条事件条件 （TagEventCondition）在时间窗口内对特定维度值的命中统计。 对应表为 tag\_event\_record\_hits。
 
@@ -265,7 +265,7 @@ type TagEventRecordHit struct {
 ```
 
 <a name="TagEventRule"></a>
-## type TagEventRule
+## type [TagEventRule](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_rule.go#L162-L185>)
 
 TagEventRule 表示标签事件规则，是基于已识别标签的高层次识别规则。 由一条或多条标签事件条件（TagEventCondition）组成，条件中的标签来自 TagRule 的识别结果，因此该规则与具体标签维度（risk / asset / behavior）无关。 规则归属命名空间（NamespaceName），不同租户的事件规则相互隔离。 例如: "登录失败"、"异常访问"、"高风险操作"等事件判定
 
@@ -297,7 +297,7 @@ type TagEventRule struct {
 ```
 
 <a name="TagEventRuleVersion"></a>
-## type TagEventRuleVersion
+## type [TagEventRuleVersion](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_rule_version.go#L18-L39>)
 
 TagEventRuleVersion 表示标签事件规则的历史版本快照。 规则内容变更（更新/回滚）前，将当前内容以新版本号快照入库； 版本号按规则内 1..N 递增，同一规则最多保留 MaxTagEventRuleVersions 条历史版本。 除规则头字段外，全部条件业务字段以 JSON 文本（Conditions）快照， 供回滚时重建规则及其条件集合；快照同时记录所属命名空间，保证数据可溯源与隔离。
 
@@ -327,7 +327,7 @@ type TagEventRuleVersion struct {
 ```
 
 <a name="TagRule"></a>
-## type TagRule
+## type [TagRule](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_rule.go#L12-L29>)
 
 TagRule 表示标签识别规则。 每条规则绑定一个目标模型类型键（Model）， 通过 Rego 源码声明在何种条件下为结构体实例打上标签。 规则归属命名空间（NamespaceName），不同租户的规则相互隔离。
 
@@ -353,7 +353,7 @@ type TagRule struct {
 ```
 
 <a name="TagRuleSample"></a>
-## type TagRuleSample
+## type [TagRuleSample](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_rule_sample.go#L15-L29>)
 
 TagRuleSample 表示标签识别规则的验证样例数据。 存储目标模型实例的 JSON 序列化文档（可反序列化回目标类型）， 供规则运行期合法性校验（第二层）使用：将规则组作用于样例输入， 任一样例评估报错即判定规则运行期不合法。 样例归属命名空间（NamespaceName），与标签规则同租户隔离，按 \(命名空间, 模型, 名称\) 唯一索引。
 
@@ -376,7 +376,7 @@ type TagRuleSample struct {
 ```
 
 <a name="TagRuleVersion"></a>
-## type TagRuleVersion
+## type [TagRuleVersion](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_rule_version.go#L16-L34>)
 
 TagRuleVersion 表示标签识别规则的历史版本快照。 规则内容变更（更新/回滚）前，将当前内容以新版本号快照入库； 版本号按规则内 1..N 递增，同一规则最多保留 MaxTagRuleVersions 条历史版本。 快照同时记录所属命名空间，保证跨命名空间访问时数据可溯源与隔离。
 
@@ -403,7 +403,7 @@ type TagRuleVersion struct {
 ```
 
 <a name="TagSumming"></a>
-## type TagSumming
+## type [TagSumming](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_summing.go#L32-L50>)
 
 TagSumming 表示标签聚合统计模型，对应 ClickHouse 中的 SummingMergeTree 表 该模型用于按分钟粒度聚合风险标签的命中次数，支持风险趋势分析和实时监控。
 

@@ -11,7 +11,7 @@
 
 
 <a name="Unmarshal"></a>
-## func Unmarshal
+## func [Unmarshal](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/tag/unmarshal.go#L27>)
 
 ```go
 func Unmarshal(tagStr string, target any) error
@@ -31,7 +31,7 @@ err := tag.Unmarshal(`mode="aes-gcm", length=32`, &cfg)
 ```
 
 <a name="Pair"></a>
-## type Pair
+## type [Pair](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/tag/base.go#L12-L17>)
 
 Pair 为一个键值对，例如 mode="aes\-gcm"
 
@@ -45,7 +45,7 @@ type Pair struct {
 ```
 
 <a name="Tag"></a>
-## type Tag
+## type [Tag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/tag/base.go#L6-L9>)
 
 Tag 为顶层结构，包含由逗号分隔的键值对列表
 
@@ -57,7 +57,7 @@ type Tag struct {
 ```
 
 <a name="Value"></a>
-## type Value
+## type [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/tag/base.go#L20-L25>)
 
 Value 可以是带引号的字符串或整数
 

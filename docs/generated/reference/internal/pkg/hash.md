@@ -38,7 +38,7 @@ const (
 ```
 
 <a name="ConsistentHash"></a>
-## type ConsistentHash
+## type [ConsistentHash](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/hash/consistenthash.go#L21-L26>)
 
 ConsistentHash 基于虚拟节点的一致性哈希环。
 
@@ -51,7 +51,7 @@ type ConsistentHash struct {
 ```
 
 <a name="NewConsistentHash"></a>
-### func NewConsistentHash
+### func [NewConsistentHash](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/hash/consistenthash.go#L29>)
 
 ```go
 func NewConsistentHash(vnodes int) *ConsistentHash
@@ -60,7 +60,7 @@ func NewConsistentHash(vnodes int) *ConsistentHash
 NewConsistentHash 创建新的一致性哈希环。
 
 <a name="NewConsistentHashWithDefaultVnodes"></a>
-### func NewConsistentHashWithDefaultVnodes
+### func [NewConsistentHashWithDefaultVnodes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/hash/consistenthash.go#L37>)
 
 ```go
 func NewConsistentHashWithDefaultVnodes() *ConsistentHash
@@ -69,7 +69,7 @@ func NewConsistentHashWithDefaultVnodes() *ConsistentHash
 NewConsistentHashWithDefaultVnodes 使用默认虚拟节点数（DefaultVnodes）创建一致性哈希环。
 
 <a name="ConsistentHash.Get"></a>
-### func \(\*ConsistentHash\) Get
+### func \(\*ConsistentHash\) [Get](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/hash/consistenthash.go#L60>)
 
 ```go
 func (ch *ConsistentHash) Get(key string) string
@@ -78,7 +78,7 @@ func (ch *ConsistentHash) Get(key string) string
 Get 在哈希环上查找 key 对应的成员。 如果环为空，返回空字符串。
 
 <a name="ConsistentHash.HashKey"></a>
-### func \(\*ConsistentHash\) HashKey
+### func \(\*ConsistentHash\) [HashKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/hash/consistenthash.go#L81>)
 
 ```go
 func (ch *ConsistentHash) HashKey(key string) uint32
@@ -87,7 +87,7 @@ func (ch *ConsistentHash) HashKey(key string) uint32
 HashKey 计算 key 的 32 位 FNV\-1a 哈希值。
 
 <a name="ConsistentHash.HashVNode"></a>
-### func \(\*ConsistentHash\) HashVNode
+### func \(\*ConsistentHash\) [HashVNode](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/hash/consistenthash.go#L88>)
 
 ```go
 func (ch *ConsistentHash) HashVNode(member string, i int) uint32
@@ -96,7 +96,7 @@ func (ch *ConsistentHash) HashVNode(member string, i int) uint32
 HashVNode 计算成员第 i 个虚拟节点的哈希值。
 
 <a name="ConsistentHash.HashesOf"></a>
-### func \(\*ConsistentHash\) HashesOf
+### func \(\*ConsistentHash\) [HashesOf](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/hash/consistenthash.go#L98>)
 
 ```go
 func (ch *ConsistentHash) HashesOf(member string) []uint32
@@ -107,7 +107,7 @@ HashesOf 返回指定成员在环上所有虚拟节点的哈希值列表（升�
 该方法通过 HashVNode 实时计算，无需额外存储。 常用于调试环分布、计算迁移影响或可视化。
 
 <a name="ConsistentHash.MemberCount"></a>
-### func \(\*ConsistentHash\) MemberCount
+### func \(\*ConsistentHash\) [MemberCount](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/hash/consistenthash.go#L76>)
 
 ```go
 func (ch *ConsistentHash) MemberCount() int
@@ -116,7 +116,7 @@ func (ch *ConsistentHash) MemberCount() int
 MemberCount 返回当前成员数量。
 
 <a name="ConsistentHash.Update"></a>
-### func \(\*ConsistentHash\) Update
+### func \(\*ConsistentHash\) [Update](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/hash/consistenthash.go#L43>)
 
 ```go
 func (ch *ConsistentHash) Update(members []string)
@@ -125,7 +125,7 @@ func (ch *ConsistentHash) Update(members []string)
 Update 用新的成员列表重建哈希环。 members 必须已排序。
 
 <a name="ConsistentHash.VNodeIndicesOf"></a>
-### func \(\*ConsistentHash\) VNodeIndicesOf
+### func \(\*ConsistentHash\) [VNodeIndicesOf](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/hash/consistenthash.go#L115>)
 
 ```go
 func (ch *ConsistentHash) VNodeIndicesOf(member string) []int
@@ -138,7 +138,7 @@ VNodeIndicesOf 返回指定成员在数据分片中所属的虚拟节点索引�
 成员不存在时返回空切片。
 
 <a name="StreamHasher"></a>
-## type StreamHasher
+## type [StreamHasher](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/hash/streamhash.go#L23-L26>)
 
 StreamHasher 基于 maphash 的流式哈希器，用于对多个字段进行顺序拼接哈希。
 
@@ -149,7 +149,7 @@ type StreamHasher struct {
 ```
 
 <a name="Acquire"></a>
-### func Acquire
+### func [Acquire](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/hash/streamhash.go#L29>)
 
 ```go
 func Acquire() *StreamHasher
@@ -158,7 +158,7 @@ func Acquire() *StreamHasher
 Acquire 从对象池中获取一个 StreamHasher，并重置其内部哈希状态。
 
 <a name="StreamHasher.Release"></a>
-### func \(\*StreamHasher\) Release
+### func \(\*StreamHasher\) [Release](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/hash/streamhash.go#L36>)
 
 ```go
 func (s *StreamHasher) Release()
@@ -167,7 +167,7 @@ func (s *StreamHasher) Release()
 Release 将 StreamHasher 归还对象池以便复用。
 
 <a name="StreamHasher.Sum64"></a>
-### func \(\*StreamHasher\) Sum64
+### func \(\*StreamHasher\) [Sum64](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/hash/streamhash.go#L58>)
 
 ```go
 func (s *StreamHasher) Sum64() uint64
@@ -176,7 +176,7 @@ func (s *StreamHasher) Sum64() uint64
 Sum64 返回当前累积内容的 64 位哈希值。
 
 <a name="StreamHasher.SumHex"></a>
-### func \(\*StreamHasher\) SumHex
+### func \(\*StreamHasher\) [SumHex](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/hash/streamhash.go#L63>)
 
 ```go
 func (s *StreamHasher) SumHex() string
@@ -185,7 +185,7 @@ func (s *StreamHasher) SumHex() string
 SumHex 返回当前累积内容哈希值的 16 进制字符串表示。
 
 <a name="StreamHasher.WriteBytes"></a>
-### func \(\*StreamHasher\) WriteBytes
+### func \(\*StreamHasher\) [WriteBytes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/hash/streamhash.go#L46>)
 
 ```go
 func (s *StreamHasher) WriteBytes(b []byte)
@@ -194,7 +194,7 @@ func (s *StreamHasher) WriteBytes(b []byte)
 WriteBytes 将字节切片写入哈希器。
 
 <a name="StreamHasher.WriteString"></a>
-### func \(\*StreamHasher\) WriteString
+### func \(\*StreamHasher\) [WriteString](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/hash/streamhash.go#L41>)
 
 ```go
 func (s *StreamHasher) WriteString(str string)
@@ -203,7 +203,7 @@ func (s *StreamHasher) WriteString(str string)
 WriteString 将字符串写入哈希器。
 
 <a name="StreamHasher.WriteUint16"></a>
-### func \(\*StreamHasher\) WriteUint16
+### func \(\*StreamHasher\) [WriteUint16](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/hash/streamhash.go#L51>)
 
 ```go
 func (s *StreamHasher) WriteUint16(v uint16)

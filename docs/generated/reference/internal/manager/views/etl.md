@@ -49,7 +49,7 @@
 
 
 <a name="EtlPipelineInspectorDailyStatListGet"></a>
-## func EtlPipelineInspectorDailyStatListGet
+## func [EtlPipelineInspectorDailyStatListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L431>)
 
 ```go
 func EtlPipelineInspectorDailyStatListGet(c *gin.Context)
@@ -60,7 +60,7 @@ EtlPipelineInspectorDailyStatListGet 获取所有队列的每日统计信息 该
 路由: GET /api/v1/etl/pipeline/inspector/queues/daily\-stats 请求体: ETLPipelineInspectorDailyStatIn 响应: ETLPipelineInspectorQueueStatOut
 
 <a name="EtlPipelineInspectorQueueListGet"></a>
-## func EtlPipelineInspectorQueueListGet
+## func [EtlPipelineInspectorQueueListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L317>)
 
 ```go
 func EtlPipelineInspectorQueueListGet(c *gin.Context)
@@ -73,7 +73,7 @@ EtlPipelineInspectorQueueListGet 获取所有任务队列的完整状态信息 �
 响应: ETLPipelineInspectorQueueListOut
 
 <a name="EtlPipelineInspectorQueuePause"></a>
-## func EtlPipelineInspectorQueuePause
+## func [EtlPipelineInspectorQueuePause](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L421>)
 
 ```go
 func EtlPipelineInspectorQueuePause(c *gin.Context)
@@ -86,7 +86,7 @@ EtlPipelineInspectorQueuePause 暂停指定队列的处理 该函数将队列暂
 - :name \- 队列名称（URL路径参数）
 
 <a name="EtlPipelineInspectorQueueUnpause"></a>
-## func EtlPipelineInspectorQueueUnpause
+## func [EtlPipelineInspectorQueueUnpause](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L411>)
 
 ```go
 func EtlPipelineInspectorQueueUnpause(c *gin.Context)
@@ -99,7 +99,7 @@ EtlPipelineInspectorQueueUnpause 恢复指定队列的处理 该函数将暂停�
 - :name \- 队列名称（URL路径参数）
 
 <a name="EtlPipelineInspectorSchedulerListGet"></a>
-## func EtlPipelineInspectorSchedulerListGet
+## func [EtlPipelineInspectorSchedulerListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L284>)
 
 ```go
 func EtlPipelineInspectorSchedulerListGet(c *gin.Context)
@@ -112,7 +112,7 @@ EtlPipelineInspectorSchedulerListGet 获取所有定时任务配置 该函数从
 响应: ETLPipelineInspectorSchedulerListOut
 
 <a name="EtlPipelineInspectorServerListGet"></a>
-## func EtlPipelineInspectorServerListGet
+## func [EtlPipelineInspectorServerListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L242>)
 
 ```go
 func EtlPipelineInspectorServerListGet(c *gin.Context)
@@ -125,7 +125,7 @@ EtlPipelineInspectorServerListGet 获取所有异步任务处理服务器的信�
 响应: ETLPipelineInspectorServerListOut
 
 <a name="EtlPipelineInspectorStateTaskArchive"></a>
-## func EtlPipelineInspectorStateTaskArchive
+## func [EtlPipelineInspectorStateTaskArchive](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L689>)
 
 ```go
 func EtlPipelineInspectorStateTaskArchive(c *gin.Context)
@@ -136,7 +136,7 @@ EtlPipelineInspectorStateTaskArchive 批量归档指定状态的所有任务 该
 路由: POST /api/v1/etl/pipeline/inspector/tasks/archive 请求体: ETLPipelineInspectorStateTaskDeleteIn 响应: 归档的任务数量（整数）
 
 <a name="EtlPipelineInspectorStateTaskDelete"></a>
-## func EtlPipelineInspectorStateTaskDelete
+## func [EtlPipelineInspectorStateTaskDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L647>)
 
 ```go
 func EtlPipelineInspectorStateTaskDelete(c *gin.Context)
@@ -147,7 +147,7 @@ EtlPipelineInspectorStateTaskDelete 批量删除指定状态的所有任务 该�
 路由: POST /api/v1/etl/pipeline/inspector/tasks/delete 请求体: ETLPipelineInspectorStateTaskDeleteIn 响应: 删除的任务数量（整数）
 
 <a name="EtlPipelineInspectorStateTaskRun"></a>
-## func EtlPipelineInspectorStateTaskRun
+## func [EtlPipelineInspectorStateTaskRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L727>)
 
 ```go
 func EtlPipelineInspectorStateTaskRun(c *gin.Context)
@@ -158,7 +158,7 @@ EtlPipelineInspectorStateTaskRun 批量运行指定状态的所有任务 该函�
 路由: POST /api/v1/etl/pipeline/inspector/tasks/run 请求体: ETLPipelineInspectorStateTaskRunIn 响应: 运行的任务数量（整数）
 
 <a name="EtlPipelineInspectorTaskArchive"></a>
-## func EtlPipelineInspectorTaskArchive
+## func [EtlPipelineInspectorTaskArchive](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L792>)
 
 ```go
 func EtlPipelineInspectorTaskArchive(c *gin.Context)
@@ -172,7 +172,7 @@ EtlPipelineInspectorTaskArchive 归档指定的单个任务 该函数将指定�
 - queue \- 队列名称（JSON请求体）
 
 <a name="EtlPipelineInspectorTaskCancelPorcessing"></a>
-## func EtlPipelineInspectorTaskCancelPorcessing
+## func [EtlPipelineInspectorTaskCancelPorcessing](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L848>)
 
 ```go
 func EtlPipelineInspectorTaskCancelPorcessing(c *gin.Context)
@@ -187,7 +187,7 @@ EtlPipelineInspectorTaskCancelPorcessing 取消正在处理中的指定任务 �
 响应: 操作状态（成功或失败）
 
 <a name="EtlPipelineInspectorTaskDelete"></a>
-## func EtlPipelineInspectorTaskDelete
+## func [EtlPipelineInspectorTaskDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L765>)
 
 ```go
 func EtlPipelineInspectorTaskDelete(c *gin.Context)
@@ -201,7 +201,7 @@ EtlPipelineInspectorTaskDelete 删除指定的单个任务 该函数通过任务
 - queue \- 队列名称（JSON请求体）
 
 <a name="EtlPipelineInspectorTaskListGet"></a>
-## func EtlPipelineInspectorTaskListGet
+## func [EtlPipelineInspectorTaskListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L492>)
 
 ```go
 func EtlPipelineInspectorTaskListGet(c *gin.Context)
@@ -212,7 +212,7 @@ EtlPipelineInspectorTaskListGet 获取指定状态的任务列表 该函数根�
 路由: GET /api/v1/etl/pipeline/inspector/tasks 请求体: ETLPipelineInspectorTaskListIn 响应: ETLPipelineInspectorTaskListOut
 
 <a name="EtlPipelineInspectorTaskRun"></a>
-## func EtlPipelineInspectorTaskRun
+## func [EtlPipelineInspectorTaskRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L819>)
 
 ```go
 func EtlPipelineInspectorTaskRun(c *gin.Context)
@@ -226,7 +226,7 @@ EtlPipelineInspectorTaskRun 立即运行指定的单个任务 该函数将指定
 - queue \- 队列名称（JSON请求体）
 
 <a name="EtlSchedulerTaskCreate"></a>
-## func EtlSchedulerTaskCreate
+## func [EtlSchedulerTaskCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl_scheduler.go#L87>)
 
 ```go
 func EtlSchedulerTaskCreate(c *gin.Context)
@@ -237,7 +237,7 @@ EtlSchedulerTaskCreate 创建一个新的定时任务配置。 先校验调度�
 路由: POST /api/v1/etl/scheduler/task/create 请求体: EtlSchedulerTaskIn
 
 <a name="EtlSchedulerTaskDelete"></a>
-## func EtlSchedulerTaskDelete
+## func [EtlSchedulerTaskDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl_scheduler.go#L179>)
 
 ```go
 func EtlSchedulerTaskDelete(c *gin.Context)
@@ -248,7 +248,7 @@ EtlSchedulerTaskDelete 删除一个定时任务配置。 仅删除配置本身�
 路由: POST /api/v1/etl/scheduler/task/delete 请求体: EtlSchedulerTaskKeyIn
 
 <a name="EtlSchedulerTaskRun"></a>
-## func EtlSchedulerTaskRun
+## func [EtlSchedulerTaskRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl_scheduler.go#L207>)
 
 ```go
 func EtlSchedulerTaskRun(c *gin.Context)
@@ -259,7 +259,7 @@ EtlSchedulerTaskRun 立即执行一个定时任务。 以该任务当前配置�
 路由: POST /api/v1/etl/scheduler/task/run 请求体: EtlSchedulerTaskKeyIn
 
 <a name="EtlSchedulerTaskToggle"></a>
-## func EtlSchedulerTaskToggle
+## func [EtlSchedulerTaskToggle](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl_scheduler.go#L149>)
 
 ```go
 func EtlSchedulerTaskToggle(c *gin.Context)
@@ -270,7 +270,7 @@ EtlSchedulerTaskToggle 切换定时任务的启用状态。 仅调整 Enabled �
 路由: POST /api/v1/etl/scheduler/task/toggle 请求体: EtlSchedulerTaskToggleIn
 
 <a name="EtlSchedulerTaskUpdate"></a>
-## func EtlSchedulerTaskUpdate
+## func [EtlSchedulerTaskUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl_scheduler.go#L118>)
 
 ```go
 func EtlSchedulerTaskUpdate(c *gin.Context)
@@ -281,7 +281,7 @@ EtlSchedulerTaskUpdate 更新一个已存在的定时任务配置。 先校验�
 路由: POST /api/v1/etl/scheduler/task/update 请求体: EtlSchedulerTaskIn
 
 <a name="RegisterRoutes"></a>
-## func RegisterRoutes
+## func [RegisterRoutes](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/register.go#L15>)
 
 ```go
 func RegisterRoutes(ctx *views.RegisterContext)
@@ -290,7 +290,7 @@ func RegisterRoutes(ctx *views.RegisterContext)
 RegisterRoutes 注册 /api/v1/etl ETL管道监控接口路由。 提供ETL（Extract\-Transform\-Load）任务管道的监控和管理功能。
 
 <a name="ETLPipelineInspectorBaseTaskIn"></a>
-## type ETLPipelineInspectorBaseTaskIn
+## type [ETLPipelineInspectorBaseTaskIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L168-L172>)
 
 ETLPipelineInspectorBaseTaskIn 是任务查询的基础输入参数结构体 包含队列、状态和分组信息，用于筛选特定状态的任务
 
@@ -303,7 +303,7 @@ type ETLPipelineInspectorBaseTaskIn struct {
 ```
 
 <a name="ETLPipelineInspectorDailyStatIn"></a>
-## type ETLPipelineInspectorDailyStatIn
+## type [ETLPipelineInspectorDailyStatIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L176-L178>)
 
 ETLPipelineInspectorDailyStatIn 是查询每日统计信息的输入参数结构体 指定要获取的历史天数，支持预定义的时间范围
 
@@ -314,7 +314,7 @@ type ETLPipelineInspectorDailyStatIn struct {
 ```
 
 <a name="ETLPipelineInspectorQueueListOut"></a>
-## type ETLPipelineInspectorQueueListOut
+## type [ETLPipelineInspectorQueueListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L222>)
 
 ETLPipelineInspectorQueueListOut 是队列列表查询的输出类型别名 返回所有队列的完整状态信息，键为队列名称
 
@@ -323,7 +323,7 @@ type ETLPipelineInspectorQueueListOut = map[string]*PipelineQueueInfo
 ```
 
 <a name="ETLPipelineInspectorQueueStatOut"></a>
-## type ETLPipelineInspectorQueueStatOut
+## type [ETLPipelineInspectorQueueStatOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L226>)
 
 ETLPipelineInspectorQueueStatOut 是队列统计查询的输出类型别名 返回所有队列的每日统计信息，键为队列名称
 
@@ -332,7 +332,7 @@ type ETLPipelineInspectorQueueStatOut = map[string][]*PipelineQueueDailyStat
 ```
 
 <a name="ETLPipelineInspectorSchedulerListOut"></a>
-## type ETLPipelineInspectorSchedulerListOut
+## type [ETLPipelineInspectorSchedulerListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L218>)
 
 ETLPipelineInspectorSchedulerListOut 是调度器列表查询的输出类型别名 返回所有任务调度器的信息列表
 
@@ -341,7 +341,7 @@ type ETLPipelineInspectorSchedulerListOut = []*PipelineSchedulerInfo
 ```
 
 <a name="ETLPipelineInspectorServerListOut"></a>
-## type ETLPipelineInspectorServerListOut
+## type [ETLPipelineInspectorServerListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L214>)
 
 ETLPipelineInspectorServerListOut 是服务器列表查询的输出类型别名 返回所有任务处理服务器的信息列表
 
@@ -350,7 +350,7 @@ type ETLPipelineInspectorServerListOut = []*PipelineServerInfo
 ```
 
 <a name="ETLPipelineInspectorSingleTaskIn"></a>
-## type ETLPipelineInspectorSingleTaskIn
+## type [ETLPipelineInspectorSingleTaskIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L182-L184>)
 
 ETLPipelineInspectorSingleTaskIn 是单任务操作的输入参数结构体 用于指定要操作的单个任务所属的队列
 
@@ -361,7 +361,7 @@ type ETLPipelineInspectorSingleTaskIn struct {
 ```
 
 <a name="ETLPipelineInspectorStateTaskDeleteIn"></a>
-## type ETLPipelineInspectorStateTaskDeleteIn
+## type [ETLPipelineInspectorStateTaskDeleteIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L198-L202>)
 
 ETLPipelineInspectorStateTaskDeleteIn 是删除特定状态任务的输入参数结构体 用于批量删除指定状态的任务
 
@@ -374,7 +374,7 @@ type ETLPipelineInspectorStateTaskDeleteIn struct {
 ```
 
 <a name="ETLPipelineInspectorStateTaskRunIn"></a>
-## type ETLPipelineInspectorStateTaskRunIn
+## type [ETLPipelineInspectorStateTaskRunIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L206-L210>)
 
 ETLPipelineInspectorStateTaskRunIn 是运行特定状态任务的输入参数结构体 用于批量重新运行指定状态的任务
 
@@ -387,7 +387,7 @@ type ETLPipelineInspectorStateTaskRunIn struct {
 ```
 
 <a name="ETLPipelineInspectorTaskListIn"></a>
-## type ETLPipelineInspectorTaskListIn
+## type [ETLPipelineInspectorTaskListIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L188-L194>)
 
 ETLPipelineInspectorTaskListIn 是任务列表查询的输入参数结构体 包含分页信息和任务筛选条件，用于获取特定状态的任务列表
 
@@ -402,7 +402,7 @@ type ETLPipelineInspectorTaskListIn struct {
 ```
 
 <a name="ETLPipelineInspectorTaskListOut"></a>
-## type ETLPipelineInspectorTaskListOut
+## type [ETLPipelineInspectorTaskListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L231-L234>)
 
 ETLPipelineInspectorTaskListOut 是任务列表查询的输出结构。 Items 为当前页任务，Total 为当前队列 / 状态 / 任务类型筛选下的任务总数， 使前端分页与筛选保持同一口径。
 
@@ -414,7 +414,7 @@ type ETLPipelineInspectorTaskListOut struct {
 ```
 
 <a name="EtlSchedulerTaskIn"></a>
-## type EtlSchedulerTaskIn
+## type [EtlSchedulerTaskIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl_scheduler.go#L16-L30>)
 
 EtlSchedulerTaskIn 是定时任务的完整配置输入参数结构体。 用于创建与更新：TypeName 唯一标识任务，CronSpec 与 Interval 互斥二选一， 其余字段为队列、超时、重试、启用状态与固定载荷。
 
@@ -437,7 +437,7 @@ type EtlSchedulerTaskIn struct {
 ```
 
 <a name="EtlSchedulerTaskKeyIn"></a>
-## type EtlSchedulerTaskKeyIn
+## type [EtlSchedulerTaskKeyIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl_scheduler.go#L41-L43>)
 
 EtlSchedulerTaskKeyIn 是按任务类型定位单个定时任务的输入参数结构体。 供删除与"立即执行"接口复用。
 
@@ -448,7 +448,7 @@ type EtlSchedulerTaskKeyIn struct {
 ```
 
 <a name="EtlSchedulerTaskToggleIn"></a>
-## type EtlSchedulerTaskToggleIn
+## type [EtlSchedulerTaskToggleIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl_scheduler.go#L34-L37>)
 
 EtlSchedulerTaskToggleIn 是定时任务启停的输入参数结构体。 仅需任务类型与目标启用状态。
 
@@ -460,7 +460,7 @@ type EtlSchedulerTaskToggleIn struct {
 ```
 
 <a name="PipelineGroupInfo"></a>
-## type PipelineGroupInfo
+## type [PipelineGroupInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L65-L68>)
 
 PipelineGroupInfo 表示任务分组信息 用于展示聚合任务的组统计信息
 
@@ -472,7 +472,7 @@ type PipelineGroupInfo struct {
 ```
 
 <a name="PipelineProcessingTaskInfo"></a>
-## type PipelineProcessingTaskInfo
+## type [PipelineProcessingTaskInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L24-L31>)
 
 PipelineProcessingTaskInfo 表示正在处理中的任务信息 用于 API 响应中展示当前正在执行的任务详情
 
@@ -488,7 +488,7 @@ type PipelineProcessingTaskInfo struct {
 ```
 
 <a name="PipelineQueueDailyStat"></a>
-## type PipelineQueueDailyStat
+## type [PipelineQueueDailyStat](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L160-L164>)
 
 PipelineQueueDailyStat 表示队列的每日统计信息 用于展示队列的历史性能指标，支持趋势分析和监控
 
@@ -501,7 +501,7 @@ type PipelineQueueDailyStat struct {
 ```
 
 <a name="PipelineQueueInfo"></a>
-## type PipelineQueueInfo
+## type [PipelineQueueInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L72-L90>)
 
 PipelineQueueInfo 表示异步任务队列的完整状态信息 包含队列的统计数据和当前状态，用于监控和诊断队列健康状况
 
@@ -528,7 +528,7 @@ type PipelineQueueInfo struct {
 ```
 
 <a name="PipelineSchedulerInfo"></a>
-## type PipelineSchedulerInfo
+## type [PipelineSchedulerInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L49-L61>)
 
 PipelineSchedulerInfo 表示任务调度器信息 用于展示定时任务（cron/interval 两种调度模式统一）的完整配置，供前端管理页展示与回填。 TypeName 是任务的唯一标识（即 etcd 配置键后缀），其余字段与 SchedulerTaskConfig 对应。
 
@@ -549,7 +549,7 @@ type PipelineSchedulerInfo struct {
 ```
 
 <a name="PipelineServerInfo"></a>
-## type PipelineServerInfo
+## type [PipelineServerInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L35-L44>)
 
 PipelineServerInfo 表示异步任务处理服务器信息 用于展示当前运行的任务处理服务器的状态和配置
 
@@ -567,7 +567,7 @@ type PipelineServerInfo struct {
 ```
 
 <a name="PipelineTaskInfo"></a>
-## type PipelineTaskInfo
+## type [PipelineTaskInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L94-L112>)
 
 PipelineTaskInfo 表示单个异步任务的详细信息 包含任务的完整生命周期信息，用于任务监控和管理
 
@@ -594,7 +594,7 @@ type PipelineTaskInfo struct {
 ```
 
 <a name="NewPipelineTaskInfo"></a>
-### func NewPipelineTaskInfo
+### func [NewPipelineTaskInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/etl/etl.go#L122>)
 
 ```go
 func NewPipelineTaskInfo(raw *asynq.TaskInfo) *PipelineTaskInfo

@@ -109,7 +109,7 @@ var (
 ```
 
 <a name="DecodeInputValues"></a>
-## func DecodeInputValues
+## func [DecodeInputValues](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L618>)
 
 ```go
 func DecodeInputValues(raw datatypes.JSON) (map[string]json.RawMessage, error)
@@ -118,7 +118,7 @@ func DecodeInputValues(raw datatypes.JSON) (map[string]json.RawMessage, error)
 DecodeInputValues 把报告计划 input\_values 列的 JSON 解码为带类型的键值映射：空值（nil 或空串） 与 JSON null 返回非 nil 的空 map；非 JSON 对象或非法 JSON 返回英文错误。值以 json.RawMessage 承载，保留数字、布尔、字符串、对象与数组的原始类型。
 
 <a name="EnqueuePlanRun"></a>
-## func EnqueuePlanRun
+## func [EnqueuePlanRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/scheduler.go#L39>)
 
 ```go
 func EnqueuePlanRun(ctx context.Context, enq *pipeline.Client, planID uint, triggerAt time.Time) error
@@ -127,7 +127,7 @@ func EnqueuePlanRun(ctx context.Context, enq *pipeline.Client, planID uint, trig
 EnqueuePlanRun 把一条报告计划投递为 periodic\-report:plan:run 任务，触发时间点为 triggerAt。 队列、超时、重试与保留时长取报告领域常量；重复投递的载荷完全一致，由处理器侧的 \(plan\_id, trigger\_at\) 唯一约束保证幂等。
 
 <a name="NextTrigger"></a>
-## func NextTrigger
+## func [NextTrigger](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/scheduler.go#L22>)
 
 ```go
 func NextTrigger(cronSpec string, after time.Time, loc *time.Location) (time.Time, error)
@@ -136,7 +136,7 @@ func NextTrigger(cronSpec string, after time.Time, loc *time.Location) (time.Tim
 NextTrigger 计算严格晚于 after 的下一个 cron 触发时间点。 cronSpec 按标准五字段 cron 解析（与计划校验口径一致）；loc 非 nil 时以其时区解析与计算， 并把结果所在时区随触发点一并返回。非法表达式原样返回解析错误。
 
 <a name="ValidatePlanBias"></a>
-## func ValidatePlanBias
+## func [ValidatePlanBias](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L103>)
 
 ```go
 func ValidatePlanBias(skill *modelsai.AgentSkill, values map[string]json.RawMessage) error
@@ -145,7 +145,7 @@ func ValidatePlanBias(skill *modelsai.AgentSkill, values map[string]json.RawMess
 ValidatePlanBias 校验计划偏置输入：键必须在技能固定参数或输入字段内，禁止覆盖运行时的 nowTime，值须与原字段的 JSON 类型一致（输入字段按字段类型，固定字段按现有值的 JSON 类型）， timeOffset/timeWindow 覆盖后仍须能解析为合法时长且 timeWindow \> 0。违规返回包装后的 ErrInputInvalid，供创建/更新计划与运行期复用。
 
 <a name="CleanupResult"></a>
-## type CleanupResult
+## type [CleanupResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/cleanup.go#L30-L37>)
 
 CleanupResult 是一次清理流程的累计结果。
 
@@ -161,7 +161,7 @@ type CleanupResult struct {
 ```
 
 <a name="ObjectRemover"></a>
-## type ObjectRemover
+## type [ObjectRemover](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/cleanup.go#L17-L20>)
 
 ObjectRemover 抽象报告对象存储的删除能力，生产实现为 \*s3.ObjectCache。
 
@@ -173,7 +173,7 @@ type ObjectRemover interface {
 ```
 
 <a name="PlanInput"></a>
-## type PlanInput
+## type [PlanInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/types.go#L52-L68>)
 
 PlanInput 是创建或更新报告计划时的输入内容，字段的必填、长度与格式约束由视图层 binding 统一负责，本类型只承载已校验的值。
 
@@ -198,7 +198,7 @@ type PlanInput struct {
 ```
 
 <a name="ReportEnvelope"></a>
-## type ReportEnvelope
+## type [ReportEnvelope](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/envelope.go#L24-L29>)
 
 ReportEnvelope 是报告生成的统一输出信封：content 为面向用户的 Markdown 正文， draft 为供下游自动化消费的结构化载荷。
 
@@ -212,7 +212,7 @@ type ReportEnvelope struct {
 ```
 
 <a name="ParseReportEnvelope"></a>
-### func ParseReportEnvelope
+### func [ParseReportEnvelope](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/envelope.go#L43>)
 
 ```go
 func ParseReportEnvelope(raw string) (ReportEnvelope, error)
@@ -221,7 +221,7 @@ func ParseReportEnvelope(raw string) (ReportEnvelope, error)
 ParseReportEnvelope 解析并校验模型输出是否符合统一信封契约。 校验失败返回面向模型的纠错原因（会被回传要求重新生成）：回答必须是不带围栏的裸 JSON 对象， content 必须为非空字符串，draft 若存在必须是 JSON 对象。
 
 <a name="SessionRemover"></a>
-## type SessionRemover
+## type [SessionRemover](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/cleanup.go#L24-L27>)
 
 SessionRemover 抽象报告运行会话的删除能力，生产实现为 \*session.Store。报告每次运行使用 独立会话，运行记录按保留天数清理时须一并删除其会话，避免会话与消息无限累积。
 
@@ -233,7 +233,7 @@ type SessionRemover interface {
 ```
 
 <a name="Store"></a>
-## type Store
+## type [Store](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L25-L28>)
 
 Store 提供报告计划、运行记录与关注关系的持久化读写，全部操作基于 GORM（database.DB）。 所有计划与运行记录读写都以命名空间为隔离维度，跨命名空间一律按不存在处理。
 
@@ -244,7 +244,7 @@ type Store struct {
 ```
 
 <a name="NewStore"></a>
-### func NewStore
+### func [NewStore](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L31>)
 
 ```go
 func NewStore(db *database.DB) (*Store, error)
@@ -253,7 +253,7 @@ func NewStore(db *database.DB) (*Store, error)
 NewStore 构造 Store；db 为空时返回英文错误。
 
 <a name="Store.Cleanup"></a>
-### func \(\*Store\) Cleanup
+### func \(\*Store\) [Cleanup](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/cleanup.go#L43>)
 
 ```go
 func (s *Store) Cleanup(ctx context.Context, now time.Time, objects ObjectRemover, sessions SessionRemover, perPlanLimit int) (CleanupResult, error)
@@ -262,7 +262,7 @@ func (s *Store) Cleanup(ctx context.Context, now time.Time, objects ObjectRemove
 Cleanup 执行到期计划停用与超期报告清理：先把到期计划停用（不再需要清理调度配置，分发器 只挑选启用的计划），再对全部计划按保留天数清理已结束的运行记录（先删对象、再删本次运行的 独立会话、最后软删记录；对象或会话删除失败时保留记录待下轮）。单项失败不中断整体流程， 最终返回首个错误；perPlanLimit 非正时取默认上限。
 
 <a name="Store.CreatePlan"></a>
-### func \(\*Store\) CreatePlan
+### func \(\*Store\) [CreatePlan](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L160>)
 
 ```go
 func (s *Store) CreatePlan(ctx context.Context, namespace string, userID uint, in PlanInput) (*modelsai.PeriodicReportPlan, error)
@@ -271,7 +271,7 @@ func (s *Store) CreatePlan(ctx context.Context, namespace string, userID uint, i
 CreatePlan 在给定命名空间下创建一条启用的报告计划：校验通过后落库，输入实参编码为 JSON 对象（空实参存空对象）；技能名称不落库，展示时按 skill\_id 关联读取。
 
 <a name="Store.CreateRunIfAbsent"></a>
-### func \(\*Store\) CreateRunIfAbsent
+### func \(\*Store\) [CreateRunIfAbsent](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L338>)
 
 ```go
 func (s *Store) CreateRunIfAbsent(ctx context.Context, run *modelsai.PeriodicReportRun) (bool, error)
@@ -280,7 +280,7 @@ func (s *Store) CreateRunIfAbsent(ctx context.Context, run *modelsai.PeriodicRep
 CreateRunIfAbsent 幂等创建一条报告运行记录：同一计划同一触发点重复投递时命中 \(plan\_id, trigger\_at\) 唯一约束，插入被忽略并返回 false。
 
 <a name="Store.DeletePlan"></a>
-### func \(\*Store\) DeletePlan
+### func \(\*Store\) [DeletePlan](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L322>)
 
 ```go
 func (s *Store) DeletePlan(ctx context.Context, namespace string, id uint) (*modelsai.PeriodicReportPlan, error)
@@ -289,7 +289,7 @@ func (s *Store) DeletePlan(ctx context.Context, namespace string, id uint) (*mod
 DeletePlan 软删除给定命名空间下的一条计划并在删除前返回该计划； 不存在或跨命名空间时返回 ErrPlanNotFound。
 
 <a name="Store.DeleteRun"></a>
-### func \(\*Store\) DeleteRun
+### func \(\*Store\) [DeleteRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L561>)
 
 ```go
 func (s *Store) DeleteRun(ctx context.Context, id uint) error
@@ -298,7 +298,7 @@ func (s *Store) DeleteRun(ctx context.Context, id uint) error
 DeleteRun 软删除一条运行记录。
 
 <a name="Store.EligibleSkills"></a>
-### func \(\*Store\) EligibleSkills
+### func \(\*Store\) [EligibleSkills](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L41>)
 
 ```go
 func (s *Store) EligibleSkills(ctx context.Context, namespace string) ([]*modelsai.AgentSkill, error)
@@ -307,7 +307,7 @@ func (s *Store) EligibleSkills(ctx context.Context, namespace string) ([]*models
 EligibleSkills 返回给定命名空间下可作为周期性报告计划来源的技能：仅自定义、已启用、标记 可周期执行、固定参数能解析出合法 timeOffset/timeWindow 且输入字段恰好含一个 nowTime 字段 的技能，按 created\_at 降序。单行数据解析失败时跳过该行，不让一行坏数据拖垮整个选项列表。
 
 <a name="Store.GetPlan"></a>
-### func \(\*Store\) GetPlan
+### func \(\*Store\) [GetPlan](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L228>)
 
 ```go
 func (s *Store) GetPlan(ctx context.Context, namespace string, id uint) (*modelsai.PeriodicReportPlan, error)
@@ -316,7 +316,7 @@ func (s *Store) GetPlan(ctx context.Context, namespace string, id uint) (*models
 GetPlan 按 ID 查询给定命名空间下的一条报告计划；不存在或跨命名空间时返回 ErrPlanNotFound。
 
 <a name="Store.GetPlanByID"></a>
-### func \(\*Store\) GetPlanByID
+### func \(\*Store\) [GetPlanByID](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L244>)
 
 ```go
 func (s *Store) GetPlanByID(ctx context.Context, id uint) (*modelsai.PeriodicReportPlan, error)
@@ -325,7 +325,7 @@ func (s *Store) GetPlanByID(ctx context.Context, id uint) (*modelsai.PeriodicRep
 GetPlanByID 按 ID 查询一条未删除的报告计划，供报告生成器内部使用（调用方已由调度配置 携带的 ID 定位计划，无需再传命名空间）；不存在时返回 ErrPlanNotFound。
 
 <a name="Store.GetRun"></a>
-### func \(\*Store\) GetRun
+### func \(\*Store\) [GetRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L399>)
 
 ```go
 func (s *Store) GetRun(ctx context.Context, namespace string, id uint) (*modelsai.PeriodicReportRun, error)
@@ -334,7 +334,7 @@ func (s *Store) GetRun(ctx context.Context, namespace string, id uint) (*modelsa
 GetRun 按 ID 查询给定命名空间下的一条运行记录；不存在或跨命名空间时返回 ErrRunNotFound。
 
 <a name="Store.ListAllPlans"></a>
-### func \(\*Store\) ListAllPlans
+### func \(\*Store\) [ListAllPlans](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L470>)
 
 ```go
 func (s *Store) ListAllPlans(ctx context.Context) ([]*modelsai.PeriodicReportPlan, error)
@@ -343,7 +343,7 @@ func (s *Store) ListAllPlans(ctx context.Context) ([]*modelsai.PeriodicReportPla
 ListAllPlans 返回全部命名空间下的报告计划，包含已软删除的计划，供清理流程使用。
 
 <a name="Store.ListDispatchablePlans"></a>
-### func \(\*Store\) ListDispatchablePlans
+### func \(\*Store\) [ListDispatchablePlans](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L491>)
 
 ```go
 func (s *Store) ListDispatchablePlans(ctx context.Context, now time.Time, limit int) ([]*modelsai.PeriodicReportPlan, error)
@@ -352,7 +352,7 @@ func (s *Store) ListDispatchablePlans(ctx context.Context, now time.Time, limit 
 ListDispatchablePlans 返回当前应由分发器处理的计划：已启用、未到期，且 next\_run\_at 为 NULL （待计算）或已到 now（到期需投递）。按 next\_run\_at 升序（NULL 在前）；limit 大于 0 时限制条数。
 
 <a name="Store.ListExpiredPlans"></a>
-### func \(\*Store\) ListExpiredPlans
+### func \(\*Store\) [ListExpiredPlans](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L479>)
 
 ```go
 func (s *Store) ListExpiredPlans(ctx context.Context, now time.Time) ([]*modelsai.PeriodicReportPlan, error)
@@ -361,7 +361,7 @@ func (s *Store) ListExpiredPlans(ctx context.Context, now time.Time) ([]*modelsa
 ListExpiredPlans 返回失效时间不晚于 now 且仍启用的报告计划，供清理流程自动停用。
 
 <a name="Store.ListExpiredRuns"></a>
-### func \(\*Store\) ListExpiredRuns
+### func \(\*Store\) [ListExpiredRuns](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L546>)
 
 ```go
 func (s *Store) ListExpiredRuns(ctx context.Context, planID uint, before time.Time, limit int) ([]*modelsai.PeriodicReportRun, error)
@@ -370,7 +370,7 @@ func (s *Store) ListExpiredRuns(ctx context.Context, planID uint, before time.Ti
 ListExpiredRuns 返回指定计划在 before 之前创建且已结束的运行记录（不含运行中记录），按 created\_at 升序；limit 大于 0 时限制返回条数。
 
 <a name="Store.ListWatchedPlanIDs"></a>
-### func \(\*Store\) ListWatchedPlanIDs
+### func \(\*Store\) [ListWatchedPlanIDs](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L414>)
 
 ```go
 func (s *Store) ListWatchedPlanIDs(ctx context.Context, namespace string, userID uint) ([]uint, error)
@@ -379,7 +379,7 @@ func (s *Store) ListWatchedPlanIDs(ctx context.Context, namespace string, userID
 ListWatchedPlanIDs 返回给定用户在该命名空间下关注的计划 ID 列表。
 
 <a name="Store.ListWatchedPlans"></a>
-### func \(\*Store\) ListWatchedPlans
+### func \(\*Store\) [ListWatchedPlans](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L426>)
 
 ```go
 func (s *Store) ListWatchedPlans(ctx context.Context, namespace string, userID uint) ([]*modelsai.PeriodicReportPlan, error)
@@ -388,7 +388,7 @@ func (s *Store) ListWatchedPlans(ctx context.Context, namespace string, userID u
 ListWatchedPlans 返回给定用户在该命名空间下关注的计划，按关注记录创建时间降序。
 
 <a name="Store.MarkRunFailed"></a>
-### func \(\*Store\) MarkRunFailed
+### func \(\*Store\) [MarkRunFailed](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L382>)
 
 ```go
 func (s *Store) MarkRunFailed(ctx context.Context, id uint, reason string, finishedAt time.Time) error
@@ -397,7 +397,7 @@ func (s *Store) MarkRunFailed(ctx context.Context, id uint, reason string, finis
 MarkRunFailed 把一条运行记录标记为失败并写入失败原因（截断到 2048 字节）与结束时间。
 
 <a name="Store.MarkRunRunning"></a>
-### func \(\*Store\) MarkRunRunning
+### func \(\*Store\) [MarkRunRunning](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L349>)
 
 ```go
 func (s *Store) MarkRunRunning(ctx context.Context, id uint, startedAt time.Time) error
@@ -406,7 +406,7 @@ func (s *Store) MarkRunRunning(ctx context.Context, id uint, startedAt time.Time
 MarkRunRunning 把一条运行记录标记为运行中并记录开始时间。
 
 <a name="Store.MarkRunSuccess"></a>
-### func \(\*Store\) MarkRunSuccess
+### func \(\*Store\) [MarkRunSuccess](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L364>)
 
 ```go
 func (s *Store) MarkRunSuccess(ctx context.Context, id uint, objectKey, title string, size int64, finishedAt time.Time) (bool, error)
@@ -415,7 +415,7 @@ func (s *Store) MarkRunSuccess(ctx context.Context, id uint, objectKey, title st
 MarkRunSuccess 把一条运行记录标记为成功并写入产出对象键、标题、大小与结束时间；返回值表示 是否命中未删除的记录。生成期间记录被用户删除时返回 false，调用方据此清理已写入的报告对象， 避免「先检查存在性、后写入」之间的竞态留下无主对象。
 
 <a name="Store.PlanNamesByIDs"></a>
-### func \(\*Store\) PlanNamesByIDs
+### func \(\*Store\) [PlanNamesByIDs](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L281>)
 
 ```go
 func (s *Store) PlanNamesByIDs(ctx context.Context, namespace string, ids []uint) (map[uint]string, error)
@@ -424,7 +424,7 @@ func (s *Store) PlanNamesByIDs(ctx context.Context, namespace string, ids []uint
 PlanNamesByIDs 批量返回计划 ID 到名称的映射，供信息流第二趟回填计划名称；计划已软删除时 映射中缺失该 ID（调用方以空名称展示）。ids 为空时返回空映射。
 
 <a name="Store.SetNextRunAtIfNull"></a>
-### func \(\*Store\) SetNextRunAtIfNull
+### func \(\*Store\) [SetNextRunAtIfNull](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L523>)
 
 ```go
 func (s *Store) SetNextRunAtIfNull(ctx context.Context, planID uint, next time.Time) error
@@ -433,7 +433,7 @@ func (s *Store) SetNextRunAtIfNull(ctx context.Context, planID uint, next time.T
 SetNextRunAtIfNull 仅在计划 next\_run\_at 仍为 NULL 时写入下次执行时间，避免覆盖其它实例 已计算的触发点。
 
 <a name="Store.SetNextRunAtIfUnchanged"></a>
-### func \(\*Store\) SetNextRunAtIfUnchanged
+### func \(\*Store\) [SetNextRunAtIfUnchanged](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L534>)
 
 ```go
 func (s *Store) SetNextRunAtIfUnchanged(ctx context.Context, planID uint, old, next time.Time) (bool, error)
@@ -442,7 +442,7 @@ func (s *Store) SetNextRunAtIfUnchanged(ctx context.Context, planID uint, old, n
 SetNextRunAtIfUnchanged 仅在计划 next\_run\_at 仍等于 old 时推进到 next，返回是否命中。 未命中说明其它实例已推进该计划的触发点，调用方据此跳过重复投递。
 
 <a name="Store.SetPlanEnabled"></a>
-### func \(\*Store\) SetPlanEnabled
+### func \(\*Store\) [SetPlanEnabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L306>)
 
 ```go
 func (s *Store) SetPlanEnabled(ctx context.Context, namespace string, id uint, enabled bool) (*modelsai.PeriodicReportPlan, error)
@@ -451,7 +451,7 @@ func (s *Store) SetPlanEnabled(ctx context.Context, namespace string, id uint, e
 SetPlanEnabled 设置给定命名空间下一条计划的启停状态并返回最新行；不存在或跨命名空间时 返回 ErrPlanNotFound。启用时清空 next\_run\_at，交给分发器按当前 cron 重新计算；停用时保留原值。
 
 <a name="Store.SetRunSession"></a>
-### func \(\*Store\) SetRunSession
+### func \(\*Store\) [SetRunSession](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L508>)
 
 ```go
 func (s *Store) SetRunSession(ctx context.Context, runID, sessionID uint) error
@@ -460,7 +460,7 @@ func (s *Store) SetRunSession(ctx context.Context, runID, sessionID uint) error
 SetRunSession 仅按运行记录 ID 更新本次运行使用的会话 ID，供报告生成器内部使用； sessionID 为 0 时写入 NULL（尚未创建或会话已删除）。
 
 <a name="Store.SetWatch"></a>
-### func \(\*Store\) SetWatch
+### func \(\*Store\) [SetWatch](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L443>)
 
 ```go
 func (s *Store) SetWatch(ctx context.Context, namespace string, userID, planID uint, watched bool) error
@@ -469,7 +469,7 @@ func (s *Store) SetWatch(ctx context.Context, namespace string, userID, planID u
 SetWatch 幂等设置用户对计划的关系：watched 为 true 时先确认计划属于该命名空间（否则 ErrPlanNotFound）再插入关注记录（已关注时不重复插入）；为 false 时软删除对应关注记录。
 
 <a name="Store.SkillNamesByIDs"></a>
-### func \(\*Store\) SkillNamesByIDs
+### func \(\*Store\) [SkillNamesByIDs](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L258>)
 
 ```go
 func (s *Store) SkillNamesByIDs(ctx context.Context, ids []uint) (map[uint]string, error)
@@ -478,7 +478,7 @@ func (s *Store) SkillNamesByIDs(ctx context.Context, ids []uint) (map[uint]strin
 SkillNamesByIDs 批量返回技能 ID 到名称的映射，供计划列表展示关联技能名。查询包含已软删除的 技能行，保证历史计划在技能下线后仍能显示原名称；ids 为空时返回空映射。
 
 <a name="Store.UpdatePlan"></a>
-### func \(\*Store\) UpdatePlan
+### func \(\*Store\) [UpdatePlan](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L194>)
 
 ```go
 func (s *Store) UpdatePlan(ctx context.Context, namespace string, id uint, in PlanInput) (*modelsai.PeriodicReportPlan, error)
@@ -487,7 +487,7 @@ func (s *Store) UpdatePlan(ctx context.Context, namespace string, id uint, in Pl
 UpdatePlan 更新给定命名空间下的一条报告计划并返回更新后的计划：先按命名空间确认计划存在 （不存在 ErrPlanNotFound），校验通过后整体覆盖可编辑字段，保留启用状态、会话 ID 与属主。 显式刷新 updated\_at，保证同微秒内的连续更新也能体现。
 
 <a name="Store.ValidatePlanInput"></a>
-### func \(\*Store\) ValidatePlanInput
+### func \(\*Store\) [ValidatePlanInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/reports/periodic/store.go#L63>)
 
 ```go
 func (s *Store) ValidatePlanInput(ctx context.Context, namespace string, in PlanInput) (*modelsai.AgentSkill, error)

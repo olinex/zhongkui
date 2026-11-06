@@ -24,7 +24,7 @@
 
 
 <a name="ToFloat32"></a>
-## func ToFloat32
+## func [ToFloat32](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/retrieval/retrieval.go#L323>)
 
 ```go
 func ToFloat32(vec []float64) []float32
@@ -33,7 +33,7 @@ func ToFloat32(vec []float64) []float32
 ToFloat32 将 \[\]float64 转为 \[\]float32（向量化输出转存储维度类型）。
 
 <a name="TruncateBytes"></a>
-## func TruncateBytes
+## func [TruncateBytes](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/retrieval/retrieval.go#L346>)
 
 ```go
 func TruncateBytes(s string, max int) string
@@ -42,7 +42,7 @@ func TruncateBytes(s string, max int) string
 TruncateBytes 把字符串按 UTF\-8 rune 边界截断到不超过 max 字节（max 非正数时不截断）， 发生截断时追加 "..."，保证不产生残缺的多字节字符。与 TruncateText（rune 语义）不同， 本函数以字节为限，用于限制工具结果对模型上下文的占用。
 
 <a name="TruncateText"></a>
-## func TruncateText
+## func [TruncateText](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/retrieval/retrieval.go#L332>)
 
 ```go
 func TruncateText(s string, max int) string
@@ -51,7 +51,7 @@ func TruncateText(s string, max int) string
 TruncateText 按 rune 截断字符串到不超过 max 个字符，超限时追加 "..."；max 非正数或未超限时原样返回。
 
 <a name="VectorLiteral"></a>
-## func VectorLiteral
+## func [VectorLiteral](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/retrieval/retrieval.go#L314>)
 
 ```go
 func VectorLiteral(vec []float64) string
@@ -60,7 +60,7 @@ func VectorLiteral(vec []float64) string
 VectorLiteral 将 \[\]float64 序列化为 pgvector 字面量（如 "\[0.1,0.2,...\]"）。
 
 <a name="FusionWeights"></a>
-## type FusionWeights
+## type [FusionWeights](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/retrieval/retrieval.go#L52-L57>)
 
 FusionWeights 是 weighted 融合的两路权重。
 
@@ -74,7 +74,7 @@ type FusionWeights struct {
 ```
 
 <a name="RetrievalResult"></a>
-## type RetrievalResult
+## type [RetrievalResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/retrieval/retrieval.go#L24-L41>)
 
 RetrievalResult 是一条检索结果的视图层载体（json 序列化给 view 层使用）。
 
@@ -100,7 +100,7 @@ type RetrievalResult struct {
 ```
 
 <a name="DedupeSimilarResults"></a>
-### func DedupeSimilarResults
+### func [DedupeSimilarResults](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/retrieval/retrieval.go#L182>)
 
 ```go
 func DedupeSimilarResults(hits []*RetrievalResult) []*RetrievalResult
@@ -109,7 +109,7 @@ func DedupeSimilarResults(hits []*RetrievalResult) []*RetrievalResult
 DedupeSimilarResults 去掉融合排序结果中内容实质重复的命中：按排序自前向后逐条保留， 某条与任一已保留条目的字符 n\-gram Jaccard 相似度不低于 dedupeSimilarityCutoff 时丢弃。 保留排序更靠前的一条——重排与融合都认定它更相关，分数更高且信息不劣于后者。输入不足 两条时原样返回。
 
 <a name="DedupeSimilarResultsWithCutoff"></a>
-### func DedupeSimilarResultsWithCutoff
+### func [DedupeSimilarResultsWithCutoff](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/retrieval/retrieval.go#L188>)
 
 ```go
 func DedupeSimilarResultsWithCutoff(hits []*RetrievalResult, cutoff float64) []*RetrievalResult
@@ -118,7 +118,7 @@ func DedupeSimilarResultsWithCutoff(hits []*RetrievalResult, cutoff float64) []*
 DedupeSimilarResultsWithCutoff 是 DedupeSimilarResults 的阈值可变体：相似度阈值由调用方 指定（长期记忆检索去重用参数 memory.dedupeThreshold），其余行为完全一致。
 
 <a name="FuseRRF"></a>
-### func FuseRRF
+### func [FuseRRF](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/retrieval/retrieval.go#L74>)
 
 ```go
 func FuseRRF(vector, keyword []*RetrievalResult) []*RetrievalResult
@@ -127,7 +127,7 @@ func FuseRRF(vector, keyword []*RetrievalResult) []*RetrievalResult
 FuseRRF 以 RRF（sum\(1/\(k\+rank\)\)，k=60）融合两路结果，按融合分降序返回。
 
 <a name="FuseRetrievalResults"></a>
-### func FuseRetrievalResults
+### func [FuseRetrievalResults](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/retrieval/retrieval.go#L64>)
 
 ```go
 func FuseRetrievalResults(vector, keyword []*RetrievalResult, fusion string, weights FusionWeights) []*RetrievalResult
@@ -136,7 +136,7 @@ func FuseRetrievalResults(vector, keyword []*RetrievalResult, fusion string, wei
 FuseRetrievalResults 按策略融合两路检索结果；未知策略默认 RRF。
 
 <a name="RowsToResults"></a>
-### func RowsToResults
+### func [RowsToResults](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/retrieval/retrieval.go#L294-L298>)
 
 ```go
 func RowsToResults(rows []struct {
@@ -149,7 +149,7 @@ func RowsToResults(rows []struct {
 RowsToResults 将检索 SQL 扫描行转换为检索结果，Content 为标题路径 \+ 正文的检索文本。
 
 <a name="SelectTopK"></a>
-### func SelectTopK
+### func [SelectTopK](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/retrieval/retrieval.go#L255>)
 
 ```go
 func SelectTopK(cands []*RetrievalResult, topK int) []*RetrievalResult
@@ -158,7 +158,7 @@ func SelectTopK(cands []*RetrievalResult, topK int) []*RetrievalResult
 SelectTopK 取融合排序后的前 topK 条（重排不可用/失败时的降级结果）；topK 非正数时返回全部。
 
 <a name="ToRetrievalResults"></a>
-### func ToRetrievalResults
+### func [ToRetrievalResults](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/retrieval/retrieval.go#L264>)
 
 ```go
 func ToRetrievalResults(docs []*schema.Document) []RetrievalResult

@@ -34,7 +34,7 @@ const (
 ```
 
 <a name="DescribeConfig"></a>
-## func DescribeConfig
+## func [DescribeConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/database/config.go#L92>)
 
 ```go
 func DescribeConfig(names ...string) config.ConfigDescriptions
@@ -43,7 +43,7 @@ func DescribeConfig(names ...string) config.ConfigDescriptions
 DescribeConfig 返回数据库配置项的元描述列表，names 为需描述的配置分组名。
 
 <a name="NewZapGormLogger"></a>
-## func NewZapGormLogger
+## func [NewZapGormLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/database/logger.go#L30>)
 
 ```go
 func NewZapGormLogger(logger *logging.Logger) logger.Interface
@@ -60,7 +60,7 @@ NewZapGormLogger 创建新的 ZapGormLogger 实例 用于将 GORM 日志适配�
 - logger.Interface: 实现了 GORM 日志接口的适配器
 
 <a name="ToUTCDatetime64"></a>
-## func ToUTCDatetime64
+## func [ToUTCDatetime64](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/database/clickhouse.go#L21>)
 
 ```go
 func ToUTCDatetime64(t time.Time, precision int) string
@@ -77,7 +77,7 @@ query.Where("created_at > ? AND created_at <= ?",
 背景：gorm clickhouse 驱动对 time.Time 参数按秒级精度插值（toDateTime）， 与 DateTime64\(N\)（微秒精度）列比较时边界判定异常，导致重复消费或数据丢失。 因此这里以带 precision 位小数精度的 UTC 字符串传参，ClickHouse 会按列类型 DateTime64\(N\) 隐式解析，完整保留精度。注意必须使用空格分隔格式， RFC3339Nano 的 'T'/'Z' 写法在隐式转换时会报 TYPE\_MISMATCH。
 
 <a name="BaseModel"></a>
-## type BaseModel
+## type [BaseModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/database/model.go#L10-L22>)
 
 BaseModel 是数据库模型的基础结构 所有数据库模型都应该嵌入此结构以获得标准字段 GORM 会自动管理 CreatedAt 和 UpdatedAt 字段的时间戳
 
@@ -98,7 +98,7 @@ type BaseModel struct {
 ```
 
 <a name="Config"></a>
-## type Config
+## type [Config](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/database/config.go#L82-L89>)
 
 Config 是数据库连接的主配置结构 包含驱动类型、连接字符串和元配置
 
@@ -114,7 +114,7 @@ type Config struct {
 ```
 
 <a name="ExtractConfig"></a>
-### func ExtractConfig
+### func [ExtractConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/database/config.go#L97>)
 
 ```go
 func ExtractConfig(viper *viper.Viper, validate *validator.Validate, name string) (*Config, error)
@@ -123,7 +123,7 @@ func ExtractConfig(viper *viper.Viper, validate *validator.Validate, name string
 ExtractConfig 从 Viper 实例中提取并校验指定名称的数据库配置。
 
 <a name="DB"></a>
-## type DB
+## type [DB](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/database/client.go#L14>)
 
 DB 是 gorm.DB 的别名，用于简化类型引用
 
@@ -132,7 +132,7 @@ type DB = gorm.DB
 ```
 
 <a name="NewDatabase"></a>
-### func NewDatabase
+### func [NewDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/database/client.go#L38>)
 
 ```go
 func NewDatabase(cfg *Config, logger *logging.Logger) (*DB, error)
@@ -164,7 +164,7 @@ if err != nil {
 ```
 
 <a name="MetaConfig"></a>
-## type MetaConfig
+## type [MetaConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/database/config.go#L21-L48>)
 
 MetaConfig 包含 GORM 数据库连接的元配置选项 这些配置对应 gorm.Config 结构体的字段，用于精细控制数据库行为
 
@@ -200,7 +200,7 @@ type MetaConfig struct {
 ```
 
 <a name="MetaConfig.ToGormConfig"></a>
-### func \(\*MetaConfig\) ToGormConfig
+### func \(\*MetaConfig\) [ToGormConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/database/config.go#L58>)
 
 ```go
 func (m *MetaConfig) ToGormConfig(logger *logging.Logger) *gorm.Config
@@ -217,7 +217,7 @@ ToGormConfig 将 MetaConfig 转换为 GORM 配置 如果 MetaConfig 为 nil，�
 - \*gorm.Config: 转换后的 GORM 配置，包含日志适配器
 
 <a name="ZapGormLogger"></a>
-## type ZapGormLogger
+## type [ZapGormLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/database/logger.go#L17-L20>)
 
 ZapGormLogger 是 GORM 日志接口的 Zap 适配器 将 GORM 的日志输出重定向到项目的 Zap 日志系统
 
@@ -228,7 +228,7 @@ type ZapGormLogger struct {
 ```
 
 <a name="ZapGormLogger.Error"></a>
-### func \(ZapGormLogger\) Error
+### func \(ZapGormLogger\) [Error](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/database/logger.go#L83>)
 
 ```go
 func (l ZapGormLogger) Error(ctx context.Context, msg string, data ...any)
@@ -243,7 +243,7 @@ Error 记录错误级别日志 对应 GORM 的错误信息日志输出
 - data: 可变参数，用于格式化消息
 
 <a name="ZapGormLogger.Info"></a>
-### func \(ZapGormLogger\) Info
+### func \(ZapGormLogger\) [Info](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/database/logger.go#L57>)
 
 ```go
 func (l ZapGormLogger) Info(ctx context.Context, msg string, data ...any)
@@ -258,7 +258,7 @@ Info 记录信息级别日志 对应 GORM 的一般信息日志输出
 - data: 可变参数，用于格式化消息
 
 <a name="ZapGormLogger.LogMode"></a>
-### func \(ZapGormLogger\) LogMode
+### func \(ZapGormLogger\) [LogMode](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/database/logger.go#L44>)
 
 ```go
 func (l ZapGormLogger) LogMode(level logger.LogLevel) logger.Interface
@@ -275,7 +275,7 @@ LogMode 设置日志级别（当前实现中忽略级别设置） 注意：当�
 - logger.Interface: 返回自身实例（级别设置被忽略）
 
 <a name="ZapGormLogger.Trace"></a>
-### func \(ZapGormLogger\) Trace
+### func \(ZapGormLogger\) [Trace](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/database/logger.go#L96>)
 
 ```go
 func (l ZapGormLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error)
@@ -291,7 +291,7 @@ Trace 记录 SQL 跟踪日志 这是 GORM 日志系统的核心方法，记录�
 - err: SQL 执行错误（如果有）
 
 <a name="ZapGormLogger.Warn"></a>
-### func \(ZapGormLogger\) Warn
+### func \(ZapGormLogger\) [Warn](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/database/logger.go#L72>)
 
 ```go
 func (l ZapGormLogger) Warn(ctx context.Context, msg string, data ...any)

@@ -39,6 +39,9 @@ vendor/
 # Go test coverage
 coverage.out
 
+# CI/CD 临时产物（make test-report / make ci-report 产物）
+.cicd/
+
 # VitePress 构建缓存与临时文件
 docs/.vitepress/cache/
 docs/.vitepress/.temp/

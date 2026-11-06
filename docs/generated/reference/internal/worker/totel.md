@@ -31,7 +31,7 @@ const (
 ```
 
 <a name="EndSpan"></a>
-## func EndSpan
+## func [EndSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/totel/otel.go#L146>)
 
 ```go
 func EndSpan(span trace.Span, errPtr *error)
@@ -40,7 +40,7 @@ func EndSpan(span trace.Span, errPtr *error)
 EndSpan 安全结束 span，并在发生错误时记录错误状态。
 
 <a name="InitMetrics"></a>
-## func InitMetrics
+## func [InitMetrics](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/totel/otel.go#L42>)
 
 ```go
 func InitMetrics()
@@ -49,7 +49,7 @@ func InitMetrics()
 InitMetrics 初始化任务处理引擎的 OpenTelemetry 指标，仅执行一次。
 
 <a name="RecordItemsLoaded"></a>
-## func RecordItemsLoaded
+## func [RecordItemsLoaded](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/totel/otel.go#L128>)
 
 ```go
 func RecordItemsLoaded(ctx context.Context, taskType string, count int)
@@ -58,7 +58,7 @@ func RecordItemsLoaded(ctx context.Context, taskType string, count int)
 RecordItemsLoaded 记录加载的数据项数量。
 
 <a name="RecordPacketsExtracted"></a>
-## func RecordPacketsExtracted
+## func [RecordPacketsExtracted](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/totel/otel.go#L135>)
 
 ```go
 func RecordPacketsExtracted(ctx context.Context, taskType string, count int)
@@ -67,7 +67,7 @@ func RecordPacketsExtracted(ctx context.Context, taskType string, count int)
 RecordPacketsExtracted 记录提取的原始数据包数量。
 
 <a name="RecordTask"></a>
-## func RecordTask
+## func [RecordTask](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/totel/otel.go#L114>)
 
 ```go
 func RecordTask(ctx context.Context, taskType string)
@@ -76,7 +76,7 @@ func RecordTask(ctx context.Context, taskType string)
 RecordTask 记录任务处理成功。
 
 <a name="RecordTaskError"></a>
-## func RecordTaskError
+## func [RecordTaskError](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/totel/otel.go#L121>)
 
 ```go
 func RecordTaskError(ctx context.Context, taskType string)
@@ -85,7 +85,7 @@ func RecordTaskError(ctx context.Context, taskType string)
 RecordTaskError 记录任务处理失败。
 
 <a name="StartBatchTaskSpan"></a>
-## func StartBatchTaskSpan
+## func [StartBatchTaskSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/totel/otel.go#L88>)
 
 ```go
 func StartBatchTaskSpan(ctx context.Context, taskType string) (context.Context, trace.Span)
@@ -94,7 +94,7 @@ func StartBatchTaskSpan(ctx context.Context, taskType string) (context.Context, 
 StartBatchTaskSpan 在批量任务执行时创建 span。
 
 <a name="StartExtractSpan"></a>
-## func StartExtractSpan
+## func [StartExtractSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/totel/otel.go#L99>)
 
 ```go
 func StartExtractSpan(ctx context.Context, taskType string) (context.Context, trace.Span)

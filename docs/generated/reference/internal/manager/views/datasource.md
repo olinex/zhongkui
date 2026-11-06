@@ -28,7 +28,7 @@
 
 
 <a name="DatasourceBatchDelete"></a>
-## func DatasourceBatchDelete
+## func [DatasourceBatchDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L463>)
 
 ```go
 func DatasourceBatchDelete(c *gin.Context)
@@ -37,7 +37,7 @@ func DatasourceBatchDelete(c *gin.Context)
 DatasourceBatchDelete 批量删除第三方数据源。 逐条先删库再注销裸名 vtable（best\-effort，忽略未注册）；数据源不存在 （或不属于当前命名空间）视为成功跳过（幂等）。
 
 <a name="DatasourceBatchSetEnabled"></a>
-## func DatasourceBatchSetEnabled
+## func [DatasourceBatchSetEnabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L514>)
 
 ```go
 func DatasourceBatchSetEnabled(enabled bool) gin.HandlerFunc
@@ -46,7 +46,7 @@ func DatasourceBatchSetEnabled(enabled bool) gin.HandlerFunc
 DatasourceBatchSetEnabled 批量启用/停用第三方数据源。 启用：先 pools.Register（即校验）落库前注册 vtable，DB 失败则回滚注销； 停用：先落库再注销 vtable（best\-effort）。逐条幂等（已处于目标状态直接成功）； 数据源不存在（或不属于当前命名空间）视为成功跳过。
 
 <a name="DatasourceCreate"></a>
-## func DatasourceCreate
+## func [DatasourceCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L212>)
 
 ```go
 func DatasourceCreate(c *gin.Context)
@@ -55,7 +55,7 @@ func DatasourceCreate(c *gin.Context)
 DatasourceCreate 处理创建第三方数据源的请求。 创建前先经 pools.Register 校验配置并在当前命名空间池注册为裸名 vtable（MySQL 注册期间 自省一次表结构），成功后再落库；落库失败则回滚注销刚注册的 vtable，保证内存池与 DB 一致。 sqlite\_file 类型以 multipart/form\-data 提交：.db 文件先经 S3 加密上传（Store），随后 Register 依赖 Materialize 从 S3 拉取解密建表；任一环节失败都清理已上传对象与已注册 vtable，保证「S3 对象 ↔ 配置」共存亡、不泄露无归属文件。 数据源归属当前请求命名空间。
 
 <a name="DatasourceDetailGet"></a>
-## func DatasourceDetailGet
+## func [DatasourceDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L324>)
 
 ```go
 func DatasourceDetailGet(c *gin.Context)
@@ -64,7 +64,7 @@ func DatasourceDetailGet(c *gin.Context)
 DatasourceDetailGet 处理获取第三方数据源详情的请求。 仅允许访问当前命名空间内的数据源，不存在时返回 404。
 
 <a name="DatasourceIntrospect"></a>
-## func DatasourceIntrospect
+## func [DatasourceIntrospect](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L638>)
 
 ```go
 func DatasourceIntrospect(c *gin.Context)
@@ -73,7 +73,7 @@ func DatasourceIntrospect(c *gin.Context)
 DatasourceIntrospect 处理自省第三方数据源表结构的请求。 不落库、不注册 vtable，仅建立连接后解析目标表结构并映射为列定义（列名 \+ 类型键）， 供前端在创建数据源时展示。sqlite\_file 类型走 multipart/form\-data 分支，复用 views.ReadMultipartFile 流式拿到上传的 .db 文件后一并传给 IntrospectSchema（其内部按 类型分发，sqlite\_file 分支做 PRAGMA 自省）；其余类型仍为 JSON 体，file 传 nil。 失败原因放在 body 的 Message 字段返回（仍走 HTTP 200，不抛 5xx）。
 
 <a name="DatasourceListGet"></a>
-## func DatasourceListGet
+## func [DatasourceListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L159>)
 
 ```go
 func DatasourceListGet(c *gin.Context)
@@ -82,7 +82,7 @@ func DatasourceListGet(c *gin.Context)
 DatasourceListGet 处理获取第三方数据源列表的请求。 支持分页、排序与过滤（时间/名称/类型/启用状态），仅返回当前命名空间内的数据源。 查询按 gorm 模型扫描（config 经 crypto 序列化器读取），再映射为接口层 Out 结构。
 
 <a name="DatasourceTest"></a>
-## func DatasourceTest
+## func [DatasourceTest](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L619>)
 
 ```go
 func DatasourceTest(c *gin.Context)
@@ -91,7 +91,7 @@ func DatasourceTest(c *gin.Context)
 DatasourceTest 处理测试第三方数据源连接的请求。 不落库、不注册 vtable，仅按类型建立连接并校验连通性；失败原因放在 body 的 Message 字段返回（仍走 HTTP 200，不抛 5xx）。sqlite\_file 无网络连接，恒返回失败。
 
 <a name="DatasourceTypeConfigGet"></a>
-## func DatasourceTypeConfigGet
+## func [DatasourceTypeConfigGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L143>)
 
 ```go
 func DatasourceTypeConfigGet(c *gin.Context)
@@ -100,7 +100,7 @@ func DatasourceTypeConfigGet(c *gin.Context)
 DatasourceTypeConfigGet 处理获取第三方数据源类型枚举的请求。 返回全部已注册数据源类型及其配置字段 schema，供前端动态渲染创建/编辑表单。schema 依据对应 vtab 前端配置结构体的 binding/default 标签经 views.getStructFields 反射生成 （与 OPTIONS 元信息同一事实来源）。
 
 <a name="DatasourceUpdate"></a>
-## func DatasourceUpdate
+## func [DatasourceUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L351>)
 
 ```go
 func DatasourceUpdate(c *gin.Context)
@@ -109,7 +109,7 @@ func DatasourceUpdate(c *gin.Context)
 DatasourceUpdate 处理更新第三方数据源信息的请求。 数据源名称与类型不可变，仅更新启用状态、配置与描述；仅允许更新当前命名空间内 的数据源。更新启用状态下先经 pools.Register 校验并覆盖注册裸名 vtable（DB 失败 时用原配置恢复注册）；停用状态下直接落库后注销 vtable（best\-effort）。
 
 <a name="RegisterRoutes"></a>
-## func RegisterRoutes
+## func [RegisterRoutes](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/register.go#L17>)
 
 ```go
 func RegisterRoutes(ctx *views.RegisterContext)
@@ -118,7 +118,7 @@ func RegisterRoutes(ctx *views.RegisterContext)
 RegisterRoutes 注册 /api/v1/datasource 第三方数据源通用管理接口。 第三方数据源（Redis / MySQL）把外部数据暴露为按命名空间隔离的 SQLite vtable，属于通用 能力（当前由标签事件消费）。数据源归属请求命名空间，注册为所在命名空间池（vtab.Pools） 内的裸名 vtable，供 rego 规则经 sqlite.query 直接引用。 认证 / RBAC / 核心库 / 命名空间等公共中间件挂在父组上继承；需 SQLiteVTabPools 中间件 提供按命名空间池，供 CRUD 处理器注册/注销 vtable。
 
 <a name="DatasourceBatchIn"></a>
-## type DatasourceBatchIn
+## type [DatasourceBatchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L83-L86>)
 
 DatasourceBatchIn 批量操作第三方数据源的请求输入结构。 Ids 接受标量（单个 ID）或数组（多个 ID）。
 
@@ -130,7 +130,7 @@ type DatasourceBatchIn struct {
 ```
 
 <a name="DatasourceCreateIn"></a>
-## type DatasourceCreateIn
+## type [DatasourceCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L31-L42>)
 
 DatasourceCreateIn 定义创建第三方数据源的请求输入结构。 命名空间取自请求上下文，数据源名称在同一命名空间内唯一（本地身份）；类型必须为 vtab 支持的类型（redis / mysql / postgres / clickhouse / sqlite\_file / etcd / mongo） 之一；Config 为连接配置的 JSON 文本，结构随类型不同而不同。
 
@@ -150,7 +150,7 @@ type DatasourceCreateIn struct {
 ```
 
 <a name="DatasourceDetailOut"></a>
-## type DatasourceDetailOut
+## type [DatasourceDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L58-L72>)
 
 DatasourceDetailOut 定义第三方数据源的详情输出结构。 嵌入 BaseItemOut 携带审计字段，业务字段与模型字段一一对应； Name 同时是该数据源注册为 vtable 后 rego 可引用的裸名。
 
@@ -173,7 +173,7 @@ type DatasourceDetailOut struct {
 ```
 
 <a name="DatasourceIntrospectIn"></a>
-## type DatasourceIntrospectIn
+## type [DatasourceIntrospectIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L105-L110>)
 
 DatasourceIntrospectIn 自省表结构请求输入。
 
@@ -187,7 +187,7 @@ type DatasourceIntrospectIn struct {
 ```
 
 <a name="DatasourceIntrospectOut"></a>
-## type DatasourceIntrospectOut
+## type [DatasourceIntrospectOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L114-L121>)
 
 DatasourceIntrospectOut 自省表结构结果输出：Success 表示自省成功，Message 为失败原因， Columns 为解析出的列定义（供前端继续调整）。
 
@@ -203,7 +203,7 @@ type DatasourceIntrospectOut struct {
 ```
 
 <a name="DatasourceListOut"></a>
-## type DatasourceListOut
+## type [DatasourceListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L76-L79>)
 
 DatasourceListOut 定义第三方数据源列表的输出项结构。 嵌入 BaseTotalOut 以支持分页总数统计。
 
@@ -215,7 +215,7 @@ type DatasourceListOut struct {
 ```
 
 <a name="DatasourceTestIn"></a>
-## type DatasourceTestIn
+## type [DatasourceTestIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L89-L94>)
 
 DatasourceTestIn 测试连接请求输入：传入数据源类型与连接配置 JSON。
 
@@ -229,7 +229,7 @@ type DatasourceTestIn struct {
 ```
 
 <a name="DatasourceTestOut"></a>
-## type DatasourceTestOut
+## type [DatasourceTestOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L97-L102>)
 
 DatasourceTestOut 测试连接结果输出：Success 表示连通性，Message 为失败原因（成功可为空）。
 
@@ -243,7 +243,7 @@ type DatasourceTestOut struct {
 ```
 
 <a name="DatasourceTypeOut"></a>
-## type DatasourceTypeOut
+## type [DatasourceTypeOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L124-L131>)
 
 DatasourceTypeOut 描述单个第三方数据源类型的枚举项。
 
@@ -259,7 +259,7 @@ type DatasourceTypeOut struct {
 ```
 
 <a name="DatasourceTypesOut"></a>
-## type DatasourceTypesOut
+## type [DatasourceTypesOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L134-L137>)
 
 DatasourceTypesOut 定义第三方数据源类型枚举的输出结构。
 
@@ -271,7 +271,7 @@ type DatasourceTypesOut struct {
 ```
 
 <a name="DatasourceUpdateIn"></a>
-## type DatasourceUpdateIn
+## type [DatasourceUpdateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/datasource/datasource.go#L46-L53>)
 
 DatasourceUpdateIn 定义更新第三方数据源的请求输入结构。 数据源名称与类型不可变（不接受二者），仅允许调整启用状态、配置与描述。
 

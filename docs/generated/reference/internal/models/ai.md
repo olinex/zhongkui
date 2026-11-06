@@ -112,7 +112,7 @@ var AllSlots = []Slot{SlotFlash, SlotStandard, SlotAdvanced, SlotEmbedding}
 ```
 
 <a name="ChatSlotValues"></a>
-## func ChatSlotValues
+## func [ChatSlotValues](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L279>)
 
 ```go
 func ChatSlotValues() []string
@@ -121,7 +121,7 @@ func ChatSlotValues() []string
 ChatSlotValues 把对话档位清单展开为字面量清单（embedding 不在其列），返回新切片，调用方 修改不影响内部档位清单。档位成员仍只声明在 AllSlots 一处，清单由此派生，新增档位无需同步 修改消费方（如参数注册表 agent.defaultSlot 的封闭取值清单）。
 
 <a name="InputFieldAcceptsJSON"></a>
-## func InputFieldAcceptsJSON
+## func [InputFieldAcceptsJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/skill.go#L313>)
 
 ```go
 func InputFieldAcceptsJSON(fieldType SkillInputFieldType, raw json.RawMessage) bool
@@ -130,7 +130,7 @@ func InputFieldAcceptsJSON(fieldType SkillInputFieldType, raw json.RawMessage) b
 InputFieldAcceptsJSON 判断原始 JSON 值是否符合技能输入字段类型：类型不在取值空间或 JSON 非法时返回 false；number / boolean 分别要求 JSON 数字 / 布尔，string / enum / date 均要求 JSON 字符串。
 
 <a name="InvalidChatSlotError"></a>
-## func InvalidChatSlotError
+## func [InvalidChatSlotError](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L299>)
 
 ```go
 func InvalidChatSlotError(value Slot) error
@@ -139,7 +139,7 @@ func InvalidChatSlotError(value Slot) error
 InvalidChatSlotError 返回「对话档位取值不合法」的英文错误，枚举文案与档位清单同源；供 视图层在 ParseChatSlot 返回 false 时直接使用，各处不再重复拼写档位枚举。
 
 <a name="MergeParameters"></a>
-## func MergeParameters
+## func [MergeParameters](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/skill.go#L324>)
 
 ```go
 func MergeParameters(sources ...map[string]json.RawMessage) map[string]json.RawMessage
@@ -148,7 +148,7 @@ func MergeParameters(sources ...map[string]json.RawMessage) map[string]json.RawM
 MergeParameters 按传入顺序合并参数映射，后者同名键覆盖前者，返回新 map 且不修改入参； 典型用法为 MergeParameters\(fixedFields, planInputs, runtimeInputs\)，优先级由右向左递增。
 
 <a name="ParseSkillFixedFields"></a>
-## func ParseSkillFixedFields
+## func [ParseSkillFixedFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/skill.go#L171>)
 
 ```go
 func ParseSkillFixedFields(raw datatypes.JSON) (map[string]json.RawMessage, error)
@@ -157,7 +157,7 @@ func ParseSkillFixedFields(raw datatypes.JSON) (map[string]json.RawMessage, erro
 ParseSkillFixedFields 把技能行 fixed\_fields 列的 JSON 解码为自由形状的参数映射：空值（nil 或 空串）与 JSON null 返回空 map；非 JSON object 或非法 JSON 返回英文错误。值以 json.RawMessage 承载，保留字符串、数字、布尔、对象与数组的原始 JSON 类型。
 
 <a name="SkillFixedFieldsJSON"></a>
-## func SkillFixedFieldsJSON
+## func [SkillFixedFieldsJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/skill.go#L184>)
 
 ```go
 func SkillFixedFieldsJSON(fields map[string]json.RawMessage) (datatypes.JSON, error)
@@ -166,7 +166,7 @@ func SkillFixedFieldsJSON(fields map[string]json.RawMessage) (datatypes.JSON, er
 SkillFixedFieldsJSON 把固定参数映射编码为技能行 fixed\_fields 列的 JSON：nil 或空 map 编码为 空 JSON 对象，非法值（如无法序列化的内容）返回英文错误。
 
 <a name="SkillIDColumn"></a>
-## func SkillIDColumn
+## func [SkillIDColumn](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/session.go#L113>)
 
 ```go
 func SkillIDColumn(id uint) *uint
@@ -175,7 +175,7 @@ func SkillIDColumn(id uint) *uint
 SkillIDColumn 把轮次技能 ID 映射为消息行的可空技能列：0（未选技能）映射为 NULL， 使 agent\_messages.skill\_id 的外键约束不会因「未选技能」而违例。
 
 <a name="SkillIDFromColumn"></a>
-## func SkillIDFromColumn
+## func [SkillIDFromColumn](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/session.go#L121>)
 
 ```go
 func SkillIDFromColumn(id *uint) uint
@@ -184,7 +184,7 @@ func SkillIDFromColumn(id *uint) uint
 SkillIDFromColumn 把消息行的可空技能列还原为轮次技能 ID：NULL 映射为 0（未选技能）。
 
 <a name="SkillInputFieldsJSON"></a>
-## func SkillInputFieldsJSON
+## func [SkillInputFieldsJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/skill.go#L88>)
 
 ```go
 func SkillInputFieldsJSON(fields []SkillInputField) (datatypes.JSON, error)
@@ -193,7 +193,7 @@ func SkillInputFieldsJSON(fields []SkillInputField) (datatypes.JSON, error)
 SkillInputFieldsJSON 把输入字段列表编码为技能行 input\_fields 列的 JSON：nil 或空切片编码为 空 JSON 数组，非法值（如无法序列化的内容）返回英文错误。
 
 <a name="SlotKind"></a>
-## func SlotKind
+## func [SlotKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L322>)
 
 ```go
 func SlotKind(slot Slot) llm.ModelKind
@@ -202,7 +202,7 @@ func SlotKind(slot Slot) llm.ModelKind
 SlotKind 返回档位要求的模型类型：embedding 档位要求向量模型，其余对话档位要求对话模型。
 
 <a name="ValidateSkillFixedFields"></a>
-## func ValidateSkillFixedFields
+## func [ValidateSkillFixedFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/skill.go#L261>)
 
 ```go
 func ValidateSkillFixedFields(fields map[string]json.RawMessage, periodic bool, inputFields []SkillInputField) error
@@ -211,7 +211,7 @@ func ValidateSkillFixedFields(fields map[string]json.RawMessage, periodic bool, 
 ValidateSkillFixedFields 校验技能固定参数：按 skillReservedFixedFields 的 isdefault 规则拒绝运行时 保留键，并拒绝与输入字段同名的固定字段；periodic 为 true 时进一步按 skillPeriodicWindowFields 校验 timeOffset / timeWindow，非周期技能不要求时长键。输入字段声明本身由调用方的校验视图负责。
 
 <a name="ValidateSkillPeriodicInputFields"></a>
-## func ValidateSkillPeriodicInputFields
+## func [ValidateSkillPeriodicInputFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/skill.go#L288>)
 
 ```go
 func ValidateSkillPeriodicInputFields(periodic bool, fields []SkillInputField) error
@@ -220,7 +220,7 @@ func ValidateSkillPeriodicInputFields(periodic bool, fields []SkillInputField) e
 ValidateSkillPeriodicInputFields 校验周期技能的输入字段：必须且只能有一个 name=nowTime、 type=date 的字段；非周期技能不校验。字段名重复、类型非法等结构问题由调用方的 binding 负责。
 
 <a name="AgentCheckpoint"></a>
-## type AgentCheckpoint
+## type [AgentCheckpoint](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/agent_checkpoint.go#L17-L25>)
 
 AgentCheckpoint 保存 eino 图一次运行的可恢复现场：挂起时由 checkpoint 存储写入，续跑按同一键恢复图 现场并跳过已完成节点，运行收敛后随之删除。对应表为 agent\_checkpoints。
 
@@ -239,7 +239,7 @@ type AgentCheckpoint struct {
 ```
 
 <a name="AgentInteraction"></a>
-## type AgentInteraction
+## type [AgentInteraction](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/agent_interaction.go#L42-L65>)
 
 AgentInteraction 保存业务交互：审批、问卷与推荐的下一步各落一行，供刷新 / 重进会话时重建 可交互块（块本身由消息载荷与交互类型重新投影，不落库）。Seq 在所属会话内单调递增（从 1 起）， 即交互的真实产生顺序；Payload 为业务 JSON（审批调用清单与决策 / 问卷题目与作答 / 下一步列表）， 经 crypto 序列化器加密落库。对应表为 agent\_interactions。
 
@@ -271,7 +271,7 @@ type AgentInteraction struct {
 ```
 
 <a name="AgentInteractionState"></a>
-## type AgentInteractionState
+## type [AgentInteractionState](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L96>)
 
 AgentInteractionState 是会话交互状态（四主状态）的标识：等待中（waiting）、运行中（running）、 暂停（paused）与已锁定（locked）。交互状态由既有事实（在途活动、挂起现场、会话消息与轮次上限） 唯一推导，不落库为独立可变列；等待中/运行中/暂停各自携带子状态（见 AgentInteractionSubstate）， 已锁定无子状态。
 
@@ -295,7 +295,7 @@ const (
 ```
 
 <a name="AllAgentInteractionStates"></a>
-### func AllAgentInteractionStates
+### func [AllAgentInteractionStates](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L487>)
 
 ```go
 func AllAgentInteractionStates() []AgentInteractionState
@@ -304,7 +304,7 @@ func AllAgentInteractionStates() []AgentInteractionState
 AllAgentInteractionStates 返回全部会话交互状态（主状态）的副本，声明顺序即枚举类条目顺序与 前端展示顺序；供交互状态机与视图层复用，调用方修改返回值不影响该取值空间。
 
 <a name="ParseAgentInteractionState"></a>
-### func ParseAgentInteractionState
+### func [ParseAgentInteractionState](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L495>)
 
 ```go
 func ParseAgentInteractionState(raw AgentInteractionState) (AgentInteractionState, error)
@@ -313,7 +313,7 @@ func ParseAgentInteractionState(raw AgentInteractionState) (AgentInteractionStat
 ParseAgentInteractionState 解析并校验会话交互状态（主状态）：不在取值空间内的取值（含空串） 返回英文错误；合法取值原样返回。主状态没有缺省值（由推导全函数必定落一个），故空串视为非法。
 
 <a name="AgentInteractionSubstate"></a>
-## type AgentInteractionSubstate
+## type [AgentInteractionSubstate](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L113>)
 
 AgentInteractionSubstate 是会话交互子状态的标识：等待中（approval/answer）、运行中 （generating/thinking/tool\_calling/compacting）与暂停（success/failed/aborted）三类主状态各自的 细分取值，与 AgentInteractionState 一同由交互状态机推导；已锁定无子状态（其子状态以空串表达）。
 
@@ -347,7 +347,7 @@ const (
 ```
 
 <a name="AllAgentInteractionSubstates"></a>
-### func AllAgentInteractionSubstates
+### func [AllAgentInteractionSubstates](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L506>)
 
 ```go
 func AllAgentInteractionSubstates() []AgentInteractionSubstate
@@ -356,7 +356,7 @@ func AllAgentInteractionSubstates() []AgentInteractionSubstate
 AllAgentInteractionSubstates 返回全部会话交互子状态的副本，声明顺序即枚举类条目顺序与前端 展示顺序；供交互状态机与视图层复用，调用方修改返回值不影响该取值空间。
 
 <a name="ParseAgentInteractionSubstate"></a>
-### func ParseAgentInteractionSubstate
+### func [ParseAgentInteractionSubstate](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L515>)
 
 ```go
 func ParseAgentInteractionSubstate(raw AgentInteractionSubstate) (AgentInteractionSubstate, error)
@@ -365,7 +365,7 @@ func ParseAgentInteractionSubstate(raw AgentInteractionSubstate) (AgentInteracti
 ParseAgentInteractionSubstate 解析并校验会话交互子状态：不在取值空间内的取值（含空串）返回 英文错误；合法取值原样返回。合法子状态由本取值空间穷举，已锁定主状态无子状态（由调用方以空串 单独表达），故空串在此视为非法。
 
 <a name="AgentKind"></a>
-## type AgentKind
+## type [AgentKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L47>)
 
 AgentKind 是 Agent 类型的标识：通用对话（general）、知识检索/知识库运营（knowledge）与 Rego 规则生成（rego）。会话与长期记忆均按「命名空间 \+ AgentKind」归属与隔离，取值与 agent\_sessions.agent\_kind、agent\_memories.agent\_kind 列的取值一致。
 
@@ -387,7 +387,7 @@ const (
 ```
 
 <a name="AllAgentKinds"></a>
-### func AllAgentKinds
+### func [AllAgentKinds](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L426>)
 
 ```go
 func AllAgentKinds() []AgentKind
@@ -396,7 +396,7 @@ func AllAgentKinds() []AgentKind
 AllAgentKinds 返回全部 Agent 类型的副本，声明顺序即枚举类条目顺序与前端展示顺序；供展示与 校验遍历使用，调用方修改返回值不影响该取值空间。
 
 <a name="ParseAgentKind"></a>
-### func ParseAgentKind
+### func [ParseAgentKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L435>)
 
 ```go
 func ParseAgentKind(raw AgentKind) (AgentKind, error)
@@ -405,7 +405,7 @@ func ParseAgentKind(raw AgentKind) (AgentKind, error)
 ParseAgentKind 解析并校验 Agent 类型取值：空串取缺省值 knowledge；非空但不在取值空间内的 取值返回英文错误；合法取值原样返回。取值清单只在 internal/models/ai 声明，调用方不再各自 校验并拼错误文案。
 
 <a name="AgentMemory"></a>
-## type AgentMemory
+## type [AgentMemory](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/memory.go#L22-L54>)
 
 AgentMemory 表示一条长期记忆，按「命名空间 \+ 属主用户 \+ Agent 类型 \+ 来源会话」归属与隔离， 仅在其来源会话内可见。对应表为 agent\_memories。
 
@@ -446,7 +446,7 @@ type AgentMemory struct {
 ```
 
 <a name="AgentMessage"></a>
-## type AgentMessage
+## type [AgentMessage](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/session.go#L60-L109>)
 
 AgentMessage 表示 AI 助手会话中的一条消息，记录消息角色（Role）、原生消息载荷 （MessageKind / Payload）、正文（Content），以及助手回复的草稿载荷（DraftJSON）与引用 来源列表（CitationsJSON）。对应表为 agent\_messages。
 
@@ -506,7 +506,7 @@ type AgentMessage struct {
 ```
 
 <a name="AgentParam"></a>
-## type AgentParam
+## type [AgentParam](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/llm.go#L103-L114>)
 
 AgentParam 表示一条 Agent 行为参数记录：出厂值（DefaultValue）由 migrate fixture 注入、 只读，当前生效值（Value）可由管理接口或直接改库调整。表内每个注册表键恒有且仅有一条 记录，参数键、类型、分组与说明由代码内参数注册表声明（注册表不再持有任何出厂值）。 对应表为 agent\_params。
 
@@ -526,7 +526,7 @@ type AgentParam struct {
 ```
 
 <a name="AgentRun"></a>
-## type AgentRun
+## type [AgentRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/agent_run.go#L21-L49>)
 
 AgentRun 表示一次 Agent 运行在挂起时刻的运行现场：命中客户端工具后， 后端把待执行调用列表、检索引用与档位落库，结束本次流等待前端回传 审批决定与执行结果，再据该现场从中断处续跑。挂起时没有大模型调用在跑，故现场不设 过期时间：只要会话未删除，任意时间都可恢复或回退。对应表为 agent\_runs。
 
@@ -565,7 +565,7 @@ type AgentRun struct {
 ```
 
 <a name="AgentRunPhase"></a>
-## type AgentRunPhase
+## type [AgentRunPhase](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L76>)
 
 AgentRunPhase 是 Agent 回合生命周期阶段的标识：运行中（running）、已完成（done）、失败 （failed）、已取消（cancelled）与挂起待审批（suspended），取值与 agent\_messages.phase 列的取值一致。与运行现场状态 AgentRunStatus 是不同概念：AgentRunStatus 描述 agent\_runs 中 「待恢复现场」的消费状态，AgentRunPhase 描述一次回合的生命周期阶段。
 
@@ -591,7 +591,7 @@ const (
 ```
 
 <a name="AllAgentRunPhases"></a>
-### func AllAgentRunPhases
+### func [AllAgentRunPhases](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L468>)
 
 ```go
 func AllAgentRunPhases() []AgentRunPhase
@@ -600,7 +600,7 @@ func AllAgentRunPhases() []AgentRunPhase
 AllAgentRunPhases 返回全部运行生命周期阶段的副本，声明顺序即枚举类条目顺序与前端展示顺序； 供 RunHub 与视图层复用，调用方修改返回值不影响该取值空间。
 
 <a name="ParseAgentRunPhase"></a>
-### func ParseAgentRunPhase
+### func [ParseAgentRunPhase](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L476>)
 
 ```go
 func ParseAgentRunPhase(raw AgentRunPhase) (AgentRunPhase, error)
@@ -609,7 +609,7 @@ func ParseAgentRunPhase(raw AgentRunPhase) (AgentRunPhase, error)
 ParseAgentRunPhase 解析并校验运行生命周期阶段：不在取值空间内的取值（含空串）返回英文错误； 合法取值原样返回。阶段没有缺省值（写入路径显式使用 running），故空串视为非法。
 
 <a name="AgentRunStatus"></a>
-## type AgentRunStatus
+## type [AgentRunStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L62>)
 
 AgentRunStatus 是 Agent 运行现场状态的标识：待恢复（pending）与已消费（consumed），取值与 agent\_runs.status 列的取值一致。运行现场在命中客户端工具时挂起并落库，处于 pending 的现场 可被恢复（现场不设过期，只要会话未删除即可恢复）。
 
@@ -629,7 +629,7 @@ const (
 ```
 
 <a name="AllAgentRunStatuses"></a>
-### func AllAgentRunStatuses
+### func [AllAgentRunStatuses](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L449>)
 
 ```go
 func AllAgentRunStatuses() []AgentRunStatus
@@ -638,7 +638,7 @@ func AllAgentRunStatuses() []AgentRunStatus
 AllAgentRunStatuses 返回全部运行现场状态的副本，声明顺序即枚举类条目顺序与前端展示顺序； 供运行现场服务与视图层复用，调用方修改返回值不影响该取值空间。
 
 <a name="ParseAgentRunStatus"></a>
-### func ParseAgentRunStatus
+### func [ParseAgentRunStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L457>)
 
 ```go
 func ParseAgentRunStatus(raw AgentRunStatus) (AgentRunStatus, error)
@@ -647,7 +647,7 @@ func ParseAgentRunStatus(raw AgentRunStatus) (AgentRunStatus, error)
 ParseAgentRunStatus 解析并校验运行现场状态：不在取值空间内的取值（含空串）返回英文错误； 合法取值原样返回。状态没有缺省值（写入路径显式使用 pending），故空串视为非法。
 
 <a name="AgentSession"></a>
-## type AgentSession
+## type [AgentSession](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/session.go#L17-L51>)
 
 AgentSession 表示一个 AI 助手会话，聚合同一话题下的多轮问答消息 （AgentMessage），并记录会话缺省档位与状态。对应表为 agent\_sessions。
 
@@ -690,7 +690,7 @@ type AgentSession struct {
 ```
 
 <a name="AgentSessionCompaction"></a>
-## type AgentSessionCompaction
+## type [AgentSessionCompaction](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/session.go#L131-L157>)
 
 AgentSessionCompaction 表示一次滚动摘要推进（静默滚动或压缩）留下的压缩检查点：记录推进后的 上下文起点（UptoSeq）与该时刻的摘要全文（加密落库），与 AgentSession 的 Summary/SummaryUptoSeq 对应，作为回滚时「逐级回退 start bound」的可恢复起点。对应表为 agent\_session\_compactions。
 
@@ -725,7 +725,7 @@ type AgentSessionCompaction struct {
 ```
 
 <a name="AgentSkill"></a>
-## type AgentSkill
+## type [AgentSkill](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/skill.go#L28-L54>)
 
 AgentSkill 表示一条 AI 技能定义，记录技能名称、明文描述与加密正文，并提供启停开关。 对应表为 agent\_skills：自定义技能按命名空间隔离；内置技能固定位于 base.SystemNamespace， 正文为空（Content 为 nil），由代码注册表按名提供。
 
@@ -760,7 +760,7 @@ type AgentSkill struct {
 ```
 
 <a name="InteractionKind"></a>
-## type InteractionKind
+## type [InteractionKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/agent_interaction.go#L12>)
 
 InteractionKind 是持久化交互（agent\_interactions.kind）的类型标识：审批（approval）、问卷 （questionnaire）与推荐的下一步（next\_steps）。取值与 agent\_interactions.kind 列一致。
 
@@ -782,7 +782,7 @@ const (
 ```
 
 <a name="InteractionStatus"></a>
-## type InteractionStatus
+## type [InteractionStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/agent_interaction.go#L26>)
 
 InteractionStatus 是持久化交互（agent\_interactions.status）的生命周期状态：待处理（pending）、 已作答 / 已决策（answered）与已取消（cancelled）。取值与 agent\_interactions.status 列一致。
 
@@ -804,7 +804,7 @@ const (
 ```
 
 <a name="KnowledgeChunk"></a>
-## type KnowledgeChunk
+## type [KnowledgeChunk](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/document.go#L66-L85>)
 
 KnowledgeChunk 表示知识文档切分后的一个分块，是 RAG 检索的最小单元： 每个分块携带向量化表示（Embedding）与全文检索表示（Search）， 支持向量相似度检索与关键词检索。标题路径与分块正文经 crypto 序列化器 加密存储（列类型 BYTEA）；Search 为 tsvector，保留明文词元以支撑全文检索。 对应表为 knowledge\_chunks。
 
@@ -832,7 +832,7 @@ type KnowledgeChunk struct {
 ```
 
 <a name="KnowledgeDocStatus"></a>
-## type KnowledgeDocStatus
+## type [KnowledgeDocStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L30>)
 
 KnowledgeDocStatus 是知识文档的处理状态标识：文档从导入到可被检索的流转状态。
 
@@ -856,7 +856,7 @@ const (
 ```
 
 <a name="KnowledgeDocument"></a>
-## type KnowledgeDocument
+## type [KnowledgeDocument](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/document.go#L28-L59>)
 
 KnowledgeDocument 表示一份上传到知识库的文档，是 RAG 索引的输入单元： 文档按标题层级切分为多个知识分块（KnowledgeChunk），并保存内容摘要 （Hash）以判断已有分块索引是否随内容变更而过期。文档正文经 crypto 序列化器 加密存储（列类型 BYTEA），内容摘要为带密钥的 HMAC\-SHA256，均避免明文落库。 对应表为 knowledge\_documents。
 
@@ -896,7 +896,7 @@ type KnowledgeDocument struct {
 ```
 
 <a name="LlmBinding"></a>
-## type LlmBinding
+## type [LlmBinding](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/llm.go#L88-L97>)
 
 LlmBinding 表示一个档位到模型注册表记录的绑定关系，每个槽位至多一条记录 （slot 唯一）。不同槽位允许复用同一条模型记录；被绑定的模型不允许删除 （外键 ON DELETE RESTRICT）。对应表为 llm\_bindings。
 
@@ -914,7 +914,7 @@ type LlmBinding struct {
 ```
 
 <a name="LlmModel"></a>
-## type LlmModel
+## type [LlmModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/llm.go#L28-L75>)
 
 LlmModel 表示一个注册到平台的 LLM 模型端点（chat 或 embedding），是 LLM 配置的 唯一事实来源（不再来自配置文件）。Name 为全局唯一的本地标识，供档位绑定与运维 识别使用；Kind 区分为对话模型（chat）与向量模型（embedding）。APIKey 以加密形式 落库（crypto serializer，BYTEA 列），明文经 APIKeyData\(\) 获取。对应表为 llm\_models。
 
@@ -970,7 +970,7 @@ type LlmModel struct {
 ```
 
 <a name="LlmModel.APIKeyData"></a>
-### func \(\*LlmModel\) APIKeyData
+### func \(\*LlmModel\) [APIKeyData](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/llm.go#L78>)
 
 ```go
 func (l *LlmModel) APIKeyData() []byte
@@ -979,7 +979,7 @@ func (l *LlmModel) APIKeyData() []byte
 APIKeyData 返回模型访问凭据的明文字节，nil 安全（APIKey 为空或 nil 时返回 nil）。
 
 <a name="LlmTool"></a>
-## type LlmTool
+## type [LlmTool](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/llm.go#L158-L178>)
 
 LlmTool 表示一条注册到平台的工具记录，是 Agent 可调用的工具的唯一事实来源。Name 为 Agent 面向的工具名，全局唯一（uq\_llm\_tools\_name）。Source 取 builtin / mcp：内置工具的 描述文案来自 i18n（Description 行为空），其入参 schema 由代码内注册表声明；MCP 工具的 入参 schema 实时取自所属服务器的 tools/list，Description 仅作列表展示缓存。一致性约束： source='mcp' 当且仅当 McpServerID IS NOT NULL，由视图层与服务层校验；工具真正的入参 schema 不落库，运行时按来源实时获取。对应表为 llm\_tools，属全局配置，不按命名空间隔离。
 
@@ -1008,7 +1008,7 @@ type LlmTool struct {
 ```
 
 <a name="McpServer"></a>
-## type McpServer
+## type [McpServer](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/llm.go#L123-L142>)
 
 McpServer 表示一个注册到平台的远程 MCP（Model Context Protocol）端点，是 Agent 可调用 的 MCP 工具的来源。Name 为全局唯一的本地标识（uq\_mcp\_servers\_name）。Transport 决定远端 连接方式，首版仅支持远程传输 streamable\_http / sse；Headers 承载 Authorization 等请求 头，是一个 JSON 对象字符串，以加密形式落库（crypto serializer，BYTEA 列），明文经 HeadersData\(\) 获取。本表有意不出现 command / args / env 列——首版不支持 stdio 本地 进程，这是从 schema 层杜绝「管理员配置任意本地命令执行」。对应表为 mcp\_servers，属全局 配置，不按命名空间隔离。
 
@@ -1036,7 +1036,7 @@ type McpServer struct {
 ```
 
 <a name="McpServer.HeadersData"></a>
-### func \(\*McpServer\) HeadersData
+### func \(\*McpServer\) [HeadersData](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/llm.go#L145>)
 
 ```go
 func (m *McpServer) HeadersData() []byte
@@ -1045,7 +1045,7 @@ func (m *McpServer) HeadersData() []byte
 HeadersData 返回请求头的明文字节，nil 安全（Headers 为空或 nil 时返回 nil）。
 
 <a name="MemoryKind"></a>
-## type MemoryKind
+## type [MemoryKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L182>)
 
 MemoryKind 是长期记忆类别的标识：事实（fact）、偏好（preference）、决策（decision）与产物 （artifact），取值与 agent\_memories.kind 列的取值一致。 类型与取值空间声明在 internal/models/ai，是因为它与 AgentKind 同属「跨层共享的 AI 归属枚举」： 模型层、运行时层、工具层与视图层统一引用这里声明的取值，避免各自就地声明字符串常量。
 
@@ -1069,7 +1069,7 @@ const (
 ```
 
 <a name="AllMemoryKinds"></a>
-### func AllMemoryKinds
+### func [AllMemoryKinds](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L526>)
 
 ```go
 func AllMemoryKinds() []MemoryKind
@@ -1078,7 +1078,7 @@ func AllMemoryKinds() []MemoryKind
 AllMemoryKinds 返回全部记忆类别的副本，声明顺序即枚举类条目顺序与前端展示顺序；供记忆服务、 工具层与视图层复用，调用方修改返回值不影响该取值空间。
 
 <a name="ParseMemoryKind"></a>
-### func ParseMemoryKind
+### func [ParseMemoryKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L542>)
 
 ```go
 func ParseMemoryKind(raw MemoryKind) (MemoryKind, error)
@@ -1087,7 +1087,7 @@ func ParseMemoryKind(raw MemoryKind) (MemoryKind, error)
 ParseMemoryKind 解析并校验记忆类别：空串取缺省值 fact；非空但不在取值空间内的取值返回英文 错误；合法取值原样返回。取值清单只在 internal/models/ai 声明，调用方不再各自校验并拼错误文案。
 
 <a name="MemoryStatus"></a>
-## type MemoryStatus
+## type [MemoryStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L198>)
 
 MemoryStatus 是长期记忆状态的标识：生效（active）与归档（archived），取值与 agent\_memories.status 列的取值一致（与会话状态 SessionStatus 是不同概念，勿混用）。
 
@@ -1107,7 +1107,7 @@ const (
 ```
 
 <a name="AllMemoryStatuses"></a>
-### func AllMemoryStatuses
+### func [AllMemoryStatuses](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L534>)
 
 ```go
 func AllMemoryStatuses() []MemoryStatus
@@ -1116,7 +1116,7 @@ func AllMemoryStatuses() []MemoryStatus
 AllMemoryStatuses 返回全部记忆状态的副本，声明顺序即枚举类条目顺序与前端展示顺序；供记忆服务 与视图层复用，调用方修改返回值不影响该取值空间。
 
 <a name="ParseMemoryStatus"></a>
-### func ParseMemoryStatus
+### func [ParseMemoryStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L556>)
 
 ```go
 func ParseMemoryStatus(raw MemoryStatus) (MemoryStatus, error)
@@ -1125,7 +1125,7 @@ func ParseMemoryStatus(raw MemoryStatus) (MemoryStatus, error)
 ParseMemoryStatus 解析并校验记忆状态：空串或不在取值空间内的取值返回英文错误；合法取值原样 返回。状态没有缺省值（写入路径显式使用 active），故空串视为非法。
 
 <a name="MessageRole"></a>
-## type MessageRole
+## type [MessageRole](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L166>)
 
 MessageRole 是 Agent 会话消息角色的标识：用户（user）、助手（assistant）与系统（system）， 取值与 agent\_messages.role 列的取值一致。此处只声明类型与取值常量，不注册枚举类：消息角色 原本就不是前端下拉的枚举类。
 
@@ -1147,7 +1147,7 @@ const (
 ```
 
 <a name="PeriodicReportPlan"></a>
-## type PeriodicReportPlan
+## type [PeriodicReportPlan](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/periodicreport.go#L36-L63>)
 
 PeriodicReportPlan 表示一个周期性报告计划：按 cron 表达式周期性执行指定技能，携带渲染输入所需的 实参，并按保留天数清理历史报告。对应表为 periodic\_report\_plans。
 
@@ -1183,7 +1183,7 @@ type PeriodicReportPlan struct {
 ```
 
 <a name="PeriodicReportPlanWatch"></a>
-## type PeriodicReportPlanWatch
+## type [PeriodicReportPlanWatch](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/periodicreport.go#L97-L106>)
 
 PeriodicReportPlanWatch 表示用户对某个报告计划的关注关系：关注后该用户的报告中心展示该计划的运行 记录。对应表为 periodic\_report\_plan\_watches。
 
@@ -1201,7 +1201,7 @@ type PeriodicReportPlanWatch struct {
 ```
 
 <a name="PeriodicReportRun"></a>
-## type PeriodicReportRun
+## type [PeriodicReportRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/periodicreport.go#L67-L93>)
 
 PeriodicReportRun 表示一次报告运行的记录：由计划在 cron 触发点创建，记录触发时间、运行状态与产出 （对象存储键、标题、大小）以及失败原因。对应表为 periodic\_report\_runs。
 
@@ -1236,7 +1236,7 @@ type PeriodicReportRun struct {
 ```
 
 <a name="PeriodicReportRunStatus"></a>
-## type PeriodicReportRunStatus
+## type [PeriodicReportRunStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/periodicreport.go#L22>)
 
 PeriodicReportRunStatus 是报告运行记录状态的标识：运行中（running）、成功（success）与失败（failed）。 取值与 periodic\_report\_runs.status 列的取值一致，取值空间在包内 init 注册为枚举类 periodicReportRunStatus。
 
@@ -1258,7 +1258,7 @@ const (
 ```
 
 <a name="ReviewValve"></a>
-## type ReviewValve
+## type [ReviewValve](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/valve.go#L10>)
 
 ReviewValve 是 Agent 会话的审核阀门标识：会话级持久化的三档开关，取值 each / auto / none， 依次对应「逐一审核 / 自动审核 / 无需审核」，与 agent\_sessions.review\_valve 列的取值一致。 阀门与该会话内 client 工具调用的审核重要级合成后决定调用是否需人工审核。
 
@@ -1280,7 +1280,7 @@ const (
 ```
 
 <a name="SessionOrigin"></a>
-## type SessionOrigin
+## type [SessionOrigin](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L153>)
 
 SessionOrigin 是 Agent 会话来由的标识：普通助手会话（chat）与内部运行会话（periodic\_report）， 取值与 agent\_sessions.origin 列的取值一致。内部运行会话只在创建它的业务入口（如周期性报告的 历史报告）中查看，不出现在 AI 助手会话列表。此处只声明类型与取值常量，不注册枚举类。
 
@@ -1300,7 +1300,7 @@ const (
 ```
 
 <a name="SessionStatus"></a>
-## type SessionStatus
+## type [SessionStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L140>)
 
 SessionStatus 是 Agent 会话状态的标识：活跃（active）与归档（archived），取值与 agent\_sessions.status 列的取值一致（与长期记忆状态 MemoryStatus 是不同概念，勿混用）。 此处只声明类型与取值常量，不注册枚举类：会话状态原本就不是前端下拉的枚举类。
 
@@ -1320,7 +1320,7 @@ const (
 ```
 
 <a name="SkillInputField"></a>
-## type SkillInputField
+## type [SkillInputField](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/skill.go#L58-L67>)
 
 SkillInputField 表示技能的一个输入字段的结构化描述：由用户填写，是报告计划渲染输入表单的 JSON 协议载体（技能行 input\_fields 列的 JSON 形状）。
 
@@ -1338,7 +1338,7 @@ type SkillInputField struct {
 ```
 
 <a name="ParseSkillInputFields"></a>
-### func ParseSkillInputFields
+### func [ParseSkillInputFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/skill.go#L71>)
 
 ```go
 func ParseSkillInputFields(raw datatypes.JSON) ([]SkillInputField, error)
@@ -1347,7 +1347,7 @@ func ParseSkillInputFields(raw datatypes.JSON) ([]SkillInputField, error)
 ParseSkillInputFields 把技能行 input\_fields 列的 JSON 解码为输入字段列表：空值（nil 或空串） 与 JSON null 返回空切片，非法 JSON 或无法映射的形状返回英文错误。
 
 <a name="SkillInputFieldType"></a>
-## type SkillInputFieldType
+## type [SkillInputFieldType](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/skill.go#L102>)
 
 SkillInputFieldType 是技能输入字段的类型标识：由用户填写，决定报告计划输入表单的控件 形态与计划 inputValues 中允许承载的 JSON 值类型。取值集合与命令边界 inputFieldRule 的 oneof 规则保持一致。
 
@@ -1373,7 +1373,7 @@ const (
 ```
 
 <a name="AllSkillInputFieldTypes"></a>
-### func AllSkillInputFieldTypes
+### func [AllSkillInputFieldTypes](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/skill.go#L129>)
 
 ```go
 func AllSkillInputFieldTypes() []SkillInputFieldType
@@ -1382,7 +1382,7 @@ func AllSkillInputFieldTypes() []SkillInputFieldType
 AllSkillInputFieldTypes 返回全部输入字段类型的副本，声明顺序即前端编辑器中的展示顺序；供边界校验与 测试遍历使用，调用方修改返回值不影响该取值空间。
 
 <a name="SkillPeriodicWindow"></a>
-## type SkillPeriodicWindow
+## type [SkillPeriodicWindow](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/skill.go#L197-L202>)
 
 SkillPeriodicWindow 表示周期技能从固定参数解析出的时间窗口：TimeOffset 是相对 nowTime 的偏移 （可为负），TimeWindow 是窗口长度（必须大于 0）。
 
@@ -1396,7 +1396,7 @@ type SkillPeriodicWindow struct {
 ```
 
 <a name="ParsePeriodicWindowFromFields"></a>
-### func ParsePeriodicWindowFromFields
+### func [ParsePeriodicWindowFromFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/skill.go#L240>)
 
 ```go
 func ParsePeriodicWindowFromFields(fields map[string]json.RawMessage) (SkillPeriodicWindow, error)
@@ -1405,7 +1405,7 @@ func ParsePeriodicWindowFromFields(fields map[string]json.RawMessage) (SkillPeri
 ParsePeriodicWindowFromFields 从已解码的固定参数映射解析周期时间窗口：把映射转换为 skillPeriodicWindowFields 结构体后交由全局 validator 校验（required / gt=0），校验通过再转回 SkillPeriodicWindow，供创建 / 更新校验与运行期直接复用 map。
 
 <a name="ParseSkillPeriodicWindow"></a>
-### func ParseSkillPeriodicWindow
+### func [ParseSkillPeriodicWindow](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/skill.go#L229>)
 
 ```go
 func ParseSkillPeriodicWindow(raw datatypes.JSON) (SkillPeriodicWindow, error)
@@ -1414,7 +1414,7 @@ func ParseSkillPeriodicWindow(raw datatypes.JSON) (SkillPeriodicWindow, error)
 ParseSkillPeriodicWindow 从技能行 fixed\_fields 列的 JSON 解析周期时间窗口：要求存在 timeOffset 与 timeWindow，且两者均可被 serializer.DurationMS 解析，timeWindow 须大于 0；缺失、类型错误 或解析失败返回英文错误。
 
 <a name="SkillSource"></a>
-## type SkillSource
+## type [SkillSource](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L222>)
 
 SkillSource 是技能来源的取值类型（agent\_skills.source 与视图层 source 字段）。
 
@@ -1434,7 +1434,7 @@ const (
 ```
 
 <a name="Slot"></a>
-## type Slot
+## type [Slot](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L234>)
 
 Slot 是模型档位槽位标识：flash（轻量）、standard（标准）、advanced（增强）三档对话模型 与 embedding（向量化）一个固定槽位。与 llm\_bindings.slot 列的取值一致。
 
@@ -1458,7 +1458,7 @@ const (
 ```
 
 <a name="ParseChatSlot"></a>
-### func ParseChatSlot
+### func [ParseChatSlot](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L311>)
 
 ```go
 func ParseChatSlot(value Slot) (Slot, bool)
@@ -1467,7 +1467,7 @@ func ParseChatSlot(value Slot) (Slot, bool)
 ParseChatSlot 解析并校验对话档位取值（忽略首尾空白；不区分大小写）： 仅 flash / standard / advanced 合法，embedding 或未知取值返回 ok=false。
 
 <a name="ParseSlot"></a>
-### func ParseSlot
+### func [ParseSlot](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L254>)
 
 ```go
 func ParseSlot(value Slot) (Slot, error)
@@ -1476,7 +1476,7 @@ func ParseSlot(value Slot) (Slot, error)
 ParseSlot 解析并校验档位取值（忽略首尾空白；不区分大小写）：四个固定档位均为合法取值， 其余取值返回英文错误。档位清单与取值规范化只在本包声明，调用方不再各自校验并拼错误文案。
 
 <a name="ResolveSlot"></a>
-### func ResolveSlot
+### func [ResolveSlot](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L333>)
 
 ```go
 func ResolveSlot(requested, declared, fallback Slot) (Slot, error)
@@ -1485,7 +1485,7 @@ func ResolveSlot(requested, declared, fallback Slot) (Slot, error)
 ResolveSlot 按「显式指定 → 调用点声明 → 注册表默认」的优先级解析本次调用使用的对话档位： requested 为调用方显式指定（如请求体字段），declared 为调用点声明的建议档位（如视图层 按业务场景推荐），fallback 为参数注册表 agent.defaultSlot 的默认档位。三者按序取第一个 非空值；任一非空取值不合法（embedding 或未知档位）或全部为空时返回英文错误。
 
 <a name="ToolSource"></a>
-## type ToolSource
+## type [ToolSource](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L209>)
 
 ToolSource 是工具来源的取值类型（llm\_tools.source 与视图层 source 字段）。
 

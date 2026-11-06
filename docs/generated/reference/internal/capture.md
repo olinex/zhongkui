@@ -42,7 +42,7 @@ const (
 ```
 
 <a name="BuildObjectKey"></a>
-## func BuildObjectKey
+## func [BuildObjectKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/object.go#L32>)
 
 ```go
 func BuildObjectKey(namespace, name, version string, timestamp time.Time, sessionID serializer.HexUUID) string
@@ -70,7 +70,7 @@ BuildObjectKey("prod", "network-capture", "v1.0", time.Now(), sessionID)
 ```
 
 <a name="DescribeConfig"></a>
-## func DescribeConfig
+## func [DescribeConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/config.go#L122>)
 
 ```go
 func DescribeConfig() config.ConfigDescriptions
@@ -79,7 +79,7 @@ func DescribeConfig() config.ConfigDescriptions
 DescribeConfig 返回配置描述信息，用于配置文档生成 该方法生成配置的结构化描述，包括字段名、类型、默认值和说明 返回值：config.ConfigDescriptions 配置描述集合
 
 <a name="ParseObjectKey"></a>
-## func ParseObjectKey
+## func [ParseObjectKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/object.go#L71>)
 
 ```go
 func ParseObjectKey(objectKey string) (namespace, name, version string, timestamp time.Time, sessionID serializer.HexUUID, ok bool)
@@ -116,7 +116,7 @@ ParseObjectKey("pcap/prod/network-capture/v1.0/1745012345678_550e8400-e29b-41d4-
 ```
 
 <a name="CaptureClient"></a>
-## type CaptureClient
+## type [CaptureClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/client.go#L94-L126>)
 
 CaptureClient 抓包客户端，负责管理与远程服务器的通信、监控配置变化、执行数据包捕获和上传 该结构体是整个抓包系统的核心组件，负责： 1. 与远程Reporter服务建立gRPC连接，监控配置变化 2. 根据配置启动/停止数据包捕获任务 3. 管理数据包的上传流程（导出、压缩、上传到S3） 4. 定期向服务器发送状态反馈，维持连接健康状态 5. 实现重试机制，确保在网络波动或服务暂时不可用时的可靠性
 
@@ -129,7 +129,7 @@ type CaptureClient struct {
 ```
 
 <a name="NewCaptureClient"></a>
-### func NewCaptureClient
+### func [NewCaptureClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/client.go#L157>)
 
 ```go
 func NewCaptureClient(logger *logging.Logger, client reporter_v1.ReporterServiceClient, s3 *s3.S3Client, cfg *Config) *CaptureClient
@@ -165,7 +165,7 @@ client := capture.NewCaptureClient(logger, grpcClient, s3Client, cfg)
 ```
 
 <a name="CaptureClient.EnableStats"></a>
-### func \(\*CaptureClient\) EnableStats
+### func \(\*CaptureClient\) [EnableStats](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/client.go#L174>)
 
 ```go
 func (cc *CaptureClient) EnableStats(interval time.Duration)
@@ -180,7 +180,7 @@ interval - 统计信息打印间隔，例如 5*time.Second 表示每 5 秒打印
 ```
 
 <a name="CaptureClient.Run"></a>
-### func \(\*CaptureClient\) Run
+### func \(\*CaptureClient\) [Run](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/client.go#L731>)
 
 ```go
 func (cc *CaptureClient) Run(ctx context.Context, sessionID serializer.HexUUID) (err error)
@@ -189,7 +189,7 @@ func (cc *CaptureClient) Run(ctx context.Context, sessionID serializer.HexUUID) 
 Run 启动抓包客户端的全部子任务：配置监听（watch）、状态反馈（feedback）、数据包上传 （upload）与可选的统计打印，任一子任务返回错误或上下文取消时整体退出。
 
 <a name="CaptureClient.Shutdown"></a>
-### func \(\*CaptureClient\) Shutdown
+### func \(\*CaptureClient\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/client.go#L794>)
 
 ```go
 func (cc *CaptureClient) Shutdown() error
@@ -198,7 +198,7 @@ func (cc *CaptureClient) Shutdown() error
 Shutdown 实现 do.ShutdownerWithError 接口，在 DI 容器关闭时被调用 清理所有尚未上传或正在导入的临时 zkcn 文件，防止文件溢出
 
 <a name="CaptureStats"></a>
-## type CaptureStats
+## type [CaptureStats](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/stats.go#L15-L24>)
 
 CaptureStats 抓包统计收集器，使用原子操作保证并发安全 用于在命令行调试模式下实时追踪抓包的关键指标： \- 累计捕获的数据包数量 \- 累计捕获的字节数 \- 累计完成的数据段（segment）数量 \- 抓包启动时间，用于计算速率（pps、mbps）
 
@@ -209,7 +209,7 @@ type CaptureStats struct {
 ```
 
 <a name="NewCaptureStats"></a>
-### func NewCaptureStats
+### func [NewCaptureStats](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/stats.go#L27>)
 
 ```go
 func NewCaptureStats() *CaptureStats
@@ -218,7 +218,7 @@ func NewCaptureStats() *CaptureStats
 NewCaptureStats 创建新的统计收集器实例，记录当前时间为启动时间
 
 <a name="CaptureStats.RecordPacket"></a>
-### func \(\*CaptureStats\) RecordPacket
+### func \(\*CaptureStats\) [RecordPacket](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/stats.go#L42>)
 
 ```go
 func (s *CaptureStats) RecordPacket(bytes int)
@@ -227,7 +227,7 @@ func (s *CaptureStats) RecordPacket(bytes int)
 RecordPacket 逐包记录捕获到的一个数据包，原子性地累加包计数和字节数 该方法由 dump goroutine 在抓包循环内部调用，保证定时打印能看到实时变化的数据 bytes 为该数据包的原始字节数
 
 <a name="CaptureStats.RecordSegment"></a>
-### func \(\*CaptureStats\) RecordSegment
+### func \(\*CaptureStats\) [RecordSegment](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/stats.go#L35>)
 
 ```go
 func (s *CaptureStats) RecordSegment()
@@ -236,7 +236,7 @@ func (s *CaptureStats) RecordSegment()
 RecordSegment 记录一次 dumpOne 的结果，原子性地累加 segment 计数 该方法由 dump goroutine 在每次完成 segment 写入后调用
 
 <a name="CaptureStats.Snapshot"></a>
-### func \(\*CaptureStats\) Snapshot
+### func \(\*CaptureStats\) [Snapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/stats.go#L49>)
 
 ```go
 func (s *CaptureStats) Snapshot() CaptureStatsSnapshot
@@ -245,7 +245,7 @@ func (s *CaptureStats) Snapshot() CaptureStatsSnapshot
 Snapshot 获取当前统计数据的原子快照，返回一份不可变的副本 用于定时打印线程安全地读取统计数据，避免数据竞争
 
 <a name="CaptureStatsSnapshot"></a>
-## type CaptureStatsSnapshot
+## type [CaptureStatsSnapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/stats.go#L59-L68>)
 
 CaptureStatsSnapshot 统计数据的不可变快照
 
@@ -263,7 +263,7 @@ type CaptureStatsSnapshot struct {
 ```
 
 <a name="CaptureStatsSnapshot.String"></a>
-### func \(CaptureStatsSnapshot\) String
+### func \(CaptureStatsSnapshot\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/stats.go#L72>)
 
 ```go
 func (s CaptureStatsSnapshot) String() string
@@ -272,7 +272,7 @@ func (s CaptureStatsSnapshot) String() string
 String 格式化统计快照为人类可读的单行输出 输出格式：packets: N, bytes: X.XX MB, segments: N, pps: N.N, mbps: N.NN
 
 <a name="Config"></a>
-## type Config
+## type [Config](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/config.go#L104-L117>)
 
 Config 抓包功能的完整配置，包含资源定义和各个模块的配置 该结构体是整个抓包功能的配置入口，通过Viper配置框架进行解析和加载
 
@@ -294,7 +294,7 @@ type Config struct {
 ```
 
 <a name="ExtractConfig"></a>
-### func ExtractConfig
+### func [ExtractConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/config.go#L142>)
 
 ```go
 func ExtractConfig(v *viper.Viper, validate *validator.Validate) (*Config, error)
@@ -323,7 +323,7 @@ cfg, err := ExtractConfig(v)
 ```
 
 <a name="FeedbackConfig"></a>
-## type FeedbackConfig
+## type [FeedbackConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/config.go#L46-L59>)
 
 FeedbackConfig 反馈配置，用于配置向服务器发送状态反馈的参数 该配置定义了状态反馈的发送频率、容差和重试机制
 
@@ -345,7 +345,7 @@ type FeedbackConfig struct {
 ```
 
 <a name="FeedbackConfig.TolerateIntervalTimeout"></a>
-### func \(\*FeedbackConfig\) TolerateIntervalTimeout
+### func \(\*FeedbackConfig\) [TolerateIntervalTimeout](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/config.go#L64>)
 
 ```go
 func (c *FeedbackConfig) TolerateIntervalTimeout() time.Duration
@@ -354,7 +354,7 @@ func (c *FeedbackConfig) TolerateIntervalTimeout() time.Duration
 TolerateIntervalTimeout 计算允许的超时间隔，基于基础间隔和容差比率 返回值：允许的最大超时时间，计算公式：IntervalTimeout \* \(1 \+ TolerateRatio\) 示例：如果IntervalTimeout=5s，TolerateRatio=3，则返回20s
 
 <a name="UploadConfig"></a>
-## type UploadConfig
+## type [UploadConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/config.go#L70-L100>)
 
 UploadConfig 上传配置，用于配置数据包捕获和上传的相关参数 该配置定义了数据包捕获、压缩、存储和上传的完整流程参数
 
@@ -393,7 +393,7 @@ type UploadConfig struct {
 ```
 
 <a name="WatchConfig"></a>
-## type WatchConfig
+## type [WatchConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/config.go#L22-L35>)
 
 WatchConfig 监控配置，用于配置与远程服务器的监控连接参数 该配置定义了心跳检测、重试机制和容差计算等监控相关参数
 
@@ -415,7 +415,7 @@ type WatchConfig struct {
 ```
 
 <a name="WatchConfig.TolerateIntervalTimeout"></a>
-### func \(\*WatchConfig\) TolerateIntervalTimeout
+### func \(\*WatchConfig\) [TolerateIntervalTimeout](<https://gitee.com/olinex/zhongkui/blob/master/internal/capture/config.go#L40>)
 
 ```go
 func (c *WatchConfig) TolerateIntervalTimeout() time.Duration

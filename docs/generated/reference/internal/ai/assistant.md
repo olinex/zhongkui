@@ -74,7 +74,7 @@ const Version = 1
 ```
 
 <a name="ApprovalBlockPayload"></a>
-## type ApprovalBlockPayload
+## type [ApprovalBlockPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/blocks.go#L86-L91>)
 
 ApprovalBlockPayload 是一轮待审批调用清单。
 
@@ -88,7 +88,7 @@ type ApprovalBlockPayload struct {
 ```
 
 <a name="ApprovalCallRecord"></a>
-## type ApprovalCallRecord
+## type [ApprovalCallRecord](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/blocks.go#L64-L83>)
 
 ApprovalCallRecord 是一轮待审批调用的单条记录。
 
@@ -116,7 +116,7 @@ type ApprovalCallRecord struct {
 ```
 
 <a name="Block"></a>
-## type Block
+## type [Block](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/blocks.go#L12-L19>)
 
 Block 是助手消息内的一块内容：Seq 为消息内单调序号（从 1 起），Kind 为块类型， Payload 按 Kind 解释（见各 Block\*Payload 结构）。
 
@@ -132,7 +132,7 @@ type Block struct {
 ```
 
 <a name="BlockCreatedPayload"></a>
-## type BlockCreatedPayload
+## type [BlockCreatedPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L91-L98>)
 
 BlockCreatedPayload 是新建内容块事件的载荷。
 
@@ -148,7 +148,7 @@ type BlockCreatedPayload struct {
 ```
 
 <a name="BlockDeltaPayload"></a>
-## type BlockDeltaPayload
+## type [BlockDeltaPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L101-L108>)
 
 BlockDeltaPayload 是思考 / 正文增量事件的载荷。
 
@@ -164,7 +164,7 @@ type BlockDeltaPayload struct {
 ```
 
 <a name="BlockKind"></a>
-## type BlockKind
+## type [BlockKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/types.go#L74>)
 
 BlockKind 是助手消息内容块的类型。
 
@@ -192,7 +192,7 @@ const (
 ```
 
 <a name="BlockUpdatedPayload"></a>
-## type BlockUpdatedPayload
+## type [BlockUpdatedPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L111-L118>)
 
 BlockUpdatedPayload 是块收敛或原位更新事件的载荷。
 
@@ -208,7 +208,7 @@ type BlockUpdatedPayload struct {
 ```
 
 <a name="CompressPhase"></a>
-## type CompressPhase
+## type [CompressPhase](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/types.go#L117>)
 
 CompressPhase 是上下文压缩的展示阶段。
 
@@ -230,7 +230,7 @@ const (
 ```
 
 <a name="CompressState"></a>
-## type CompressState
+## type [CompressState](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/blocks.go#L124-L140>)
 
 CompressState 是上下文压缩的展示态。
 
@@ -255,7 +255,7 @@ type CompressState struct {
 ```
 
 <a name="ContentBlockPayload"></a>
-## type ContentBlockPayload
+## type [ContentBlockPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/blocks.go#L28-L31>)
 
 ContentBlockPayload 是一段连续正文文本。
 
@@ -267,7 +267,7 @@ type ContentBlockPayload struct {
 ```
 
 <a name="Emitter"></a>
-## type Emitter
+## type [Emitter](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L175-L188>)
 
 Emitter 生成带版本、游标与时间戳的事件信封；同一实例内 Seq 单调递增。
 
@@ -278,7 +278,7 @@ type Emitter struct {
 ```
 
 <a name="NewEmitter"></a>
-### func NewEmitter
+### func [NewEmitter](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L191>)
 
 ```go
 func NewEmitter(sessionID uint, runID string) *Emitter
@@ -287,7 +287,7 @@ func NewEmitter(sessionID uint, runID string) *Emitter
 NewEmitter 创建实时事件构造器：Seq 从 1 开始。
 
 <a name="NewSnapshotEmitter"></a>
-### func NewSnapshotEmitter
+### func [NewSnapshotEmitter](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L200>)
 
 ```go
 func NewSnapshotEmitter(sessionID uint) *Emitter
@@ -296,7 +296,7 @@ func NewSnapshotEmitter(sessionID uint) *Emitter
 NewSnapshotEmitter 创建历史快照构造器：不携带 runID，Seq 仅用于回放排序。
 
 <a name="Emitter.BlockCreated"></a>
-### func \(\*Emitter\) BlockCreated
+### func \(\*Emitter\) [BlockCreated](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L270>)
 
 ```go
 func (e *Emitter) BlockCreated(blockSeq int, kind BlockKind, payload any) Event
@@ -305,7 +305,7 @@ func (e *Emitter) BlockCreated(blockSeq int, kind BlockKind, payload any) Event
 BlockCreated 生成新建内容块事件。
 
 <a name="Emitter.BlockDelta"></a>
-### func \(\*Emitter\) BlockDelta
+### func \(\*Emitter\) [BlockDelta](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L279>)
 
 ```go
 func (e *Emitter) BlockDelta(blockSeq int, kind BlockKind, text string) Event
@@ -314,7 +314,7 @@ func (e *Emitter) BlockDelta(blockSeq int, kind BlockKind, text string) Event
 BlockDelta 生成思考 / 正文增量事件。
 
 <a name="Emitter.BlockUpdated"></a>
-### func \(\*Emitter\) BlockUpdated
+### func \(\*Emitter\) [BlockUpdated](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L288>)
 
 ```go
 func (e *Emitter) BlockUpdated(blockSeq int, kind BlockKind, payload any) Event
@@ -323,7 +323,7 @@ func (e *Emitter) BlockUpdated(blockSeq int, kind BlockKind, payload any) Event
 BlockUpdated 生成块收敛或原位更新事件。
 
 <a name="Emitter.InteractionResumed"></a>
-### func \(\*Emitter\) InteractionResumed
+### func \(\*Emitter\) [InteractionResumed](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L314>)
 
 ```go
 func (e *Emitter) InteractionResumed(interruptIDs []string) Event
@@ -332,7 +332,7 @@ func (e *Emitter) InteractionResumed(interruptIDs []string) Event
 InteractionResumed 生成交互提交后续跑事件。
 
 <a name="Emitter.InteractionWaiting"></a>
-### func \(\*Emitter\) InteractionWaiting
+### func \(\*Emitter\) [InteractionWaiting](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L305>)
 
 ```go
 func (e *Emitter) InteractionWaiting(substate InteractionSubstate, interruptIDs []string, blockSeq int) Event
@@ -341,7 +341,7 @@ func (e *Emitter) InteractionWaiting(substate InteractionSubstate, interruptIDs 
 InteractionWaiting 生成进入待审批 / 待作答事件。
 
 <a name="Emitter.MessageID"></a>
-### func \(\*Emitter\) MessageID
+### func \(\*Emitter\) [MessageID](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L215>)
 
 ```go
 func (e *Emitter) MessageID() uint
@@ -350,7 +350,7 @@ func (e *Emitter) MessageID() uint
 MessageID 返回当前事件所属助手消息 ID。
 
 <a name="Emitter.Next"></a>
-### func \(\*Emitter\) Next
+### func \(\*Emitter\) [Next](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L229>)
 
 ```go
 func (e *Emitter) Next(eventType EventType, payload any) Event
@@ -359,7 +359,7 @@ func (e *Emitter) Next(eventType EventType, payload any) Event
 Next 生成一条事件：分配游标、写入版本、会话 / 运行 / 消息标识与时间戳。
 
 <a name="Emitter.Seq"></a>
-### func \(\*Emitter\) Seq
+### func \(\*Emitter\) [Seq](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L222>)
 
 ```go
 func (e *Emitter) Seq() int
@@ -368,7 +368,7 @@ func (e *Emitter) Seq() int
 Seq 返回已分配的最大游标。
 
 <a name="Emitter.SetMessageID"></a>
-### func \(\*Emitter\) SetMessageID
+### func \(\*Emitter\) [SetMessageID](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L208>)
 
 ```go
 func (e *Emitter) SetMessageID(messageID uint)
@@ -377,7 +377,7 @@ func (e *Emitter) SetMessageID(messageID uint)
 SetMessageID 设置后续事件携带的助手消息 ID；落库后回填。
 
 <a name="Emitter.SnapshotBegin"></a>
-### func \(\*Emitter\) SnapshotBegin
+### func \(\*Emitter\) [SnapshotBegin](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L246>)
 
 ```go
 func (e *Emitter) SnapshotBegin() Event
@@ -386,7 +386,7 @@ func (e *Emitter) SnapshotBegin() Event
 SnapshotBegin 生成历史快照开始事件。
 
 <a name="Emitter.SnapshotEnd"></a>
-### func \(\*Emitter\) SnapshotEnd
+### func \(\*Emitter\) [SnapshotEnd](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L262>)
 
 ```go
 func (e *Emitter) SnapshotEnd() Event
@@ -395,7 +395,7 @@ func (e *Emitter) SnapshotEnd() Event
 SnapshotEnd 生成历史快照结束事件。
 
 <a name="Emitter.SnapshotMessage"></a>
-### func \(\*Emitter\) SnapshotMessage
+### func \(\*Emitter\) [SnapshotMessage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L254>)
 
 ```go
 func (e *Emitter) SnapshotMessage(message MessageSnapshot) Event
@@ -404,7 +404,7 @@ func (e *Emitter) SnapshotMessage(message MessageSnapshot) Event
 SnapshotMessage 生成历史快照消息事件：信封 messageID 同步为该消息主键。
 
 <a name="Emitter.ToolCallUpdated"></a>
-### func \(\*Emitter\) ToolCallUpdated
+### func \(\*Emitter\) [ToolCallUpdated](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L297>)
 
 ```go
 func (e *Emitter) ToolCallUpdated(blockSeq int, call ToolCallRecord) Event
@@ -413,7 +413,7 @@ func (e *Emitter) ToolCallUpdated(blockSeq int, call ToolCallRecord) Event
 ToolCallUpdated 生成单条工具调用状态变化事件。
 
 <a name="Emitter.TurnCompleted"></a>
-### func \(\*Emitter\) TurnCompleted
+### func \(\*Emitter\) [TurnCompleted](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L319>)
 
 ```go
 func (e *Emitter) TurnCompleted(phase modelsai.AgentRunPhase, messageID uint, usage *Usage) Event
@@ -422,7 +422,7 @@ func (e *Emitter) TurnCompleted(phase modelsai.AgentRunPhase, messageID uint, us
 TurnCompleted 生成回合终态事件。
 
 <a name="Emitter.TurnError"></a>
-### func \(\*Emitter\) TurnError
+### func \(\*Emitter\) [TurnError](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L328>)
 
 ```go
 func (e *Emitter) TurnError(message, code string) Event
@@ -431,7 +431,7 @@ func (e *Emitter) TurnError(message, code string) Event
 TurnError 生成请求或生成失败事件。
 
 <a name="Event"></a>
-## type Event
+## type [Event](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/types.go#L54-L71>)
 
 Event 是 SSE 的单条事件信封：data 行即该结构的 JSON。
 
@@ -457,7 +457,7 @@ type Event struct {
 ```
 
 <a name="Event.Validate"></a>
-### func \(Event\) Validate
+### func \(Event\) [Validate](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L333>)
 
 ```go
 func (e Event) Validate() error
@@ -466,7 +466,7 @@ func (e Event) Validate() error
 Validate 校验事件的必填字段，供构造与测试使用。
 
 <a name="EventType"></a>
-## type EventType
+## type [EventType](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/types.go#L9>)
 
 EventType 是 AI 助手 SSE 的事件类型标识。
 
@@ -520,7 +520,7 @@ const (
 ```
 
 <a name="InteractionResumedPayload"></a>
-## type InteractionResumedPayload
+## type [InteractionResumedPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L151-L154>)
 
 InteractionResumedPayload 是用户提交交互后续跑事件的载荷。
 
@@ -532,7 +532,7 @@ type InteractionResumedPayload struct {
 ```
 
 <a name="InteractionSubstate"></a>
-## type InteractionSubstate
+## type [InteractionSubstate](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/types.go#L106>)
 
 InteractionSubstate 是会话等待用户输入的子状态。
 
@@ -552,7 +552,7 @@ const (
 ```
 
 <a name="InteractionWaitingPayload"></a>
-## type InteractionWaitingPayload
+## type [InteractionWaitingPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L141-L148>)
 
 InteractionWaitingPayload 是进入待审批 / 待作答事件的载荷。
 
@@ -568,7 +568,7 @@ type InteractionWaitingPayload struct {
 ```
 
 <a name="MessageCitationsPayload"></a>
-## type MessageCitationsPayload
+## type [MessageCitationsPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L129-L132>)
 
 MessageCitationsPayload 是检索引用就绪事件的载荷。
 
@@ -580,7 +580,7 @@ type MessageCitationsPayload struct {
 ```
 
 <a name="MessageCompressPayload"></a>
-## type MessageCompressPayload
+## type [MessageCompressPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L135-L138>)
 
 MessageCompressPayload 是上下文压缩状态事件的载荷。
 
@@ -592,7 +592,7 @@ type MessageCompressPayload struct {
 ```
 
 <a name="MessagePersistedPayload"></a>
-## type MessagePersistedPayload
+## type [MessagePersistedPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L85-L88>)
 
 MessagePersistedPayload 是助手消息落库事件的载荷。
 
@@ -604,7 +604,7 @@ type MessagePersistedPayload struct {
 ```
 
 <a name="MessageSnapshot"></a>
-## type MessageSnapshot
+## type [MessageSnapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/blocks.go#L150-L183>)
 
 MessageSnapshot 是历史快照中的一条消息：字段与现有会话消息出参一致，并附带终态块与元信息。
 
@@ -646,7 +646,7 @@ type MessageSnapshot struct {
 ```
 
 <a name="MessageStartedPayload"></a>
-## type MessageStartedPayload
+## type [MessageStartedPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L77-L82>)
 
 MessageStartedPayload 是助手消息开始事件的载荷。
 
@@ -660,7 +660,7 @@ type MessageStartedPayload struct {
 ```
 
 <a name="NextStepsBlockPayload"></a>
-## type NextStepsBlockPayload
+## type [NextStepsBlockPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/blocks.go#L106-L109>)
 
 NextStepsBlockPayload 是回答末尾的推荐下一步。
 
@@ -672,7 +672,7 @@ type NextStepsBlockPayload struct {
 ```
 
 <a name="PendingCallSnapshot"></a>
-## type PendingCallSnapshot
+## type [PendingCallSnapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/blocks.go#L143-L147>)
 
 PendingCallSnapshot 是历史快照中的一条挂起调用：在 PendingCall 基础上补充锚点消息 ID。
 
@@ -685,7 +685,7 @@ type PendingCallSnapshot struct {
 ```
 
 <a name="QuestionnaireBlockPayload"></a>
-## type QuestionnaireBlockPayload
+## type [QuestionnaireBlockPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/blocks.go#L94-L103>)
 
 QuestionnaireBlockPayload 是一轮 ask\_user 问卷：题目、作答与是否仍待回答。
 
@@ -703,7 +703,7 @@ type QuestionnaireBlockPayload struct {
 ```
 
 <a name="ReasoningBlockPayload"></a>
-## type ReasoningBlockPayload
+## type [ReasoningBlockPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/blocks.go#L22-L25>)
 
 ReasoningBlockPayload 是一段连续思考文本。
 
@@ -715,7 +715,7 @@ type ReasoningBlockPayload struct {
 ```
 
 <a name="ResumeBeginPayload"></a>
-## type ResumeBeginPayload
+## type [ResumeBeginPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L29-L34>)
 
 ResumeBeginPayload 是断线续播开始事件的载荷。
 
@@ -729,7 +729,7 @@ type ResumeBeginPayload struct {
 ```
 
 <a name="ResumeResetPayload"></a>
-## type ResumeResetPayload
+## type [ResumeResetPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L37-L40>)
 
 ResumeResetPayload 是续播游标失效事件的载荷。
 
@@ -741,7 +741,7 @@ type ResumeResetPayload struct {
 ```
 
 <a name="SnapshotBeginPayload"></a>
-## type SnapshotBeginPayload
+## type [SnapshotBeginPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L14-L17>)
 
 SnapshotBeginPayload 是历史快照开始事件的载荷。
 
@@ -753,7 +753,7 @@ type SnapshotBeginPayload struct {
 ```
 
 <a name="SnapshotEndPayload"></a>
-## type SnapshotEndPayload
+## type [SnapshotEndPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L26>)
 
 SnapshotEndPayload 是历史快照结束事件的载荷（无字段）。
 
@@ -762,7 +762,7 @@ type SnapshotEndPayload struct{}
 ```
 
 <a name="SnapshotMessagePayload"></a>
-## type SnapshotMessagePayload
+## type [SnapshotMessagePayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L20-L23>)
 
 SnapshotMessagePayload 是历史快照中一条消息事件的载荷。
 
@@ -774,7 +774,7 @@ type SnapshotMessagePayload struct {
 ```
 
 <a name="ToolCallRecord"></a>
-## type ToolCallRecord
+## type [ToolCallRecord](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/blocks.go#L34-L55>)
 
 ToolCallRecord 是一条工具调用从发起到结果的完整事实。
 
@@ -804,7 +804,7 @@ type ToolCallRecord struct {
 ```
 
 <a name="ToolCallStatus"></a>
-## type ToolCallStatus
+## type [ToolCallStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/types.go#L93>)
 
 ToolCallStatus 是工具调用的生命周期状态。
 
@@ -826,7 +826,7 @@ const (
 ```
 
 <a name="ToolCallUpdatedPayload"></a>
-## type ToolCallUpdatedPayload
+## type [ToolCallUpdatedPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L121-L126>)
 
 ToolCallUpdatedPayload 是单条工具调用状态变化事件的载荷。
 
@@ -840,7 +840,7 @@ type ToolCallUpdatedPayload struct {
 ```
 
 <a name="ToolCallsBlockPayload"></a>
-## type ToolCallsBlockPayload
+## type [ToolCallsBlockPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/blocks.go#L58-L61>)
 
 ToolCallsBlockPayload 是同一轮发起的工具调用组。
 
@@ -852,7 +852,7 @@ type ToolCallsBlockPayload struct {
 ```
 
 <a name="TurnCompletedPayload"></a>
-## type TurnCompletedPayload
+## type [TurnCompletedPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L157-L164>)
 
 TurnCompletedPayload 是回合终态事件的载荷。
 
@@ -868,7 +868,7 @@ type TurnCompletedPayload struct {
 ```
 
 <a name="TurnErrorPayload"></a>
-## type TurnErrorPayload
+## type [TurnErrorPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L167-L172>)
 
 TurnErrorPayload 是请求或生成失败事件的载荷。
 
@@ -882,7 +882,7 @@ type TurnErrorPayload struct {
 ```
 
 <a name="TurnPreemptedPayload"></a>
-## type TurnPreemptedPayload
+## type [TurnPreemptedPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L71-L74>)
 
 TurnPreemptedPayload 是回合被抢占事件的载荷。
 
@@ -894,7 +894,7 @@ type TurnPreemptedPayload struct {
 ```
 
 <a name="TurnStartedPayload"></a>
-## type TurnStartedPayload
+## type [TurnStartedPayload](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L59-L68>)
 
 TurnStartedPayload 是回合开始事件的载荷。
 
@@ -912,7 +912,7 @@ type TurnStartedPayload struct {
 ```
 
 <a name="Usage"></a>
-## type Usage
+## type [Usage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/blocks.go#L112-L121>)
 
 Usage 是一轮助手消息的用量合计。
 
@@ -930,7 +930,7 @@ type Usage struct {
 ```
 
 <a name="UserMessageSnapshot"></a>
-## type UserMessageSnapshot
+## type [UserMessageSnapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/assistant/events.go#L43-L56>)
 
 UserMessageSnapshot 是一次新提问的用户消息事实，前端据此替换本地回显。
 

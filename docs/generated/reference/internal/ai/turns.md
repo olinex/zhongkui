@@ -56,7 +56,7 @@ var (
 ```
 
 <a name="ActionInput"></a>
-## type ActionInput
+## type [ActionInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/types.go#L123-L132>)
 
 ActionInput 通过审批 / 问卷操作恢复一个挂起的运行。
 
@@ -74,7 +74,7 @@ type ActionInput struct {
 ```
 
 <a name="ChatInput"></a>
-## type ChatInput
+## type [ChatInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/types.go#L88-L120>)
 
 ChatInput 启动（或抢占）一次对话轮次。
 
@@ -115,7 +115,7 @@ type ChatInput struct {
 ```
 
 <a name="ChatItem"></a>
-## type ChatItem
+## type [ChatItem](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/types.go#L196-L226>)
 
 ChatItem 是 TurnLoop 的元素类型。每次查询或审批 / 问卷操作都会作为一个 ChatItem 推入；循环每轮消费一个查询（恢复时消费一个操作）。
 
@@ -156,7 +156,7 @@ type ChatItem struct {
 ```
 
 <a name="Deps"></a>
-## type Deps
+## type [Deps](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/types.go#L68-L85>)
 
 Deps 是 turn 管理器的装配依赖集合。
 
@@ -182,7 +182,7 @@ type Deps struct {
 ```
 
 <a name="Manager"></a>
-## type Manager
+## type [Manager](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/manager.go#L47-L62>)
 
 Manager 为每个会话持有一个活跃的 TurnLoop，并管理内存中的实时领域事件 缓冲区。
 
@@ -193,7 +193,7 @@ type Manager struct {
 ```
 
 <a name="New"></a>
-### func New
+### func [New](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/manager.go#L65>)
 
 ```go
 func New(ctx context.Context, deps Deps) (*Manager, error)
@@ -202,7 +202,7 @@ func New(ctx context.Context, deps Deps) (*Manager, error)
 New 构建会话轮次管理器。
 
 <a name="Manager.Abort"></a>
-### func \(\*Manager\) Abort
+### func \(\*Manager\) [Abort](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/manager.go#L874>)
 
 ```go
 func (m *Manager) Abort(ctx context.Context, sessionID, userID uint, namespaceName string) error
@@ -211,7 +211,7 @@ func (m *Manager) Abort(ctx context.Context, sessionID, userID uint, namespaceNa
 Abort 立即停止活跃循环，并用一张 cancelled 卡片关闭 轮次流。
 
 <a name="Manager.Action"></a>
-### func \(\*Manager\) Action
+### func \(\*Manager\) [Action](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/manager.go#L654>)
 
 ```go
 func (m *Manager) Action(ctx context.Context, in ActionInput) (*Stream, error)
@@ -220,7 +220,7 @@ func (m *Manager) Action(ctx context.Context, in ActionInput) (*Stream, error)
 Action 通过审批/问卷操作恢复一个挂起的运行。
 
 <a name="Manager.Chat"></a>
-### func \(\*Manager\) Chat
+### func \(\*Manager\) [Chat](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/manager.go#L542>)
 
 ```go
 func (m *Manager) Chat(ctx context.Context, in ChatInput) (*Stream, error)
@@ -229,7 +229,7 @@ func (m *Manager) Chat(ctx context.Context, in ChatInput) (*Stream, error)
 Chat 启动一个轮次，当会话循环繁忙时抢占当前轮次。
 
 <a name="Manager.Events"></a>
-### func \(\*Manager\) Events
+### func \(\*Manager\) [Events](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/manager.go#L839>)
 
 ```go
 func (m *Manager) Events(ctx context.Context, sessionID, userID uint, namespaceName string, after int) (*Stream, error)
@@ -238,7 +238,7 @@ func (m *Manager) Events(ctx context.Context, sessionID, userID uint, namespaceN
 Events 返回给定索引之后的当前轮次缓冲区重放内容以及一个 实时订阅。无在途回合时返回 nil，由视图层返回 204。
 
 <a name="Manager.RenderAssistant"></a>
-### func \(\*Manager\) RenderAssistant
+### func \(\*Manager\) [RenderAssistant](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/assistant_render.go#L20>)
 
 ```go
 func (m *Manager) RenderAssistant(ctx context.Context, sessionID, userID uint, namespaceName string) (*Stream, error)
@@ -247,7 +247,7 @@ func (m *Manager) RenderAssistant(ctx context.Context, sessionID, userID uint, n
 RenderAssistant 返回会话的历史快照流（含终态块与元信息）。
 
 <a name="Manager.ReopenInteraction"></a>
-### func \(\*Manager\) ReopenInteraction
+### func \(\*Manager\) [ReopenInteraction](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/manager.go#L314>)
 
 ```go
 func (m *Manager) ReopenInteraction(ctx context.Context, in ReopenInteractionInput) error
@@ -256,7 +256,7 @@ func (m *Manager) ReopenInteraction(ctx context.Context, in ReopenInteractionInp
 ReopenInteraction 回退到一条已作答 / 已决策的交互（审批或问卷）：删除该交互锚点之后的全部消息与 更晚交互，把该交互重置为待处理，并以挂起时的图现场重建挂起现场，使会话重新落「等待审批 / 等待 作答」——用户可重新选择，而无需重跑整轮回答。会话运行中（有在途回合）时由调用方守卫拒绝；目标 交互仍待处理时幂等。
 
 <a name="Manager.Shutdown"></a>
-### func \(\*Manager\) Shutdown
+### func \(\*Manager\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/manager.go#L1007>)
 
 ```go
 func (m *Manager) Shutdown(ctx context.Context)
@@ -265,7 +265,7 @@ func (m *Manager) Shutdown(ctx context.Context)
 Shutdown 停止全部会话循环并释放管理器。
 
 <a name="Manager.State"></a>
-### func \(\*Manager\) State
+### func \(\*Manager\) [State](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/manager.go#L929>)
 
 ```go
 func (m *Manager) State(ctx context.Context, sessionID, userID uint, namespaceName string) (State, error)
@@ -274,7 +274,7 @@ func (m *Manager) State(ctx context.Context, sessionID, userID uint, namespaceNa
 State 返回会话推导出的生命周期状态。
 
 <a name="Manager.StopSession"></a>
-### func \(\*Manager\) StopSession
+### func \(\*Manager\) [StopSession](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/manager.go#L970>)
 
 ```go
 func (m *Manager) StopSession(ctx context.Context, sessionID uint) error
@@ -283,7 +283,7 @@ func (m *Manager) StopSession(ctx context.Context, sessionID uint) error
 StopSession 停止并遗忘会话的循环。它会在删除会话记录 之前被调用。
 
 <a name="ReopenInteractionInput"></a>
-## type ReopenInteractionInput
+## type [ReopenInteractionInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/types.go#L136-L147>)
 
 ReopenInteractionInput 回退到一条已作答 / 已决策的交互（审批或问卷）：删除该交互之后的回答、把该 交互重置为待处理，并以挂起时的图现场重建运行现场，使用户可重新选择 / 作答。
 
@@ -303,7 +303,7 @@ type ReopenInteractionInput struct {
 ```
 
 <a name="ResumeInfo"></a>
-## type ResumeInfo
+## type [ResumeInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/types.go#L166-L173>)
 
 ResumeInfo 描述一次 /events 续播的判定结果。
 
@@ -319,7 +319,7 @@ type ResumeInfo struct {
 ```
 
 <a name="State"></a>
-## type State
+## type [State](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/types.go#L176-L189>)
 
 State 是会话对外可见的生命周期快照。
 
@@ -341,7 +341,7 @@ type State struct {
 ```
 
 <a name="Stream"></a>
-## type Stream
+## type [Stream](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/types.go#L151-L163>)
 
 Stream 是一次轮次的输出视图：已缓冲的条目加上实时通道。Close 只解除 订阅，不会停止该轮次。
 
@@ -362,7 +362,7 @@ type Stream struct {
 ```
 
 <a name="StreamItem"></a>
-## type StreamItem
+## type [StreamItem](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/types.go#L25-L28>)
 
 StreamItem 是轮次缓冲中的一条输出：领域事件。
 
@@ -374,7 +374,7 @@ type StreamItem struct {
 ```
 
 <a name="StreamResult"></a>
-## type StreamResult
+## type [StreamResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/types.go#L31-L58>)
 
 StreamResult 是对一个 agent 事件流的投影结果（实时投影与历史重建共用）。
 
@@ -410,7 +410,7 @@ type StreamResult[M adk.MessageType] struct {
 ```
 
 <a name="TurnAction"></a>
-## type TurnAction
+## type [TurnAction](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/turns/types.go#L229-L234>)
 
 TurnAction 是审批 / 问卷操作请求经映射后的 gob 安全形式。
 

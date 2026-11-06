@@ -27,7 +27,7 @@
 
 
 <a name="Components"></a>
-## type Components
+## type [Components](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/components.go#L110-L130>)
 
 Components 聚合 AI 助手（RAG \+ Agent）运行所需的全部组件：ADK Agent 运行时（Agent）、 TurnLoop 会话驱动（Turns）、知识库索引（Knowledge）、知识库检索器（Retriever）、会话持久化 （session.Store）、技能资源存储（skill.Store）、行为参数解析器（Params）与已启用的工具清单 （Tools）。由本包的运行时（Runtime）依据数据库模型注册表装配，并经请求中间件注入视图层； AI 未启用时各执行组件为 nil，视图层以 Enabled 统一判断。
 
@@ -56,7 +56,7 @@ type Components struct {
 ```
 
 <a name="Components.Enabled"></a>
-### func \(\*Components\) Enabled
+### func \(\*Components\) [Enabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/components.go#L133>)
 
 ```go
 func (c *Components) Enabled() bool
@@ -65,7 +65,7 @@ func (c *Components) Enabled() bool
 Enabled 报告 AI 能力是否已完整装配（未启用或装配不完整时返回 false）。
 
 <a name="Runtime"></a>
-## type Runtime
+## type [Runtime](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/runtime.go#L77-L89>)
 
 Runtime 是 AI 助手（RAG \+ Agent）的运行时装配层：以数据库模型注册表为唯一配置来源， 持有一份原子快照（含已构建的客户端与 \*Components），在配置变更（etcd 广播）时整体 重建。快照重建失败时保留上一可用快照并记录英文错误，绝不 panic、也不以残缺能力降级。
 
@@ -76,7 +76,7 @@ type Runtime struct {
 ```
 
 <a name="NewRuntime"></a>
-### func NewRuntime
+### func [NewRuntime](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/runtime.go#L112>)
 
 ```go
 func NewRuntime(ctx context.Context, db *database.DB, client *etcd.EtcdClient, logger *logging.Logger, options ...RuntimeOption) (*Runtime, error)
@@ -85,7 +85,7 @@ func NewRuntime(ctx context.Context, db *database.DB, client *etcd.EtcdClient, l
 NewRuntime 构造运行时并完成首次装配：读取数据库配置、构建客户端与组件、建立维度 强校验，并创建 etcd 变更监听器。首次装配失败（如 embedding 维度不一致、绑定模型 端点信息不完整）返回错误，由启动路径中止启动；模型注册表为空时装配为未启用状态而 不报错，服务可正常启动等待前端注册模型。
 
 <a name="Runtime.AgenticChat"></a>
-### func \(\*Runtime\) AgenticChat
+### func \(\*Runtime\) [AgenticChat](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/runtime.go#L197>)
 
 ```go
 func (r *Runtime) AgenticChat(slot ai.Slot) (model.AgenticModel, error)
@@ -94,7 +94,7 @@ func (r *Runtime) AgenticChat(slot ai.Slot) (model.AgenticModel, error)
 AgenticChat 按档位返回已构建的 responses 客户端；该档位不是 responses 模式或未绑定时 返回英文错误，调用方据此报告「指定档位不可用」而非静默降级为 chat。
 
 <a name="Runtime.Chat"></a>
-### func \(\*Runtime\) Chat
+### func \(\*Runtime\) [Chat](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/runtime.go#L184>)
 
 ```go
 func (r *Runtime) Chat(slot ai.Slot) (model.BaseChatModel, error)
@@ -103,7 +103,7 @@ func (r *Runtime) Chat(slot ai.Slot) (model.BaseChatModel, error)
 Chat 按档位返回已构建的对话客户端；档位未绑定或绑定不可用时返回英文错误，调用方 据此报告「指定档位不可用」而非静默切换到其他档位。
 
 <a name="Runtime.Current"></a>
-### func \(\*Runtime\) Current
+### func \(\*Runtime\) [Current](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/runtime.go#L144>)
 
 ```go
 func (r *Runtime) Current() *Components
@@ -112,7 +112,7 @@ func (r *Runtime) Current() *Components
 Current 返回当前已构建的 AI 组件快照（未启用时返回仅携带参数解析器的空组件）。 读取走原子指针，无锁，可被任意 goroutine 并发调用。
 
 <a name="Runtime.DisabledReason"></a>
-### func \(\*Runtime\) DisabledReason
+### func \(\*Runtime\) [DisabledReason](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/runtime.go#L168>)
 
 ```go
 func (r *Runtime) DisabledReason(lang *base.Language) string
@@ -121,7 +121,7 @@ func (r *Runtime) DisabledReason(lang *base.Language) string
 DisabledReason 返回 AI 能力不可用的原因（按请求语言本地化；可用时为空串），委托当前 配置快照（Snapshot.DisabledReason），供功能开关列表向前端说明「为什么功能不可用」。
 
 <a name="Runtime.Embed"></a>
-### func \(\*Runtime\) Embed
+### func \(\*Runtime\) [Embed](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/runtime.go#L209>)
 
 ```go
 func (r *Runtime) Embed() (embedding.Embedder, error)
@@ -130,7 +130,7 @@ func (r *Runtime) Embed() (embedding.Embedder, error)
 Embed 返回已构建的向量化客户端；embedding 档位未绑定或绑定不可用时返回英文错误。
 
 <a name="Runtime.Enabled"></a>
-### func \(\*Runtime\) Enabled
+### func \(\*Runtime\) [Enabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/runtime.go#L153>)
 
 ```go
 func (r *Runtime) Enabled() bool
@@ -139,7 +139,7 @@ func (r *Runtime) Enabled() bool
 Enabled 报告 AI 能力当前是否可用（standard 与 embedding 档位均有可用绑定）。
 
 <a name="Runtime.Invalidate"></a>
-### func \(\*Runtime\) Invalidate
+### func \(\*Runtime\) [Invalidate](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/runtime.go#L221>)
 
 ```go
 func (r *Runtime) Invalidate(ctx context.Context) error
@@ -148,7 +148,7 @@ func (r *Runtime) Invalidate(ctx context.Context) error
 Invalidate 重新读取数据库配置并整体替换当前装配态，供配置变更（etcd 广播）时调用。 重建失败时保留上一可用快照并记录英文错误（不 panic、不残缺降级），同时向上返回错误 供监听方记录告警。替换成功后关闭被替换掉的旧快照持有的 MCP 会话（避免重建次数增长导致 连接泄漏）；关闭失败只记英文告警，不影响返回值。
 
 <a name="Runtime.Params"></a>
-### func \(\*Runtime\) Params
+### func \(\*Runtime\) [Params](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/runtime.go#L173>)
 
 ```go
 func (r *Runtime) Params() *config.Params
@@ -157,7 +157,7 @@ func (r *Runtime) Params() *config.Params
 Params 返回当前行为参数读取器（值全部取自库内 agent\_params.value）。
 
 <a name="Runtime.SetCapabilities"></a>
-### func \(\*Runtime\) SetCapabilities
+### func \(\*Runtime\) [SetCapabilities](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/runtime.go#L94>)
 
 ```go
 func (r *Runtime) SetCapabilities(items []capability.Capability)
@@ -166,7 +166,7 @@ func (r *Runtime) SetCapabilities(items []capability.Capability)
 SetCapabilities 注入能力快照：能力声明位于视图层，AI 包不反向依赖 manager，故由装配层 在 registerViewRoutes 之后调用。该快照只用于 api\_invoke 的只读白名单校验，不进入提示词。 传入的切片会被复制，调用方后续修改不影响运行时。
 
 <a name="Runtime.Shutdown"></a>
-### func \(\*Runtime\) Shutdown
+### func \(\*Runtime\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/runtime.go#L261>)
 
 ```go
 func (r *Runtime) Shutdown(ctx context.Context) error
@@ -175,7 +175,7 @@ func (r *Runtime) Shutdown(ctx context.Context) error
 Shutdown 停止配置变更监听（实现 runtime.Service 生命周期，实际停止依赖 Start 的 ctx 取消）；同时满足 samber/do 的 ShutdownerWithContext 约定，由注入器在关闭阶段调用。 先关闭 TurnLoop 会话驱动（中止全部在途回合并等待终态落库），再关闭当前快照持有的 MCP 会话（失败只记英文告警；CloseTools 幂等，故重复调用安全），最后关闭监听。
 
 <a name="Runtime.Snapshot"></a>
-### func \(\*Runtime\) Snapshot
+### func \(\*Runtime\) [Snapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/runtime.go#L158>)
 
 ```go
 func (r *Runtime) Snapshot() *llmconfig.Snapshot
@@ -184,7 +184,7 @@ func (r *Runtime) Snapshot() *llmconfig.Snapshot
 Snapshot 返回当前配置快照（尚未完成首次装配时返回未启用的空快照）。
 
 <a name="Runtime.Start"></a>
-### func \(\*Runtime\) Start
+### func \(\*Runtime\) [Start](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/runtime.go#L249>)
 
 ```go
 func (r *Runtime) Start(ctx context.Context) error
@@ -193,7 +193,7 @@ func (r *Runtime) Start(ctx context.Context) error
 Start 阻塞运行配置变更监听，直到 ctx 取消（实现 runtime.Service 生命周期）。
 
 <a name="Runtime.TestModel"></a>
-### func \(\*Runtime\) TestModel
+### func \(\*Runtime\) [TestModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/runtime.go#L244>)
 
 ```go
 func (r *Runtime) TestModel(ctx context.Context, cfg llm.ModelConfig) error
@@ -202,7 +202,7 @@ func (r *Runtime) TestModel(ctx context.Context, cfg llm.ModelConfig) error
 TestModel 对给定模型端点配置做一次轻量探活，委托 llminfra.TestModel。
 
 <a name="Runtime.Turns"></a>
-### func \(\*Runtime\) Turns
+### func \(\*Runtime\) [Turns](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/runtime.go#L178>)
 
 ```go
 func (r *Runtime) Turns() *turns.Manager
@@ -211,7 +211,7 @@ func (r *Runtime) Turns() *turns.Manager
 Turns 返回 TurnLoop 会话驱动（随装配态重建），供视图层取用；AI 未启用时为 nil。
 
 <a name="RuntimeOption"></a>
-## type RuntimeOption
+## type [RuntimeOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/runtime.go#L37>)
 
 RuntimeOption 是运行时的可选装配项，用于注入由 provider 统一管理的可选依赖； 不传时运行时按原有能力装配，测试与无依赖场景无需构造这些组件。
 
@@ -220,7 +220,7 @@ type RuntimeOption func(*runtimeOptions)
 ```
 
 <a name="WithJSEngine"></a>
-### func WithJSEngine
+### func [WithJSEngine](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/runtime.go#L46>)
 
 ```go
 func WithJSEngine(engine *jsengine.Engine) RuntimeOption

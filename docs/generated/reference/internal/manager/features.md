@@ -32,7 +32,7 @@ const (
 ```
 
 <a name="Feature"></a>
-## type Feature
+## type [Feature](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/features/features.go#L47-L52>)
 
 Feature 全局功能开关接口：由具体功能实现，供注册表聚合枚举与查询。
 
@@ -46,7 +46,7 @@ type Feature interface {
 ```
 
 <a name="Ai"></a>
-### func Ai
+### func [Ai](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/features/features.go#L138>)
 
 ```go
 func Ai(enabled Reasoned) Feature
@@ -55,7 +55,7 @@ func Ai(enabled Reasoned) Feature
 Ai 构造 AI 助手功能开关。
 
 <a name="PasswordReset"></a>
-### func PasswordReset
+### func [PasswordReset](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/features/features.go#L113>)
 
 ```go
 func PasswordReset(sender IsEnabled) Feature
@@ -64,7 +64,7 @@ func PasswordReset(sender IsEnabled) Feature
 PasswordReset 构造密码重置功能开关。
 
 <a name="IsEnabled"></a>
-## type IsEnabled
+## type [IsEnabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/features/features.go#L22-L25>)
 
 IsEnabled 具备可查询启用状态的依赖提供方接口（如由 \*mail.Sender 满足）：用于查询 某依赖能力当前是否可用。定义在使用方（features）以解耦与具体实现包的依赖：底层能力 判断（如 SMTP 配置完整性）被封装进实现方的 Enabled，features 不直接读取其配置结构。
 
@@ -76,7 +76,7 @@ type IsEnabled interface {
 ```
 
 <a name="Out"></a>
-## type Out
+## type [Out](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/features/features.go#L55-L63>)
 
 Out 功能开关输出项，供列表接口序列化给前端。
 
@@ -93,7 +93,7 @@ type Out struct {
 ```
 
 <a name="Reasoned"></a>
-## type Reasoned
+## type [Reasoned](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/features/features.go#L31-L35>)
 
 Reasoned 在启用状态之外还能报告「不可用原因」的依赖提供方接口（由 \*ai.Runtime 满足）： 原因文案由实现方按请求语言本地化（如 LLM 档位未绑定），features 只转发不解读。 实现该接口的功能在列表接口中带上原因，供前端向用户说明「为什么功能不可用」； 未实现的功能（如密码重置）原因留空，前端回退到通用提示。
 
@@ -106,7 +106,7 @@ type Reasoned interface {
 ```
 
 <a name="Registry"></a>
-## type Registry
+## type [Registry](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/features/features.go#L66-L69>)
 
 Registry 全局功能开关注册表：按装配顺序维护功能集合，供枚举与按键查询。
 
@@ -117,7 +117,7 @@ type Registry struct {
 ```
 
 <a name="NewRegistry"></a>
-### func NewRegistry
+### func [NewRegistry](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/features/features.go#L72>)
 
 ```go
 func NewRegistry(features ...Feature) *Registry
@@ -126,7 +126,7 @@ func NewRegistry(features ...Feature) *Registry
 NewRegistry 依据装配顺序构造功能注册表。
 
 <a name="Registry.IsEnabled"></a>
-### func \(\*Registry\) IsEnabled
+### func \(\*Registry\) [IsEnabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/features/features.go#L91>)
 
 ```go
 func (r *Registry) IsEnabled(key string) bool
@@ -135,7 +135,7 @@ func (r *Registry) IsEnabled(key string) bool
 IsEnabled 判断指定键的功能是否开启；未注册的功能视为关闭。
 
 <a name="Registry.List"></a>
-### func \(\*Registry\) List
+### func \(\*Registry\) [List](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/features/features.go#L78>)
 
 ```go
 func (r *Registry) List(lang *base.Language) []Out

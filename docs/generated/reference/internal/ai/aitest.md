@@ -17,7 +17,7 @@
 
 
 <a name="InitKeys"></a>
-## func InitKeys
+## func [InitKeys](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/aitest/aitest.go#L27>)
 
 ```go
 func InitKeys()
@@ -26,7 +26,7 @@ func InitKeys()
 InitKeys 初始化全局密钥派生：生成文档的派生摘要与落库摘要共用 hash 字段的 HMAC 密钥， 纯逻辑测试也要能计算摘要，故先初始化全局密钥派生。各包 TestMain 调用一次。
 
 <a name="NewKnowledgeDB"></a>
-## func NewKnowledgeDB
+## func [NewKnowledgeDB](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/aitest/aitest.go#L55>)
 
 ```go
 func NewKnowledgeDB(t testing.TB) *database.DB
@@ -35,7 +35,7 @@ func NewKnowledgeDB(t testing.TB) *database.DB
 NewKnowledgeDB 构造知识库/长期记忆测试用的 sqlite 内存库并迁移知识文档、知识分块与长期记忆表 （sqlite 不支持 pgvector/tsvector，用例只覆盖空命名空间与不触发向量写入的路径）。
 
 <a name="NewSessionDB"></a>
-## func NewSessionDB
+## func [NewSessionDB](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/aitest/aitest.go#L38>)
 
 ```go
 func NewSessionDB(t testing.TB) *database.DB
@@ -44,7 +44,7 @@ func NewSessionDB(t testing.TB) *database.DB
 NewSessionDB 构造会话测试用的 sqlite 内存库并迁移会话/消息/持久化交互/长期记忆/挂起运行相关表 （会话删除级联用例需要这些表同库；sqlite 不支持 pgvector/tsvector，用例只覆盖空嵌入的路径）。
 
 <a name="Params"></a>
-## func Params
+## func [Params](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/aitest/aitest.go#L70>)
 
 ```go
 func Params(t testing.TB, overrides map[string]string) *config.Params
@@ -53,7 +53,7 @@ func Params(t testing.TB, overrides map[string]string) *config.Params
 Params 构造测试用参数读取器：出厂值由 migrate fixture 注入数据库，测试不复制生产 提示词正文，故提示词类键给可辨识的短占位串（agent.systemPrompt 保留 "ZhongKui" 以便 断言系统提示已注入），其余键给与出厂值等价的字面量；overrides 覆盖其上。
 
 <a name="RecordingReporter"></a>
-## type RecordingReporter
+## type [RecordingReporter](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/aitest/aitest.go#L137-L144>)
 
 RecordingReporter 是 contract.SyncReporter 的测试替身：记录 Start/Step/Finish 的调用次数与参数。
 
@@ -69,7 +69,7 @@ type RecordingReporter struct {
 ```
 
 <a name="RecordingReporter.Finish"></a>
-### func \(\*RecordingReporter\) Finish
+### func \(\*RecordingReporter\) [Finish](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/aitest/aitest.go#L157>)
 
 ```go
 func (r *RecordingReporter) Finish()
@@ -78,7 +78,7 @@ func (r *RecordingReporter) Finish()
 Finish 累计一次 Finish 调用。
 
 <a name="RecordingReporter.Start"></a>
-### func \(\*RecordingReporter\) Start
+### func \(\*RecordingReporter\) [Start](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/aitest/aitest.go#L147>)
 
 ```go
 func (r *RecordingReporter) Start(total int)
@@ -87,7 +87,7 @@ func (r *RecordingReporter) Start(total int)
 Start 记录一次 Start 的待处理总数。
 
 <a name="RecordingReporter.Step"></a>
-### func \(\*RecordingReporter\) Step
+### func \(\*RecordingReporter\) [Step](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/aitest/aitest.go#L152>)
 
 ```go
 func (r *RecordingReporter) Step(item contract.SyncProgressItem)
@@ -96,7 +96,7 @@ func (r *RecordingReporter) Step(item contract.SyncProgressItem)
 Step 记录一条进度明细。
 
 <a name="StubEmbedder"></a>
-## type StubEmbedder
+## type [StubEmbedder](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/aitest/aitest.go#L128>)
 
 StubEmbedder 是满足 embedder 接口的最小桩实现：EmbedStrings 返回与入参等长的空向量表。
 
@@ -105,7 +105,7 @@ type StubEmbedder struct{}
 ```
 
 <a name="StubEmbedder.EmbedStrings"></a>
-### func \(StubEmbedder\) EmbedStrings
+### func \(StubEmbedder\) [EmbedStrings](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/aitest/aitest.go#L131>)
 
 ```go
 func (StubEmbedder) EmbedStrings(_ context.Context, texts []string, _ ...embedding.Option) ([][]float64, error)

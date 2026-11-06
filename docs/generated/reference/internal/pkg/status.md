@@ -17,7 +17,7 @@
 
 
 <a name="Probe"></a>
-## type Probe
+## type [Probe](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/status/status.go#L45>)
 
 Probe 一次依赖连通性探测。 实现必须自行 recover 内部 panic 并返回 Status（绝不抛出）。
 
@@ -26,7 +26,7 @@ type Probe func(ctx context.Context) Status
 ```
 
 <a name="Registry"></a>
-## type Registry
+## type [Registry](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/status/registry.go#L18-L24>)
 
 Registry 依赖自省注册表。 持有全部已注册探测项与统一的单探测超时，最后一次 Run 的结果被缓存， 可供 Render 直接渲染，并负责并行执行与表格渲染。
 
@@ -38,7 +38,7 @@ type Registry struct {
 ```
 
 <a name="New"></a>
-### func New
+### func [New](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/status/registry.go#L28>)
 
 ```go
 func New() *Registry
@@ -47,7 +47,7 @@ func New() *Registry
 New 创建一个新的依赖自省注册表。 默认的单探测超时为 3s，经 creasty/defaults 依据 perProbeTimeout 的 default tag 注入。
 
 <a name="Registry.Register"></a>
-### func \(\*Registry\) Register
+### func \(\*Registry\) [Register](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/status/registry.go#L40>)
 
 ```go
 func (r *Registry) Register(spec Spec)
@@ -56,7 +56,7 @@ func (r *Registry) Register(spec Spec)
 Register 追加一个探测项。 注册顺序即 Run 返回结果的顺序。
 
 <a name="Registry.Render"></a>
-### func \(\*Registry\) Render
+### func \(\*Registry\) [Render](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/status/registry.go#L113>)
 
 ```go
 func (r *Registry) Render(localize func(key string) string) error
@@ -72,7 +72,7 @@ localize 用于本地化表头与状态值；本地化缺失时以 key 本身作
 返回值：表格渲染错误（包装为 errors.WithStack）。
 
 <a name="Registry.Run"></a>
-### func \(\*Registry\) Run
+### func \(\*Registry\) [Run](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/status/registry.go#L60>)
 
 ```go
 func (r *Registry) Run(ctx context.Context) []Status
@@ -89,7 +89,7 @@ Run 并行执行全部探测，返回与注册顺序一致的 \[\]Status。
 内部使用 errgroupx 并行调度，各协程回调恒返回 nil（不抛错误）。 Latency 在此处计时并填充为 time.Duration。
 
 <a name="Registry.SetPerProbeTimeout"></a>
-### func \(\*Registry\) SetPerProbeTimeout
+### func \(\*Registry\) [SetPerProbeTimeout](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/status/registry.go#L46>)
 
 ```go
 func (r *Registry) SetPerProbeTimeout(d time.Duration)
@@ -98,7 +98,7 @@ func (r *Registry) SetPerProbeTimeout(d time.Duration)
 SetPerProbeTimeout 设置每个探测项的独立超时。 默认值为 perProbeTimeout 的 default tag 设定（3s）。
 
 <a name="Spec"></a>
-## type Spec
+## type [Spec](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/status/status.go#L48-L52>)
 
 Spec 一个待注册的依赖探测项。
 
@@ -111,7 +111,7 @@ type Spec struct {
 ```
 
 <a name="Status"></a>
-## type Status
+## type [Status](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/status/status.go#L21-L28>)
 
 Status 单个外部依赖的健康状态。 字段名/类型固定；Err 与 Latency 带 omitempty。
 
@@ -127,7 +127,7 @@ type Status struct {
 ```
 
 <a name="Status.State"></a>
-### func \(Status\) State
+### func \(Status\) [State](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/status/status.go#L32>)
 
 ```go
 func (s Status) State() string

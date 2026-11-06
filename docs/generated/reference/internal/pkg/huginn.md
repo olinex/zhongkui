@@ -52,7 +52,7 @@ var (
 ```
 
 <a name="HTTPFingerprint"></a>
-## type HTTPFingerprint
+## type [HTTPFingerprint](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/huginn/binding.go#L30-L39>)
 
 HTTPFingerprint Http 指纹识别结果。
 
@@ -70,7 +70,7 @@ type HTTPFingerprint struct {
 ```
 
 <a name="AnalyzeHTTPRequest"></a>
-### func AnalyzeHTTPRequest
+### func [AnalyzeHTTPRequest](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/huginn/binding.go#L163>)
 
 ```go
 func AnalyzeHTTPRequest(raw []byte) (*HTTPFingerprint, error)
@@ -79,7 +79,7 @@ func AnalyzeHTTPRequest(raw []byte) (*HTTPFingerprint, error)
 AnalyzeHTTPRequest 分析原始 Http/1.x 请求头字节，返回 Http 指纹。 无法识别时返回 \(nil, nil\)。
 
 <a name="AnalyzeHTTPResponse"></a>
-### func AnalyzeHTTPResponse
+### func [AnalyzeHTTPResponse](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/huginn/binding.go#L169>)
 
 ```go
 func AnalyzeHTTPResponse(raw []byte) (*HTTPFingerprint, error)
@@ -88,7 +88,7 @@ func AnalyzeHTTPResponse(raw []byte) (*HTTPFingerprint, error)
 AnalyzeHTTPResponse 分析原始 Http/1.x 响应头字节，返回 Http 指纹。 无法识别时返回 \(nil, nil\)。
 
 <a name="TCPFingerprint"></a>
-## type TCPFingerprint
+## type [TCPFingerprint](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/huginn/binding.go#L18-L27>)
 
 TCPFingerprint TCP 指纹识别结果（p0f 风格）。
 
@@ -106,7 +106,7 @@ type TCPFingerprint struct {
 ```
 
 <a name="AnalyzeTCPIPv4"></a>
-### func AnalyzeTCPIPv4
+### func [AnalyzeTCPIPv4](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/huginn/binding.go#L117>)
 
 ```go
 func AnalyzeTCPIPv4(raw []byte) (*TCPFingerprint, error)
@@ -115,7 +115,7 @@ func AnalyzeTCPIPv4(raw []byte) (*TCPFingerprint, error)
 AnalyzeTCPIPv4 分析原始 IPv4\+TCP 头字节，返回 TCP 指纹。 raw 需为完整的 IPv4 头与 TCP 头字节序列；无法识别时返回 \(nil, nil\)。
 
 <a name="AnalyzeTCPIPv6"></a>
-### func AnalyzeTCPIPv6
+### func [AnalyzeTCPIPv6](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/huginn/binding.go#L123>)
 
 ```go
 func AnalyzeTCPIPv6(raw []byte) (*TCPFingerprint, error)

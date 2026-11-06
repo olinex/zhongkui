@@ -58,7 +58,7 @@ var ErrDataIncomplete = errors.New("application data incomplete, retry later")
 ```
 
 <a name="NewHttpTransport"></a>
-## func NewHttpTransport
+## func [NewHttpTransport](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/http.go#L426-L435>)
 
 ```go
 func NewHttpTransport(ctx context.Context, s3Client *s3.S3Client, meta *n.BaseMeta, streamMeta *StreamMeta, streamIndex uint32, request *http.Request, response *http.Response, kd *key.KeyDerivation, buildTailer BuildTailer) (transport *n.HttpTransport, err error)
@@ -95,7 +95,7 @@ Build 构建完整的HTTP传输对象 实现tcp.AppProtocolDetector接口的Buil
 6. 返回完整的HttpTransport对象，包含所有HTTP传输信息
 
 <a name="RegisterAppProtocolDetector"></a>
-## func RegisterAppProtocolDetector
+## func [RegisterAppProtocolDetector](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/base.go#L71>)
 
 ```go
 func RegisterAppProtocolDetector(protocol AppProtocol, detector AppProtocolDetector)
@@ -104,7 +104,7 @@ func RegisterAppProtocolDetector(protocol AppProtocol, detector AppProtocolDetec
 RegisterAppProtocolDetector 注册一个应用层协议推测器。 protocol: 要注册的协议类型 detector: 协议推测器实现
 
 <a name="AppProtocol"></a>
-## type AppProtocol
+## type [AppProtocol](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/base.go#L63>)
 
 AppProtocol 表示应用层协议的枚举类型。 该类型用于标识TCP数据流中承载的应用层协议类型，支持协议识别和协议特定的数据处理。 在TCP流重组过程中，系统会根据数据内容自动识别协议类型，并将识别结果存储在此字段中。
 
@@ -113,7 +113,7 @@ type AppProtocol string
 ```
 
 <a name="AppProtocolDetector"></a>
-## type AppProtocolDetector
+## type [AppProtocolDetector](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/base.go#L118-L141>)
 
 AppProtocolDetector 应用层协议推测器接口。 用于推测数据包中的应用层协议类型，并判断数据是否完整。
 
@@ -145,7 +145,7 @@ type AppProtocolDetector interface {
 ```
 
 <a name="AppTailer"></a>
-## type AppTailer
+## type [AppTailer](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/base.go#L100-L111>)
 
 AppTailer 记录一条流在提取阶段消费的客户端/服务端数据量、偏移与时间戳。
 
@@ -165,7 +165,7 @@ type AppTailer struct {
 ```
 
 <a name="BuildTailer"></a>
-## type BuildTailer
+## type [BuildTailer](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/base.go#L114>)
 
 BuildTailer 是构建 AppTailer 的回调，供组装阶段取用流的消费偏移信息。
 
@@ -174,7 +174,7 @@ type BuildTailer func(ctx context.Context) (tailer *AppTailer, err error)
 ```
 
 <a name="HttpDetector"></a>
-## type HttpDetector
+## type [HttpDetector](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/http.go#L44-L49>)
 
 HttpDetector HTTP协议检测器 实现tcp.AppProtocolDetector接口，用于检测和提取TCP流中的HTTP协议数据 该检测器负责识别HTTP请求和响应，解析HTTP协议头部，并构建完整的HTTP传输对象
 
@@ -185,7 +185,7 @@ type HttpDetector struct {
 ```
 
 <a name="NewHttpDetector"></a>
-### func NewHttpDetector
+### func [NewHttpDetector](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/http.go#L52>)
 
 ```go
 func NewHttpDetector(client *s3.S3Client, kd *key.KeyDerivation) *HttpDetector
@@ -194,7 +194,7 @@ func NewHttpDetector(client *s3.S3Client, kd *key.KeyDerivation) *HttpDetector
 NewHttpDetector 创建 HTTP 协议检测器。
 
 <a name="HttpDetector.Build"></a>
-### func \(\*HttpDetector\) Build
+### func \(\*HttpDetector\) [Build](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/http.go#L276-L283>)
 
 ```go
 func (s *HttpDetector) Build(ctx context.Context, baseMeta *n.BaseMeta, streamMeta *StreamMeta, streamIndex uint32, clientPayload, serverPayload any, tailer BuildTailer) (app any, err error)
@@ -203,7 +203,7 @@ func (s *HttpDetector) Build(ctx context.Context, baseMeta *n.BaseMeta, streamMe
 Build 将提取到的 HTTP 请求与响应组装为 HttpTransport 对象。
 
 <a name="HttpDetector.Detect"></a>
-### func \(\*HttpDetector\) Detect
+### func \(\*HttpDetector\) [Detect](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/http.go#L150>)
 
 ```go
 func (s *HttpDetector) Detect(ctx context.Context, peek []byte, c2s bool) (ok bool, err error)
@@ -229,7 +229,7 @@ Detect 检测TCP流中的数据是否为HTTP协议 实现tcp.AppProtocolDetector
 3. 根据方向调用相应的检测方法： \- c2s=true: 调用isClient检测HTTP请求 \- c2s=false: 调用isServer检测HTTP响应
 
 <a name="HttpDetector.Extract"></a>
-### func \(\*HttpDetector\) Extract
+### func \(\*HttpDetector\) [Extract](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/http.go#L195-L198>)
 
 ```go
 func (s *HttpDetector) Extract(ctx context.Context, clientReader, serverReader *bufio.Reader) (clientPayload, serverPayload any, err error)
@@ -269,7 +269,7 @@ Extract 从TCP流中提取HTTP协议数据 实现tcp.AppProtocolDetector接口�
 - 调用者需要检查返回的clientPayload和serverPayload是否为nil来判断是否解析成功
 
 <a name="StreamMeta"></a>
-## type StreamMeta
+## type [StreamMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/base.go#L76-L97>)
 
 StreamMeta 描述一条已重组 TCP 流的元数据：地址、端口、ISN、被动指纹与时间戳。
 

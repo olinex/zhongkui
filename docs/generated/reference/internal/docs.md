@@ -58,7 +58,7 @@ const Root = "docs"
 ```
 
 <a name="Check"></a>
-## func Check
+## func [Check](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/check.go#L28>)
 
 ```go
 func Check(ctx context.Context, projectRoot string, root *cobra.Command) error
@@ -67,7 +67,7 @@ func Check(ctx context.Context, projectRoot string, root *cobra.Command) error
 Check 校验工作区生成物与当前代码声明一致：先把全部生成域导出到临时目录，再与 docs/ 下的 实际产物逐文件比对。任何缺失、多余或内容不同都返回错误，使 CI 能拦截文档漂移。 只比较生成域（docs/generated、docs/index.md、docs/nav.json），不触碰策展目录。 root 用于把 CLI 命令树一并纳入投影；为 nil 时不生成 CLI 参考页。
 
 <a name="Export"></a>
-## func Export
+## func [Export](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/export.go#L68>)
 
 ```go
 func Export(ctx context.Context, opts Options) error
@@ -76,7 +76,7 @@ func Export(ctx context.Context, opts Options) error
 Export 执行完整导出流程：叙述档生成、投影页、参考档生成、参考索引、文档总目录与导航文件。 所有输出文件均幂等覆盖，目录按需创建；只写生成域，不触碰策展目录。
 
 <a name="RenderPackage"></a>
-## func RenderPackage
+## func [RenderPackage](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/render.go#L94>)
 
 ```go
 func RenderPackage(projectRoot, importPath string, narrative bool) (string, error)
@@ -87,7 +87,7 @@ RenderPackage 按导入路径加载单个包并按选定档位渲染 Markdown。
 若目录不存在（真正的包缺失）则返回包装后的错误；若目录存在但不含 Go 源码 （如仅作为子包命名空间的目录），则视为无需渲染，返回空字符串。
 
 <a name="AiIngest"></a>
-## type AiIngest
+## type [AiIngest](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L100>)
 
 AiIngest 是文档进入 RAG 时的分区取值；空串表示不进入 RAG。
 
@@ -113,7 +113,7 @@ const (
 ```
 
 <a name="AiIngest.Valid"></a>
-### func \(AiIngest\) Valid
+### func \(AiIngest\) [Valid](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L116>)
 
 ```go
 func (i AiIngest) Valid() bool
@@ -122,7 +122,7 @@ func (i AiIngest) Valid() bool
 Valid 报告 AI 摄入分区是否合法（空串合法，表示不摄入）。
 
 <a name="Category"></a>
-## type Category
+## type [Category](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/category.go#L8>)
 
 Category 表示 Diátaxis 文档分类。
 
@@ -146,7 +146,7 @@ const (
 ```
 
 <a name="Categories"></a>
-### func Categories
+### func [Categories](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/category.go#L22>)
 
 ```go
 func Categories() []Category
@@ -155,7 +155,7 @@ func Categories() []Category
 Categories 返回全部文档分类，是分类集合的唯一注册点。
 
 <a name="Category.Label"></a>
-### func \(Category\) Label
+### func \(Category\) [Label](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/category.go#L37>)
 
 ```go
 func (c Category) Label() string
@@ -164,7 +164,7 @@ func (c Category) Label() string
 Label 返回该分类的中文标签。
 
 <a name="Category.Valid"></a>
-### func \(Category\) Valid
+### func \(Category\) [Valid](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/category.go#L32>)
 
 ```go
 func (c Category) Valid() bool
@@ -173,7 +173,7 @@ func (c Category) Valid() bool
 Valid 报告该分类是否为已注册的合法分类。
 
 <a name="Entry"></a>
-## type Entry
+## type [Entry](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L126-L153>)
 
 Entry 表示一条已登记文档条目。
 
@@ -209,7 +209,7 @@ type Entry struct {
 ```
 
 <a name="Curated"></a>
-### func Curated
+### func [Curated](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L553>)
 
 ```go
 func Curated() []Entry
@@ -218,7 +218,7 @@ func Curated() []Entry
 Curated 返回所有策展条目（SourceCurated）。
 
 <a name="Generated"></a>
-### func Generated
+### func [Generated](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L541>)
 
 ```go
 func Generated() []Entry
@@ -227,7 +227,7 @@ func Generated() []Entry
 Generated 返回所有由代码声明派生的条目（SourceComment）。
 
 <a name="Registry"></a>
-### func Registry
+### func [Registry](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L157>)
 
 ```go
 func Registry() []Entry
@@ -236,7 +236,7 @@ func Registry() []Entry
 Registry 返回全部文档条目，是文档体系的唯一注册点。 每个包至多对应一个叙述档条目，避免相同知识内容被重复索引。
 
 <a name="KnowledgeDocument"></a>
-## type KnowledgeDocument
+## type [KnowledgeDocument](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/schema.go#L431-L438>)
 
 KnowledgeDocument 是一篇可入 RAG 的生成知识文档：Title 为同步与去重的稳定键，Content 为正文。
 
@@ -252,7 +252,7 @@ type KnowledgeDocument struct {
 ```
 
 <a name="SchemaKnowledgeDocuments"></a>
-### func SchemaKnowledgeDocuments
+### func [SchemaKnowledgeDocuments](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/schema.go#L443>)
 
 ```go
 func SchemaKnowledgeDocuments(projectRoot string) ([]KnowledgeDocument, error)
@@ -261,7 +261,7 @@ func SchemaKnowledgeDocuments(projectRoot string) ([]KnowledgeDocument, error)
 SchemaKnowledgeDocuments 生成数据表分区的知识文档集：每张已迁移表一篇，正文与数据表参考页 同源，仅去掉指向仓库文件的相对链接（RAG 正文中的相对链接不可达）。返回顺序按域与表名稳定 排序，保证 zki sync schema 幂等。
 
 <a name="NarrativeDocument"></a>
-## type NarrativeDocument
+## type [NarrativeDocument](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/export.go#L222-L235>)
 
 NarrativeDocument 是供入 RAG 的叙述页文档：由包注释渲染而来，Content 与落盘叙述档正文同源。
 
@@ -283,7 +283,7 @@ type NarrativeDocument struct {
 ```
 
 <a name="GeneratedNarrativeDocuments"></a>
-### func GeneratedNarrativeDocuments
+### func [GeneratedNarrativeDocuments](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/export.go#L240>)
 
 ```go
 func GeneratedNarrativeDocuments(projectRoot string) ([]NarrativeDocument, error)
@@ -292,7 +292,7 @@ func GeneratedNarrativeDocuments(projectRoot string) ([]NarrativeDocument, error
 GeneratedNarrativeDocuments 遍历注册表中由代码声明派生且按叙述档渲染的条目，逐条渲染包注释并 组装为入 RAG 的叙述页文档。正文为空（包目录不含 Go 源码）的条目直接跳过；返回顺序保持 Registry 顺序，保证同步幂等。projectRoot 为项目根目录，用于解析导入路径对应的包目录。
 
 <a name="Options"></a>
-## type Options
+## type [Options](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/export.go#L55-L64>)
 
 Options 控制文档导出的行为。
 
@@ -310,7 +310,7 @@ type Options struct {
 ```
 
 <a name="Projection"></a>
-## type Projection
+## type [Projection](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/export.go#L37-L52>)
 
 Projection 是由外部声明派生的文档投影页（如接口能力参考页）：正文由调用方按单一事实来源渲染， 导出器只负责落到生成根下的稳定路径并套用统一页头与生成标记。
 
@@ -334,7 +334,7 @@ type Projection struct {
 ```
 
 <a name="Role"></a>
-## type Role
+## type [Role](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/role.go#L6>)
 
 Role 表示文档建议阅读的角色。
 
@@ -361,7 +361,7 @@ const (
 ```
 
 <a name="Roles"></a>
-### func Roles
+### func [Roles](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/role.go#L23>)
 
 ```go
 func Roles() []Role
@@ -370,7 +370,7 @@ func Roles() []Role
 Roles 返回全部建议阅读角色，是角色集合的唯一注册点。
 
 <a name="Role.Label"></a>
-### func \(Role\) Label
+### func \(Role\) [Label](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/role.go#L38>)
 
 ```go
 func (r Role) Label() string
@@ -379,7 +379,7 @@ func (r Role) Label() string
 Label 返回该角色的中文标签。
 
 <a name="Role.Valid"></a>
-### func \(Role\) Valid
+### func \(Role\) [Valid](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/role.go#L33>)
 
 ```go
 func (r Role) Valid() bool
@@ -388,7 +388,7 @@ func (r Role) Valid() bool
 Valid 报告该角色是否为已注册的合法角色。
 
 <a name="Section"></a>
-## type Section
+## type [Section](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L13>)
 
 Section 是文档的导航分区：描述读者旅程与领域，与文件系统目录、Diátaxis 分类相互独立。
 
@@ -416,7 +416,7 @@ const (
 ```
 
 <a name="Sections"></a>
-### func Sections
+### func [Sections](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L31>)
 
 ```go
 func Sections() []Section
@@ -425,7 +425,7 @@ func Sections() []Section
 Sections 返回全部导航分区，顺序即站点与目录的展示顺序。
 
 <a name="Section.Label"></a>
-### func \(Section\) Label
+### func \(Section\) [Label](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L53>)
 
 ```go
 func (s Section) Label() string
@@ -434,7 +434,7 @@ func (s Section) Label() string
 Label 返回分区中文展示名。
 
 <a name="Section.Valid"></a>
-### func \(Section\) Valid
+### func \(Section\) [Valid](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L43>)
 
 ```go
 func (s Section) Valid() bool
@@ -443,7 +443,7 @@ func (s Section) Valid() bool
 Valid 报告分区取值是否合法。
 
 <a name="Source"></a>
-## type Source
+## type [Source](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L73>)
 
 Source 是文档的来源，决定它落在哪个根目录、由谁写入。
 
@@ -463,7 +463,7 @@ const (
 ```
 
 <a name="Source.Root"></a>
-### func \(Source\) Root
+### func \(Source\) [Root](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L88>)
 
 ```go
 func (s Source) Root() string
@@ -472,7 +472,7 @@ func (s Source) Root() string
 Root 返回来源对应的根目录（相对 docs/）。
 
 <a name="Source.Valid"></a>
-### func \(Source\) Valid
+### func \(Source\) [Valid](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L83>)
 
 ```go
 func (s Source) Valid() bool

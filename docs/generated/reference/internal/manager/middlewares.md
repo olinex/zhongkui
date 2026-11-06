@@ -255,7 +255,7 @@ var (
 ```
 
 <a name="AiMiddleware"></a>
-## func AiMiddleware
+## func [AiMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/ai.go#L18>)
 
 ```go
 func AiMiddleware(rt *ai.Runtime) gin.HandlerFunc
@@ -264,7 +264,7 @@ func AiMiddleware(rt *ai.Runtime) gin.HandlerFunc
 AiMiddleware 创建一个 Gin 中间件，将 AI 助手运行时（\*ai.Runtime）注入到请求上下文 中，供 AI 相关处理器读取。运行时按请求实时给出当前组件快照（Current），配置变更 （etcd 广播热重载）后无需重启即可生效；AI 未启用时组件仅携带参数解析器，处理器经 Enabled 统一判断。
 
 <a name="Authorize"></a>
-## func Authorize
+## func [Authorize](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/authorize.go#L54>)
 
 ```go
 func Authorize(c *gin.Context, span trace.Span) *response.CodeError
@@ -273,7 +273,7 @@ func Authorize(c *gin.Context, span trace.Span) *response.CodeError
 Authorize 执行动态授权检查，基于当前请求的路径和方法进行权限验证 参数 c: Gin 上下文 返回: 授权错误码，nil 表示授权成功 流程: 1. 获取当前命名空间 2. 获取当前用户 3. 获取请求的完整路径作为资源对象 4. 使用 RBAC 策略验证用户是否有权访问该资源
 
 <a name="CORSHeadersMiddleware"></a>
-## func CORSHeadersMiddleware
+## func [CORSHeadersMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/secure.go#L74>)
 
 ```go
 func CORSHeadersMiddleware(cfg *config.CORSConfig) gin.HandlerFunc
@@ -309,7 +309,7 @@ CORSHeadersMiddleware 创建跨域资源共享（CORS）响应头中间件。
 - gin.HandlerFunc: Gin 框架中间件处理函数
 
 <a name="CoreDatabaseMiddleware"></a>
-## func CoreDatabaseMiddleware
+## func [CoreDatabaseMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/database.go#L32>)
 
 ```go
 func CoreDatabaseMiddleware(db *database.DB) gin.HandlerFunc
@@ -326,7 +326,7 @@ CoreDatabaseMiddleware 创建一个 Gin 中间件，将数据库连接实例注�
 - gin.HandlerFunc: Gin 中间件处理函数
 
 <a name="EtcdClientMiddleware"></a>
-## func EtcdClientMiddleware
+## func [EtcdClientMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/database.go#L102>)
 
 ```go
 func EtcdClientMiddleware(client *etcd.EtcdClient) gin.HandlerFunc
@@ -343,7 +343,7 @@ EtcdClientMiddleware 创建一个 Gin 中间件，将 etcd 客户端实例注入
 - gin.HandlerFunc: Gin 中间件处理函数
 
 <a name="FeatureRegistryMiddleware"></a>
-## func FeatureRegistryMiddleware
+## func [FeatureRegistryMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/feature_registry.go#L19>)
 
 ```go
 func FeatureRegistryMiddleware(registry *features.Registry) gin.HandlerFunc
@@ -352,7 +352,7 @@ func FeatureRegistryMiddleware(registry *features.Registry) gin.HandlerFunc
 FeatureRegistryMiddleware 创建一个 Gin 中间件，将功能开关注册表注入请求上下文。 该中间件将传入的注册表实例存储在 Gin 上下文中，后续处理器可通过 GetFeatureRegistry 获取，用于查询功能开关（如判断密码重置功能是否可用）。
 
 <a name="GetAi"></a>
-## func GetAi
+## func [GetAi](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/ai.go#L40>)
 
 ```go
 func GetAi(c *gin.Context) *ai.Components
@@ -363,7 +363,7 @@ GetAi 从 Gin 请求上下文中获取当前 AI 助手组件快照（等价于 G
 注意: 如果上下文中不存在该实例，该函数会触发 panic， 这通常意味着未正确注册 AiMiddleware 中间件。
 
 <a name="GetAiRuntime"></a>
-## func GetAiRuntime
+## func [GetAiRuntime](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/ai.go#L29>)
 
 ```go
 func GetAiRuntime(c *gin.Context) *ai.Runtime
@@ -374,7 +374,7 @@ GetAiRuntime 从 Gin 请求上下文中获取 AI 助手运行时（供需要快�
 注意: 如果上下文中不存在该实例，该函数会触发 panic， 这通常意味着未正确注册 AiMiddleware 中间件。
 
 <a name="GetCoreDatabase"></a>
-## func GetCoreDatabase
+## func [GetCoreDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/database.go#L51>)
 
 ```go
 func GetCoreDatabase(c *gin.Context) *database.DB
@@ -393,7 +393,7 @@ GetCoreDatabase 从 Gin 请求上下文中获取数据库连接实例。 该函�
 - \*database.DB: 绑定了当前请求上下文的数据库连接实例
 
 <a name="GetEtcdClient"></a>
-## func GetEtcdClient
+## func [GetEtcdClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/database.go#L119>)
 
 ```go
 func GetEtcdClient(c *gin.Context) *etcd.EtcdClient
@@ -412,7 +412,7 @@ GetEtcdClient 从 Gin 请求上下文中获取 etcd 客户端实例。
 - \*etcd.EtcdClient: etcd 客户端实例
 
 <a name="GetFeatureRegistry"></a>
-## func GetFeatureRegistry
+## func [GetFeatureRegistry](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/feature_registry.go#L27>)
 
 ```go
 func GetFeatureRegistry(c *gin.Context) *features.Registry
@@ -421,7 +421,7 @@ func GetFeatureRegistry(c *gin.Context) *features.Registry
 GetFeatureRegistry 从 Gin 请求上下文中获取功能开关注册表实例。
 
 <a name="GetLanguage"></a>
-## func GetLanguage
+## func [GetLanguage](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/i18n.go#L63>)
 
 ```go
 func GetLanguage(c *gin.Context) *base.Language
@@ -450,7 +450,7 @@ fmt.Println(lang.String()) // 输出: "zh-Hans" 或 "en"
 ```
 
 <a name="GetMessagePool"></a>
-## func GetMessagePool
+## func [GetMessagePool](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/message_pool.go#L28>)
 
 ```go
 func GetMessagePool(c *gin.Context) *message.Pool
@@ -459,7 +459,7 @@ func GetMessagePool(c *gin.Context) *message.Pool
 GetMessagePool 从 Gin 请求上下文中获取消息渠道连接池实例。 如果上下文中不存在该实例，则触发 panic（通常意味着未正确注册 MessagePoolMiddleware）。
 
 <a name="GetNamespace"></a>
-## func GetNamespace
+## func [GetNamespace](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/namspace.go#L104>)
 
 ```go
 func GetNamespace(c *gin.Context) (string, *response.CodeError)
@@ -479,7 +479,7 @@ GetNamespace 从 Gin 上下文中获取当前请求所属的命名空间名称�
 - \*CodeError: 如果上下文中不存在命名空间信息，则返回 ErrNampspaceDoesNotExist
 
 <a name="GetObjectCache"></a>
-## func GetObjectCache
+## func [GetObjectCache](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/objectcache.go#L40>)
 
 ```go
 func GetObjectCache(c *gin.Context) *s3.ObjectCache
@@ -498,7 +498,7 @@ GetObjectCache 从 Gin 请求上下文中获取通用对象缓存实例。
 - \*s3.ObjectCache: 通用对象缓存实例
 
 <a name="GetPasswordResetLimiter"></a>
-## func GetPasswordResetLimiter
+## func [GetPasswordResetLimiter](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/ratelimit.go#L25>)
 
 ```go
 func GetPasswordResetLimiter(c *gin.Context) *redis.FixedWindowLimiter
@@ -507,7 +507,7 @@ func GetPasswordResetLimiter(c *gin.Context) *redis.FixedWindowLimiter
 GetPasswordResetLimiter 从 Gin 请求上下文中获取密码重置申请限流器。 上下文中不存在时触发 panic，通常意味着未注册 PasswordResetLimiterMiddleware。
 
 <a name="GetPipelineClient"></a>
-## func GetPipelineClient
+## func [GetPipelineClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/pipeline.go#L32>)
 
 ```go
 func GetPipelineClient(c *gin.Context) *pipeline.Client
@@ -516,7 +516,7 @@ func GetPipelineClient(c *gin.Context) *pipeline.Client
 GetPipelineClient 从 Gin 请求上下文中获取 Pipeline 客户端实例。
 
 <a name="GetPipelineInspector"></a>
-## func GetPipelineInspector
+## func [GetPipelineInspector](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/pipeline.go#L85>)
 
 ```go
 func GetPipelineInspector(c *gin.Context) *pipeline.Inspector
@@ -548,7 +548,7 @@ func listQueues(c *gin.Context) {
 ```
 
 <a name="GetRawDatabase"></a>
-## func GetRawDatabase
+## func [GetRawDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/database.go#L86>)
 
 ```go
 func GetRawDatabase(c *gin.Context) *database.DB
@@ -567,7 +567,7 @@ GetRawDatabase 从 Gin 请求上下文中获取 raw 库（ClickHouse）连接实
 - \*database.DB: 绑定了当前请求上下文的 raw 库连接实例
 
 <a name="GetRbacPolicy"></a>
-## func GetRbacPolicy
+## func [GetRbacPolicy](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/authorize.go#L39>)
 
 ```go
 func GetRbacPolicy(c *gin.Context) *casbin.Enforcer
@@ -576,7 +576,7 @@ func GetRbacPolicy(c *gin.Context) *casbin.Enforcer
 GetRbacPolicy 从 Gin 上下文中获取 RBAC 策略实例 参数 c: Gin 上下文 返回: RBAC 策略实例 注意: 如果上下文不存在 RBAC 策略，会触发 panic
 
 <a name="GetS3Client"></a>
-## func GetS3Client
+## func [GetS3Client](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/s3.go#L38>)
 
 ```go
 func GetS3Client(c *gin.Context) *s3.S3Client
@@ -595,7 +595,7 @@ GetS3Client 从 Gin 请求上下文中获取 S3 客户端实例。
 - \*s3.S3Client: S3 客户端实例
 
 <a name="GetSQLiteVTabPools"></a>
-## func GetSQLiteVTabPools
+## func [GetSQLiteVTabPools](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/sqlitevtab.go#L29>)
 
 ```go
 func GetSQLiteVTabPools(c *gin.Context) *vtab.Pools
@@ -604,7 +604,7 @@ func GetSQLiteVTabPools(c *gin.Context) *vtab.Pools
 GetSQLiteVTabPools 从 Gin 请求上下文中获取 sqlite vtable 池持有者实例。 如果上下文中不存在该实例，则触发 panic（通常意味着未正确注册 SQLiteVTabPoolsMiddleware）。
 
 <a name="GetTagRuleEngine"></a>
-## func GetTagRuleEngine
+## func [GetTagRuleEngine](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/tag_rule.go#L36>)
 
 ```go
 func GetTagRuleEngine(c *gin.Context) *tagengine.Engine
@@ -619,7 +619,7 @@ GetTagRuleEngine 从 Gin 请求上下文中获取标签引擎。
 - \*tagengine.Engine: 标签识别引擎
 
 <a name="GetUser"></a>
-## func GetUser
+## func [GetUser](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/authenticator.go#L154>)
 
 ```go
 func GetUser(c *gin.Context) (*core.User, *response.CodeError)
@@ -635,7 +635,7 @@ GetUser 从 Gin 上下文中获取用户信息。 参数:
 - \*CodeError: 如果用户不存在返回错误
 
 <a name="MessagePoolMiddleware"></a>
-## func MessagePoolMiddleware
+## func [MessagePoolMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/message_pool.go#L19>)
 
 ```go
 func MessagePoolMiddleware(pool *message.Pool) gin.HandlerFunc
@@ -644,7 +644,7 @@ func MessagePoolMiddleware(pool *message.Pool) gin.HandlerFunc
 MessagePoolMiddleware 创建一个 Gin 中间件，将消息渠道连接池实例注入请求上下文。 该中间件在请求处理链中调用 c.Set 将池实例存储到上下文中，使得后续处理函数可以 通过 GetMessagePool 获取同一连接池实例。
 
 <a name="NamespaceMiddleware"></a>
-## func NamespaceMiddleware
+## func [NamespaceMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/namspace.go#L63>)
 
 ```go
 func NamespaceMiddleware(cfg *config.NamespaceConfig) gin.HandlerFunc
@@ -669,7 +669,7 @@ NamespaceMiddleware 创建一个命名空间识别中间件。
 - gin.HandlerFunc: 可直接注册到 Gin 路由中的中间件处理函数
 
 <a name="ObjectCacheMiddleware"></a>
-## func ObjectCacheMiddleware
+## func [ObjectCacheMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/objectcache.go#L23>)
 
 ```go
 func ObjectCacheMiddleware(cache *s3.ObjectCache) gin.HandlerFunc
@@ -686,7 +686,7 @@ ObjectCacheMiddleware 创建一个 Gin 中间件，将通用对象缓存实例�
 - gin.HandlerFunc: Gin 中间件处理函数
 
 <a name="OtelMiddleware"></a>
-## func OtelMiddleware
+## func [OtelMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/otel.go#L14>)
 
 ```go
 func OtelMiddleware() gin.HandlerFunc
@@ -695,7 +695,7 @@ func OtelMiddleware() gin.HandlerFunc
 OtelMiddleware 返回为 API 管理层接入 OpenTelemetry 链路追踪的 Gin 中间件。
 
 <a name="PasswordResetLimiterMiddleware"></a>
-## func PasswordResetLimiterMiddleware
+## func [PasswordResetLimiterMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/ratelimit.go#L16>)
 
 ```go
 func PasswordResetLimiterMiddleware(limiter *redis.FixedWindowLimiter) gin.HandlerFunc
@@ -704,7 +704,7 @@ func PasswordResetLimiterMiddleware(limiter *redis.FixedWindowLimiter) gin.Handl
 PasswordResetLimiterMiddleware 创建密码重置申请限流中间件：将限流器注入请求上下文， 供处理器按请求来源维度调用其 Allow 判定是否超限。
 
 <a name="PipelineClientMiddleware"></a>
-## func PipelineClientMiddleware
+## func [PipelineClientMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/pipeline.go#L24>)
 
 ```go
 func PipelineClientMiddleware(client *pipeline.Client) gin.HandlerFunc
@@ -713,7 +713,7 @@ func PipelineClientMiddleware(client *pipeline.Client) gin.HandlerFunc
 PipelineClientMiddleware 创建一个 Gin 中间件，将 Pipeline 客户端实例注入到请求上下文中。 该中间件将传入的 Client 实例存储到 Gin 上下文中，使得后续的请求处理函数 可以通过 GetPipelineClient 函数获取客户端实例，用于向 asynq 队列投递任务 （例如定时任务管理的"立即执行"）。
 
 <a name="PipelineInspectorMiddleware"></a>
-## func PipelineInspectorMiddleware
+## func [PipelineInspectorMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/pipeline.go#L55>)
 
 ```go
 func PipelineInspectorMiddleware(inspector *pipeline.Inspector) gin.HandlerFunc
@@ -738,7 +738,7 @@ router.Use(PipelineInspectorMiddleware(inspector))
 ```
 
 <a name="RawDatabaseMiddleware"></a>
-## func RawDatabaseMiddleware
+## func [RawDatabaseMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/database.go#L67>)
 
 ```go
 func RawDatabaseMiddleware(db *database.DB) gin.HandlerFunc
@@ -755,7 +755,7 @@ RawDatabaseMiddleware 创建一个 Gin 中间件，将 raw 库（ClickHouse）�
 - gin.HandlerFunc: Gin 中间件处理函数
 
 <a name="RbacPolicyAuthorizeMiddleware"></a>
-## func RbacPolicyAuthorizeMiddleware
+## func [RbacPolicyAuthorizeMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/authorize.go#L148>)
 
 ```go
 func RbacPolicyAuthorizeMiddleware() gin.HandlerFunc
@@ -764,7 +764,7 @@ func RbacPolicyAuthorizeMiddleware() gin.HandlerFunc
 RbacPolicyAuthorizeMiddleware 创建一个动态授权的 Gin 中间件 返回: Gin 中间件函数 功能: 对每个请求自动执行 Authorize 函数进行权限检查
 
 <a name="RbacPolicyMiddleware"></a>
-## func RbacPolicyMiddleware
+## func [RbacPolicyMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/authorize.go#L28>)
 
 ```go
 func RbacPolicyMiddleware(policy *casbin.Enforcer) gin.HandlerFunc
@@ -773,7 +773,7 @@ func RbacPolicyMiddleware(policy *casbin.Enforcer) gin.HandlerFunc
 RbacPolicyMiddleware 创建一个 Gin 中间件，将 RBAC 策略设置到 Gin 上下文中 参数 policy: RBAC 策略实例 返回: Gin 中间件函数
 
 <a name="RequireNamespace"></a>
-## func RequireNamespace
+## func [RequireNamespace](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/namspace.go#L123>)
 
 ```go
 func RequireNamespace(c *gin.Context) (string, bool)
@@ -793,7 +793,7 @@ RequireNamespace 从请求上下文获取当前请求所属的命名空间名称
 - bool: 是否成功获取；false 表示命名空间缺失，请求已被中断
 
 <a name="RequireUserID"></a>
-## func RequireUserID
+## func [RequireUserID](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/authenticator.go#L173>)
 
 ```go
 func RequireUserID(c *gin.Context) (uint, bool)
@@ -813,7 +813,7 @@ RequireUserID 从请求上下文获取当前请求用户 ID（users.id）。
 - bool: 是否成功获取；false 表示用户缺失，请求已被中断
 
 <a name="S3ClientMiddleware"></a>
-## func S3ClientMiddleware
+## func [S3ClientMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/s3.go#L21>)
 
 ```go
 func S3ClientMiddleware(client *s3.S3Client) gin.HandlerFunc
@@ -830,7 +830,7 @@ S3ClientMiddleware 创建一个 Gin 中间件，将 S3 客户端实例注入到�
 - gin.HandlerFunc: Gin 中间件处理函数
 
 <a name="SQLiteVTabPoolsMiddleware"></a>
-## func SQLiteVTabPoolsMiddleware
+## func [SQLiteVTabPoolsMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/sqlitevtab.go#L20>)
 
 ```go
 func SQLiteVTabPoolsMiddleware(pools *vtab.Pools) gin.HandlerFunc
@@ -839,7 +839,7 @@ func SQLiteVTabPoolsMiddleware(pools *vtab.Pools) gin.HandlerFunc
 SQLiteVTabPoolsMiddleware 创建一个 Gin 中间件，将 sqlite vtable 池持有者实例注入 请求上下文。该中间件在请求处理链中调用 c.Set 将池持有者存储到上下文中，使得后续 处理函数可以通过 GetSQLiteVTabPools 获取同一实例。
 
 <a name="SecureHeadersMiddleware"></a>
-## func SecureHeadersMiddleware
+## func [SecureHeadersMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/secure.go#L34>)
 
 ```go
 func SecureHeadersMiddleware(cfg *config.SecureConfig) gin.HandlerFunc
@@ -868,7 +868,7 @@ SecureHeadersMiddleware 创建 HTTP 安全响应头中间件。
 - gin.HandlerFunc: Gin 框架中间件处理函数
 
 <a name="StartHandlerSpan"></a>
-## func StartHandlerSpan
+## func [StartHandlerSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/otel.go#L31>)
 
 ```go
 func StartHandlerSpan(c *gin.Context, name string) (context.Context, trace.Span)
@@ -877,7 +877,7 @@ func StartHandlerSpan(c *gin.Context, name string) (context.Context, trace.Span)
 StartHandlerSpan 在当前请求上下文中创建一个 gin\-handler 作用域的子 span。
 
 <a name="StartMiddlewareSpan"></a>
-## func StartMiddlewareSpan
+## func [StartMiddlewareSpan](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/otel.go#L26>)
 
 ```go
 func StartMiddlewareSpan(c *gin.Context, name string) (context.Context, trace.Span)
@@ -886,7 +886,7 @@ func StartMiddlewareSpan(c *gin.Context, name string) (context.Context, trace.Sp
 StartMiddlewareSpan 在当前请求上下文中创建一个 gin\-middleware 作用域的子 span。
 
 <a name="StaticAuthorize"></a>
-## func StaticAuthorize
+## func [StaticAuthorize](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/authorize.go#L114>)
 
 ```go
 func StaticAuthorize(c *gin.Context, span trace.Span, namespace, object, action string) *response.CodeError
@@ -895,7 +895,7 @@ func StaticAuthorize(c *gin.Context, span trace.Span, namespace, object, action 
 StaticAuthorize 执行静态授权检查，使用指定的命名空间、对象和操作进行权限验证 参数 c: Gin 上下文 参数 namespace: 命名空间 参数 object: 资源对象（权限点 object） 参数 action: 操作类型（语义动作，如 READ / WRITE） 返回: 授权错误码，nil 表示授权成功 注意: 此函数用于固定资源的授权检查，不依赖于请求路径； 与 Casbin 模型 r = sub, obj, act, nsp 对应，Enforce 参数顺序为 \(sub, obj, act, nsp\)
 
 <a name="StaticRbacPolicyAuthorizeMiddleware"></a>
-## func StaticRbacPolicyAuthorizeMiddleware
+## func [StaticRbacPolicyAuthorizeMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/authorize.go#L167>)
 
 ```go
 func StaticRbacPolicyAuthorizeMiddleware(namespace, object, action string) gin.HandlerFunc
@@ -904,7 +904,7 @@ func StaticRbacPolicyAuthorizeMiddleware(namespace, object, action string) gin.H
 StaticRbacPolicyAuthorizeMiddleware 创建一个静态授权的 Gin 中间件 参数 namespace: 命名空间 参数 object: 资源对象 参数 action: 操作类型 返回: Gin 中间件函数 功能: 对每个请求自动执行 StaticAuthorize 函数进行固定资源的权限检查
 
 <a name="TagRuleEngineMiddleware"></a>
-## func TagRuleEngineMiddleware
+## func [TagRuleEngineMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/tag_rule.go#L22>)
 
 ```go
 func TagRuleEngineMiddleware(engine *tagengine.Engine) gin.HandlerFunc
@@ -921,7 +921,7 @@ TagRuleEngineMiddleware 创建一个 Gin 中间件，将标签引擎注入到请
 - gin.HandlerFunc: Gin 中间件处理函数
 
 <a name="TranslateMiddleware"></a>
-## func TranslateMiddleware
+## func [TranslateMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/i18n.go#L36>)
 
 ```go
 func TranslateMiddleware() gin.HandlerFunc
@@ -954,7 +954,7 @@ r.Use(TranslateMiddleware())
 ```
 
 <a name="ZapLoggerMiddleware"></a>
-## func ZapLoggerMiddleware
+## func [ZapLoggerMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/logger.go#L128>)
 
 ```go
 func ZapLoggerMiddleware(logger *logging.Logger) gin.HandlerFunc
@@ -985,7 +985,7 @@ r.Use(ZapLoggerMiddleware(logger))
 ```
 
 <a name="AccessKeyAuthenticator"></a>
-## type AccessKeyAuthenticator
+## type [AccessKeyAuthenticator](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/access_key.go#L24-L29>)
 
 AccessKeyAuthenticator 使用 X\-Access\-Key 请求头完成访问密钥签名鉴权。 令牌解析、方法比对、防重放、密钥状态与签名校验统一委托 internal/pkg/auth 的共享实现， 本类型只负责把 Web 请求的方法标识传入共享鉴权，并按用户标识加载用户。
 
@@ -996,7 +996,7 @@ type AccessKeyAuthenticator struct {
 ```
 
 <a name="NewAccessKeyAuthenticator"></a>
-### func NewAccessKeyAuthenticator
+### func [NewAccessKeyAuthenticator](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/access_key.go#L41>)
 
 ```go
 func NewAccessKeyAuthenticator(keys *core.AccessKeyPool, db *database.DB) *AccessKeyAuthenticator
@@ -1012,7 +1012,7 @@ NewAccessKeyAuthenticator 创建访问密钥认证器。 参数:
 - \*AccessKeyAuthenticator: 新创建的认证器实例
 
 <a name="AccessKeyAuthenticator.AuthenticateRequest"></a>
-### func \(\*AccessKeyAuthenticator\) AuthenticateRequest
+### func \(\*AccessKeyAuthenticator\) [AuthenticateRequest](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/access_key.go#L63>)
 
 ```go
 func (a *AccessKeyAuthenticator) AuthenticateRequest(c *gin.Context) (*core.User, *response.CodeError)
@@ -1030,7 +1030,7 @@ AuthenticateRequest 认证当前请求，满足 CredentialAuthenticator 接口�
 - \*response.CodeError: 认证失败时返回 ErrBadAccessKey
 
 <a name="AccessKeyAuthenticator.Match"></a>
-### func \(\*AccessKeyAuthenticator\) Match
+### func \(\*AccessKeyAuthenticator\) [Match](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/access_key.go#L51>)
 
 ```go
 func (a *AccessKeyAuthenticator) Match(c *gin.Context) bool
@@ -1039,7 +1039,7 @@ func (a *AccessKeyAuthenticator) Match(c *gin.Context) bool
 Match 报告当前请求是否携带访问密钥签名令牌。
 
 <a name="AccessKeyAuthenticator.Name"></a>
-### func \(\*AccessKeyAuthenticator\) Name
+### func \(\*AccessKeyAuthenticator\) [Name](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/access_key.go#L46>)
 
 ```go
 func (a *AccessKeyAuthenticator) Name() string
@@ -1048,7 +1048,7 @@ func (a *AccessKeyAuthenticator) Name() string
 Name 返回本认证器的名称，用于日志与可观测性。
 
 <a name="ApiLogger"></a>
-## type ApiLogger
+## type [ApiLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/logger.go#L19-L22>)
 
 ApiLogger 是对 logging.Logger（zap.SugaredLogger）的封装 在记录日志时自动附加 HTTP 请求上下文信息（请求方法、路径、客户端 IP）， 专为 Gin 框架的 HTTP 请求处理场景设计，使业务代码无需手动传递这些通用字段
 
@@ -1059,7 +1059,7 @@ type ApiLogger struct {
 ```
 
 <a name="GetLogger"></a>
-### func GetLogger
+### func [GetLogger](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/logger.go#L160>)
 
 ```go
 func GetLogger(c *gin.Context) *ApiLogger
@@ -1085,7 +1085,7 @@ GetLogger 从 gin.Context 中获取 ApiLogger 实例
 ```
 
 <a name="ApiLogger.Debugf"></a>
-### func \(\*ApiLogger\) Debugf
+### func \(\*ApiLogger\) [Debugf](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/logger.go#L66>)
 
 ```go
 func (a *ApiLogger) Debugf(c *gin.Context, fields []any, template string, args ...any)
@@ -1101,7 +1101,7 @@ Debugf 记录调试级别的日志 适用于开发调试阶段输出详细的程
 - args: 模板格式化参数
 
 <a name="ApiLogger.Errorf"></a>
-### func \(\*ApiLogger\) Errorf
+### func \(\*ApiLogger\) [Errorf](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/logger.go#L102>)
 
 ```go
 func (a *ApiLogger) Errorf(c *gin.Context, fields []any, template string, args ...any)
@@ -1117,7 +1117,7 @@ Errorf 记录错误级别的日志 适用于记录系统错误，表示操作失
 - args: 模板格式化参数
 
 <a name="ApiLogger.Infof"></a>
-### func \(\*ApiLogger\) Infof
+### func \(\*ApiLogger\) [Infof](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/logger.go#L78>)
 
 ```go
 func (a *ApiLogger) Infof(c *gin.Context, fields []any, template string, args ...any)
@@ -1133,7 +1133,7 @@ Infof 记录信息级别的日志 适用于记录程序正常运行的关键流�
 - args: 模板格式化参数
 
 <a name="ApiLogger.Warnf"></a>
-### func \(\*ApiLogger\) Warnf
+### func \(\*ApiLogger\) [Warnf](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/logger.go#L90>)
 
 ```go
 func (a *ApiLogger) Warnf(c *gin.Context, fields []any, template string, args ...any)
@@ -1149,7 +1149,7 @@ Warnf 记录警告级别的日志 适用于记录不影响系统运行但需要�
 - args: 模板格式化参数
 
 <a name="Authenticator"></a>
-## type Authenticator
+## type [Authenticator](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/authenticator.go#L58-L61>)
 
 Authenticator 是统一的多路鉴权聚合器：按注册顺序遍历 CredentialAuthenticator， 命中第一个携带凭据的认证器后只执行该路认证，从而实现可扩展的多路鉴权中间件。
 
@@ -1160,7 +1160,7 @@ type Authenticator struct {
 ```
 
 <a name="GetAuth"></a>
-### func GetAuth
+### func [GetAuth](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/authenticator.go#L188>)
 
 ```go
 func GetAuth(c *gin.Context) *Authenticator
@@ -1175,7 +1175,7 @@ GetAuth 从 Gin 上下文中获取统一鉴权聚合器。 参数:
 - \*Authenticator: 聚合器实例，如果不存在返回 nil
 
 <a name="NewAuthenticator"></a>
-### func NewAuthenticator
+### func [NewAuthenticator](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/authenticator.go#L64>)
 
 ```go
 func NewAuthenticator(authenticators ...CredentialAuthenticator) *Authenticator
@@ -1184,7 +1184,7 @@ func NewAuthenticator(authenticators ...CredentialAuthenticator) *Authenticator
 NewAuthenticator 创建多路鉴权聚合器。传入 nil 认证器属于装配错误，直接 panic（fail fast）。
 
 <a name="Authenticator.AuthenticateMiddleware"></a>
-### func \(\*Authenticator\) AuthenticateMiddleware
+### func \(\*Authenticator\) [AuthenticateMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/authenticator.go#L106>)
 
 ```go
 func (a *Authenticator) AuthenticateMiddleware(allowAnonymous bool) gin.HandlerFunc
@@ -1201,7 +1201,7 @@ AuthenticateMiddleware 认证中间件：按注册顺序选择第一个匹配的
 - gin.HandlerFunc: Gin 中间件函数
 
 <a name="Authenticator.AuthenticatorMiddleware"></a>
-### func \(\*Authenticator\) AuthenticatorMiddleware
+### func \(\*Authenticator\) [AuthenticatorMiddleware](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/authenticator.go#L91>)
 
 ```go
 func (a *Authenticator) AuthenticatorMiddleware() gin.HandlerFunc
@@ -1214,7 +1214,7 @@ AuthenticatorMiddleware 把统一鉴权聚合器注入请求上下文，供后�
 - gin.HandlerFunc: Gin 中间件函数
 
 <a name="Authenticator.JWT"></a>
-### func \(\*Authenticator\) JWT
+### func \(\*Authenticator\) [JWT](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/authenticator.go#L77>)
 
 ```go
 func (a *Authenticator) JWT() *JwtAuthenticator
@@ -1223,7 +1223,7 @@ func (a *Authenticator) JWT() *JwtAuthenticator
 JWT 返回聚合器中注册的 JWT 认证器；未注册时返回 nil。 登录、刷新等需要签发令牌的处理器经此取用，认证选择本身仍由聚合器负责。
 
 <a name="CredentialAuthenticator"></a>
-## type CredentialAuthenticator
+## type [CredentialAuthenticator](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/authenticator.go#L19-L26>)
 
 CredentialAuthenticator 是一路凭据的认证器抽象。聚合器按注册顺序选择第一个匹配当前请求的 认证器执行认证；一旦匹配，认证失败即终止请求，不回退到其他方式或匿名身份。
 
@@ -1239,7 +1239,7 @@ type CredentialAuthenticator interface {
 ```
 
 <a name="JwtAuthenticator"></a>
-## type JwtAuthenticator
+## type [JwtAuthenticator](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/jwt.go#L43-L50>)
 
 JwtAuthenticator JWT 认证器 负责 JWT 令牌的创建、验证、刷新和管理
 
@@ -1250,7 +1250,7 @@ type JwtAuthenticator struct {
 ```
 
 <a name="GetJWT"></a>
-### func GetJWT
+### func [GetJWT](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/authenticator.go#L204>)
 
 ```go
 func GetJWT(c *gin.Context) *JwtAuthenticator
@@ -1265,7 +1265,7 @@ GetJWT 从请求上下文中的统一鉴权聚合器里取回 JWT 认证器，�
 - \*JwtAuthenticator: JWT 认证器实例，聚合器或 JWT 认证器不存在时返回 nil
 
 <a name="NewJwtAuthenticator"></a>
-### func NewJwtAuthenticator
+### func [NewJwtAuthenticator](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/jwt.go#L60>)
 
 ```go
 func NewJwtAuthenticator(cfg *config.AuthConfig, db *database.DB, kd *key.KeyDerivation) *JwtAuthenticator
@@ -1282,7 +1282,7 @@ NewJwtAuthenticator 创建新的 JWT 认证器实例 参数:
 - \*JwtAuthenticator: 新创建的认证器实例
 
 <a name="JwtAuthenticator.Authenticate"></a>
-### func \(\*JwtAuthenticator\) Authenticate
+### func \(\*JwtAuthenticator\) [Authenticate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/jwt.go#L154>)
 
 ```go
 func (j *JwtAuthenticator) Authenticate(c *gin.Context) *core.User
@@ -1297,7 +1297,7 @@ Authenticate 认证用户请求 从请求中提取令牌，验证有效性，并
 - \*core.User: 认证成功的用户对象，认证失败返回 nil
 
 <a name="JwtAuthenticator.AuthenticateRequest"></a>
-### func \(\*JwtAuthenticator\) AuthenticateRequest
+### func \(\*JwtAuthenticator\) [AuthenticateRequest](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/jwt.go#L185>)
 
 ```go
 func (j *JwtAuthenticator) AuthenticateRequest(c *gin.Context) (*core.User, *response.CodeError)
@@ -1306,7 +1306,7 @@ func (j *JwtAuthenticator) AuthenticateRequest(c *gin.Context) (*core.User, *res
 AuthenticateRequest 认证当前请求，满足 CredentialAuthenticator 接口： 令牌缺失或非法时统一返回 ErrJwtBadToken，由聚合器终止请求。
 
 <a name="JwtAuthenticator.Match"></a>
-### func \(\*JwtAuthenticator\) Match
+### func \(\*JwtAuthenticator\) [Match](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/jwt.go#L179>)
 
 ```go
 func (j *JwtAuthenticator) Match(c *gin.Context) bool
@@ -1315,7 +1315,7 @@ func (j *JwtAuthenticator) Match(c *gin.Context) bool
 Match 报告当前请求是否携带 JWT 令牌。
 
 <a name="JwtAuthenticator.Name"></a>
-### func \(\*JwtAuthenticator\) Name
+### func \(\*JwtAuthenticator\) [Name](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/jwt.go#L174>)
 
 ```go
 func (j *JwtAuthenticator) Name() string
@@ -1324,7 +1324,7 @@ func (j *JwtAuthenticator) Name() string
 Name 返回本认证器的名称，用于日志与可观测性。
 
 <a name="JwtAuthenticator.Parse"></a>
-### func \(\*JwtAuthenticator\) Parse
+### func \(\*JwtAuthenticator\) [Parse](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/jwt.go#L133>)
 
 ```go
 func (j *JwtAuthenticator) Parse(token string) (*jwt.Token, *UserClaims, error)
@@ -1341,7 +1341,7 @@ Parse 解析 JWT 令牌 使用配置的密钥验证令牌签名，并提取用�
 - error: 解析过程中出现的错误
 
 <a name="JwtAuthenticator.Refresh"></a>
-### func \(\*JwtAuthenticator\) Refresh
+### func \(\*JwtAuthenticator\) [Refresh](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/jwt.go#L243>)
 
 ```go
 func (j *JwtAuthenticator) Refresh(c *gin.Context) (string, *response.CodeError)
@@ -1357,7 +1357,7 @@ Refresh 刷新 JWT 令牌 检查当前令牌是否有效且在可刷新时间范
 - \*CodeError: 刷新过程中出现的错误
 
 <a name="JwtAuthenticator.Sign"></a>
-### func \(\*JwtAuthenticator\) Sign
+### func \(\*JwtAuthenticator\) [Sign](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/jwt.go#L200>)
 
 ```go
 func (j *JwtAuthenticator) Sign(user *core.User) (string, *response.CodeError)
@@ -1373,7 +1373,7 @@ Sign 为用户创建 JWT 令牌 根据用户信息生成包含声明的 JWT 令�
 - \*CodeError: 生成过程中出现的错误
 
 <a name="JwtAuthenticator.TokenCookieInject"></a>
-### func \(\*JwtAuthenticator\) TokenCookieInject
+### func \(\*JwtAuthenticator\) [TokenCookieInject](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/jwt.go#L271>)
 
 ```go
 func (j *JwtAuthenticator) TokenCookieInject(c *gin.Context, token string)
@@ -1385,7 +1385,7 @@ TokenCookieInject 将令牌注入到 Cookie 中 参数:
 - token: JWT 令牌字符串
 
 <a name="UserClaims"></a>
-## type UserClaims
+## type [UserClaims](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/middlewares/jwt.go#L31-L39>)
 
 UserClaims 自定义 JWT 声明结构 继承 jwt.RegisteredClaims 标准声明，并添加用户相关字段
 

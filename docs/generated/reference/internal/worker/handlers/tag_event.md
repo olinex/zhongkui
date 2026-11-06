@@ -51,7 +51,7 @@ const (
 ```
 
 <a name="DedupKey"></a>
-## func DedupKey
+## func [DedupKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/tag_event/suppress.go#L45>)
 
 ```go
 func DedupKey(ev *tagengine.TagEventRecord) string
@@ -60,7 +60,7 @@ func DedupKey(ev *tagengine.TagEventRecord) string
 DedupKey 计算标签事件的抑制指纹：namespace \+ rule\_id \+ 排序后的命中分组 \(model|dimension|item\) 串联后取 SHA\-256 十六进制。
 
 <a name="EventCleanupHandler"></a>
-## type EventCleanupHandler
+## type [EventCleanupHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/tag_event/cleanup.go#L42-L45>)
 
 EventCleanupHandler 标签事件无效记录清理处理器，消费 tag:event:cleanup 任务。 语义：suppressed 状态仅表示"同一事件键在抑制窗口内被抑制、从未向用户发送通知"， 属无效数据可安全清理；已通知后被自动/手动关闭的事件状态为 closed，是真实验告警历史，予以保留。
 
@@ -71,7 +71,7 @@ type EventCleanupHandler struct {
 ```
 
 <a name="NewEventCleanupHandler"></a>
-### func NewEventCleanupHandler
+### func [NewEventCleanupHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/tag_event/cleanup.go#L51>)
 
 ```go
 func NewEventCleanupHandler(i do.Injector) *EventCleanupHandler
@@ -80,7 +80,7 @@ func NewEventCleanupHandler(i do.Injector) *EventCleanupHandler
 NewEventCleanupHandler 从 do.Injector 解析依赖并创建无效记录清理处理器。
 
 <a name="EventCleanupHandler.Do"></a>
-### func \(\*EventCleanupHandler\) Do
+### func \(\*EventCleanupHandler\) [Do](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/tag_event/cleanup.go#L59>)
 
 ```go
 func (h *EventCleanupHandler) Do(ctx context.Context, task etl.Task) error
@@ -89,7 +89,7 @@ func (h *EventCleanupHandler) Do(ctx context.Context, task etl.Task) error
 Do 执行一次清理：解析任务载荷中的保留期（缺失或非正值时用默认 7 天）， 单条 DELETE 删除 status=suppressed 且 detected\_at 早于截止时间的记录，命中明细经数据库外键级联删除。
 
 <a name="EventDetectHandler"></a>
-## type EventDetectHandler
+## type [EventDetectHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/tag_event/detect.go#L35-L39>)
 
 EventDetectHandler 标签事件检测处理器，消费游标调度器投递的 tag:event:detect 任务。 流程：解析任务载荷中的游标时间点 \-\> 加载启用条件 \-\> 过滤非法表达式 \-\> tagengine.Detect 单条 UNION ALL SQL 查询 tag\_summings \-\> 聚合事件 \-\> 将命中事件批量入库（status=pending）。
 
@@ -100,7 +100,7 @@ type EventDetectHandler struct {
 ```
 
 <a name="NewEventDetectHandler"></a>
-### func NewEventDetectHandler
+### func [NewEventDetectHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/tag_event/detect.go#L43>)
 
 ```go
 func NewEventDetectHandler(i do.Injector) *EventDetectHandler
@@ -109,7 +109,7 @@ func NewEventDetectHandler(i do.Injector) *EventDetectHandler
 NewEventDetectHandler 从 do.Injector 解析依赖并创建标签事件检测处理器。 供 worker 注册处直接构造，与 pcap.NewPcapBatchHandler 的注册模式一致。
 
 <a name="EventDetectHandler.Do"></a>
-### func \(\*EventDetectHandler\) Do
+### func \(\*EventDetectHandler\) [Do](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/tag_event/detect.go#L56>)
 
 ```go
 func (h *EventDetectHandler) Do(ctx context.Context, task etl.Task) error
@@ -118,7 +118,7 @@ func (h *EventDetectHandler) Do(ctx context.Context, task etl.Task) error
 Do 执行一次标签事件检测。 检测时间取自任务载荷中的游标时间点（CursorTaskPayload.TriggerAt），由 CursorScheduler 按游标推进投递：即使积压补投或多个触发点并行执行，每个触发点也使用自身时间窗口计算， 不会因实际执行时刻漂移而重复或遗漏。载荷解析失败或缺失 triggerAt 时返回错误触发 asynq 重试。 表达式非法仅记录告警日志并跳过对应条件，入库失败返回错误触发 asynq 重试； 加载/查询错误返回错误触发 asynq 重试。
 
 <a name="EventSuppressHandler"></a>
-## type EventSuppressHandler
+## type [EventSuppressHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/tag_event/suppress.go#L82-L86>)
 
 EventSuppressHandler 标签事件抑制评估处理器，消费 tag:event:suppress 任务。 流程（全部在单事务内，先以一条 group\-select 按 dedup\_key 聚合，再依据聚合结果批量更新状态）：
 
@@ -137,7 +137,7 @@ type EventSuppressHandler struct {
 ```
 
 <a name="NewEventSuppressHandler"></a>
-### func NewEventSuppressHandler
+### func [NewEventSuppressHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/tag_event/suppress.go#L89>)
 
 ```go
 func NewEventSuppressHandler(i do.Injector) *EventSuppressHandler
@@ -146,7 +146,7 @@ func NewEventSuppressHandler(i do.Injector) *EventSuppressHandler
 NewEventSuppressHandler 从 do.Injector 解析依赖并创建标签事件抑制评估处理器。
 
 <a name="EventSuppressHandler.Do"></a>
-### func \(\*EventSuppressHandler\) Do
+### func \(\*EventSuppressHandler\) [Do](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/tag_event/suppress.go#L99>)
 
 ```go
 func (h *EventSuppressHandler) Do(ctx context.Context, task etl.Task) error

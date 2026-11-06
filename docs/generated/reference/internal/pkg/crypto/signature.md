@@ -24,7 +24,7 @@ const (
 ```
 
 <a name="HMACSHA256Sign"></a>
-## func HMACSHA256Sign
+## func [HMACSHA256Sign](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/signature/hmac_sha256.go#L19>)
 
 ```go
 func HMACSHA256Sign(secret, value string) (string, error)
@@ -33,7 +33,7 @@ func HMACSHA256Sign(secret, value string) (string, error)
 HMACSHA256Sign 使用 HMAC\-SHA256 算法对值进行签名。 secret: HMAC 密钥 value: 待签名的原始值 返回值: 经 Base64 标准编码的签名字符串，或签名过程中产生的错误
 
 <a name="SignFunc"></a>
-## type SignFunc
+## type [SignFunc](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/signature/signature.go#L13>)
 
 SignFunc 定义签名函数的类型，接收密钥和待签名的原始值，返回签名结果字符串或错误。 该类型允许通过依赖注入的方式支持不同的签名算法实现。
 
@@ -42,7 +42,7 @@ type SignFunc func(secret, value string) (string, error)
 ```
 
 <a name="Signaturer"></a>
-## type Signaturer
+## type [Signaturer](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/signature/signature.go#L17-L21>)
 
 Signaturer 是签名器结构体，封装了签名算法的前缀标识、密钥和签名函数， 提供统一的签名生成（Sign）和签名校验（Check）能力。
 
@@ -53,7 +53,7 @@ type Signaturer struct {
 ```
 
 <a name="NewHMACSHA256Signaturer"></a>
-### func NewHMACSHA256Signaturer
+### func [NewHMACSHA256Signaturer](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/signature/hmac_sha256.go#L28>)
 
 ```go
 func NewHMACSHA256Signaturer(secret string) *Signaturer
@@ -62,7 +62,7 @@ func NewHMACSHA256Signaturer(secret string) *Signaturer
 NewHMACSHA256Signaturer 创建一个使用 HMAC\-SHA256 算法的签名器实例。 secret: 签名密钥 返回值: 配置好的 Signaturer 指针，可直接调用 Sign/Check 方法进行签名和校验
 
 <a name="Signaturer.Check"></a>
-### func \(\*Signaturer\) Check
+### func \(\*Signaturer\) [Check](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/signature/signature.go#L56>)
 
 ```go
 func (s *Signaturer) Check(signature, raw string) (bool, error)
@@ -78,7 +78,7 @@ Check 校验给定的签名字符串是否与原始值匹配。 校验流程：
 signature: 待校验的签名字符串，格式应为 "\<prefix\>:\<签名值\>" raw: 原始值 返回值: 签名是否有效（bool），以及校验过程中可能产生的错误
 
 <a name="Signaturer.Sign"></a>
-### func \(\*Signaturer\) Sign
+### func \(\*Signaturer\) [Sign](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/signature/signature.go#L38>)
 
 ```go
 func (s *Signaturer) Sign(value string) (string, error)

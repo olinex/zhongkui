@@ -10,7 +10,7 @@
 
 
 <a name="CheckResult"></a>
-## type CheckResult
+## type [CheckResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/mermaid/mermaid.go#L55-L62>)
 
 CheckResult 是 mermaid\_check 的返回结果。
 
@@ -26,7 +26,7 @@ type CheckResult struct {
 ```
 
 <a name="Check"></a>
-### func Check
+### func [Check](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/mermaid/mermaid.go#L182>)
 
 ```go
 func Check(engine *jsengine.Engine, source string) CheckResult
@@ -35,7 +35,7 @@ func Check(engine *jsengine.Engine, source string) CheckResult
 Check 用官方 mermaid 解析器校验一段源码：合法时返回识别到的图表类型，不合法时返回官方报错 与中文修改建议。engine 为 provider 管理的 JS 运行时；为空或未启动时返回可定位的 Issue。
 
 <a name="Issue"></a>
-## type Issue
+## type [Issue](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/mermaid/mermaid.go#L43-L52>)
 
 Issue 是单条校验问题：行号从 1 开始；列号官方未给出，0 表示未知。
 

@@ -22,7 +22,7 @@ var Bundle *i18n.Bundle
 ```
 
 <a name="EnumLabel"></a>
-## func EnumLabel
+## func [EnumLabel](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/translate/template.go#L18>)
 
 ```go
 func EnumLabel(lang *base.Language, className, key string) string
@@ -31,7 +31,7 @@ func EnumLabel(lang *base.Language, className, key string) string
 EnumLabel 返回某语言下指定枚举类某 key 的 label：键为 enum.\<类名\>.\<key\>，未命中时回退 返回传入的 key 参数（与 Localize 未命中返回键本身语义一致）。
 
 <a name="L"></a>
-## func L
+## func [L](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/translate/localize.go#L42>)
 
 ```go
 func L(lang *base.Language, key string, data map[string]any) string
@@ -40,7 +40,7 @@ func L(lang *base.Language, key string, data map[string]any) string
 L 是 Localize 的简写形式，按指定语言本地化消息键。
 
 <a name="Localize"></a>
-## func Localize
+## func [Localize](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/translate/localize.go#L23>)
 
 ```go
 func Localize(lang *base.Language, key string, data map[string]any) string
@@ -49,7 +49,7 @@ func Localize(lang *base.Language, key string, data map[string]any) string
 Localize 按指定语言对消息键进行本地化渲染，数据占位符使用 \[\[.X\]\] 语法； 渲染失败时回退返回原始键名。
 
 <a name="Localizer"></a>
-## func Localizer
+## func [Localizer](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/translate/localize.go#L17>)
 
 ```go
 func Localizer(lang *base.Language) *i18n.Localizer
@@ -58,7 +58,7 @@ func Localizer(lang *base.Language) *i18n.Localizer
 Localizer 为指定语言创建一个 i18n 本地化器实例。
 
 <a name="T"></a>
-## func T
+## func [T](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/translate/localize.go#L52>)
 
 ```go
 func T(key string, data map[string]any) string
@@ -67,7 +67,7 @@ func T(key string, data map[string]any) string
 T 是 Translate 的简写形式，使用默认语言本地化消息键。
 
 <a name="Translate"></a>
-## func Translate
+## func [Translate](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/translate/localize.go#L47>)
 
 ```go
 func Translate(key string, data map[string]any) string

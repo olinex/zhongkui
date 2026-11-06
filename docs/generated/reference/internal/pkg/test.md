@@ -43,7 +43,7 @@ var Tracer = NewStageTracer()
 ```
 
 <a name="BenchOption"></a>
-## type BenchOption
+## type [BenchOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/benchmark.go#L38>)
 
 BenchOption 定义基准测试的运行选项。
 
@@ -52,7 +52,7 @@ type BenchOption func(*benchConfig)
 ```
 
 <a name="WithAutoReport"></a>
-### func WithAutoReport
+### func [WithAutoReport](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/benchmark.go#L55>)
 
 ```go
 func WithAutoReport(enabled bool) BenchOption
@@ -61,7 +61,7 @@ func WithAutoReport(enabled bool) BenchOption
 WithAutoReport 设置是否自动生成报告文件。
 
 <a name="WithOutputDir"></a>
-### func WithOutputDir
+### func [WithOutputDir](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/benchmark.go#L48>)
 
 ```go
 func WithOutputDir(dir string) BenchOption
@@ -70,7 +70,7 @@ func WithOutputDir(dir string) BenchOption
 WithOutputDir 设置报告输出目录。
 
 <a name="WithProfiling"></a>
-### func WithProfiling
+### func [WithProfiling](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/benchmark.go#L62>)
 
 ```go
 func WithProfiling(enabled bool) BenchOption
@@ -79,7 +79,7 @@ func WithProfiling(enabled bool) BenchOption
 WithProfiling 设置是否启用性能剖析。
 
 <a name="WithProfilingConfig"></a>
-### func WithProfilingConfig
+### func [WithProfilingConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/benchmark.go#L69>)
 
 ```go
 func WithProfilingConfig(cfg ProfilingConfig) BenchOption
@@ -88,7 +88,7 @@ func WithProfilingConfig(cfg ProfilingConfig) BenchOption
 WithProfilingConfig 设置性能剖析配置并启用剖析。
 
 <a name="WithWarmup"></a>
-### func WithWarmup
+### func [WithWarmup](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/benchmark.go#L41>)
 
 ```go
 func WithWarmup(n int) BenchOption
@@ -97,7 +97,7 @@ func WithWarmup(n int) BenchOption
 WithWarmup 设置基准运行前的预热次数。
 
 <a name="BenchResult"></a>
-## type BenchResult
+## type [BenchResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/benchmark.go#L77-L95>)
 
 BenchResult 保存单次基准测试的统计结果。
 
@@ -123,7 +123,7 @@ type BenchResult struct {
 ```
 
 <a name="Run"></a>
-### func Run
+### func [Run](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/benchmark.go#L489>)
 
 ```go
 func Run(name string, fn func(), opts ...BenchOption) *BenchResult
@@ -132,7 +132,7 @@ func Run(name string, fn func(), opts ...BenchOption) *BenchResult
 Run 运行基准测试并返回统计结果，可选生成报告与采集剖析数据。
 
 <a name="BenchResult.AllocsPerOp"></a>
-### func \(\*BenchResult\) AllocsPerOp
+### func \(\*BenchResult\) [AllocsPerOp](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/benchmark.go#L114>)
 
 ```go
 func (r *BenchResult) AllocsPerOp() int64
@@ -141,7 +141,7 @@ func (r *BenchResult) AllocsPerOp() int64
 AllocsPerOp 返回单次操作的内存分配次数。
 
 <a name="BenchResult.AvgNs"></a>
-### func \(\*BenchResult\) AvgNs
+### func \(\*BenchResult\) [AvgNs](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/benchmark.go#L158>)
 
 ```go
 func (r *BenchResult) AvgNs() float64
@@ -150,7 +150,7 @@ func (r *BenchResult) AvgNs() float64
 AvgNs 返回采样耗时的平均值（纳秒）。
 
 <a name="BenchResult.BytesPerOp"></a>
-### func \(\*BenchResult\) BytesPerOp
+### func \(\*BenchResult\) [BytesPerOp](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/benchmark.go#L122>)
 
 ```go
 func (r *BenchResult) BytesPerOp() int64
@@ -159,7 +159,7 @@ func (r *BenchResult) BytesPerOp() int64
 BytesPerOp 返回单次操作的内存分配字节数。
 
 <a name="BenchResult.MaxNs"></a>
-### func \(\*BenchResult\) MaxNs
+### func \(\*BenchResult\) [MaxNs](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/benchmark.go#L144>)
 
 ```go
 func (r *BenchResult) MaxNs() float64
@@ -168,7 +168,7 @@ func (r *BenchResult) MaxNs() float64
 MaxNs 返回采样耗时中的最大值（纳秒）。
 
 <a name="BenchResult.MbPerSec"></a>
-### func \(\*BenchResult\) MbPerSec
+### func \(\*BenchResult\) [MbPerSec](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/benchmark.go#L106>)
 
 ```go
 func (r *BenchResult) MbPerSec() float64
@@ -177,7 +177,7 @@ func (r *BenchResult) MbPerSec() float64
 MbPerSec 返回吞吐量（MB/s）。
 
 <a name="BenchResult.MinNs"></a>
-### func \(\*BenchResult\) MinNs
+### func \(\*BenchResult\) [MinNs](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/benchmark.go#L130>)
 
 ```go
 func (r *BenchResult) MinNs() float64
@@ -186,7 +186,7 @@ func (r *BenchResult) MinNs() float64
 MinNs 返回采样耗时中的最小值（纳秒）。
 
 <a name="BenchResult.NsPerOp"></a>
-### func \(\*BenchResult\) NsPerOp
+### func \(\*BenchResult\) [NsPerOp](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/benchmark.go#L98>)
 
 ```go
 func (r *BenchResult) NsPerOp() float64
@@ -195,7 +195,7 @@ func (r *BenchResult) NsPerOp() float64
 NsPerOp 返回单次操作的纳秒耗时。
 
 <a name="BenchResult.Percentile"></a>
-### func \(\*BenchResult\) Percentile
+### func \(\*BenchResult\) [Percentile](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/benchmark.go#L170>)
 
 ```go
 func (r *BenchResult) Percentile(p float64) float64
@@ -204,7 +204,7 @@ func (r *BenchResult) Percentile(p float64) float64
 Percentile 返回给定百分位（0\-100）的采样耗时（纳秒）。
 
 <a name="BenchResult.ReportString"></a>
-### func \(\*BenchResult\) ReportString
+### func \(\*BenchResult\) [ReportString](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/benchmark.go#L365>)
 
 ```go
 func (r *BenchResult) ReportString() string
@@ -213,7 +213,7 @@ func (r *BenchResult) ReportString() string
 ReportString 生成 Markdown 格式的基准测试报告。
 
 <a name="BenchResult.ReportToFile"></a>
-### func \(\*BenchResult\) ReportToFile
+### func \(\*BenchResult\) [ReportToFile](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/benchmark.go#L380>)
 
 ```go
 func (r *BenchResult) ReportToFile(path string) error
@@ -222,7 +222,7 @@ func (r *BenchResult) ReportToFile(path string) error
 ReportToFile 将报告写入指定文件，必要时创建父目录。
 
 <a name="ProfileEntry"></a>
-## type ProfileEntry
+## type [ProfileEntry](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/profiling.go#L49-L58>)
 
 ProfileEntry 表示一条剖析统计条目。
 
@@ -240,7 +240,7 @@ type ProfileEntry struct {
 ```
 
 <a name="ProfileResult"></a>
-## type ProfileResult
+## type [ProfileResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/profiling.go#L61-L88>)
 
 ProfileResult 汇总一次性能剖析的产物路径与统计结果。
 
@@ -276,7 +276,7 @@ type ProfileResult struct {
 ```
 
 <a name="ProfilingConfig"></a>
-## type ProfilingConfig
+## type [ProfilingConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/profiling.go#L21-L34>)
 
 ProfilingConfig 定义性能剖析的采集开关与展示条目数。
 
@@ -298,7 +298,7 @@ type ProfilingConfig struct {
 ```
 
 <a name="DefaultProfilingConfig"></a>
-### func DefaultProfilingConfig
+### func [DefaultProfilingConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/profiling.go#L37>)
 
 ```go
 func DefaultProfilingConfig() ProfilingConfig
@@ -307,7 +307,7 @@ func DefaultProfilingConfig() ProfilingConfig
 DefaultProfilingConfig 返回默认的性能剖析配置（全部开启，TopN 为 10）。
 
 <a name="StageTracer"></a>
-## type StageTracer
+## type [StageTracer](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/tracer_stub.go#L12>)
 
 StageTracer 阶段耗时追踪器（非 profile 构建下的空实现，各方法均为空操作）。
 
@@ -316,7 +316,7 @@ type StageTracer struct{}
 ```
 
 <a name="NewStageTracer"></a>
-### func NewStageTracer
+### func [NewStageTracer](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/tracer_stub.go#L15>)
 
 ```go
 func NewStageTracer() *StageTracer
@@ -325,7 +325,7 @@ func NewStageTracer() *StageTracer
 NewStageTracer 创建一个 StageTracer 实例（非 profile 构建下的空实现）。
 
 <a name="StageTracer.Begin"></a>
-### func \(\*StageTracer\) Begin
+### func \(\*StageTracer\) [Begin](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/tracer_stub.go#L18>)
 
 ```go
 func (t *StageTracer) Begin(name string)
@@ -334,7 +334,7 @@ func (t *StageTracer) Begin(name string)
 Begin 开始一个命名阶段（非 profile 构建下的空操作）。
 
 <a name="StageTracer.End"></a>
-### func \(\*StageTracer\) End
+### func \(\*StageTracer\) [End](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/tracer_stub.go#L21>)
 
 ```go
 func (t *StageTracer) End()
@@ -343,7 +343,7 @@ func (t *StageTracer) End()
 End 结束最近一次 Begin 开启的阶段（非 profile 构建下的空操作）。
 
 <a name="StageTracer.Report"></a>
-### func \(\*StageTracer\) Report
+### func \(\*StageTracer\) [Report](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/test/tracer_stub.go#L24>)
 
 ```go
 func (t *StageTracer) Report()

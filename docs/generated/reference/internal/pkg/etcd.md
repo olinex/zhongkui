@@ -68,7 +68,7 @@ var ErrChangeUnavailable = errors.New("etcd change broadcast unavailable: no etc
 ```
 
 <a name="BroadcastChange"></a>
-## func BroadcastChange
+## func [BroadcastChange](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/notify.go#L39>)
 
 ```go
 func BroadcastChange(ctx context.Context, client *EtcdClient, key string, event any) error
@@ -77,7 +77,7 @@ func BroadcastChange(ctx context.Context, client *EtcdClient, key string, event 
 BroadcastChange 广播变更事件到 etcd 指定键。 业务写路径在 DB 事务提交后调用，通知所有进程的监听方按最新数据执行 同步/失效逻辑；发布带超时上限，失败返回错误但不影响调用方； 未绑定 etcd 客户端时返回 ErrChangeUnavailable。 注意：调用方应保证 DB 提交先于 etcd 发布，收到通知的进程读到的必是新数据。
 
 <a name="DescribeConfig"></a>
-## func DescribeConfig
+## func [DescribeConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/config.go#L155>)
 
 ```go
 func DescribeConfig() config.ConfigDescriptions
@@ -86,7 +86,7 @@ func DescribeConfig() config.ConfigDescriptions
 DescribeConfig 返回 etcd 配置项的描述信息，用于生成配置文档。
 
 <a name="WithPrefix"></a>
-## func WithPrefix
+## func [WithPrefix](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/client.go#L40>)
 
 ```go
 func WithPrefix(key string) string
@@ -115,7 +115,7 @@ WithPrefix("config/") -> "zki/config/"
 ```
 
 <a name="ChangeHandler"></a>
-## type ChangeHandler
+## type [ChangeHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/watcher.go#L32-L36>)
 
 ChangeHandler 变更事件处理器接口。 消费方负责解析负载并执行同步/失效逻辑；解析失败的回退策略由消费方自行决定。
 
@@ -128,7 +128,7 @@ type ChangeHandler interface {
 ```
 
 <a name="ChangeHandlerFunc"></a>
-## type ChangeHandlerFunc
+## type [ChangeHandlerFunc](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/watcher.go#L40>)
 
 ChangeHandlerFunc 函数适配器，将普通函数适配为 ChangeHandler。 便于消费方以函数字面量形式注册变更处理逻辑。
 
@@ -137,7 +137,7 @@ type ChangeHandlerFunc func(ctx context.Context, value []byte) error
 ```
 
 <a name="ChangeHandlerFunc.HandleChange"></a>
-### func \(ChangeHandlerFunc\) HandleChange
+### func \(ChangeHandlerFunc\) [HandleChange](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/watcher.go#L43>)
 
 ```go
 func (f ChangeHandlerFunc) HandleChange(ctx context.Context, value []byte) error
@@ -146,7 +146,7 @@ func (f ChangeHandlerFunc) HandleChange(ctx context.Context, value []byte) error
 HandleChange 调用适配的函数，实现 ChangeHandler 接口。
 
 <a name="Cluster"></a>
-## type Cluster
+## type [Cluster](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/cluster.go#L42-L53>)
 
 Cluster 基于 etcd 实现分布式集群成员发现与数据分片路由。
 
@@ -165,7 +165,7 @@ type Cluster struct {
 ```
 
 <a name="NewCluster"></a>
-### func NewCluster
+### func [NewCluster](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/cluster.go#L76>)
 
 ```go
 func NewCluster(client *EtcdClient, name string) *Cluster
@@ -184,7 +184,7 @@ NewCluster 创建集群管理器。
 - \*Cluster: 初始化完成的集群管理器，尚未加入集群
 
 <a name="Cluster.HashesOf"></a>
-### func \(\*Cluster\) HashesOf
+### func \(\*Cluster\) [HashesOf](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/cluster.go#L197>)
 
 ```go
 func (c *Cluster) HashesOf(member string) []uint32
@@ -193,7 +193,7 @@ func (c *Cluster) HashesOf(member string) []uint32
 HashesOf 返回指定成员在一致性哈希环上的所有虚拟节点哈希位置。 委托给内部 ConsistentHash.HashesOf 实现。
 
 <a name="Cluster.MemberCount"></a>
-### func \(\*Cluster\) MemberCount
+### func \(\*Cluster\) [MemberCount](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/cluster.go#L189>)
 
 ```go
 func (c *Cluster) MemberCount() int
@@ -202,7 +202,7 @@ func (c *Cluster) MemberCount() int
 MemberCount 返回当前活跃成员数量。
 
 <a name="Cluster.MemberID"></a>
-### func \(\*Cluster\) MemberID
+### func \(\*Cluster\) [MemberID](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/cluster.go#L98>)
 
 ```go
 func (c *Cluster) MemberID() string
@@ -211,7 +211,7 @@ func (c *Cluster) MemberID() string
 MemberID 返回当前成员的唯一标识。
 
 <a name="Cluster.Name"></a>
-### func \(\*Cluster\) Name
+### func \(\*Cluster\) [Name](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/cluster.go#L93>)
 
 ```go
 func (c *Cluster) Name() string
@@ -220,7 +220,7 @@ func (c *Cluster) Name() string
 Name 返回集群名称。
 
 <a name="Cluster.ShouldProcess"></a>
-### func \(\*Cluster\) ShouldProcess
+### func \(\*Cluster\) [ShouldProcess](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/cluster.go#L182>)
 
 ```go
 func (c *Cluster) ShouldProcess(key string) bool
@@ -237,7 +237,7 @@ ShouldProcess 判断当前成员是否应处理指定 key 的数据。 使用一
 - bool: true 表示当前成员负责处理该 key 的数据
 
 <a name="Cluster.Transaction"></a>
-### func \(\*Cluster\) Transaction
+### func \(\*Cluster\) [Transaction](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/cluster.go#L124>)
 
 ```go
 func (c *Cluster) Transaction(ctx context.Context, tx func(ctx context.Context) error) error
@@ -259,7 +259,7 @@ Transaction 在集群会话中执行事务逻辑。
 - rebuildRing 重建哈希环期间写锁阻塞所有读操作，但耗时极短
 
 <a name="Cluster.VNodeIndicesOf"></a>
-### func \(\*Cluster\) VNodeIndicesOf
+### func \(\*Cluster\) [VNodeIndicesOf](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/cluster.go#L205>)
 
 ```go
 func (c *Cluster) VNodeIndicesOf(member string) []int
@@ -268,7 +268,7 @@ func (c *Cluster) VNodeIndicesOf(member string) []int
 VNodeIndicesOf 返回指定成员在数据分片中所属的虚拟节点索引列表。 用于 ClickHouse 侧按 cityHash64\(key\) % VNodeCount 过滤数据。
 
 <a name="ClusterMember"></a>
-## type ClusterMember
+## type [ClusterMember](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/cluster.go#L57-L64>)
 
 ClusterMember 表示集群成员的元信息。 注册时写入 etcd value，便于运维排查。
 
@@ -284,7 +284,7 @@ type ClusterMember struct {
 ```
 
 <a name="Config"></a>
-## type Config
+## type [Config](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/config.go#L98-L110>)
 
 Config 定义了 etcd 客户端的完整配置结构。 该配置映射到 etcd client/v3 的 clientv3.Config，并可通过 ToEtcdConfig 方法转换。 所有字段均支持通过 viper 从配置文件中自动加载（使用 mapstructure 标签）， 并具有合理的默认值（使用 default 标签）。
 
@@ -319,7 +319,7 @@ type Config struct {
 ```
 
 <a name="ExtractConfig"></a>
-### func ExtractConfig
+### func [ExtractConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/config.go#L160>)
 
 ```go
 func ExtractConfig(viper *viper.Viper, validate *validator.Validate) (*Config, error)
@@ -328,7 +328,7 @@ func ExtractConfig(viper *viper.Viper, validate *validator.Validate) (*Config, e
 ExtractConfig 从 viper 实例中提取并校验 etcd 配置。
 
 <a name="Config.ToEtcdConfig"></a>
-### func \(\*Config\) ToEtcdConfig
+### func \(\*Config\) [ToEtcdConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/config.go#L128>)
 
 ```go
 func (c *Config) ToEtcdConfig(ctx context.Context, logger *logging.Logger) (cfg clientv3.Config, err error)
@@ -354,7 +354,7 @@ ToEtcdConfig 将 Config 转换为 etcd client/v3 的 clientv3.Config 对象。 �
 - err: 转换过程中的错误，主要为 TLS 配置转换失败
 
 <a name="Election"></a>
-## type Election
+## type [Election](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/election.go#L64-L73>)
 
 Election 封装了基于 etcd 的分布式领导者选举逻辑。 它利用 etcd 的 concurrency 包实现多实例间的领导者竞选， 确保同一时刻只有一个实例运行关键业务逻辑（如定时任务调度）。
 
@@ -372,7 +372,7 @@ type Election struct {
 ```
 
 <a name="NewElection"></a>
-### func NewElection
+### func [NewElection](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/election.go#L88-L93>)
 
 ```go
 func NewElection(ctx context.Context, client *EtcdClient, logger *logging.Logger, handler ElectionHandler) *Election
@@ -394,7 +394,7 @@ NewElection 创建一个新的领导者选举实例。
 - \*Election: 初始化完成的选举实例
 
 <a name="Election.Shutdown"></a>
-### func \(\*Election\) Shutdown
+### func \(\*Election\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/election.go#L199>)
 
 ```go
 func (e *Election) Shutdown()
@@ -410,7 +410,7 @@ Shutdown 优雅关闭选举实例，通知当前的选举处理器停止运行�
 - 需要主动放弃领导者角色时
 
 <a name="Election.Start"></a>
-### func \(\*Election\) Start
+### func \(\*Election\) [Start](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/election.go#L126>)
 
 ```go
 func (e *Election) Start(ctx context.Context) error
@@ -438,7 +438,7 @@ Start 启动领导者选举流程，该方法会阻塞直到选举上下文被�
 - error: 选举过程中的错误，可能包括 Session 创建失败、Campaign 失败、 选举通道异常关闭或 handler.Start 返回的错误
 
 <a name="ElectionHandler"></a>
-## type ElectionHandler
+## type [ElectionHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/election.go#L42-L51>)
 
 ElectionHandler 定义了领导者选举中候选者需要实现的接口。 当某个实例通过选举成为领导者后，将调用该接口的 Start 方法启动领导者的业务逻辑； 当实例需要停止时，将调用 Shutdown 方法进行优雅关闭。
 
@@ -468,7 +468,7 @@ type ElectionHandler interface {
 ```
 
 <a name="EtcdClient"></a>
-## type EtcdClient
+## type [EtcdClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/client.go#L20>)
 
 EtcdClient 是 etcd client/v3 客户端的类型别名，指向 clientv3.Client。 使用类型别名便于在项目内统一引用，同时保留 clientv3.Client 的全部功能。
 
@@ -477,7 +477,7 @@ type EtcdClient = clientv3.Client
 ```
 
 <a name="NewEtcdClient"></a>
-### func NewEtcdClient
+### func [NewEtcdClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/client.go#L69>)
 
 ```go
 func NewEtcdClient(ctx context.Context, cfg *Config, logger *logging.Logger, dialOpts ...g.DialOption) (*EtcdClient, error)
@@ -507,7 +507,7 @@ NewEtcdClient 根据提供的配置创建并返回一个新的 etcd 客户端实
 - error: 创建过程中的错误，包括配置转换失败或连接建立失败
 
 <a name="TLSConfig"></a>
-## type TLSConfig
+## type [TLSConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/config.go#L33-L38>)
 
 TLSConfig 定义了 etcd 客户端的 TLS 安全连接配置。 支持两种方式提供 CA 证书：直接内联 PEM 证书内容（Cert）或指定证书文件路径（CertFilePath）。 两者互斥，不能同时使用。
 
@@ -528,7 +528,7 @@ type TLSConfig struct {
 ```
 
 <a name="TLSConfig.ToStandardConfig"></a>
-### func \(\*TLSConfig\) ToStandardConfig
+### func \(\*TLSConfig\) [ToStandardConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/config.go#L56>)
 
 ```go
 func (t *TLSConfig) ToStandardConfig() (config *tls.Config, err error)
@@ -552,7 +552,7 @@ ToStandardConfig 将 TLSConfig 转换为标准库的 \*tls.Config 对象。 该�
 - err: 转换过程中的错误，如证书配置无效或证书内容无法解析
 
 <a name="WatchOption"></a>
-## type WatchOption
+## type [WatchOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/watcher.go#L54>)
 
 WatchOption 定义 Watcher 的可选参数，以函数式选项模式配置监听器。
 
@@ -561,7 +561,7 @@ type WatchOption func(*watchOptions)
 ```
 
 <a name="WithWatchRetryInterval"></a>
-### func WithWatchRetryInterval
+### func [WithWatchRetryInterval](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/watcher.go#L58>)
 
 ```go
 func WithWatchRetryInterval(interval time.Duration) WatchOption
@@ -570,7 +570,7 @@ func WithWatchRetryInterval(interval time.Duration) WatchOption
 WithWatchRetryInterval 覆盖 watch 中断后的重连间隔（默认 watchRetryInterval）。 测试场景可传入极小间隔（如 time.Millisecond）以加速重连验证。
 
 <a name="Watcher"></a>
-## type Watcher
+## type [Watcher](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/watcher.go#L67-L80>)
 
 Watcher 通用的 etcd 变更监听器，实现 runtime.Service 生命周期。 监听指定键的变更事件，逐事件回调 handler 执行同步/失效逻辑； watch 中断自动重连；未绑定 etcd 客户端时直接返回（无监听能力）。
 
@@ -581,7 +581,7 @@ type Watcher struct {
 ```
 
 <a name="NewWatcher"></a>
-### func NewWatcher
+### func [NewWatcher](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/watcher.go#L94>)
 
 ```go
 func NewWatcher(client *EtcdClient, key string, handler ChangeHandler, logger *logging.Logger, opts ...WatchOption) *Watcher
@@ -602,7 +602,7 @@ NewWatcher 创建变更监听器。 应用选项后 watch 字段默认为 client
 - \*Watcher: 初始化完成的监听器实例
 
 <a name="Watcher.Shutdown"></a>
-### func \(\*Watcher\) Shutdown
+### func \(\*Watcher\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/watcher.go#L143>)
 
 ```go
 func (w *Watcher) Shutdown(_ context.Context) error
@@ -611,7 +611,7 @@ func (w *Watcher) Shutdown(_ context.Context) error
 Shutdown 停止变更监听。 由 runtime 编排器在 Start 返回后调用，实际停止依赖 Start 的 ctx 取消。
 
 <a name="Watcher.Start"></a>
-### func \(\*Watcher\) Start
+### func \(\*Watcher\) [Start](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/watcher.go#L114>)
 
 ```go
 func (w *Watcher) Start(ctx context.Context) error

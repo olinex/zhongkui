@@ -39,7 +39,7 @@
 
 
 <a name="ParseExtraBody"></a>
-## func ParseExtraBody
+## func [ParseExtraBody](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/model.go#L122>)
 
 ```go
 func ParseExtraBody(raw string) (map[string]any, error)
@@ -48,7 +48,7 @@ func ParseExtraBody(raw string) (map[string]any, error)
 ParseExtraBody 解析模型端点的高级请求配置（llm\_models.extra\_body）：入参为空、纯空白或 字面量 null 时返回 \(nil, nil\)；否则必须是 JSON 对象（\{\}），解析为 map\[string\]any 返回。 非对象或非法 JSON 返回英文错误。
 
 <a name="ParseJSONValue"></a>
-## func ParseJSONValue
+## func [ParseJSONValue](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/model.go#L137>)
 
 ```go
 func ParseJSONValue(raw string) (any, error)
@@ -57,7 +57,7 @@ func ParseJSONValue(raw string) (any, error)
 ParseJSONValue 解析思考开关的开/关取值（llm\_models.thinking\_on\_value / thinking\_off\_value）： 入参为空或字面量 null 时返回 \(nil, nil\)；否则解析为任意 JSON 值（bool / object / string / number / array）返回。非法 JSON 返回英文错误。
 
 <a name="ProbeEmbeddingDimensions"></a>
-## func ProbeEmbeddingDimensions
+## func [ProbeEmbeddingDimensions](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/probe.go#L19>)
 
 ```go
 func ProbeEmbeddingDimensions(ctx context.Context, cfg ModelConfig) (int, error)
@@ -66,7 +66,7 @@ func ProbeEmbeddingDimensions(ctx context.Context, cfg ModelConfig) (int, error)
 ProbeEmbeddingDimensions 对 embedding 端点发起一次最小向量化请求并返回实际输出的向量维度。 cfg.Dimensions \> 0 时随请求声明该维度（OpenAI 兼容端点的 dimensions 参数，模型可据此返回 降维向量），否则请求模型原生维度。超时取 cfg.Timeout，未声明（0）时经 defaults.Set 回填 ModelConfig.Timeout 的 default 标签声明的 15s；端点不可达、凭据非法或返回空向量时返回英文错误， 绝不静默失败。
 
 <a name="ValidateAPIMode"></a>
-## func ValidateAPIMode
+## func [ValidateAPIMode](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/model.go#L66>)
 
 ```go
 func ValidateAPIMode(kind ModelKind, mode APIMode) error
@@ -75,7 +75,7 @@ func ValidateAPIMode(kind ModelKind, mode APIMode) error
 ValidateAPIMode 校验模型类型与接口形态的组合：接口形态本身必须合法（空串按 chat 处理），且 responses 只允许用于 chat 类模型；embedding 等非 chat 类模型使用 responses 时返回英文错误。
 
 <a name="APIMode"></a>
-## type APIMode
+## type [APIMode](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/model.go#L39>)
 
 APIMode 是对话模型使用的接口形态标识：chat（Chat Completions，\*schema.Message）与 responses（Response API，\*schema.AgenticMessage）。取值与 llm\_models.api\_mode 列、 agent\_messages.message\_kind 列的取值一致，决定客户端的接口实现以及消息载荷的编解码方式。
 
@@ -95,7 +95,7 @@ const (
 ```
 
 <a name="ParseAPIMode"></a>
-### func ParseAPIMode
+### func [ParseAPIMode](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/model.go#L52>)
 
 ```go
 func ParseAPIMode(value APIMode) (APIMode, error)
@@ -104,7 +104,7 @@ func ParseAPIMode(value APIMode) (APIMode, error)
 ParseAPIMode 解析并规范化接口形态取值（忽略首尾空白；不区分大小写）：空串取缺省值 chat（与 llm\_models.api\_mode 列默认值一致），chat / responses 合法，其余取值返回英文错误。形态清单与 取值规范化只在本包声明，调用方不再各自校验并拼错误文案。
 
 <a name="AgenticClient"></a>
-## type AgenticClient
+## type [AgenticClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/agentic.go#L17-L22>)
 
 AgenticClient 封装 eino\-ext 的 Response API 模型（agenticopenai），用于支持 /v1/responses 的 OpenAI 兼容端点；它是 ChatClient 的 responses 对应实现，满足 model.AgenticModel 接口。
 
@@ -115,7 +115,7 @@ type AgenticClient struct {
 ```
 
 <a name="NewAgenticChatClient"></a>
-### func NewAgenticChatClient
+### func [NewAgenticChatClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/agentic.go#L64>)
 
 ```go
 func NewAgenticChatClient(ctx context.Context, cfg ModelConfig) (*AgenticClient, error)
@@ -124,7 +124,7 @@ func NewAgenticChatClient(ctx context.Context, cfg ModelConfig) (*AgenticClient,
 NewAgenticChatClient 依据模型配置构造 AgenticClient。
 
 <a name="AgenticClient.Generate"></a>
-### func \(\*AgenticClient\) Generate
+### func \(\*AgenticClient\) [Generate](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/agentic.go#L25>)
 
 ```go
 func (c *AgenticClient) Generate(ctx context.Context, messages []*schema.AgenticMessage, opts ...model.Option) (*schema.AgenticMessage, error)
@@ -133,7 +133,7 @@ func (c *AgenticClient) Generate(ctx context.Context, messages []*schema.Agentic
 Generate 执行一次非流式调用，产出一条 AgenticMessage；超时按 TimeoutRetry 策略重试。
 
 <a name="AgenticClient.ModelName"></a>
-### func \(\*AgenticClient\) ModelName
+### func \(\*AgenticClient\) [ModelName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/agentic.go#L61>)
 
 ```go
 func (c *AgenticClient) ModelName() string
@@ -142,7 +142,7 @@ func (c *AgenticClient) ModelName() string
 ModelName 返回供应商侧的模型名。
 
 <a name="AgenticClient.RequestOptions"></a>
-### func \(\*AgenticClient\) RequestOptions
+### func \(\*AgenticClient\) [RequestOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/agentic.go#L50>)
 
 ```go
 func (c *AgenticClient) RequestOptions(thinking string) []model.Option
@@ -151,7 +151,7 @@ func (c *AgenticClient) RequestOptions(thinking string) []model.Option
 RequestOptions 依据 ExtraBody 与思考开关构造按请求的模型选项。agenticopenai.WithExtraFields 采用覆盖语义，故先把各来源合并为一张表再一次传入。
 
 <a name="AgenticClient.Stream"></a>
-### func \(\*AgenticClient\) Stream
+### func \(\*AgenticClient\) [Stream](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/agentic.go#L36>)
 
 ```go
 func (c *AgenticClient) Stream(ctx context.Context, messages []*schema.AgenticMessage, opts ...model.Option) (*schema.StreamReader[*schema.AgenticMessage], error)
@@ -160,7 +160,7 @@ func (c *AgenticClient) Stream(ctx context.Context, messages []*schema.AgenticMe
 Stream 执行一次流式调用，返回 AgenticMessage 流；读取器由调用方负责关闭。
 
 <a name="ChatClient"></a>
-## type ChatClient
+## type [ChatClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/client.go#L42-L45>)
 
 ChatClient 包装 eino OpenAI 兼容对话模型（eino\-ext components/model/openai）， 提供流式（Stream）与非流式（Generate）两种生成方式。调用 Stream 时 eino\-ext 底层请求 固定携带 stream:true，无需额外配置。温度与 maxTokens 在每次调用时以 eino model.Option 注入。超时经自定义 HTTPClient 注入：见 newChatHTTPClient，非流式 Generate 以调用方 context 施加整请求超时，流式 Stream 仅以响应头超时约束首字节、整体时长交由调用方 context 约束。
 
@@ -173,7 +173,7 @@ type ChatClient struct {
 ```
 
 <a name="NewChatClient"></a>
-### func NewChatClient
+### func [NewChatClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/client.go#L136>)
 
 ```go
 func NewChatClient(ctx context.Context, cfg ModelConfig) (*ChatClient, error)
@@ -182,7 +182,7 @@ func NewChatClient(ctx context.Context, cfg ModelConfig) (*ChatClient, error)
 NewChatClient 依据模型端点配置快照构造 ChatClient。 要求 baseURL/apiKey/model 均非空，否则返回英文错误（不允许静默降级）。
 
 <a name="ChatClient.Generate"></a>
-### func \(\*ChatClient\) Generate
+### func \(\*ChatClient\) [Generate](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/client.go#L50>)
 
 ```go
 func (c *ChatClient) Generate(ctx context.Context, messages []*schema.Message, opts ...model.Option) (*schema.Message, error)
@@ -191,7 +191,7 @@ func (c *ChatClient) Generate(ctx context.Context, messages []*schema.Message, o
 Generate 以非流式方式生成回复，调用时注入温度与 maxTokens。以模型超时给 context 施加 整请求截止时间（等价于原 http.Client.Timeout），超时为正数时才生效；命中超时且启用了 TimeoutRetry 时按策略逐次放宽截止时间重试。
 
 <a name="ChatClient.ModelName"></a>
-### func \(\*ChatClient\) ModelName
+### func \(\*ChatClient\) [ModelName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/client.go#L130>)
 
 ```go
 func (c *ChatClient) ModelName() string
@@ -200,7 +200,7 @@ func (c *ChatClient) ModelName() string
 ModelName 返回底层供应商模型名（如 gpt\-4o\-mini），供 dry\-run 元信息等展示场景使用。
 
 <a name="ChatClient.RequestOptions"></a>
-### func \(\*ChatClient\) RequestOptions
+### func \(\*ChatClient\) [RequestOptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/client.go#L104>)
 
 ```go
 func (c *ChatClient) RequestOptions(thinking string) []model.Option
@@ -211,7 +211,7 @@ RequestOptions 依据会话的思考模式开关（"on" 开启 / "off" 关闭 / 
 注意 eino 的 WithExtraFields（einoopenai.WithExtraFields）是「替换」语义而非「合并」语义： 同一次请求内多次调用只有最后一个生效，因此必须把 ExtraBody 与思考字段合并为一个 map 后单次 调用；thinking 为空或未知取值时不注入思考字段。合并结果为空时返回空切片（不注入任何高级字段）。
 
 <a name="ChatClient.Stream"></a>
-### func \(\*ChatClient\) Stream
+### func \(\*ChatClient\) [Stream](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/client.go#L64>)
 
 ```go
 func (c *ChatClient) Stream(ctx context.Context, messages []*schema.Message, opts ...model.Option) (*schema.StreamReader[*schema.Message], error)
@@ -220,7 +220,7 @@ func (c *ChatClient) Stream(ctx context.Context, messages []*schema.Message, opt
 Stream 以流式方式生成回复（底层请求 stream:true），调用时注入温度与 maxTokens。 调用方负责关闭返回的 reader。此处不对 context 施加整请求截止时间：一次长回答的流式 生成时长可远超模型超时，若以整请求超时约束会在读取正文阶段被中断（见 newChatHTTPClient 的说明）。整体时长由调用方 context（如 HTTP 请求生命周期）约束。
 
 <a name="ChunkUnitKind"></a>
-## type ChunkUnitKind
+## type [ChunkUnitKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/chunker.go#L439>)
 
 ChunkUnitKind 是分块正文中识别出的结构单元类型（chunkUnitKind 枚举类的取值类型）。
 
@@ -246,7 +246,7 @@ const (
 ```
 
 <a name="DescribeChunk"></a>
-### func DescribeChunk
+### func [DescribeChunk](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/chunker.go#L482>)
 
 ```go
 func DescribeChunk(content string) []ChunkUnitKind
@@ -255,7 +255,7 @@ func DescribeChunk(content string) []ChunkUnitKind
 DescribeChunk 复用本包的行级 markdown 解析识别分块正文包含的结构单元类型：去重后按 chunkUnitKindValues 的声明顺序稳定返回；无单元时返回空切片（而非 nil）。识别只针对正文， 标题单元不参与（见 mdUnitKindToChunkUnitKind）。
 
 <a name="EmbedClient"></a>
-## type EmbedClient
+## type [EmbedClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/client.go#L157-L160>)
 
 EmbedClient 包装 eino OpenAI 兼容向量化模型（eino\-ext components/embedding/openai）， 实现 eino embedding.Embedder 接口，可直接注入 eino 检索链路。
 
@@ -266,7 +266,7 @@ type EmbedClient struct {
 ```
 
 <a name="NewEmbedClient"></a>
-### func NewEmbedClient
+### func [NewEmbedClient](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/client.go#L223>)
 
 ```go
 func NewEmbedClient(ctx context.Context, cfg ModelConfig) (*EmbedClient, error)
@@ -275,7 +275,7 @@ func NewEmbedClient(ctx context.Context, cfg ModelConfig) (*EmbedClient, error)
 NewEmbedClient 依据模型端点配置快照构造 EmbedClient。 要求 baseURL/apiKey/model 均非空，否则返回英文错误（不允许静默降级）。
 
 <a name="EmbedClient.EmbedStrings"></a>
-### func \(\*EmbedClient\) EmbedStrings
+### func \(\*EmbedClient\) [EmbedStrings](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/client.go#L171>)
 
 ```go
 func (e *EmbedClient) EmbedStrings(ctx context.Context, texts []string, opts ...embedding.Option) ([][]float64, error)
@@ -284,7 +284,7 @@ func (e *EmbedClient) EmbedStrings(ctx context.Context, texts []string, opts ...
 EmbedStrings 批量向量化文本，返回与输入顺序一致的向量列表。超过 embedBatchSize 时按批切分 逐批提交再顺序拼接，规避供应商的单请求条数上限。
 
 <a name="EmbedClient.EmbedStringsWithUsage"></a>
-### func \(\*EmbedClient\) EmbedStringsWithUsage
+### func \(\*EmbedClient\) [EmbedStringsWithUsage](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/client.go#L194>)
 
 ```go
 func (e *EmbedClient) EmbedStringsWithUsage(ctx context.Context, texts []string, opts ...embedding.Option) ([][]float64, embedding.TokenUsage, error)
@@ -293,7 +293,7 @@ func (e *EmbedClient) EmbedStringsWithUsage(ctx context.Context, texts []string,
 EmbedStringsWithUsage 与 EmbedStrings 行为一致（含按 embedBatchSize 切批与顺序拼接），并额外 返回本次调用累计的 token 用量：经上下文级 eino 回调（callbacks.InitCallbacks 注入，不写进程级 全局回调）汇总底层向量化组件在每批结束时上报的 embedding.CallbackOutput.TokenUsage，多批自动 累加；供应商未返回用量时为零值。
 
 <a name="EmbedClient.ModelName"></a>
-### func \(\*EmbedClient\) ModelName
+### func \(\*EmbedClient\) [ModelName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/client.go#L217>)
 
 ```go
 func (e *EmbedClient) ModelName() string
@@ -302,7 +302,7 @@ func (e *EmbedClient) ModelName() string
 ModelName 返回底层供应商模型名（如 text\-embedding\-3\-small），供状态展示使用。
 
 <a name="MarkdownChunker"></a>
-## type MarkdownChunker
+## type [MarkdownChunker](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/chunker.go#L61-L64>)
 
 MarkdownChunker 是 Markdown 结构感知切片器，实现 eino document.Transformer 接口： 输入 Document.Content 为 markdown 原文，输出切片后的 chunk 文档，每个 chunk 的 MetaData 携带 chunkIndex、headingPath 并保留输入 MetaData。分块规则：
 
@@ -318,7 +318,7 @@ type MarkdownChunker struct {
 ```
 
 <a name="NewMarkdownChunker"></a>
-### func NewMarkdownChunker
+### func [NewMarkdownChunker](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/chunker.go#L67>)
 
 ```go
 func NewMarkdownChunker(size, overlap int) *MarkdownChunker
@@ -327,7 +327,7 @@ func NewMarkdownChunker(size, overlap int) *MarkdownChunker
 NewMarkdownChunker 构造 MarkdownChunker。size \<= 0 时回退默认 800，overlap \< 0 时按 0 处理。
 
 <a name="MarkdownChunker.Transform"></a>
-### func \(\*MarkdownChunker\) Transform
+### func \(\*MarkdownChunker\) [Transform](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/chunker.go#L78>)
 
 ```go
 func (c *MarkdownChunker) Transform(_ context.Context, src []*schema.Document, _ ...document.TransformerOption) ([]*schema.Document, error)
@@ -336,7 +336,7 @@ func (c *MarkdownChunker) Transform(_ context.Context, src []*schema.Document, _
 Transform 对每个输入文档执行 markdown 结构感知切片，返回切片后的 chunk 文档列表。
 
 <a name="ModelConfig"></a>
-## type ModelConfig
+## type [ModelConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/model.go#L81-L117>)
 
 ModelConfig 是一个模型端点的运行时配置快照，由 ai 运行时从模型注册表（llm\_models） 与档位绑定（llm\_bindings）组装而来，是 LLM 接入配置的唯一事实来源（不再来自配置文件）。 完整形状规则声明在视图层入口 In 结构体；本类型只保留构造客户端所需的端点三要素标签， 供 validateEndpoint 在运行时边界 fail fast。
 
@@ -381,7 +381,7 @@ type ModelConfig struct {
 ```
 
 <a name="ModelKind"></a>
-## type ModelKind
+## type [ModelKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/model.go#L15>)
 
 ModelKind 是 LLM 模型类型标识：对话模型（chat）与向量化模型（embedding）。 与 llm\_models.kind 列的取值一致，决定构造哪一类客户端以及可绑定的档位范围。
 
@@ -401,7 +401,7 @@ const (
 ```
 
 <a name="ParseModelKind"></a>
-### func ParseModelKind
+### func [ParseModelKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/model.go#L27>)
 
 ```go
 func ParseModelKind(value ModelKind) (ModelKind, error)
@@ -410,7 +410,7 @@ func ParseModelKind(value ModelKind) (ModelKind, error)
 ParseModelKind 解析并校验模型类型取值（忽略首尾空白；不区分大小写）：仅 chat / embedding 为合法取值，其余取值返回英文错误。类型清单与取值规范化只在本包声明，调用方不再各自校验。
 
 <a name="TimeoutRetryPolicy"></a>
-## type TimeoutRetryPolicy
+## type [TimeoutRetryPolicy](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/llm/retry.go#L15-L22>)
 
 TimeoutRetryPolicy 是超时重试策略：仅用于非流式 Generate，遇到超时错误时按倍数放宽 单次请求截止时间后重试。零值（Enabled=false）表示不重试。
 

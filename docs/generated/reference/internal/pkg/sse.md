@@ -25,7 +25,7 @@
 
 
 <a name="WriteSSE"></a>
-## func WriteSSE
+## func [WriteSSE](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sse/sse.go#L115>)
 
 ```go
 func WriteSSE(w http.ResponseWriter, ev SSEEvent) error
@@ -34,7 +34,7 @@ func WriteSSE(w http.ResponseWriter, ev SSEEvent) error
 WriteSSE 向响应写入一条无序号 SSE 事件并刷新（响应头须先经 NewSSEWriter 设置）。 返回事件编码或写入失败的错误。
 
 <a name="SSEEvent"></a>
-## type SSEEvent
+## type [SSEEvent](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sse/sse.go#L58-L63>)
 
 SSEEvent 是 SSE 流上的一条无序号事件：event 行携带类型，data 行携带 JSON 负载。 不参与断线续播的流（如检索试运行、审批续跑）使用本类型，线格式不含 id 行。
 
@@ -48,7 +48,7 @@ type SSEEvent struct {
 ```
 
 <a name="SSEEvent.Encode"></a>
-### func \(SSEEvent\) Encode
+### func \(SSEEvent\) [Encode](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sse/sse.go#L68>)
 
 ```go
 func (e SSEEvent) Encode() ([]byte, error)
@@ -57,7 +57,7 @@ func (e SSEEvent) Encode() ([]byte, error)
 Encode 将无序号事件编码为 SSE 线格式（event: \<type\>\\n \+ data: \<json\>\\n \+ 空行）。 data 负载经紧凑 JSON 序列化（Go 的 encoding/json 对 Marshaler 输出同样做 压缩），始终为单行，符合 SSE 的 data 行规范。
 
 <a name="SSEEventValue"></a>
-## type SSEEventValue
+## type [SSEEventValue](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sse/sse.go#L19>)
 
 SSEEventValue 是 SSE 事件类型值：SSEEvent.Event 的取值空间（独立类型，禁止与 普通字符串混用，保证事件类型枚举的类型安全）。
 
@@ -100,7 +100,7 @@ const (
 ```
 
 <a name="SSEIDEvent"></a>
-## type SSEIDEvent
+## type [SSEIDEvent](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sse/sse.go#L91-L96>)
 
 SSEIDEvent 是 SSE 流上的一条带序号事件：在无序号事件前追加 id 行（单调自增序号）， 供断线续播时以 ?after= 指定回放起点。可续播的流（如 AI 助手驻留运行）使用本类型， 序号由运行事件的自增序列给出，恒不为 0。
 
@@ -114,7 +114,7 @@ type SSEIDEvent struct {
 ```
 
 <a name="SSEIDEvent.Encode"></a>
-### func \(SSEIDEvent\) Encode
+### func \(SSEIDEvent\) [Encode](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sse/sse.go#L100>)
 
 ```go
 func (e SSEIDEvent) Encode() ([]byte, error)
@@ -123,7 +123,7 @@ func (e SSEIDEvent) Encode() ([]byte, error)
 Encode 将带序号事件编码为 SSE 线格式（id: \<n\>\\n \+ event: \<type\>\\n \+ data: \<json\>\\n \+ 空行）。 id 行恒输出：序号是续播的定位依据，调用方必须提供有效序号（见 SSEIDEvent 说明）。
 
 <a name="SSEWriter"></a>
-## type SSEWriter
+## type [SSEWriter](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sse/sse.go#L134-L137>)
 
 SSEWriter 是 SSE 响应写手的便捷封装：构造时设置 text/event\-stream 响应头， 提供增量/完成/错误/心跳的语义化发送方法（内部统一复用 WriteSSE）。
 
@@ -134,7 +134,7 @@ type SSEWriter struct {
 ```
 
 <a name="NewSSEWriter"></a>
-### func NewSSEWriter
+### func [NewSSEWriter](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sse/sse.go#L141>)
 
 ```go
 func NewSSEWriter(w http.ResponseWriter) *SSEWriter
@@ -143,7 +143,7 @@ func NewSSEWriter(w http.ResponseWriter) *SSEWriter
 NewSSEWriter 构造 SSEWriter 并设置 text/event\-stream 响应头（no\-cache、 keep\-alive、禁止网关缓冲，保证事件即时送达）。
 
 <a name="SSEWriter.Ping"></a>
-### func \(\*SSEWriter\) Ping
+### func \(\*SSEWriter\) [Ping](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sse/sse.go#L210>)
 
 ```go
 func (s *SSEWriter) Ping() error
@@ -152,7 +152,7 @@ func (s *SSEWriter) Ping() error
 Ping 发送心跳事件（无负载，保持代理/网关连接不被超时断开）。
 
 <a name="SSEWriter.SendDelta"></a>
-### func \(\*SSEWriter\) SendDelta
+### func \(\*SSEWriter\) [SendDelta](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sse/sse.go#L161>)
 
 ```go
 func (s *SSEWriter) SendDelta(delta string) error
@@ -161,7 +161,7 @@ func (s *SSEWriter) SendDelta(delta string) error
 SendDelta 发送一段增量文本（delta 事件）。
 
 <a name="SSEWriter.SendDone"></a>
-### func \(\*SSEWriter\) SendDone
+### func \(\*SSEWriter\) [SendDone](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sse/sse.go#L196>)
 
 ```go
 func (s *SSEWriter) SendDone(payload any) error
@@ -170,7 +170,7 @@ func (s *SSEWriter) SendDone(payload any) error
 SendDone 发送完成事件（payload 为调用方结构化产物，任意可 JSON 序列化负载）。
 
 <a name="SSEWriter.SendError"></a>
-### func \(\*SSEWriter\) SendError
+### func \(\*SSEWriter\) [SendError](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sse/sse.go#L201>)
 
 ```go
 func (s *SSEWriter) SendError(err error) error
@@ -179,7 +179,7 @@ func (s *SSEWriter) SendError(err error) error
 SendError 发送错误事件（错误信息写入 data 行；err 为 nil 时输出空串）。
 
 <a name="SSEWriter.SendEvent"></a>
-### func \(\*SSEWriter\) SendEvent
+### func \(\*SSEWriter\) [SendEvent](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sse/sse.go#L152>)
 
 ```go
 func (s *SSEWriter) SendEvent(ev SSEIDEvent) error
@@ -188,7 +188,7 @@ func (s *SSEWriter) SendEvent(ev SSEIDEvent) error
 SendEvent 原样发送一条已构造的带序号 SSE 事件（含 id 行），供续播场景把带序号的 事件透传给客户端；其余语义化方法（SendDelta/SendStage/...）不携带序号。
 
 <a name="SSEWriter.SendReasoning"></a>
-### func \(\*SSEWriter\) SendReasoning
+### func \(\*SSEWriter\) [SendReasoning](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sse/sse.go#L166>)
 
 ```go
 func (s *SSEWriter) SendReasoning(delta string) error
@@ -197,7 +197,7 @@ func (s *SSEWriter) SendReasoning(delta string) error
 SendReasoning 发送一段思考过程增量文本（reasoning 事件，data 为 \{"delta": "..."\}）。
 
 <a name="SSEWriter.SendStage"></a>
-### func \(\*SSEWriter\) SendStage
+### func \(\*SSEWriter\) [SendStage](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sse/sse.go#L178>)
 
 ```go
 func (s *SSEWriter) SendStage(payload any) error
@@ -206,7 +206,7 @@ func (s *SSEWriter) SendStage(payload any) error
 SendStage 发送阶段事件（stage 事件，payload 为调用方的阶段状态负载）。
 
 <a name="SSEWriter.SendStageDelta"></a>
-### func \(\*SSEWriter\) SendStageDelta
+### func \(\*SSEWriter\) [SendStageDelta](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sse/sse.go#L173>)
 
 ```go
 func (s *SSEWriter) SendStageDelta(stage string, delta string) error
@@ -215,7 +215,7 @@ func (s *SSEWriter) SendStageDelta(stage string, delta string) error
 SendStageDelta 发送带阶段标识的增量文本（delta 事件，data 为 \{"stage": "...", "delta": "..."\}），供多阶段流式过程（如检索试运行）把增量 归属到具体阶段。
 
 <a name="SSEWriter.SendState"></a>
-### func \(\*SSEWriter\) SendState
+### func \(\*SSEWriter\) [SendState](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sse/sse.go#L184>)
 
 ```go
 func (s *SSEWriter) SendState(payload any) error
@@ -224,7 +224,7 @@ func (s *SSEWriter) SendState(payload any) error
 SendState 发送会话交互状态事件（state 事件，payload 由调用方提供，须含描述交互主状态的 state 与子状态的 substate 字段），供前端以单一状态源驱动界面。
 
 <a name="SSEWriter.SendToolRequest"></a>
-### func \(\*SSEWriter\) SendToolRequest
+### func \(\*SSEWriter\) [SendToolRequest](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sse/sse.go#L191>)
 
 ```go
 func (s *SSEWriter) SendToolRequest(payload any) error

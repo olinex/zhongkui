@@ -17,7 +17,7 @@
 
 
 <a name="ExtractConfig"></a>
-## func ExtractConfig
+## func [ExtractConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/config/config.go#L335>)
 
 ```go
 func ExtractConfig[C any](v *viper.Viper, validate *validator.Validate, prefix string) (*C, error)
@@ -63,7 +63,7 @@ fmt.Println(cfg.Host) // "10.0.0.1"
 ```
 
 <a name="GetContextParam"></a>
-## func GetContextParam
+## func [GetContextParam](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/config/config.go#L369>)
 
 ```go
 func GetContextParam[T any](ctx context.Context, name string) (*T, error)
@@ -86,7 +86,7 @@ GetContextParam 从 context 中按指定键提取参数映射并解码为泛型�
 - error: 上下文无该键、键值类型不匹配或解码失败时返回错误
 
 <a name="NewDefaultViper"></a>
-## func NewDefaultViper
+## func [NewDefaultViper](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/config/config.go#L119>)
 
 ```go
 func NewDefaultViper(flags *pflag.FlagSet) *viper.Viper
@@ -110,7 +110,7 @@ NewDefaultViper 创建一个使用默认参数的 Viper 实例。
 - \*viper.Viper: 使用默认参数初始化的 Viper 实例
 
 <a name="NewDefaultViperWithCmd"></a>
-## func NewDefaultViperWithCmd
+## func [NewDefaultViperWithCmd](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/config/config.go#L133>)
 
 ```go
 func NewDefaultViperWithCmd(cmd *cobra.Command) *viper.Viper
@@ -129,7 +129,7 @@ NewDefaultViperWithCmd 基于 cobra.Command 创建默认的 Viper 实例。
 - \*viper.Viper: 使用默认参数初始化的 Viper 实例
 
 <a name="NewViper"></a>
-## func NewViper
+## func [NewViper](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/config/config.go#L60-L66>)
 
 ```go
 func NewViper(envPrefix string, configName string, configType string, configPath string, flags *pflag.FlagSet) *viper.Viper
@@ -161,7 +161,7 @@ NewViper 创建一个新的 Viper 实例，用于加载和管理配置。
 注意：如果配置文件读取失败或命令行参数绑定失败，函数会 panic。 调用方应确保配置文件存在于搜索路径中，或在调用前做好 recover 处理。
 
 <a name="ConfigDescription"></a>
-## type ConfigDescription
+## type [ConfigDescription](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/config/config.go#L141-L150>)
 
 ConfigDescription 描述单个配置项的元信息。
 
@@ -181,7 +181,7 @@ type ConfigDescription struct {
 ```
 
 <a name="ConfigDescriptions"></a>
-## type ConfigDescriptions
+## type [ConfigDescriptions](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/config/config.go#L156>)
 
 ConfigDescriptions 是 ConfigDescription 的切片类型，表示一组配置项描述。
 
@@ -192,7 +192,7 @@ type ConfigDescriptions []ConfigDescription
 ```
 
 <a name="DescribeConfig"></a>
-### func DescribeConfig
+### func [DescribeConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/config/config.go#L296>)
 
 ```go
 func DescribeConfig[C any](prefix string) ConfigDescriptions
@@ -230,7 +230,7 @@ descs := DescribeConfig[DBConfig]("db.primary")
 ```
 
 <a name="ConfigDescriptions.Describe"></a>
-### func \(ConfigDescriptions\) Describe
+### func \(ConfigDescriptions\) [Describe](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/config/config.go#L179>)
 
 ```go
 func (descs ConfigDescriptions) Describe(localize func(key, fallback string) string) error
@@ -245,7 +245,7 @@ Describe 将配置描述以表格形式输出到标准输出。
 - error: 表格写入或渲染过程中的错误，包装为 errors.WithStack
 
 <a name="ConfigDescriptions.Join"></a>
-### func \(\*ConfigDescriptions\) Join
+### func \(\*ConfigDescriptions\) [Join](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/config/config.go#L167>)
 
 ```go
 func (descs *ConfigDescriptions) Join(others ConfigDescriptions)

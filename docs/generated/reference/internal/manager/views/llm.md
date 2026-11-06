@@ -56,7 +56,7 @@
 
 
 <a name="LlmBindingListGet"></a>
-## func LlmBindingListGet
+## func [LlmBindingListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/binding.go#L71>)
 
 ```go
 func LlmBindingListGet(c *gin.Context)
@@ -65,7 +65,7 @@ func LlmBindingListGet(c *gin.Context)
 LlmBindingListGet 处理获取档位绑定情况的请求。 槽位可用性以 AI 运行时快照为权威（含「模型被禁用」「类型不符」的判定）， 绑定记录 ID 取自 llm\_bindings；整体可用性与不可用原因取快照的判定结果 （不可用原因按请求语言本地化）；另附带知识库索引列当前维度，供运维绑定前预知目标维度。
 
 <a name="LlmBindingSet"></a>
-## func LlmBindingSet
+## func [LlmBindingSet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/binding.go#L123>)
 
 ```go
 func LlmBindingSet(c *gin.Context)
@@ -74,7 +74,7 @@ func LlmBindingSet(c *gin.Context)
 LlmBindingSet 处理绑定档位的请求。 校验档位取值合法、模型存在、模型已启用且类型与档位匹配（embedding 槽位要求向量模型， 其余档位要求对话模型）后写入绑定记录（同槽位重复绑定时覆盖为最新模型）； embedding 槽位额外做一次真实维度兼容性校验（探测端点实际输出维度与 knowledge\_chunks.embedding 列维度是否兼容，不兼容即 400 拒绝、不写绑定），通过后把 已验证维度写回模型记录（后端管理的只读缓存）；成功后在提交后置动作中重建运行时并广播变更。
 
 <a name="LlmBindingUnbind"></a>
-## func LlmBindingUnbind
+## func [LlmBindingUnbind](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/binding.go#L212>)
 
 ```go
 func LlmBindingUnbind(c *gin.Context)
@@ -83,7 +83,7 @@ func LlmBindingUnbind(c *gin.Context)
 LlmBindingUnbind 处理解绑档位的请求。 删除该槽位的绑定记录（不存在时视为已解绑，幂等）；成功后在提交后置动作中重建运行时 并广播变更。
 
 <a name="LlmModelBatchDelete"></a>
-## func LlmModelBatchDelete
+## func [LlmModelBatchDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/model.go#L489>)
 
 ```go
 func LlmModelBatchDelete(c *gin.Context)
@@ -92,7 +92,7 @@ func LlmModelBatchDelete(c *gin.Context)
 LlmModelBatchDelete 批量删除 LLM 模型。 逐条先校验是否仍被档位绑定（被绑定时返回按请求语言本地化的错误，避免触发外键 RESTRICT 的 500）， 再软删除；模型不存在视为成功跳过（幂等）。全部条目处理完毕后统一重建运行时并广播变更。
 
 <a name="LlmModelCreate"></a>
-## func LlmModelCreate
+## func [LlmModelCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/model.go#L239>)
 
 ```go
 func LlmModelCreate(c *gin.Context)
@@ -101,7 +101,7 @@ func LlmModelCreate(c *gin.Context)
 LlmModelCreate 处理注册 LLM 模型端点的请求。 校验名称非空且未被占用（含软删除记录，避免触发唯一索引冲突）、类型合法、端点字段合法 后落库；成功后在提交后置动作中重建运行时并广播变更。
 
 <a name="LlmModelDetailGet"></a>
-## func LlmModelDetailGet
+## func [LlmModelDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/model.go#L322>)
 
 ```go
 func LlmModelDetailGet(c *gin.Context)
@@ -110,7 +110,7 @@ func LlmModelDetailGet(c *gin.Context)
 LlmModelDetailGet 处理获取 LLM 模型详情的请求。 模型不存在时返回 404；apiKey 以密文形式返回。
 
 <a name="LlmModelListGet"></a>
-## func LlmModelListGet
+## func [LlmModelListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/model.go#L195>)
 
 ```go
 func LlmModelListGet(c *gin.Context)
@@ -119,7 +119,7 @@ func LlmModelListGet(c *gin.Context)
 LlmModelListGet 处理获取 LLM 模型注册表列表的请求。 支持分页、排序与过滤（时间/名称/类型/启用状态）；模型注册表为全局配置，不按命名空间 隔离。查询按 gorm 模型扫描（api\_key 经 crypto 序列化器读取），再映射为接口层 Out 结构； apiKey 在投影白名单内，凭据以密文（base64）出参，仅供列表单元格展示加密标识与直传 /plaintext/crypto 解密，明文须经明文权限接口查看。
 
 <a name="LlmModelTest"></a>
-## func LlmModelTest
+## func [LlmModelTest](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/model.go#L534>)
 
 ```go
 func LlmModelTest(c *gin.Context)
@@ -128,7 +128,7 @@ func LlmModelTest(c *gin.Context)
 LlmModelTest 处理模型端点连通性测试请求。 不落库、不产生任何副作用；支持「已存在模型 id」（读取解密凭据）与「完整端点配置」 两种用法。探活一律复用 ai.TestModel 的轻量探测（chat 走 GET \{baseURL\}/models， embedding 走一次最小向量化请求），失败原因放在 body 的 message 字段返回（仍走 HTTP 200）。
 
 <a name="LlmModelUpdate"></a>
-## func LlmModelUpdate
+## func [LlmModelUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/model.go#L345>)
 
 ```go
 func LlmModelUpdate(c *gin.Context)
@@ -137,7 +137,7 @@ func LlmModelUpdate(c *gin.Context)
 LlmModelUpdate 处理更新 LLM 模型端点的请求。 模型类型不可变（沿用库内记录的类型做类型相关校验）；apiKey 留空表示沿用原凭据 （Select 不含 api\_key 列）；其余字段按整表单全量校验后落库，成功后重建运行时并广播变更。 若该模型当前正绑定在 embedding 槽位，则写库前须用本次提交的新端点做一次真实维度探测， 校验其对 knowledge\_chunks.embedding 列维度的兼容性（不兼容即 400 拒绝、不落库），并把 探测到的已验证维度写回模型记录；未绑定 embedding 槽位时不写 dimensions 列。
 
 <a name="LlmParamListGet"></a>
-## func LlmParamListGet
+## func [LlmParamListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/param.go#L88>)
 
 ```go
 func LlmParamListGet(c *gin.Context)
@@ -146,7 +146,7 @@ func LlmParamListGet(c *gin.Context)
 LlmParamListGet 处理获取 Agent 参数列表的请求。 返回注册表全部参数的元信息、库内出厂值与当前生效值，并标注当前值是否已偏离出厂值； label / comment 跟随请求语言（i18n 键 param.\<group\>.\<name\>.label / .comment）。
 
 <a name="LlmParamReset"></a>
-## func LlmParamReset
+## func [LlmParamReset](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/param.go#L208>)
 
 ```go
 func LlmParamReset(c *gin.Context)
@@ -155,7 +155,7 @@ func LlmParamReset(c *gin.Context)
 LlmParamReset 处理恢复 Agent 参数出厂值的请求。 按分组（Group 优先，映射为注册表中该分组下的全部键）或按键列表把当前值写回出厂值， 未声明的分组/键直接拒绝；成功后在提交后置动作中重建运行时并广播变更。
 
 <a name="LlmParamSet"></a>
-## func LlmParamSet
+## func [LlmParamSet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/param.go#L132>)
 
 ```go
 func LlmParamSet(c *gin.Context)
@@ -164,7 +164,7 @@ func LlmParamSet(c *gin.Context)
 LlmParamSet 处理批量写入 Agent 参数的请求。 先全量校验（键必须已声明、值必须符合注册表声明的类型、跨键关系必须成立），校验通过后 再逐条写入，避免部分写入后因后续条目非法而中断；空值等价于恢复出厂值（把当前值写回 default\_value），与「参数记录恒存在」的启动期强校验保持一致。跨键关系在这里提前拦截， 避免把库改成下次启动无法通过校验的状态。
 
 <a name="LlmToolBatchDelete"></a>
-## func LlmToolBatchDelete
+## func [LlmToolBatchDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/tool.go#L185>)
 
 ```go
 func LlmToolBatchDelete(c *gin.Context)
@@ -173,7 +173,7 @@ func LlmToolBatchDelete(c *gin.Context)
 LlmToolBatchDelete 批量删除工具。 内置工具（source='builtin'）由代码内注册表声明、生命周期由代码掌握，接口不得删除：只要本批 任一 ID 命中内置工具，就\*\*整批拒绝\*\*并返回按请求语言本地化的错误（不做部分删除）。校验通过后逐条软删除， 工具不存在视为成功跳过（幂等）；全部条目处理完毕后统一重建运行时并广播变更。
 
 <a name="LlmToolListGet"></a>
-## func LlmToolListGet
+## func [LlmToolListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/tool.go#L64>)
 
 ```go
 func LlmToolListGet(c *gin.Context)
@@ -182,7 +182,7 @@ func LlmToolListGet(c *gin.Context)
 LlmToolListGet 处理获取工具注册表列表的请求。 支持分页、排序与过滤（时间/名称/来源/启用状态）；工具注册表为全局配置，不按命名空间隔离。 查询按 gorm 模型扫描（工具行只存 mcp\_server\_id），再由处理器批量补齐所属服务器名后投影字段。
 
 <a name="LlmToolSetEnabled"></a>
-## func LlmToolSetEnabled
+## func [LlmToolSetEnabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/tool.go#L143>)
 
 ```go
 func LlmToolSetEnabled(c *gin.Context)
@@ -191,7 +191,7 @@ func LlmToolSetEnabled(c *gin.Context)
 LlmToolSetEnabled 处理批量启用/停用工具的请求。 逐条读取后写入目标状态（已处于目标状态幂等短路），工具不存在视为成功跳过（幂等）。全部条目处理 完毕后，若有实际变更则重建运行时并广播变更。
 
 <a name="McpServerBatchDelete"></a>
-## func McpServerBatchDelete
+## func [McpServerBatchDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/mcp.go#L324>)
 
 ```go
 func McpServerBatchDelete(c *gin.Context)
@@ -200,7 +200,7 @@ func McpServerBatchDelete(c *gin.Context)
 McpServerBatchDelete 批量删除 MCP 服务器。 每台服务器在一个事务里被软删除，并\*\*显式一并软删其工具行\*\*：GORM 的软删除发出的是 UPDATE， 不会触发数据库层的 ON DELETE CASCADE（该外键只在物理 DELETE 时生效），故在此显式级联， 保证删除服务器后其同步出的工具行不再出现在工具列表中。服务器不存在视为成功跳过（幂等）。 全部条目处理完毕后统一重建运行时并广播变更。
 
 <a name="McpServerCreate"></a>
-## func McpServerCreate
+## func [McpServerCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/mcp.go#L201>)
 
 ```go
 func McpServerCreate(c *gin.Context)
@@ -209,7 +209,7 @@ func McpServerCreate(c *gin.Context)
 McpServerCreate 处理注册 MCP 服务器端点的请求。 字段合法性（名称非空、传输方式属于 mcpTransport 枚举、URL 为绝对 http/https、超时为正数、 请求头为合法 JSON 对象）一律由 McpServerCreateIn 的绑定标签保证；处理器只做名称唯一性预检 （含软删除记录，避免触发唯一索引冲突）与落库（headers 以密文写入），成功后在提交后置动作中 重建运行时并广播变更。
 
 <a name="McpServerDetailGet"></a>
-## func McpServerDetailGet
+## func [McpServerDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/mcp.go#L247>)
 
 ```go
 func McpServerDetailGet(c *gin.Context)
@@ -218,7 +218,7 @@ func McpServerDetailGet(c *gin.Context)
 McpServerDetailGet 处理获取 MCP 服务器详情的请求。 服务器不存在时返回 404；headers 以密文形式返回。
 
 <a name="McpServerListGet"></a>
-## func McpServerListGet
+## func [McpServerListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/mcp.go#L155>)
 
 ```go
 func McpServerListGet(c *gin.Context)
@@ -227,7 +227,7 @@ func McpServerListGet(c *gin.Context)
 McpServerListGet 处理获取 MCP 服务器注册表列表的请求。 支持分页、排序与过滤（时间/名称/传输方式/启用状态）；注册表为全局配置，不按命名空间隔离。 查询按 gorm 模型扫描（headers 经 crypto 序列化器读取），再映射为接口层 Out 结构并做字段投影； headers 出参为密文，不出现在任何投影项的明文位置。
 
 <a name="McpServerSync"></a>
-## func McpServerSync
+## func [McpServerSync](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/mcp.go#L430>)
 
 ```go
 func McpServerSync(c *gin.Context)
@@ -236,7 +236,7 @@ func McpServerSync(c *gin.Context)
 McpServerSync 处理把远端工具清单同步到工具注册表的请求。 经 llminfra.ProbeMCPServer 取回远端 tools/list 后与 llm\_tools 中该服务器的行（source='mcp'、 mcp\_server\_id=:id）对账：新工具以 enabled=false 新增，已存在工具保留 enabled 并刷新 description / remote\_name，远端已不存在的工具被删除。全程在一个事务里完成，一致后重建运行时 并广播变更。
 
 <a name="McpServerTest"></a>
-## func McpServerTest
+## func [McpServerTest](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/mcp.go#L368>)
 
 ```go
 func McpServerTest(c *gin.Context)
@@ -245,7 +245,7 @@ func McpServerTest(c *gin.Context)
 McpServerTest 处理 MCP 服务器连通性测试请求。 不落库、不产生任何副作用；支持「已注册服务器 id」（读取解密凭据）与「完整端点配置」两种用法。 探测经 llminfra.ProbeMCPServer 执行 MCP initialize 握手 \+ tools/list，返回远端发现的工具数量与名称 清单；失败（不可达、握手失败等）返回明确的英文错误。本接口耗时较长，服务端不设额外上限， 超时由 timeoutSeconds / 请求上下文约束。
 
 <a name="McpServerUpdate"></a>
-## func McpServerUpdate
+## func [McpServerUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/mcp.go#L267>)
 
 ```go
 func McpServerUpdate(c *gin.Context)
@@ -254,7 +254,7 @@ func McpServerUpdate(c *gin.Context)
 McpServerUpdate 处理更新 MCP 服务器端点的请求。 传输方式允许修改；headers 留空表示沿用原凭据（Select 不含 headers 列）；其余字段按整表单全量 校验后落库，成功后重建运行时并广播变更。
 
 <a name="RegisterRoutes"></a>
-## func RegisterRoutes
+## func [RegisterRoutes](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/register.go#L30>)
 
 ```go
 func RegisterRoutes(ctx *views.RegisterContext)
@@ -263,7 +263,7 @@ func RegisterRoutes(ctx *views.RegisterContext)
 RegisterRoutes 注册 /api/v1/admin/llm AI 助手 admin 配置接口。 认证 / RBAC / 核心库 / 命名空间 / etcd 等公共中间件挂在分组上继承；需 Ai 中间件提供 AI 运行时（校验档位可用性、执行端点连通性测试）。
 
 <a name="LlmBindingListOut"></a>
-## type LlmBindingListOut
+## type [LlmBindingListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/binding.go#L48-L59>)
 
 LlmBindingListOut 定义档位绑定列表的输出结构。 Slots 固定覆盖四个槽位；Enabled / DisabledReason 报告 AI 能力的整体可用性与不可用原因。
 
@@ -283,7 +283,7 @@ type LlmBindingListOut struct {
 ```
 
 <a name="LlmBindingSetIn"></a>
-## type LlmBindingSetIn
+## type [LlmBindingSetIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/binding.go#L62-L65>)
 
 LlmBindingSetIn 定义绑定档位的请求输入结构。
 
@@ -295,7 +295,7 @@ type LlmBindingSetIn struct {
 ```
 
 <a name="LlmModelBatchIn"></a>
-## type LlmModelBatchIn
+## type [LlmModelBatchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/model.go#L155-L158>)
 
 LlmModelBatchIn 批量操作 LLM 模型的请求输入结构。 Ids 接受标量（单个 ID）或数组（多个 ID）。
 
@@ -307,7 +307,7 @@ type LlmModelBatchIn struct {
 ```
 
 <a name="LlmModelCreateIn"></a>
-## type LlmModelCreateIn
+## type [LlmModelCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/model.go#L31-L65>)
 
 LlmModelCreateIn 定义创建 LLM 模型端点的请求输入结构。 端点三要素（baseURL / apiKey / model）必填；kind 为 chat 或 embedding 且创建后不可更改； 数值型字段的默认值经 default 标签声明，并在反序列化前由 defaults.Set 填充。
 
@@ -350,7 +350,7 @@ type LlmModelCreateIn struct {
 ```
 
 <a name="LlmModelDetailOut"></a>
-## type LlmModelDetailOut
+## type [LlmModelDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/model.go#L107-L144>)
 
 LlmModelDetailOut 定义 LLM 模型端点的详情输出结构。 嵌入 BaseItemOut 携带审计字段；字段名与列表字段投影白名单（search.toml selectFields） 一一对应；apiKey 以密文形式返回（crypto 序列化器，经 form 标签告知前端该字段已加密）。
 
@@ -396,7 +396,7 @@ type LlmModelDetailOut struct {
 ```
 
 <a name="LlmModelListOut"></a>
-## type LlmModelListOut
+## type [LlmModelListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/model.go#L148-L151>)
 
 LlmModelListOut 定义 LLM 模型列表的输出项结构。 嵌入 BaseTotalOut 以支持分页总数统计。
 
@@ -408,7 +408,7 @@ type LlmModelListOut struct {
 ```
 
 <a name="LlmModelTestIn"></a>
-## type LlmModelTestIn
+## type [LlmModelTestIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/model.go#L163-L180>)
 
 LlmModelTestIn 连通性测试请求输入，支持两种用法：
 
@@ -437,7 +437,7 @@ type LlmModelTestIn struct {
 ```
 
 <a name="LlmModelTestOut"></a>
-## type LlmModelTestOut
+## type [LlmModelTestOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/model.go#L183-L188>)
 
 LlmModelTestOut 连通性测试结果输出：Success 表示端点可达，Message 为失败原因。
 
@@ -451,7 +451,7 @@ type LlmModelTestOut struct {
 ```
 
 <a name="LlmModelUpdateIn"></a>
-## type LlmModelUpdateIn
+## type [LlmModelUpdateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/model.go#L70-L102>)
 
 LlmModelUpdateIn 定义更新 LLM 模型端点的请求输入结构。 模型类型不可变（不接受 Kind），其余字段按整表单提交并全量校验； APIKey 留空表示保持原凭据不变，避免编辑时强制回填密文。
 
@@ -492,7 +492,7 @@ type LlmModelUpdateIn struct {
 ```
 
 <a name="LlmParamItemOut"></a>
-## type LlmParamItemOut
+## type [LlmParamItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/param.go#L29-L52>)
 
 LlmParamItemOut 定义单个 Agent 参数的元信息、出厂值、当前生效值与偏离态。 Key / Group / Kind 来自代码内参数注册表（唯一事实来源）；Default 为库内出厂值 （agent\_params.default\_value，只由 migrate fixture 维护）；Value 为库内当前生效值 （agent\_params.value）；Label / Comment 跟随请求语言。
 
@@ -524,7 +524,7 @@ type LlmParamItemOut struct {
 ```
 
 <a name="LlmParamListOut"></a>
-## type LlmParamListOut
+## type [LlmParamListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/param.go#L56-L59>)
 
 LlmParamListOut 定义 Agent 参数列表的输出结构。 Items 按注册表声明顺序（即前端展示顺序）返回全部可调参数。
 
@@ -536,7 +536,7 @@ type LlmParamListOut struct {
 ```
 
 <a name="LlmParamResetIn"></a>
-## type LlmParamResetIn
+## type [LlmParamResetIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/param.go#L78-L83>)
 
 LlmParamResetIn 定义恢复 Agent 参数出厂值的请求输入结构。 Group 与 Keys 二选一：Group 优先（恢复该分组全部参数），两者皆空时拒绝。
 
@@ -550,7 +550,7 @@ type LlmParamResetIn struct {
 ```
 
 <a name="LlmParamSetIn"></a>
-## type LlmParamSetIn
+## type [LlmParamSetIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/param.go#L71-L74>)
 
 LlmParamSetIn 定义批量写入 Agent 参数的请求输入结构。
 
@@ -562,7 +562,7 @@ type LlmParamSetIn struct {
 ```
 
 <a name="LlmParamSetItemIn"></a>
-## type LlmParamSetItemIn
+## type [LlmParamSetItemIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/param.go#L63-L68>)
 
 LlmParamSetItemIn 定义单条参数输入：Value 为 JSON 原生类型（字符串 / 数值 / 布尔）。 Value 为 null 或空字符串表示恢复出厂值（把当前值写回 default\_value）。
 
@@ -576,7 +576,7 @@ type LlmParamSetItemIn struct {
 ```
 
 <a name="LlmSlotBindingOut"></a>
-## type LlmSlotBindingOut
+## type [LlmSlotBindingOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/binding.go#L23-L44>)
 
 LlmSlotBindingOut 定义单个档位的绑定摘要与可用性输出。 无论档位是否已绑定都保留一条记录，供运维区分「未绑定」「已绑定但模型被禁用」 「已绑定但模型类型与档位不符」三种情况。
 
@@ -606,7 +606,7 @@ type LlmSlotBindingOut struct {
 ```
 
 <a name="LlmToolBatchIn"></a>
-## type LlmToolBatchIn
+## type [LlmToolBatchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/tool.go#L47-L50>)
 
 LlmToolBatchIn 批量操作工具的请求输入结构。 Ids 接受标量（单个 ID）或数组（多个 ID）。
 
@@ -618,7 +618,7 @@ type LlmToolBatchIn struct {
 ```
 
 <a name="LlmToolListOut"></a>
-## type LlmToolListOut
+## type [LlmToolListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/tool.go#L28-L43>)
 
 LlmToolListOut 定义工具注册表列表的输出项结构。 嵌入 BaseItemOut 携带审计字段、BaseTotalOut 以支持分页总数统计；字段名与列表字段投影白名单 （search.toml selectFields）一一对应。McpServerName 由处理器按 mcp\_server\_id 批量补齐可读的 服务器名，非库内列。
 
@@ -642,7 +642,7 @@ type LlmToolListOut struct {
 ```
 
 <a name="LlmToolSetEnabledIn"></a>
-## type LlmToolSetEnabledIn
+## type [LlmToolSetEnabledIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/tool.go#L54-L59>)
 
 LlmToolSetEnabledIn 批量启用/停用工具的请求输入结构。 Ids 接受标量（单个 ID）或数组（多个 ID）；Enabled 为目标状态，整批统一写入。
 
@@ -656,7 +656,7 @@ type LlmToolSetEnabledIn struct {
 ```
 
 <a name="McpServerBatchIn"></a>
-## type McpServerBatchIn
+## type [McpServerBatchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/mcp.go#L105-L108>)
 
 McpServerBatchIn 批量操作 MCP 服务器的请求输入结构。 Ids 接受标量（单个 ID）或数组（多个 ID）。
 
@@ -668,7 +668,7 @@ type McpServerBatchIn struct {
 ```
 
 <a name="McpServerCreateIn"></a>
-## type McpServerCreateIn
+## type [McpServerCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/mcp.go#L35-L50>)
 
 McpServerCreateIn 定义注册 MCP 服务器端点的请求输入结构。 名称与传输方式、URL 必填；timeoutSeconds 默认 60 秒（经 default 标签声明并在反序列化前由 defaults.Set 填充）；headers 为明文 JSON 对象文本（承载 Authorization 等凭据），落库为密文。
 
@@ -694,7 +694,7 @@ type McpServerCreateIn struct {
 ```
 
 <a name="McpServerDetailOut"></a>
-## type McpServerDetailOut
+## type [McpServerDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/mcp.go#L75-L92>)
 
 McpServerDetailOut 定义 MCP 服务器端点的详情输出结构。 嵌入 BaseItemOut 携带审计字段；字段名与列表字段投影白名单（search.toml selectFields）一一对应； headers 以密文形式返回（crypto 序列化器，经 form 标签告知前端该字段已加密），不回显明文。
 
@@ -720,7 +720,7 @@ type McpServerDetailOut struct {
 ```
 
 <a name="McpServerListOut"></a>
-## type McpServerListOut
+## type [McpServerListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/mcp.go#L96-L101>)
 
 McpServerListOut 定义 MCP 服务器列表的输出项结构。 嵌入 BaseTotalOut 以支持分页总数统计。
 
@@ -734,7 +734,7 @@ type McpServerListOut struct {
 ```
 
 <a name="McpServerSyncOut"></a>
-## type McpServerSyncOut
+## type [McpServerSyncOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/mcp.go#L142-L149>)
 
 McpServerSyncOut 工具清单同步结果输出：Created / Updated / Removed 分别为新增、刷新与 清理（远端已不提供）的工具行数。
 
@@ -750,7 +750,7 @@ type McpServerSyncOut struct {
 ```
 
 <a name="McpServerTestIn"></a>
-## type McpServerTestIn
+## type [McpServerTestIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/mcp.go#L116-L127>)
 
 McpServerTestIn 连通性测试请求输入，支持两种用法：
 
@@ -775,7 +775,7 @@ type McpServerTestIn struct {
 ```
 
 <a name="McpServerTestOut"></a>
-## type McpServerTestOut
+## type [McpServerTestOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/mcp.go#L131-L138>)
 
 McpServerTestOut 连通性测试结果输出：Ok 表示端点可达，ToolCount / ToolNames 为远端 tools/list 发现的工具数量与名称清单。失败时接口返回明确英文错误（不返回本结构）。
 
@@ -791,7 +791,7 @@ type McpServerTestOut struct {
 ```
 
 <a name="McpServerUpdateIn"></a>
-## type McpServerUpdateIn
+## type [McpServerUpdateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/llm/mcp.go#L55-L70>)
 
 McpServerUpdateIn 定义更新 MCP 服务器端点的请求输入结构。 传输方式允许修改；headers 留空表示沿用原凭据（避免编辑时强制回填密文）；其余字段按整表单提交。 校验标签与 McpServerCreateIn 同口径（见其注释）。
 

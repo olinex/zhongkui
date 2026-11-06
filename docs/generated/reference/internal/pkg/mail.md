@@ -23,7 +23,7 @@ const Prefix = "smtp"
 ```
 
 <a name="DescribeConfig"></a>
-## func DescribeConfig
+## func [DescribeConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/mail/config.go#L39>)
 
 ```go
 func DescribeConfig() config.ConfigDescriptions
@@ -32,7 +32,7 @@ func DescribeConfig() config.ConfigDescriptions
 DescribeConfig 返回系统层邮件直发配置的结构化描述信息（供 describe config 渲染）。
 
 <a name="Config"></a>
-## type Config
+## type [Config](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/mail/config.go#L23-L36>)
 
 Config 是系统层邮件直发的配置结构体，对应 config.toml 的 \[smtp\] 段。 字段通过 mapstructure 标签映射、default 标签填充默认值、comment 标签提供中文说明（DescribeConfig 的渲染来源）。
 
@@ -54,7 +54,7 @@ type Config struct {
 ```
 
 <a name="ExtractConfig"></a>
-### func ExtractConfig
+### func [ExtractConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/mail/config.go#L44>)
 
 ```go
 func ExtractConfig(v *viper.Viper, validate *validator.Validate) (*Config, error)
@@ -63,7 +63,7 @@ func ExtractConfig(v *viper.Viper, validate *validator.Validate) (*Config, error
 ExtractConfig 从 Viper 配置管理器中提取 \[smtp\] 配置并校验。
 
 <a name="Sender"></a>
-## type Sender
+## type [Sender](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/mail/mail.go#L20-L27>)
 
 Sender 系统层邮件直发器：持有 \[smtp\] 配置、日志器与消息渠道连接池，经 message 邮件渠道直接发送。与 notify.Service 不同，Sender 不落库、不解析 notification\_targets， 仅按系统配置直接投递。
 
@@ -74,7 +74,7 @@ type Sender struct {
 ```
 
 <a name="NewSender"></a>
-### func NewSender
+### func [NewSender](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/mail/mail.go#L30>)
 
 ```go
 func NewSender(cfg *Config, logger *logging.Logger, pool *message.Pool) *Sender
@@ -83,7 +83,7 @@ func NewSender(cfg *Config, logger *logging.Logger, pool *message.Pool) *Sender
 NewSender 构造一个系统层邮件直发器。
 
 <a name="Sender.Enabled"></a>
-### func \(\*Sender\) Enabled
+### func \(\*Sender\) [Enabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/mail/mail.go#L49>)
 
 ```go
 func (s *Sender) Enabled() bool
@@ -92,7 +92,7 @@ func (s *Sender) Enabled() bool
 Enabled 报告系统邮件直发能力是否可用：仅当 \[smtp\] 启用且必备配置（host/from）齐全时可用。 该能力判断供全局功能开关（features）使用，使底层 SMTP 配置细节仅在本包内可见， features 层无需直接读取 mail.Config。Send 也在投递前做同一守卫。
 
 <a name="Sender.Send"></a>
-### func \(\*Sender\) Send
+### func \(\*Sender\) [Send](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/mail/mail.go#L56>)
 
 ```go
 func (s *Sender) Send(ctx context.Context, to string, msg message.Message, lang string) error

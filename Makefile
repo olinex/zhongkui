@@ -17,6 +17,11 @@ endif
 # 抓包基准测试需要 root 权限，默认使用 sudo；可通过 SUDO= make bench-slow 显式跳过
 SUDO ?= sudo
 
+# CI/CD 临时产物根目录：测试报告、逐项检查日志，整体不入库、不进镜像
+REPORT_ROOT ?= .cicd
+REPORT_DIR ?= $(REPORT_ROOT)/reports
+GOLANG_REPORT_DIR ?= $(REPORT_ROOT)/golang-report
+
 .PHONY: bench-fast
 .PHONY: bench-prepare
 .PHONY: bench-probe
@@ -29,6 +34,7 @@ SUDO ?= sudo
 .PHONY: build-check
 .PHONY: build-release
 .PHONY: ci
+.PHONY: ci-report
 .PHONY: clean
 .PHONY: create-test-dbs
 .PHONY: dev-tools
@@ -52,6 +58,7 @@ SUDO ?= sudo
 .PHONY: run-dev-deps
 .PHONY: stop-dev-deps
 .PHONY: test
+.PHONY: test-report
 .PHONY: ts-tools
 .PHONY: uptrace-clear
 .PHONY: uptrace-cli-help
@@ -497,10 +504,30 @@ fmt-check:
 vet:
 	go vet ./...
 
-# test - 运行全部单元测试
+# test - 运行全部单元测试（终端友好，失败即停）
 # 用法: make test
 test:
 	go test ./...
+
+# test-report - 以 Gitee Go 可直接解析的格式运行单元测试，并生成覆盖率报告
+# 产物均位于 .cicd/golang-report/：report.jsonl 测试报告、index.html 覆盖率页面、coverage.txt 汇总
+# 与 test 的区别：JSON 不刷屏，失败时打印失败包名并保留完整报告供 CI 上传
+# 用法: make test-report
+test-report:
+	@mkdir -p $(GOLANG_REPORT_DIR)
+	@set +e; \
+	go test -v -json -cover -coverprofile=$(GOLANG_REPORT_DIR)/cover.out ./... \
+		> $(GOLANG_REPORT_DIR)/report.jsonl 2> $(GOLANG_REPORT_DIR)/stderr.log; \
+	status=$$?; \
+	go tool cover -html=$(GOLANG_REPORT_DIR)/cover.out -o $(GOLANG_REPORT_DIR)/index.html 2>/dev/null || true; \
+	go tool cover -func=$(GOLANG_REPORT_DIR)/cover.out > $(GOLANG_REPORT_DIR)/coverage.txt 2>/dev/null || true; \
+	tail -n 1 $(GOLANG_REPORT_DIR)/coverage.txt 2>/dev/null || true; \
+	if [ $$status -ne 0 ]; then \
+		echo "单元测试失败，完整报告: $(GOLANG_REPORT_DIR)/report.jsonl"; \
+		grep '"Action":"fail"' $(GOLANG_REPORT_DIR)/report.jsonl | tail -n 20 || true; \
+		tail -n 40 $(GOLANG_REPORT_DIR)/stderr.log || true; \
+	fi; \
+	exit $$status
 
 # build-check - 编译全部包但不产出二进制，作为 CI 的构建门禁
 # 用法: make build-check
@@ -546,9 +573,37 @@ license-check:
 	go run cmd/licensecheck/main.go --root .
 
 # ci - 提交与 CI 的统一入口：格式、构建、vet、测试、注释检查、许可证与文档漂移检查
+# 失败即停，适合本地提交前快速自查
 # 用法: make ci
 ci: fmt-check build-check vet test lint license-check docs-check
 	@echo "CI 检查全部通过"
+
+# ci-report - 汇总式 CI：逐项执行检查并留存日志，跑完全部检查后再统一判失败
+# 与 ci 的区别：
+#   1. 不在第一个失败处中断，一次暴露所有问题；
+#   2. 每项输出写入 $(REPORT_DIR)/<检查名>.log；
+#   3. 测试改用 test-report，额外产出 Gitee Go 可解析的 .cicd/golang-report/。
+# 用法: make ci-report
+CI_CHECKS := fmt-check build-check vet test-report lint license-check docs-check
+
+ci-report:
+	@mkdir -p $(REPORT_DIR)
+	@failed=""; \
+	for check in $(CI_CHECKS); do \
+		printf '\n===== %s =====\n' "$$check"; \
+		if $(MAKE) --no-print-directory "$$check" > "$(REPORT_DIR)/$$check.log" 2>&1; then \
+			printf 'PASS  %s\n' "$$check"; \
+		else \
+			printf 'FAIL  %s\n' "$$check"; \
+			failed="$$failed $$check"; \
+			tail -n 40 "$(REPORT_DIR)/$$check.log"; \
+		fi; \
+	done; \
+	if [ -n "$$failed" ]; then \
+		printf '\nCI 检查未通过，失败项:%s\n逐项日志目录: %s\n' "$$failed" "$(REPORT_DIR)"; \
+		exit 1; \
+	fi; \
+	printf '\nCI 检查全部通过\n'
 
 # ============================================================
 # Wire 抓包实现基线测试

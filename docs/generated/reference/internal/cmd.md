@@ -124,7 +124,7 @@ var RootCmd = &cobra.Command{
 ```
 
 <a name="Execute"></a>
-## func Execute
+## func [Execute](<https://gitee.com/olinex/zhongkui/blob/master/internal/cmd/root.go#L144>)
 
 ```go
 func Execute()
@@ -133,7 +133,7 @@ func Execute()
 Execute 本地化命令树后执行根命令，执行失败时打印错误并以非零状态退出。
 
 <a name="HexDecode"></a>
-## func HexDecode
+## func [HexDecode](<https://gitee.com/olinex/zhongkui/blob/master/internal/cmd/testcase.go#L494>)
 
 ```go
 func HexDecode(s string) ([]byte, error)
@@ -142,7 +142,7 @@ func HexDecode(s string) ([]byte, error)
 HexDecode 把十六进制字符串解码为原始字节（供测试代码使用的便捷函数）。
 
 <a name="PacketRecord"></a>
-## type PacketRecord
+## type [PacketRecord](<https://gitee.com/olinex/zhongkui/blob/master/internal/cmd/testcase.go#L54-L67>)
 
 PacketRecord 表示单个 TCP 包的记录。
 
@@ -164,7 +164,7 @@ type PacketRecord struct {
 ```
 
 <a name="TLSInputs"></a>
-## type TLSInputs
+## type [TLSInputs](<https://gitee.com/olinex/zhongkui/blob/master/internal/cmd/tls.go#L19-L28>)
 
 TLSInputs tls 子命令的输入参数。
 
@@ -182,7 +182,7 @@ type TLSInputs struct {
 ```
 
 <a name="TransactionFixture"></a>
-## type TransactionFixture
+## type [TransactionFixture](<https://gitee.com/olinex/zhongkui/blob/master/internal/cmd/testcase.go#L32-L51>)
 
 TransactionFixture 表示 TCP 流中的一个 HTTP 事务（请求\-响应对）。 对于 HTTP/1.1 keep\-alive 连接，一个 TCP 流可能包含多个事务。
 

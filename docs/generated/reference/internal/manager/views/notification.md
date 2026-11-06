@@ -78,7 +78,7 @@
 
 
 <a name="NotificationChannelBatchDelete"></a>
-## func NotificationChannelBatchDelete
+## func [NotificationChannelBatchDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_channel.go#L310>)
 
 ```go
 func NotificationChannelBatchDelete(c *gin.Context)
@@ -87,7 +87,7 @@ func NotificationChannelBatchDelete(c *gin.Context)
 NotificationChannelBatchDelete 批量删除通知渠道。 逐条复用原 notificationChannelDelete 语义；渠道不存在（或不属于当前命名空间） 视为成功跳过（幂等）。
 
 <a name="NotificationChannelBatchSetEnabled"></a>
-## func NotificationChannelBatchSetEnabled
+## func [NotificationChannelBatchSetEnabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_channel.go#L347>)
 
 ```go
 func NotificationChannelBatchSetEnabled(enabled bool) gin.HandlerFunc
@@ -96,7 +96,7 @@ func NotificationChannelBatchSetEnabled(enabled bool) gin.HandlerFunc
 NotificationChannelBatchSetEnabled 批量启用/停用通知渠道。 逐条复用原 notificationChannelSetEnabled 语义：幂等短路（已处于目标状态直接成功）\+ Update； 渠道不存在（或不属于当前命名空间）视为成功跳过（幂等）。
 
 <a name="NotificationChannelCreate"></a>
-## func NotificationChannelCreate
+## func [NotificationChannelCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_channel.go#L190>)
 
 ```go
 func NotificationChannelCreate(c *gin.Context)
@@ -105,7 +105,7 @@ func NotificationChannelCreate(c *gin.Context)
 NotificationChannelCreate 处理创建通知渠道的请求。 创建前校验渠道类型必须为 message.Types\(\) 中已注册的类型；渠道归属当前请求命名空间。
 
 <a name="NotificationChannelDetailGet"></a>
-## func NotificationChannelDetailGet
+## func [NotificationChannelDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_channel.go#L236>)
 
 ```go
 func NotificationChannelDetailGet(c *gin.Context)
@@ -114,7 +114,7 @@ func NotificationChannelDetailGet(c *gin.Context)
 NotificationChannelDetailGet 处理获取通知渠道详情的请求。 仅允许访问当前命名空间内的渠道，不存在时返回 404。
 
 <a name="NotificationChannelListGet"></a>
-## func NotificationChannelListGet
+## func [NotificationChannelListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_channel.go#L142>)
 
 ```go
 func NotificationChannelListGet(c *gin.Context)
@@ -123,7 +123,7 @@ func NotificationChannelListGet(c *gin.Context)
 NotificationChannelListGet 处理获取通知渠道列表的请求。 支持分页、排序与过滤（时间/名称/类型/启用状态），仅返回当前命名空间内的渠道。 查询按 gorm 模型扫描（config 经 crypto 序列化器读取），再映射为接口层 Out 结构。
 
 <a name="NotificationChannelTypesGet"></a>
-## func NotificationChannelTypesGet
+## func [NotificationChannelTypesGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_channel.go#L121>)
 
 ```go
 func NotificationChannelTypesGet(c *gin.Context)
@@ -132,7 +132,7 @@ func NotificationChannelTypesGet(c *gin.Context)
 NotificationChannelTypesGet 处理获取通知渠道类型枚举的请求。 返回 message.Types\(\) 中已注册的每个类型及其渠道级/目标级配置 schema，供前端 动态渲染创建/编辑表单。schema 依据 message 包各配置结构体的 binding/form 标签 经 views.GetStructFields 反射生成（与 OPTIONS 元信息同一事实来源）；字段展示 文案由前端依据字段名与渠道类型自行翻译。
 
 <a name="NotificationChannelUpdate"></a>
-## func NotificationChannelUpdate
+## func [NotificationChannelUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_channel.go#L261>)
 
 ```go
 func NotificationChannelUpdate(c *gin.Context)
@@ -141,7 +141,7 @@ func NotificationChannelUpdate(c *gin.Context)
 NotificationChannelUpdate 处理更新通知渠道的请求。 渠道名称与类型不可变，仅更新启用状态、配置与描述；仅允许更新当前命名空间内的渠道。
 
 <a name="NotificationGroupBatchDelete"></a>
-## func NotificationGroupBatchDelete
+## func [NotificationGroupBatchDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_group.go#L367>)
 
 ```go
 func NotificationGroupBatchDelete(c *gin.Context)
@@ -150,7 +150,7 @@ func NotificationGroupBatchDelete(c *gin.Context)
 NotificationGroupBatchDelete 批量删除通知目标组。 逐条复用事务删除语义：先显式删除组目标关联行，再删除组本身；组不存在（或不属于当前命名空间） 视为成功跳过（幂等）。
 
 <a name="NotificationGroupCreate"></a>
-## func NotificationGroupCreate
+## func [NotificationGroupCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_group.go#L260>)
 
 ```go
 func NotificationGroupCreate(c *gin.Context)
@@ -159,7 +159,7 @@ func NotificationGroupCreate(c *gin.Context)
 NotificationGroupCreate 处理创建通知目标组的请求。 组归属当前请求命名空间；若标记为默认组，则在事务内先取消命名空间内其他组的 默认标记，再创建新组（IsDefault=true 语义：新默认组替换旧默认组）。
 
 <a name="NotificationGroupDetailGet"></a>
-## func NotificationGroupDetailGet
+## func [NotificationGroupDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_group.go#L171>)
 
 ```go
 func NotificationGroupDetailGet(c *gin.Context)
@@ -168,7 +168,7 @@ func NotificationGroupDetailGet(c *gin.Context)
 NotificationGroupDetailGet 处理获取通知目标组详情的请求。 返回组的业务字段与绑定目标列表（含关联渠道名称/类型）； 仅允许访问当前命名空间内的组。
 
 <a name="NotificationGroupListGet"></a>
-## func NotificationGroupListGet
+## func [NotificationGroupListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_group.go#L108>)
 
 ```go
 func NotificationGroupListGet(c *gin.Context)
@@ -177,7 +177,7 @@ func NotificationGroupListGet(c *gin.Context)
 NotificationGroupListGet 处理获取通知目标组列表的请求。 支持分页、排序与过滤（时间/名称/默认标记），仅返回当前命名空间内的组， 并以单条聚合查询填充各组的目标计数。
 
 <a name="NotificationGroupSetDefault"></a>
-## func NotificationGroupSetDefault
+## func [NotificationGroupSetDefault](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_group.go#L405>)
 
 ```go
 func NotificationGroupSetDefault(c *gin.Context)
@@ -186,7 +186,7 @@ func NotificationGroupSetDefault(c *gin.Context)
 NotificationGroupSetDefault 设置指定通知组为命名空间的默认组。 事务内先取消命名空间内其他组的默认标记，再将该组置为默认；仅允许操作当前命名空间内的组。
 
 <a name="NotificationGroupUpdate"></a>
-## func NotificationGroupUpdate
+## func [NotificationGroupUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_group.go#L315>)
 
 ```go
 func NotificationGroupUpdate(c *gin.Context)
@@ -195,7 +195,7 @@ func NotificationGroupUpdate(c *gin.Context)
 NotificationGroupUpdate 处理更新通知目标组的请求。 更新描述字段；若请求携带 targetIds 则同步整集替换绑定目标（缺省保持既有绑定不变）； 仅允许更新当前命名空间内的组。
 
 <a name="NotificationRecordDetailGet"></a>
-## func NotificationRecordDetailGet
+## func [NotificationRecordDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_record.go#L162>)
 
 ```go
 func NotificationRecordDetailGet(c *gin.Context)
@@ -204,7 +204,7 @@ func NotificationRecordDetailGet(c *gin.Context)
 NotificationRecordDetailGet 处理获取通知记录详情的请求。 返回记录的完整发送内容；仅允许访问当前命名空间内的记录； 目标名称与渠道名称尽力补全（相关记录可能已删除，缺失置空字符串）。
 
 <a name="NotificationRecordListGet"></a>
-## func NotificationRecordListGet
+## func [NotificationRecordListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_record.go#L90>)
 
 ```go
 func NotificationRecordListGet(c *gin.Context)
@@ -213,7 +213,7 @@ func NotificationRecordListGet(c *gin.Context)
 NotificationRecordListGet 处理获取通知记录列表的请求。 支持分页、排序与过滤（时间/状态/事件类型/渠道类型），仅返回当前命名空间内的记录； 列表批量补全目标名称（尽力而为，缺失置空字符串）。
 
 <a name="NotificationTargetBatchDelete"></a>
-## func NotificationTargetBatchDelete
+## func [NotificationTargetBatchDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_target.go#L384>)
 
 ```go
 func NotificationTargetBatchDelete(c *gin.Context)
@@ -222,7 +222,7 @@ func NotificationTargetBatchDelete(c *gin.Context)
 NotificationTargetBatchDelete 批量删除通知目标。 目标不存在（或不属于当前命名空间）视为成功跳过（幂等）。
 
 <a name="NotificationTargetBatchSetEnabled"></a>
-## func NotificationTargetBatchSetEnabled
+## func [NotificationTargetBatchSetEnabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_target.go#L417>)
 
 ```go
 func NotificationTargetBatchSetEnabled(enabled bool) gin.HandlerFunc
@@ -231,7 +231,7 @@ func NotificationTargetBatchSetEnabled(enabled bool) gin.HandlerFunc
 NotificationTargetBatchSetEnabled 批量启用/停用通知目标。 幂等短路（已处于目标状态直接成功）\+ Update；目标不存在（或不属于当前命名空间）视为成功跳过。
 
 <a name="NotificationTargetCreate"></a>
-## func NotificationTargetCreate
+## func [NotificationTargetCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_target.go#L266>)
 
 ```go
 func NotificationTargetCreate(c *gin.Context)
@@ -240,7 +240,7 @@ func NotificationTargetCreate(c *gin.Context)
 NotificationTargetCreate 处理创建通知目标的请求。 校验所选渠道属于当前命名空间（不存在则返回 404）；目标 Type 由渠道类型键派生并快照入库。
 
 <a name="NotificationTargetDetailGet"></a>
-## func NotificationTargetDetailGet
+## func [NotificationTargetDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_target.go#L309>)
 
 ```go
 func NotificationTargetDetailGet(c *gin.Context)
@@ -249,7 +249,7 @@ func NotificationTargetDetailGet(c *gin.Context)
 NotificationTargetDetailGet 处理获取通知目标详情的请求。 返回目标全部字段并附带所属渠道信息；仅允许访问当前命名空间内的目标。
 
 <a name="NotificationTargetListGet"></a>
-## func NotificationTargetListGet
+## func [NotificationTargetListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_target.go#L176>)
 
 ```go
 func NotificationTargetListGet(c *gin.Context)
@@ -258,7 +258,7 @@ func NotificationTargetListGet(c *gin.Context)
 NotificationTargetListGet 处理获取通知目标列表的请求。 支持分页、排序与过滤（时间/名称/渠道/类型/启用状态/语言），仅返回当前命名空间内的目标； 按 gorm 模型扫描（config 经 crypto 序列化器读取）再映射为接口层 Out 结构， 第二趟按渠道 ID 批量加载所属渠道信息（ChannelName/ChannelType/ChannelEnabled）回填。
 
 <a name="NotificationTargetSend"></a>
-## func NotificationTargetSend
+## func [NotificationTargetSend](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_target.go#L537>)
 
 ```go
 func NotificationTargetSend(c *gin.Context)
@@ -267,7 +267,7 @@ func NotificationTargetSend(c *gin.Context)
 NotificationTargetSend 处理"向单个通知目标发送"的请求。 按 \(id, namespace\) 预加载渠道校验目标存在且属于当前命名空间（缺失 404）， 目标或所属渠道被禁用时返回 400 \+ CodeNotificationSendFailed（详情为可本地化文案）， 通过后组装 notify.SendTargetInput 并投递 notify:send:target 异步任务（投递失败 500）。
 
 <a name="NotificationTargetTestSend"></a>
-## func NotificationTargetTestSend
+## func [NotificationTargetTestSend](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_target.go#L462>)
 
 ```go
 func NotificationTargetTestSend(c *gin.Context)
@@ -276,7 +276,7 @@ func NotificationTargetTestSend(c *gin.Context)
 NotificationTargetTestSend 处理通知目标 test\-send（测试发送）的请求。 按目标所属渠道实际类型构建渠道实例，以固定模板（notify.test.title / notify.test.content） 在目标偏好的语言下渲染测试消息，并经渠道实际发送一次；响应返回渠道 MessageID、 渲染后的标题/正文、实际使用的语言，以及本次通知行为所用渠道与目标的参数 （config 为 base64 密文，前端可经 plaintext 接口解密）。 发起通知行为的任何报错（渠道构建、目标配置解析、实际投递失败）均以正常业务错误 （400 \+ CodeNotificationSendFailed，details 携带具体原因）返回，供 UI 直接展示； 仅数据库查询等未预期内部错误保持 500。
 
 <a name="NotificationTargetUpdate"></a>
-## func NotificationTargetUpdate
+## func [NotificationTargetUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_target.go#L342>)
 
 ```go
 func NotificationTargetUpdate(c *gin.Context)
@@ -285,7 +285,7 @@ func NotificationTargetUpdate(c *gin.Context)
 NotificationTargetUpdate 处理更新通知目标的请求。 仅更新启用状态、目标配置、消息语言与描述；目标名称与所属渠道不可变。 仅允许更新当前命名空间内的目标。
 
 <a name="NotificationTemplateCreate"></a>
-## func NotificationTemplateCreate
+## func [NotificationTemplateCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L241>)
 
 ```go
 func NotificationTemplateCreate(c *gin.Context)
@@ -294,7 +294,7 @@ func NotificationTemplateCreate(c *gin.Context)
 NotificationTemplateCreate 处理创建通知模板的请求。 校验事件为注册表已知事件、渠道类型/语言在支持范围内（否则 400）， 同一命名空间下 \(event, channel\_type, language\) 已存在时返回 400； 新建模板来源强制为 override。
 
 <a name="NotificationTemplateDryRun"></a>
-## func NotificationTemplateDryRun
+## func [NotificationTemplateDryRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L447>)
 
 ```go
 func NotificationTemplateDryRun(c *gin.Context)
@@ -303,7 +303,7 @@ func NotificationTemplateDryRun(c *gin.Context)
 NotificationTemplateDryRun 处理模板试运行请求。 使用事件的内置样例参数渲染编辑器内尚未保存的标题/正文，无需手填参数即可预览； 任一模板语法非法则 400 \+ 具体字段错误，阻止以非法模板试运行。
 
 <a name="NotificationTemplateEventsMetaGet"></a>
-## func NotificationTemplateEventsMetaGet
+## func [NotificationTemplateEventsMetaGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L499>)
 
 ```go
 func NotificationTemplateEventsMetaGet(c *gin.Context)
@@ -312,7 +312,7 @@ func NotificationTemplateEventsMetaGet(c *gin.Context)
 NotificationTemplateEventsMetaGet 处理获取通知事件精简元数据的请求（/events/meta）。 遍历 notify.TemplateSpecs\(\) 事件注册表，为每个事件组装支持语言（spec.Languages）与 可用模板变量清单（notify.EventFields），供模板编辑器语言下拉提示与智能补全使用； 事件键升序返回保证输出稳定。
 
 <a name="NotificationTemplateListGet"></a>
-## func NotificationTemplateListGet
+## func [NotificationTemplateListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L202>)
 
 ```go
 func NotificationTemplateListGet(c *gin.Context)
@@ -321,7 +321,7 @@ func NotificationTemplateListGet(c *gin.Context)
 NotificationTemplateListGet 处理获取通知模板列表的请求。 基于统一搜索基座 BuildSearchQuery 支持分页、排序与多字段过滤（事件/来源/语言/渠道类型/ 创建/更新时间），仅返回当前命名空间内的模板。
 
 <a name="NotificationTemplateRenderTest"></a>
-## func NotificationTemplateRenderTest
+## func [NotificationTemplateRenderTest](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L384>)
 
 ```go
 func NotificationTemplateRenderTest(c *gin.Context)
@@ -330,7 +330,7 @@ func NotificationTemplateRenderTest(c *gin.Context)
 NotificationTemplateRenderTest 渲染模板预览（render\-test）。 按事件在命名空间下解析持久化模板并渲染标题/正文；缺省渠道使用 "\*"、缺省语言使用 平台默认语言。渲染失败（未知事件、模板非法等）以 400 \+ 具体原因返回。
 
 <a name="NotificationTemplateRestoreDefault"></a>
-## func NotificationTemplateRestoreDefault
+## func [NotificationTemplateRestoreDefault](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L362>)
 
 ```go
 func NotificationTemplateRestoreDefault(c *gin.Context)
@@ -339,7 +339,7 @@ func NotificationTemplateRestoreDefault(c *gin.Context)
 NotificationTemplateRestoreDefault 恢复整个事件在该命名空间下的模板为内置默认。 删除该事件在该命名空间的全部持久化模板行即可：默认标题/正文不再落库，渲染时若该 命名空间无对应模板行，将自动回退到翻译包 i18n 键 notify.\<template\>.title/.content。
 
 <a name="NotificationTemplateUpdate"></a>
-## func NotificationTemplateUpdate
+## func [NotificationTemplateUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L309>)
 
 ```go
 func NotificationTemplateUpdate(c *gin.Context)
@@ -348,7 +348,7 @@ func NotificationTemplateUpdate(c *gin.Context)
 NotificationTemplateUpdate 处理更新通知模板的请求。 按 \(id, namespace\) 定位行，不存在返回 404；标题/正文为空返回 400； 更新标题/正文/描述并强制 Source=override（覆盖内置默认）。
 
 <a name="NotificationTemplateValidate"></a>
-## func NotificationTemplateValidate
+## func [NotificationTemplateValidate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L423>)
 
 ```go
 func NotificationTemplateValidate(c *gin.Context)
@@ -357,7 +357,7 @@ func NotificationTemplateValidate(c *gin.Context)
 NotificationTemplateValidate 处理模板语法校验请求。 分别按 Go text/template 语法解析编辑器内尚未保存的标题/正文，标题与正文各自返回 是否合法及错误信息；语法校验失败不视为 HTTP 错误（恒 200），便于编辑器反复调用。
 
 <a name="RegisterRoutes"></a>
-## func RegisterRoutes
+## func [RegisterRoutes](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/register.go#L13>)
 
 ```go
 func RegisterRoutes(ctx *views.RegisterContext)
@@ -366,7 +366,7 @@ func RegisterRoutes(ctx *views.RegisterContext)
 RegisterRoutes 注册 /api/v1/notification 通知管理接口路由。 通知分类下的渠道 / 目标 / 组 / 发送记录管理，与标签事件同级的独立分类。 认证 / RBAC / 核心库 / 命名空间等公共中间件挂在父组上继承。
 
 <a name="NotificationChannelBatchIn"></a>
-## type NotificationChannelBatchIn
+## type [NotificationChannelBatchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_channel.go#L81-L84>)
 
 NotificationChannelBatchIn 批量操作通知渠道的请求输入结构。 Ids 接受标量（单个 ID）或数组（多个 ID）。
 
@@ -378,7 +378,7 @@ type NotificationChannelBatchIn struct {
 ```
 
 <a name="NotificationChannelCreateIn"></a>
-## type NotificationChannelCreateIn
+## type [NotificationChannelCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_channel.go#L30-L41>)
 
 NotificationChannelCreateIn 定义创建通知渠道的请求输入结构。 命名空间取自请求上下文，渠道名称在同一命名空间内唯一；渠道类型必须为 message.Types\(\) 中已注册的类型之一；Config 为渠道级配置的 JSON 文本。
 
@@ -398,7 +398,7 @@ type NotificationChannelCreateIn struct {
 ```
 
 <a name="NotificationChannelDetailOut"></a>
-## type NotificationChannelDetailOut
+## type [NotificationChannelDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_channel.go#L56-L70>)
 
 NotificationChannelDetailOut 定义通知渠道的详情输出结构。 嵌入 BaseItemOut 携带审计字段，业务字段与模型字段一一对应。
 
@@ -421,7 +421,7 @@ type NotificationChannelDetailOut struct {
 ```
 
 <a name="NotificationChannelListOut"></a>
-## type NotificationChannelListOut
+## type [NotificationChannelListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_channel.go#L74-L77>)
 
 NotificationChannelListOut 定义通知渠道列表的输出项结构。 嵌入 BaseTotalOut 以支持分页总数统计。
 
@@ -433,7 +433,7 @@ type NotificationChannelListOut struct {
 ```
 
 <a name="NotificationChannelTypeConfigSchema"></a>
-## type NotificationChannelTypeConfigSchema
+## type [NotificationChannelTypeConfigSchema](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_channel.go#L90-L95>)
 
 NotificationChannelTypeConfigSchema 描述某渠道类型的配置 schema。 Channel 为渠道级配置字段列表，Target 为目标级配置字段列表；字段描述复用 views.FieldMeta（与 OPTIONS 元信息同一反射事实来源），展示文案由前端依据 字段名与渠道类型自行翻译。
 
@@ -447,7 +447,7 @@ type NotificationChannelTypeConfigSchema struct {
 ```
 
 <a name="NotificationChannelTypeOut"></a>
-## type NotificationChannelTypeOut
+## type [NotificationChannelTypeOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_channel.go#L98-L108>)
 
 NotificationChannelTypeOut 描述单个通知渠道类型的枚举项。
 
@@ -466,7 +466,7 @@ type NotificationChannelTypeOut struct {
 ```
 
 <a name="NotificationChannelTypesOut"></a>
-## type NotificationChannelTypesOut
+## type [NotificationChannelTypesOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_channel.go#L111-L114>)
 
 NotificationChannelTypesOut 定义通知渠道类型枚举的输出结构。
 
@@ -478,7 +478,7 @@ type NotificationChannelTypesOut struct {
 ```
 
 <a name="NotificationChannelUpdateIn"></a>
-## type NotificationChannelUpdateIn
+## type [NotificationChannelUpdateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_channel.go#L45-L52>)
 
 NotificationChannelUpdateIn 定义更新通知渠道的请求输入结构。 渠道名称与类型不可变（不接受二者），仅允许调整启用状态、配置与描述。
 
@@ -494,7 +494,7 @@ type NotificationChannelUpdateIn struct {
 ```
 
 <a name="NotificationGroupBatchIn"></a>
-## type NotificationGroupBatchIn
+## type [NotificationGroupBatchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_group.go#L100-L103>)
 
 NotificationGroupBatchIn 批量操作通知目标组的请求输入结构。 Ids 接受标量（单个 ID）或数组（多个 ID）。
 
@@ -506,7 +506,7 @@ type NotificationGroupBatchIn struct {
 ```
 
 <a name="NotificationGroupCreateIn"></a>
-## type NotificationGroupCreateIn
+## type [NotificationGroupCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_group.go#L25-L35>)
 
 NotificationGroupCreateIn 定义创建通知目标组的请求输入结构。 组名在命名空间内唯一（由唯一索引保证），命名空间取自请求上下文。
 
@@ -525,7 +525,7 @@ type NotificationGroupCreateIn struct {
 ```
 
 <a name="NotificationGroupDetailOut"></a>
-## type NotificationGroupDetailOut
+## type [NotificationGroupDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_group.go#L70-L80>)
 
 NotificationGroupDetailOut 定义通知目标组详情的输出结构， 在基础审计字段之上附加业务字段与绑定目标列表。
 
@@ -544,7 +544,7 @@ type NotificationGroupDetailOut struct {
 ```
 
 <a name="NotificationGroupListOut"></a>
-## type NotificationGroupListOut
+## type [NotificationGroupListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_group.go#L84-L96>)
 
 NotificationGroupListOut 定义通知目标组列表的输出项结构。 嵌入 BaseTotalOut 以支持分页总数统计，TargetCount 汇总组内目标数。
 
@@ -565,7 +565,7 @@ type NotificationGroupListOut struct {
 ```
 
 <a name="NotificationGroupTargetOut"></a>
-## type NotificationGroupTargetOut
+## type [NotificationGroupTargetOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_group.go#L49-L66>)
 
 NotificationGroupTargetOut 定义通知详情中单条绑定目标的输出结构， 聚合目标与其所属渠道的名称与类型信息。
 
@@ -591,7 +591,7 @@ type NotificationGroupTargetOut struct {
 ```
 
 <a name="NotificationGroupUpdateIn"></a>
-## type NotificationGroupUpdateIn
+## type [NotificationGroupUpdateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_group.go#L39-L45>)
 
 NotificationGroupUpdateIn 定义更新通知目标组的请求输入结构。 组名称与默认标记不可在此更新，仅允许调整描述与绑定目标。
 
@@ -606,7 +606,7 @@ type NotificationGroupUpdateIn struct {
 ```
 
 <a name="NotificationRecordDetailOut"></a>
-## type NotificationRecordDetailOut
+## type [NotificationRecordDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_record.go#L21-L49>)
 
 NotificationRecordDetailOut 定义通知记录详情输出结构。 嵌入 BaseItemOut 携带审计字段；除记录本身字段外，还尽力补全目标名称与渠道名称。
 
@@ -643,7 +643,7 @@ type NotificationRecordDetailOut struct {
 ```
 
 <a name="NotificationRecordListOut"></a>
-## type NotificationRecordListOut
+## type [NotificationRecordListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_record.go#L54-L73>)
 
 NotificationRecordListOut 定义通知记录列表的输出项结构。 嵌入 BaseItemOut 携带审计字段、BaseTotalOut 支持分页总数统计； 列表仅补全目标名称，不携带渠道名称等详情字段。
 
@@ -671,7 +671,7 @@ type NotificationRecordListOut struct {
 ```
 
 <a name="NotificationTargetBatchIn"></a>
-## type NotificationTargetBatchIn
+## type [NotificationTargetBatchIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_target.go#L99-L102>)
 
 NotificationTargetBatchIn 批量操作通知目标的请求输入结构。 Ids 接受标量（单个 ID）或数组（多个 ID）。
 
@@ -683,7 +683,7 @@ type NotificationTargetBatchIn struct {
 ```
 
 <a name="NotificationTargetCreateIn"></a>
-## type NotificationTargetCreateIn
+## type [NotificationTargetCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_target.go#L34-L47>)
 
 NotificationTargetCreateIn 定义创建通知目标的请求输入结构。 Type 不入参，类型由所选渠道（ChannelID）派生并在创建时快照到目标。 Config 为目标级配置（JSON 文本），其结构随渠道类型不同而不同 （如 email 目标为 \{"to": ...\}，webhook 目标为 \{"url": ..., "headers": \{...\}\}）。
 
@@ -705,7 +705,7 @@ type NotificationTargetCreateIn struct {
 ```
 
 <a name="NotificationTargetDetailOut"></a>
-## type NotificationTargetDetailOut
+## type [NotificationTargetDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_target.go#L64-L88>)
 
 NotificationTargetDetailOut 定义通知目标详情的输出结构。 嵌入 BaseItemOut 携带审计字段，并附带所属渠道的快照信息（ChannelName/ChannelType/ChannelEnabled）。
 
@@ -738,7 +738,7 @@ type NotificationTargetDetailOut struct {
 ```
 
 <a name="NotificationTargetListOut"></a>
-## type NotificationTargetListOut
+## type [NotificationTargetListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_target.go#L92-L95>)
 
 NotificationTargetListOut 定义通知目标列表的输出项结构。 嵌入 BaseTotalOut 以支持分页总数统计。
 
@@ -750,7 +750,7 @@ type NotificationTargetListOut struct {
 ```
 
 <a name="NotificationTargetSendIn"></a>
-## type NotificationTargetSendIn
+## type [NotificationTargetSendIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_target.go#L107-L116>)
 
 NotificationTargetSendIn 定义"向单个通知目标发送通知"的请求输入结构。 调用方指定目标（经 URL :id）\+ 事件引用 \+ 消息模板，投递 notify:send:target 异步任务， 复用通知全链路（模板渲染、渠道基座投递与发送记录写入）。
 
@@ -768,7 +768,7 @@ type NotificationTargetSendIn struct {
 ```
 
 <a name="NotificationTargetSendOut"></a>
-## type NotificationTargetSendOut
+## type [NotificationTargetSendOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_target.go#L120-L127>)
 
 NotificationTargetSendOut 定义"向单个通知目标发送通知"的输出结构。 回显本次异步投递请求所定位的目标与事件引用。
 
@@ -784,7 +784,7 @@ type NotificationTargetSendOut struct {
 ```
 
 <a name="NotificationTargetTestSendChannelOut"></a>
-## type NotificationTargetTestSendChannelOut
+## type [NotificationTargetTestSendChannelOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_target.go#L149-L158>)
 
 NotificationTargetTestSendChannelOut 定义 test\-send 的渠道参数输出结构。
 
@@ -802,7 +802,7 @@ type NotificationTargetTestSendChannelOut struct {
 ```
 
 <a name="NotificationTargetTestSendOut"></a>
-## type NotificationTargetTestSendOut
+## type [NotificationTargetTestSendOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_target.go#L133-L146>)
 
 NotificationTargetTestSendOut 定义通知目标 test\-send 的输出结构。 返回渠道实际生成的 MessageID、按目标语言渲染后的标题/正文，以及本次通知行为 实际使用的渠道与目标参数（Config 为 base64 密文，前端可经 plaintext 接口解密 核对，保证「所见即所发」）；结构对渠道类型无感知，新渠道无需改动本结构即可复用。
 
@@ -824,7 +824,7 @@ type NotificationTargetTestSendOut struct {
 ```
 
 <a name="NotificationTargetTestSendTargetOut"></a>
-## type NotificationTargetTestSendTargetOut
+## type [NotificationTargetTestSendTargetOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_target.go#L161-L170>)
 
 NotificationTargetTestSendTargetOut 定义 test\-send 的目标参数输出结构。
 
@@ -842,7 +842,7 @@ type NotificationTargetTestSendTargetOut struct {
 ```
 
 <a name="NotificationTargetUpdateIn"></a>
-## type NotificationTargetUpdateIn
+## type [NotificationTargetUpdateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_target.go#L51-L60>)
 
 NotificationTargetUpdateIn 定义更新通知目标的请求输入结构。 目标名称与所属渠道不可变，仅允许调整启用状态、目标配置、消息语言与描述。
 
@@ -860,7 +860,7 @@ type NotificationTargetUpdateIn struct {
 ```
 
 <a name="NotificationTemplateCreateIn"></a>
-## type NotificationTemplateCreateIn
+## type [NotificationTemplateCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L57-L70>)
 
 NotificationTemplateCreateIn 定义创建通知模板的请求输入结构。
 
@@ -882,7 +882,7 @@ type NotificationTemplateCreateIn struct {
 ```
 
 <a name="NotificationTemplateDryRunIn"></a>
-## type NotificationTemplateDryRunIn
+## type [NotificationTemplateDryRunIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L144-L155>)
 
 NotificationTemplateDryRunIn 定义模板试运行的请求输入结构。 使用事件的内置样例参数渲染编辑器内尚未保存的标题/正文，无需手填参数即可预览。
 
@@ -902,7 +902,7 @@ type NotificationTemplateDryRunIn struct {
 ```
 
 <a name="NotificationTemplateDryRunOut"></a>
-## type NotificationTemplateDryRunOut
+## type [NotificationTemplateDryRunOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L158-L169>)
 
 NotificationTemplateDryRunOut 定义模板试运行的输出结构。
 
@@ -922,7 +922,7 @@ type NotificationTemplateDryRunOut struct {
 ```
 
 <a name="NotificationTemplateEventMetaItemOut"></a>
-## type NotificationTemplateEventMetaItemOut
+## type [NotificationTemplateEventMetaItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L174-L181>)
 
 NotificationTemplateEventMetaItemOut 定义单条通知事件的精简元数据输出项。 供模板编辑器生成语言下拉提示与模板变量智能补全，不承载渠道/模板键等已由 统一枚举接口（/admin/enum）覆盖的枚举信息。
 
@@ -938,7 +938,7 @@ type NotificationTemplateEventMetaItemOut struct {
 ```
 
 <a name="NotificationTemplateEventMetaOut"></a>
-## type NotificationTemplateEventMetaOut
+## type [NotificationTemplateEventMetaOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L184-L187>)
 
 NotificationTemplateEventMetaOut 定义通知事件精简元数据接口的输出结构。
 
@@ -950,7 +950,7 @@ type NotificationTemplateEventMetaOut struct {
 ```
 
 <a name="NotificationTemplateItemOut"></a>
-## type NotificationTemplateItemOut
+## type [NotificationTemplateItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L28-L47>)
 
 NotificationTemplateItemOut 定义通知模板列表的输出项结构。 字段与核心模型解耦（独立定义），JSON 键与映射来源模型字段保持一致。
 
@@ -978,7 +978,7 @@ type NotificationTemplateItemOut struct {
 ```
 
 <a name="NotificationTemplateListOut"></a>
-## type NotificationTemplateListOut
+## type [NotificationTemplateListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L51-L54>)
 
 NotificationTemplateListOut 定义通知模板列表的输出项结构。 嵌入 BaseTotalOut 以支持分页总数统计（Total 不参与 JSON 序列化）。
 
@@ -990,7 +990,7 @@ type NotificationTemplateListOut struct {
 ```
 
 <a name="NotificationTemplateRenderTestIn"></a>
-## type NotificationTemplateRenderTestIn
+## type [NotificationTemplateRenderTestIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L95-L104>)
 
 NotificationTemplateRenderTestIn 定义模板渲染预览的请求输入结构。
 
@@ -1008,7 +1008,7 @@ type NotificationTemplateRenderTestIn struct {
 ```
 
 <a name="NotificationTemplateRenderTestOut"></a>
-## type NotificationTemplateRenderTestOut
+## type [NotificationTemplateRenderTestOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L107-L118>)
 
 NotificationTemplateRenderTestOut 定义模板渲染预览的输出结构。
 
@@ -1028,7 +1028,7 @@ type NotificationTemplateRenderTestOut struct {
 ```
 
 <a name="NotificationTemplateRestoreDefaultIn"></a>
-## type NotificationTemplateRestoreDefaultIn
+## type [NotificationTemplateRestoreDefaultIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L87-L92>)
 
 NotificationTemplateRestoreDefaultIn 定义恢复默认模板的请求输入结构。 语义：将整个事件在命名空间下的模板重置为代码内置默认（删除全部该事件行后重新种子化）。
 
@@ -1042,7 +1042,7 @@ type NotificationTemplateRestoreDefaultIn struct {
 ```
 
 <a name="NotificationTemplateUpdateIn"></a>
-## type NotificationTemplateUpdateIn
+## type [NotificationTemplateUpdateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L74-L83>)
 
 NotificationTemplateUpdateIn 定义更新通知模板的请求输入结构。 仅允许调整标题、正文与描述；事件/渠道/语言组合不可变，更新后强制为 override 来源。
 
@@ -1060,7 +1060,7 @@ type NotificationTemplateUpdateIn struct {
 ```
 
 <a name="NotificationTemplateValidateIn"></a>
-## type NotificationTemplateValidateIn
+## type [NotificationTemplateValidateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L122-L127>)
 
 NotificationTemplateValidateIn 定义模板语法校验的请求输入结构。 校验编辑器内尚未保存的标题/正文，均按 Go text/template 语法解析。
 
@@ -1074,7 +1074,7 @@ type NotificationTemplateValidateIn struct {
 ```
 
 <a name="NotificationTemplateValidateOut"></a>
-## type NotificationTemplateValidateOut
+## type [NotificationTemplateValidateOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/notification/notification_template.go#L131-L140>)
 
 NotificationTemplateValidateOut 定义模板语法校验的输出结构。 标题/正文各自返回是否合法与错误信息，校验失败不视为 HTTP 错误，便于编辑器反复调用。
 

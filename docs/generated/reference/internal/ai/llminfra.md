@@ -18,7 +18,7 @@
 
 
 <a name="CheckEmbeddingDimension"></a>
-## func CheckEmbeddingDimension
+## func [CheckEmbeddingDimension](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llminfra/schema.go#L152>)
 
 ```go
 func CheckEmbeddingDimension(ctx context.Context, db *gorm.DB, dimensions int) error
@@ -27,7 +27,7 @@ func CheckEmbeddingDimension(ctx context.Context, db *gorm.DB, dimensions int) e
 CheckEmbeddingDimension 按 vectorColumns 清单逐列校验（knowledge\_chunks.embedding 与 agent\_memories.embedding）维度与配置指定维度一致；某列可读且不一致时返回提示运行 migrate 子命令的英文错误，并点名是哪张表哪列。表或列不存在（数据库尚未建表）或维度读不出时返回 nil， 交由迁移负责建列。用于服务启动时的强校验：维度不一致即中止启动，用户需自行执行 migrate 重建列，而非在启动时自动改动数据库结构。
 
 <a name="ChunkEmbeddingDimension"></a>
-## func ChunkEmbeddingDimension
+## func [ChunkEmbeddingDimension](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llminfra/schema.go#L176>)
 
 ```go
 func ChunkEmbeddingDimension(ctx context.Context, db *gorm.DB) (int, bool, error)
@@ -36,7 +36,7 @@ func ChunkEmbeddingDimension(ctx context.Context, db *gorm.DB) (int, bool, error
 ChunkEmbeddingDimension 返回 knowledge\_chunks.embedding 列的 pgvector 维度与是否可读， 供状态自检等外部共用与校准一致的读取来源。
 
 <a name="EmbedStringsWithUsage"></a>
-## func EmbedStringsWithUsage
+## func [EmbedStringsWithUsage](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llminfra/embed.go#L14>)
 
 ```go
 func EmbedStringsWithUsage(ctx context.Context, emb port.Embedder, texts []string) ([][]float64, contract.EmbedUsage, error)
@@ -45,7 +45,7 @@ func EmbedStringsWithUsage(ctx context.Context, emb port.Embedder, texts []strin
 EmbedStringsWithUsage 向量化文本并尽力取回 token 用量，委托 port.EmbedStringsWithUsage。 保留本包入口供装配层与视图层按既有 import 调用。
 
 <a name="MemoryEmbeddingDimension"></a>
-## func MemoryEmbeddingDimension
+## func [MemoryEmbeddingDimension](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llminfra/schema.go#L182>)
 
 ```go
 func MemoryEmbeddingDimension(ctx context.Context, db *gorm.DB) (int, bool, error)
@@ -54,7 +54,7 @@ func MemoryEmbeddingDimension(ctx context.Context, db *gorm.DB) (int, bool, erro
 MemoryEmbeddingDimension 返回 agent\_memories.embedding 列的 pgvector 维度与是否可读， 供状态自检等外部比较记忆列维度与配置维度，读取来源与校准一致。
 
 <a name="ReconcileEmbeddingColumn"></a>
-## func ReconcileEmbeddingColumn
+## func [ReconcileEmbeddingColumn](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llminfra/schema.go#L42>)
 
 ```go
 func ReconcileEmbeddingColumn(ctx context.Context, db *gorm.DB, dimensions int) (reconciled bool, err error)
@@ -63,7 +63,7 @@ func ReconcileEmbeddingColumn(ctx context.Context, db *gorm.DB, dimensions int) 
 ReconcileEmbeddingColumn 按 vectorColumns 清单遍历，将每列（knowledge\_chunks.embedding 与 agent\_memories.embedding）的维度校准为配置指定的维度，使「配置为唯一事实来源」：更换 embedding 模型（通常伴随维度变化）时，用户只需改 ai.embedding.dimensions，启动后数据库列 会自动跟随，无需手工改迁移或重建索引。返回的 reconciled 表示「任一列被改动过」。
 
 <a name="TestModel"></a>
-## func TestModel
+## func [TestModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llminfra/probe.go#L21>)
 
 ```go
 func TestModel(ctx context.Context, cfg llm.ModelConfig) error
@@ -72,7 +72,7 @@ func TestModel(ctx context.Context, cfg llm.ModelConfig) error
 TestModel 对给定模型端点配置做一次轻量探活：chat 模型以 GET \{baseURL\}/models 判定 端点可达（OpenAI 兼容端点的标准能力，任何 HTTP 响应即视为已响应，仅传输层错误视为 不可达），避免以完整生成请求探活；embedding 模型执行一次最小向量化请求并校验返回 向量非空。配置不完整时返回英文错误。
 
 <a name="VerifyEmbeddingCompat"></a>
-## func VerifyEmbeddingCompat
+## func [VerifyEmbeddingCompat](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llminfra/embedding_compat.go#L24>)
 
 ```go
 func VerifyEmbeddingCompat(ctx context.Context, cfg llm.ModelConfig, columnDim int) (int, error)
@@ -84,7 +84,7 @@ VerifyEmbeddingCompat 探测 cfg 指向的 embedding 端点实际输出的向量
 2. 定向探测（声明 dimensions = columnDim）：text\-embedding\-3\-small/large 这类模型的语义 是「原生 1536 维，但支持 dimensions 参数返回降维向量」，索引若按 1024 建依然兼容， 故原生维度不等于 columnDim 时须再声明 columnDim 探一次；此步失败（供应商不支持 dimensions 参数）不单独报错，而是落到下一步返回统一的不兼容错误。
 
 <a name="EmbeddingDimensionMismatchError"></a>
-## type EmbeddingDimensionMismatchError
+## type [EmbeddingDimensionMismatchError](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llminfra/embedding_compat.go#L48-L55>)
 
 EmbeddingDimensionMismatchError 表示 embedding 模型的实际输出维度与知识库索引维度不兼容。 这是一类「请求体合法、冲突在于系统当前索引维度」的配置性拒绝，故以专用错误类型（而非笼统的 请求体错误）暴露给调用方，让接口层能选用语义准确的业务错误码，并据此在文案中补齐修复前置条件。 端点不可达 / 凭据无效等错误不会被包装为该类型，须如实透出（见 VerifyEmbeddingCompat 注释）。
 
@@ -100,7 +100,7 @@ type EmbeddingDimensionMismatchError struct {
 ```
 
 <a name="EmbeddingDimensionMismatchError.Error"></a>
-### func \(\*EmbeddingDimensionMismatchError\) Error
+### func \(\*EmbeddingDimensionMismatchError\) [Error](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llminfra/embedding_compat.go#L59>)
 
 ```go
 func (e *EmbeddingDimensionMismatchError) Error() string
@@ -109,7 +109,7 @@ func (e *EmbeddingDimensionMismatchError) Error() string
 Error 返回英文错误详情，含完整修复步骤：先解绑 embedding 档位（若已绑定，否则重建索引会被 reconcile 前置校验拒绝），再按模型原生维度重建索引列。
 
 <a name="MCPRemoteTool"></a>
-## type MCPRemoteTool
+## type [MCPRemoteTool](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llminfra/mcp_probe.go#L17>)
 
 MCPRemoteTool 是远端 MCP 服务器 tools/list 返回的一个工具的展示信息：服务器侧的工具名与 可读描述。它是 internal/ai/tools/mcp.RemoteTool 的类型别名（二者为同一类型），避免同一结构 在同模块内重复声明；视图层（连通性测试、工具清单同步）经本包使用该类型，只依赖 internal/ai， 不直接引用 MCP SDK。
 
@@ -118,7 +118,7 @@ type MCPRemoteTool = mcp.RemoteTool
 ```
 
 <a name="ProbeMCPServer"></a>
-### func ProbeMCPServer
+### func [ProbeMCPServer](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llminfra/mcp_probe.go#L23>)
 
 ```go
 func ProbeMCPServer(ctx context.Context, transport, url string, headers map[string]string, timeout time.Duration) ([]MCPRemoteTool, error)

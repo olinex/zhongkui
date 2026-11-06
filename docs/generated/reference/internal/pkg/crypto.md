@@ -35,7 +35,7 @@ const SecurityTagKey = "secure"
 ```
 
 <a name="CheckPassword"></a>
-## func CheckPassword
+## func [CheckPassword](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/password.go#L34>)
 
 ```go
 func CheckPassword(hashedPassword []byte, rawPassword string) bool
@@ -55,7 +55,7 @@ CheckPassword 校验原始密码与哈希密码是否匹配。
 - bool: 如果原始密码与哈希密码匹配则返回 true，否则返回 false
 
 <a name="DigestForField"></a>
-## func DigestForField
+## func [DigestForField](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L183>)
 
 ```go
 func DigestForField(model any, path, nameTag string, data []byte) (string, error)
@@ -78,7 +78,7 @@ DigestForField 按字段路径解析模型字段的 secure 标签，派生 HMAC 
 - error: 字段无 secure 标签、算法标识不是 hmac\-sha256、密钥派生失败时返回错误
 
 <a name="GenerateRandomBase64String"></a>
-## func GenerateRandomBase64String
+## func [GenerateRandomBase64String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/random.go#L72>)
 
 ```go
 func GenerateRandomBase64String(length int) (string, error)
@@ -102,7 +102,7 @@ URL安全Base64编码使用 '\-' 替代 '\+'，'\_' 替代 '/'， 因此生成�
 相比 GenerateRandomString，该函数在相同输出长度下提供更高的信息熵 （每个字符约6比特 vs 每个字符约5.95比特），且包含更多种类的字符。
 
 <a name="GenerateRandomString"></a>
-## func GenerateRandomString
+## func [GenerateRandomString](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/random.go#L35>)
 
 ```go
 func GenerateRandomString(length int) (string, error)
@@ -124,7 +124,7 @@ GenerateRandomString 生成指定长度的随机字符串。
 注意：由于每个字符独立从62个字符中选取，较短字符串的字符多样性有限。 如需更高的信息密度或更短的等价随机值，请考虑使用 GenerateRandomBase64String。
 
 <a name="HashKeyForField"></a>
-## func HashKeyForField
+## func [HashKeyForField](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L159>)
 
 ```go
 func HashKeyForField(model any, path, nameTag string) ([]byte, error)
@@ -146,7 +146,7 @@ nameTag 与 FieldTag 同义：字段路径按 json 名匹配，故通常传入 "
 - error: 字段无 secure 标签、算法标识不是 hmac\-sha256、密钥派生失败时返回错误
 
 <a name="HashKeyForTag"></a>
-## func HashKeyForTag
+## func [HashKeyForTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L130>)
 
 ```go
 func HashKeyForTag(cTag CryptoTag) ([]byte, error)
@@ -164,7 +164,7 @@ HashKeyForTag 校验摘要字段标签的算法标识为 hmac\-sha256 并派生�
 - error: 算法标识不是 hmac\-sha256、密钥派生器未初始化或密钥派生失败时返回错误
 
 <a name="HashPassword"></a>
-## func HashPassword
+## func [HashPassword](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/password.go#L19>)
 
 ```go
 func HashPassword(password string) ([]byte, error)
@@ -184,7 +184,7 @@ bcrypt 是一种自适应的密码哈希算法，内置盐值（salt），能够
 - error: 如果哈希过程中发生错误（如密码长度超过 72 字节限制），则返回非 nil 错误
 
 <a name="ModeForField"></a>
-## func ModeForField
+## func [ModeForField](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L113>)
 
 ```go
 func ModeForField(model any, path, nameTag string) (mode.Mode, error)
@@ -193,7 +193,7 @@ func ModeForField(model any, path, nameTag string) (mode.Mode, error)
 ModeForField 按字段路径解析模型字段的 secure 标签并构造加密模式，供视图层 明文查看接口（CryptoPlaintextGet）使用。nameTag 与 FieldTag 同义：明文接口的 field 参数为字段 json 名，故传入 "json"。
 
 <a name="ModeForTag"></a>
-## func ModeForTag
+## func [ModeForTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L79>)
 
 ```go
 func ModeForTag(cTag CryptoTag) (mode.Mode, error)
@@ -211,7 +211,7 @@ ModeForTag 依据 CryptoTag 派生密钥并构造对应的加密模式实例，�
 - error: 密钥派生器未初始化、密钥派生失败或未知加密模式时返回错误
 
 <a name="ModeFromTag"></a>
-## func ModeFromTag
+## func [ModeFromTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L102>)
 
 ```go
 func ModeFromTag(tag string) (mode.Mode, error)
@@ -220,7 +220,7 @@ func ModeFromTag(tag string) (mode.Mode, error)
 ModeFromTag 解析 secure 标签字符串并构造加密模式，供 GORM crypto 序列化器 （读库扫描 Scan）使用。
 
 <a name="CryptoTag"></a>
-## type CryptoTag
+## type [CryptoTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L31-L38>)
 
 CryptoTag 加密字段标签内容（secure 标签解析结果）。
 
@@ -236,7 +236,7 @@ type CryptoTag struct {
 ```
 
 <a name="FieldTag"></a>
-### func FieldTag
+### func [FieldTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L59>)
 
 ```go
 func FieldTag(model any, path, nameTag string) (CryptoTag, error)
@@ -250,7 +250,7 @@ FieldTag 按字段路径解析模型字段的 secure 标签为 CryptoTag（不�
 背景：结构体嵌入会导致内外层同 json 名字段并存（如 PacketIPv6TCP 内嵌 PacketIPv6 且 两者均声明 Payload）。单段路径解析到最外层，多段路径可定位内层，从而消除歧义。
 
 <a name="ParseCryptoTag"></a>
-### func ParseCryptoTag
+### func [ParseCryptoTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L41>)
 
 ```go
 func ParseCryptoTag(tag string) (CryptoTag, error)

@@ -10,7 +10,7 @@
 
 
 <a name="BatchHandler"></a>
-## type BatchHandler
+## type [BatchHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/base/batch.go#L22-L26>)
 
 BatchHandler 批量任务处理器，用于处理流水线式的批量数据处理任务。 持有 etl.Chain 作为数据处理内核，在 Do 中编排任务级生命周期（指标、前后置钩子）。
 
@@ -21,7 +21,7 @@ type BatchHandler struct {
 ```
 
 <a name="NewBatchHandler"></a>
-### func NewBatchHandler
+### func [NewBatchHandler](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/base/batch.go#L31-L39>)
 
 ```go
 func NewBatchHandler(bufferCount int, bufferTimeout time.Duration, extract etl.TaskExtractFunc[any], transforms []etl.TaskTransformFunc[any], loads []etl.TaskLoadFunc[any], preE etl.LiveFunc, postE etl.LiveFunc) *BatchHandler
@@ -30,7 +30,7 @@ func NewBatchHandler(bufferCount int, bufferTimeout time.Duration, extract etl.T
 NewBatchHandler 创建一个新的批量任务处理器。 bufferCount 指定缓冲区大小，bufferTimeout 指定缓冲区超时时间， extract 是数据提取函数，transforms 是数据转换函数列表，loads 是数据加载函数列表。
 
 <a name="BatchHandler.Do"></a>
-### func \(\*BatchHandler\) Do
+### func \(\*BatchHandler\) [Do](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/base/batch.go#L58>)
 
 ```go
 func (w *BatchHandler) Do(ctx context.Context, task etl.Task) (err error)

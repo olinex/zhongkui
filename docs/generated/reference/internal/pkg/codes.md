@@ -72,7 +72,7 @@ const (
 ```
 
 <a name="FilenameExtensionCodes"></a>
-## type FilenameExtensionCodes
+## type [FilenameExtensionCodes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/filename_extension.go#L23-L26>)
 
 FilenameExtensionCodes 提供文件扩展名到分类标签的查询能力。
 
@@ -86,7 +86,7 @@ type FilenameExtensionCodes struct {
 ```
 
 <a name="GetFilenameExtensionCodes"></a>
-### func GetFilenameExtensionCodes
+### func [GetFilenameExtensionCodes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/filename_extension.go#L33>)
 
 ```go
 func GetFilenameExtensionCodes() *FilenameExtensionCodes
@@ -97,7 +97,7 @@ GetFilenameExtensionCodes 获取文件扩展名代码查询器的全局单例。
 首次调用时会从嵌入的 JSON 数据文件中加载并解析所有扩展名数据。 后续调用直接返回已缓存的实例，不再重复加载。 如果加载过程中发生错误，将触发 panic，因为这是不可恢复的初始化错误。
 
 <a name="FilenameExtensionCodes.ConvertFromName"></a>
-### func \(\*FilenameExtensionCodes\) ConvertFromName
+### func \(\*FilenameExtensionCodes\) [ConvertFromName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/filename_extension.go#L78>)
 
 ```go
 func (c *FilenameExtensionCodes) ConvertFromName(name string) []string
@@ -110,7 +110,7 @@ ConvertFromName 根据文件扩展名查询其所属的分类标签列表。
 注意：该方法区分大小写，仅支持小写扩展名查询。
 
 <a name="ISO15924Codes"></a>
-## type ISO15924Codes
+## type [ISO15924Codes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/script_language.go#L52-L59>)
 
 ISO15924Codes 提供 ISO 15924 书写系统代码的多种维度快速查询能力。
 
@@ -123,7 +123,7 @@ type ISO15924Codes struct {
 ```
 
 <a name="GetISO15924Codes"></a>
-### func GetISO15924Codes
+### func [GetISO15924Codes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/script_language.go#L67>)
 
 ```go
 func GetISO15924Codes() *ISO15924Codes
@@ -134,7 +134,7 @@ GetISO15924Codes 获取 ISO 15924 书写系统代码查询器的全局单例。
 首次调用时会从嵌入的 JSON 数据文件中加载并解析所有书写系统数据， 构建各维度索引。后续调用直接返回已缓存的实例，不再重复加载。 使用 sync.Once 保证并发安全且仅初始化一次。 如果加载过程中发生错误，将触发 panic，因为这是不可恢复的初始化错误。
 
 <a name="ISO15924Codes.ConvertFromAlpha4"></a>
-### func \(\*ISO15924Codes\) ConvertFromAlpha4
+### func \(\*ISO15924Codes\) [ConvertFromAlpha4](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/script_language.go#L137>)
 
 ```go
 func (c *ISO15924Codes) ConvertFromAlpha4(alpha4 string) *ISO15924Entry
@@ -151,7 +151,7 @@ ConvertFromAlpha4 根据四位字母代码（Alpha\-4）查询书写系统信息
 - 匹配到的书写系统条目指针；若未找到则返回 nil
 
 <a name="ISO15924Codes.ConvertFromName"></a>
-### func \(\*ISO15924Codes\) ConvertFromName
+### func \(\*ISO15924Codes\) [ConvertFromName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/script_language.go#L148>)
 
 ```go
 func (c *ISO15924Codes) ConvertFromName(name string) *ISO15924Entry
@@ -168,7 +168,7 @@ ConvertFromName 根据书写系统英文名称查询书写系统信息。
 - 匹配到的书写系统条目指针；若未找到则返回 nil
 
 <a name="ISO15924Codes.ConvertFromNumeric"></a>
-### func \(\*ISO15924Codes\) ConvertFromNumeric
+### func \(\*ISO15924Codes\) [ConvertFromNumeric](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/script_language.go#L159>)
 
 ```go
 func (c *ISO15924Codes) ConvertFromNumeric(numeric string) *ISO15924Entry
@@ -185,7 +185,7 @@ ConvertFromNumeric 根据三位数字代码查询书写系统信息。
 - 匹配到的书写系统条目指针；若未找到则返回 nil
 
 <a name="ISO15924Data"></a>
-## type ISO15924Data
+## type [ISO15924Data](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/script_language.go#L42-L45>)
 
 ISO15924Data 表示 ISO 15924 标准数据文件的顶层结构， 用于从嵌入的 JSON 文件中反序列化书写系统条目列表。
 
@@ -208,7 +208,7 @@ type ISO15924Data struct {
 ```
 
 <a name="ISO15924Entry"></a>
-## type ISO15924Entry
+## type [ISO15924Entry](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/script_language.go#L22-L29>)
 
 ISO15924Entry 表示 ISO 15924 标准中一种书写系统（script）的完整信息条目。
 
@@ -226,7 +226,7 @@ type ISO15924Entry struct {
 ```
 
 <a name="ISO31661Codes"></a>
-## type ISO31661Codes
+## type [ISO31661Codes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/country.go#L49-L58>)
 
 ISO31661Codes 提供 ISO 3166\-1 国家/地区代码的多种维度快速查询能力。
 
@@ -239,7 +239,7 @@ type ISO31661Codes struct {
 ```
 
 <a name="GetISO31661Codes"></a>
-### func GetISO31661Codes
+### func [GetISO31661Codes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/country.go#L65>)
 
 ```go
 func GetISO31661Codes() *ISO31661Codes
@@ -250,7 +250,7 @@ GetISO31661Codes 获取 ISO 3166\-1 国家/地区代码查询器的全局单例�
 首次调用时会从嵌入的 JSON 数据文件中加载并解析所有国家/地区数据， 构建各维度索引。后续调用直接返回已缓存的实例，不再重复加载。 如果加载过程中发生错误，将触发 panic，因为这是不可恢复的初始化错误。
 
 <a name="ISO31661Codes.ConvertFromAlpha2"></a>
-### func \(\*ISO31661Codes\) ConvertFromAlpha2
+### func \(\*ISO31661Codes\) [ConvertFromAlpha2](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/country.go#L143>)
 
 ```go
 func (c *ISO31661Codes) ConvertFromAlpha2(alpha2 string) *ISO31661Entry
@@ -267,7 +267,7 @@ ConvertFromAlpha2 根据两位字母代码（Alpha\-2）查询国家/地区信�
 - 匹配到的国家/地区条目指针；若未找到则返回 nil
 
 <a name="ISO31661Codes.ConvertFromAlpha3"></a>
-### func \(\*ISO31661Codes\) ConvertFromAlpha3
+### func \(\*ISO31661Codes\) [ConvertFromAlpha3](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/country.go#L154>)
 
 ```go
 func (c *ISO31661Codes) ConvertFromAlpha3(alpha3 string) *ISO31661Entry
@@ -284,7 +284,7 @@ ConvertFromAlpha3 根据三位字母代码（Alpha\-3）查询国家/地区信�
 - 匹配到的国家/地区条目指针；若未找到则返回 nil
 
 <a name="ISO31661Codes.ConvertFromName"></a>
-### func \(\*ISO31661Codes\) ConvertFromName
+### func \(\*ISO31661Codes\) [ConvertFromName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/country.go#L165>)
 
 ```go
 func (c *ISO31661Codes) ConvertFromName(name string) *ISO31661Entry
@@ -301,7 +301,7 @@ ConvertFromName 根据国家/地区英文名称查询国家/地区信息。
 - 匹配到的国家/地区条目指针；若未找到则返回 nil
 
 <a name="ISO31661Codes.ConvertFromNumeric"></a>
-### func \(\*ISO31661Codes\) ConvertFromNumeric
+### func \(\*ISO31661Codes\) [ConvertFromNumeric](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/country.go#L176>)
 
 ```go
 func (c *ISO31661Codes) ConvertFromNumeric(numeric string) *ISO31661Entry
@@ -318,7 +318,7 @@ ConvertFromNumeric 根据三位数字代码查询国家/地区信息。
 - 匹配到的国家/地区条目指针；若未找到则返回 nil
 
 <a name="ISO31661Data"></a>
-## type ISO31661Data
+## type [ISO31661Data](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/country.go#L39-L42>)
 
 ISO31661Data 表示 ISO 3166\-1 标准数据文件的顶层结构， 用于从嵌入的 JSON 文件中反序列化国家/地区条目列表。
 
@@ -330,7 +330,7 @@ type ISO31661Data struct {
 ```
 
 <a name="ISO31661Entry"></a>
-## type ISO31661Entry
+## type [ISO31661Entry](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/country.go#L22-L35>)
 
 ISO31661Entry 表示 ISO 3166\-1 标准中一个国家/地区的完整信息条目。
 
@@ -354,7 +354,7 @@ type ISO31661Entry struct {
 ```
 
 <a name="ISO4217Codes"></a>
-## type ISO4217Codes
+## type [ISO4217Codes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/currency.go#L43-L50>)
 
 ISO4217Codes 提供 ISO 4217 货币代码的多种维度快速查询能力。
 
@@ -367,7 +367,7 @@ type ISO4217Codes struct {
 ```
 
 <a name="GetISO4217Codes"></a>
-### func GetISO4217Codes
+### func [GetISO4217Codes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/currency.go#L57>)
 
 ```go
 func GetISO4217Codes() *ISO4217Codes
@@ -378,7 +378,7 @@ GetISO4217Codes 获取 ISO 4217 货币代码查询器的全局单例。
 首次调用时会从嵌入的 JSON 数据文件中加载并解析所有货币数据， 构建各维度索引。后续调用直接返回已缓存的实例，不再重复加载。 如果加载过程中发生错误，将触发 panic，因为这是不可恢复的初始化错误。
 
 <a name="ISO4217Codes.ConvertFromAlpha3"></a>
-### func \(\*ISO4217Codes\) ConvertFromAlpha3
+### func \(\*ISO4217Codes\) [ConvertFromAlpha3](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/currency.go#L124>)
 
 ```go
 func (c *ISO4217Codes) ConvertFromAlpha3(alpha3 string) *ISO4217Entry
@@ -395,7 +395,7 @@ ConvertFromAlpha3 根据三位字母代码（Alpha\-3）查询货币信息。
 - 匹配到的货币条目指针；若未找到则返回 nil
 
 <a name="ISO4217Codes.ConvertFromName"></a>
-### func \(\*ISO4217Codes\) ConvertFromName
+### func \(\*ISO4217Codes\) [ConvertFromName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/currency.go#L135>)
 
 ```go
 func (c *ISO4217Codes) ConvertFromName(name string) *ISO4217Entry
@@ -412,7 +412,7 @@ ConvertFromName 根据货币英文名称查询货币信息。
 - 匹配到的货币条目指针；若未找到则返回 nil
 
 <a name="ISO4217Codes.ConvertFromNumeric"></a>
-### func \(\*ISO4217Codes\) ConvertFromNumeric
+### func \(\*ISO4217Codes\) [ConvertFromNumeric](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/currency.go#L146>)
 
 ```go
 func (c *ISO4217Codes) ConvertFromNumeric(numeric string) *ISO4217Entry
@@ -429,7 +429,7 @@ ConvertFromNumeric 根据三位数字代码查询货币信息。
 - 匹配到的货币条目指针；若未找到则返回 nil
 
 <a name="ISO4217Data"></a>
-## type ISO4217Data
+## type [ISO4217Data](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/currency.go#L33-L36>)
 
 ISO4217Data 表示 ISO 4217 标准数据文件的顶层结构， 用于从嵌入的 JSON 文件中反序列化货币条目列表。
 
@@ -441,7 +441,7 @@ type ISO4217Data struct {
 ```
 
 <a name="ISO4217Entry"></a>
-## type ISO4217Entry
+## type [ISO4217Entry](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/currency.go#L22-L29>)
 
 ISO4217Entry 表示 ISO 4217 标准中一种货币的完整信息条目。
 
@@ -459,7 +459,7 @@ type ISO4217Entry struct {
 ```
 
 <a name="ISO6392Codes"></a>
-## type ISO6392Codes
+## type [ISO6392Codes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/language.go#L53-L60>)
 
 ISO6392Codes 提供基于 ISO 639\-2 标准的语言代码查询与转换能力。
 
@@ -474,7 +474,7 @@ type ISO6392Codes struct {
 ```
 
 <a name="GetISO6392Codes"></a>
-### func GetISO6392Codes
+### func [GetISO6392Codes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/language.go#L67>)
 
 ```go
 func GetISO6392Codes() *ISO6392Codes
@@ -485,7 +485,7 @@ GetISO6392Codes 返回 ISO 639\-2 语言代码查询器的全局单例。
 首次调用时从嵌入的 JSON 数据文件中加载并构建索引，后续调用直接返回已缓存的实例。 使用 sync.Once 保证并发安全且仅初始化一次。 如果数据加载失败，将以 panic 终止程序，因为这属于不可恢复的启动错误。
 
 <a name="ISO6392Codes.ConvertFromAlpha2"></a>
-### func \(\*ISO6392Codes\) ConvertFromAlpha2
+### func \(\*ISO6392Codes\) [ConvertFromAlpha2](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/language.go#L137>)
 
 ```go
 func (c *ISO6392Codes) ConvertFromAlpha2(alpha2 string) *ISO6392Entry
@@ -496,7 +496,7 @@ ConvertFromAlpha2 根据 ISO 639\-1 Alpha\-2 代码（如 "zh"、"en"）查询�
 如果给定的 Alpha\-2 代码不存在或语言没有 Alpha\-2 代码，则返回 nil。 查询区分大小写。
 
 <a name="ISO6392Codes.ConvertFromAlpha3"></a>
-### func \(\*ISO6392Codes\) ConvertFromAlpha3
+### func \(\*ISO6392Codes\) [ConvertFromAlpha3](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/language.go#L146>)
 
 ```go
 func (c *ISO6392Codes) ConvertFromAlpha3(alpha3 string) *ISO6392Entry
@@ -507,7 +507,7 @@ ConvertFromAlpha3 根据 ISO 639\-2 Alpha\-3 代码（如 "zho"、"eng"）查询
 所有 ISO 639\-2 语言均拥有 Alpha\-3 代码，因此该索引最为完整。 如果给定的 Alpha\-3 代码不存在，则返回 nil。 查询区分大小写。
 
 <a name="ISO6392Codes.ConvertFromName"></a>
-### func \(\*ISO6392Codes\) ConvertFromName
+### func \(\*ISO6392Codes\) [ConvertFromName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/language.go#L154>)
 
 ```go
 func (c *ISO6392Codes) ConvertFromName(name string) *ISO6392Entry
@@ -518,7 +518,7 @@ ConvertFromName 根据语言的英文标准名称（如 "Chinese"、"English"）
 如果给定的名称不存在，则返回 nil。 查询区分大小写，名称必须与 ISO 标准完全一致。
 
 <a name="ISO6392Data"></a>
-## type ISO6392Data
+## type [ISO6392Data](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/language.go#L41-L44>)
 
 ISO6392Data 表示 ISO 639\-2 JSON 数据文件的顶层结构。
 
@@ -541,7 +541,7 @@ type ISO6392Data struct {
 ```
 
 <a name="ISO6392Entry"></a>
-## type ISO6392Entry
+## type [ISO6392Entry](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/language.go#L22-L29>)
 
 ISO6392Entry 表示 ISO 639\-2 标准中的单条语言记录。
 
@@ -559,7 +559,7 @@ type ISO6392Entry struct {
 ```
 
 <a name="RFC1766Codes"></a>
-## type RFC1766Codes
+## type [RFC1766Codes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/locale.go#L28-L33>)
 
 RFC1766Codes 提供基于 RFC 1766 标准的区域设置代码查询与转换能力。
 
@@ -579,7 +579,7 @@ type RFC1766Codes struct {
 ```
 
 <a name="GetRFC1766Codes"></a>
-### func GetRFC1766Codes
+### func [GetRFC1766Codes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/locale.go#L39>)
 
 ```go
 func GetRFC1766Codes() *RFC1766Codes
@@ -590,7 +590,7 @@ GetRFC1766Codes 创建并返回 RFC 1766 区域设置代码查询器实例。
 内部分别调用 GetISO6392Codes\(\) 和 GetISO31661Codes\(\) 获取语言和国家/地区 代码查询器的全局单例，组合为 RFC1766Codes 实例。
 
 <a name="RFC1766Codes.ConvertFromName"></a>
-### func \(\*RFC1766Codes\) ConvertFromName
+### func \(\*RFC1766Codes\) [ConvertFromName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/locale.go#L58>)
 
 ```go
 func (c *RFC1766Codes) ConvertFromName(name string) *RFC1766Entry
@@ -609,7 +609,7 @@ ConvertFromName 根据区域设置名称查询对应的 RFC 1766 条目。
 - 匹配到的 RFC1766Entry 指针；若名称格式无效、语言或国家/地区代码不存在则返回 nil
 
 <a name="RFC1766Entry"></a>
-## type RFC1766Entry
+## type [RFC1766Entry](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/locale.go#L10-L15>)
 
 RFC1766Entry 表示符合 RFC 1766 标准的区域设置条目。
 
@@ -625,7 +625,7 @@ type RFC1766Entry struct {
 ```
 
 <a name="RFC4646Codes"></a>
-## type RFC4646Codes
+## type [RFC4646Codes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/locale.go#L105-L110>)
 
 RFC4646Codes 提供基于 RFC 4646 标准的语言脚本代码查询与转换能力。
 
@@ -645,7 +645,7 @@ type RFC4646Codes struct {
 ```
 
 <a name="GetRFC4646Codes"></a>
-### func GetRFC4646Codes
+### func [GetRFC4646Codes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/locale.go#L116>)
 
 ```go
 func GetRFC4646Codes() *RFC4646Codes
@@ -656,7 +656,7 @@ GetRFC4646Codes 创建并返回 RFC 4646 语言脚本代码查询器实例。
 内部分别调用 GetISO6392Codes\(\) 和 GetISO15924Codes\(\) 获取语言和文字脚本 代码查询器的全局单例，组合为 RFC4646Codes 实例。
 
 <a name="RFC4646Codes.ConvertFromName"></a>
-### func \(\*RFC4646Codes\) ConvertFromName
+### func \(\*RFC4646Codes\) [ConvertFromName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/locale.go#L135>)
 
 ```go
 func (c *RFC4646Codes) ConvertFromName(name string) *RFC4646Entry
@@ -675,7 +675,7 @@ ConvertFromName 根据语言标签名称查询对应的 RFC 4646 条目。
 - 匹配到的 RFC4646Entry 指针；若名称格式无效、语言或脚本代码不存在则返回 nil
 
 <a name="RFC4646Entry"></a>
-## type RFC4646Entry
+## type [RFC4646Entry](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/codes/locale.go#L87-L92>)
 
 RFC4646Entry 表示符合 RFC 4646 标准的语言脚本条目。
 

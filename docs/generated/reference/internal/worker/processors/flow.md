@@ -28,7 +28,7 @@ const (
 ```
 
 <a name="NewIPv4PacketProcessorFactory"></a>
-## func NewIPv4PacketProcessorFactory
+## func [NewIPv4PacketProcessorFactory](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/processors/flow/processor.go#L54-L56>)
 
 ```go
 func NewIPv4PacketProcessorFactory(injector do.Injector) etl.ProcessorFactory
@@ -37,7 +37,7 @@ func NewIPv4PacketProcessorFactory(injector do.Injector) etl.ProcessorFactory
 NewIPv4PacketProcessor 创建 IPv4 TCP 处理器
 
 <a name="NewIPv6PacketProcessorFactory"></a>
-## func NewIPv6PacketProcessorFactory
+## func [NewIPv6PacketProcessorFactory](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/processors/flow/processor.go#L63-L65>)
 
 ```go
 func NewIPv6PacketProcessorFactory(injector do.Injector) etl.ProcessorFactory
@@ -46,7 +46,7 @@ func NewIPv6PacketProcessorFactory(injector do.Injector) etl.ProcessorFactory
 NewIPv6PacketProcessor 创建 IPv6 TCP 处理器
 
 <a name="NewPacketProcessor"></a>
-## func NewPacketProcessor
+## func [NewPacketProcessor](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/processors/flow/processor.go#L72-L76>)
 
 ```go
 func NewPacketProcessor[P tcp.TCPPacket](ctx context.Context, injector do.Injector, name string) (etl.Processor, error)
@@ -55,7 +55,7 @@ func NewPacketProcessor[P tcp.TCPPacket](ctx context.Context, injector do.Inject
 NewPacketProcessor 创建 TCP 流处理器。
 
 <a name="PacketProcessor"></a>
-## type PacketProcessor
+## type [PacketProcessor](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/processors/flow/processor.go#L29-L34>)
 
 PacketProcessor 管理 TCP 流处理的完整生命周期。 包含分布式编排器，协调从 ClickHouse 轮询 → TCP 流重组 → 批量写入的完整流水线。 处理链由 etl.Pipeline 在 flowClusterHandler.Start 内部编排， 本结构仅负责与 runtime 生命周期（Start/Shutdown）适配。
 
@@ -66,7 +66,7 @@ type PacketProcessor[P tcp.TCPPacket] struct {
 ```
 
 <a name="PacketProcessor[P].Shutdown"></a>
-### func \(\*PacketProcessor\[P\]\) Shutdown
+### func \(\*PacketProcessor\[P\]\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/processors/flow/processor.go#L48>)
 
 ```go
 func (p *PacketProcessor[P]) Shutdown()
@@ -75,7 +75,7 @@ func (p *PacketProcessor[P]) Shutdown()
 Shutdown 优雅关闭处理器。
 
 <a name="PacketProcessor[P].Start"></a>
-### func \(\*PacketProcessor\[P\]\) Start
+### func \(\*PacketProcessor\[P\]\) [Start](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/processors/flow/processor.go#L37>)
 
 ```go
 func (p *PacketProcessor[P]) Start(ctx context.Context, name string) error
@@ -84,7 +84,7 @@ func (p *PacketProcessor[P]) Start(ctx context.Context, name string) error
 Start 启动处理管道，阻塞直到 ctx 取消。
 
 <a name="Param"></a>
-## type Param
+## type [Param](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/processors/flow/param.go#L9-L30>)
 
 Param TCP 流组包处理器的配置参数。 支持从 Viper 配置中通过 mapstructure tag 加载。
 

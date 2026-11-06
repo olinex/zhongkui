@@ -144,7 +144,7 @@ var ErrSQLiteStoreNotInjected = errors.New("sqlite_file: S3 object cache not inj
 ```
 
 <a name="CloseAllClickHouseClients"></a>
-## func CloseAllClickHouseClients
+## func [CloseAllClickHouseClients](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/clickhouse.go#L87>)
 
 ```go
 func CloseAllClickHouseClients(ctx context.Context)
@@ -153,7 +153,7 @@ func CloseAllClickHouseClients(ctx context.Context)
 CloseAllClickHouseClients 关闭全部 ClickHouse db 池并释放底层连接。供进程优雅关闭调用。
 
 <a name="CloseAllEtcdClients"></a>
-## func CloseAllEtcdClients
+## func [CloseAllEtcdClients](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/etcd.go#L144>)
 
 ```go
 func CloseAllEtcdClients(ctx context.Context)
@@ -162,7 +162,7 @@ func CloseAllEtcdClients(ctx context.Context)
 CloseAllEtcdClients 关闭全部 etcd 客户端池并销毁存活对象。供进程优雅关闭调用。
 
 <a name="CloseAllMongoClients"></a>
-## func CloseAllMongoClients
+## func [CloseAllMongoClients](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/mongo.go#L139>)
 
 ```go
 func CloseAllMongoClients(ctx context.Context)
@@ -171,7 +171,7 @@ func CloseAllMongoClients(ctx context.Context)
 CloseAllMongoClients 关闭全部 Mongo 客户端池并销毁存活对象。供进程优雅关闭调用。
 
 <a name="CloseAllMySQLClients"></a>
-## func CloseAllMySQLClients
+## func [CloseAllMySQLClients](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/mysql.go#L121>)
 
 ```go
 func CloseAllMySQLClients(ctx context.Context)
@@ -180,7 +180,7 @@ func CloseAllMySQLClients(ctx context.Context)
 CloseAllMySQLClients 关闭全部 mysql db 池并释放底层连接。供接入方在进程优雅关闭阶段调用。
 
 <a name="CloseAllPostgresClients"></a>
-## func CloseAllPostgresClients
+## func [CloseAllPostgresClients](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/postgres.go#L130>)
 
 ```go
 func CloseAllPostgresClients(ctx context.Context)
@@ -189,7 +189,7 @@ func CloseAllPostgresClients(ctx context.Context)
 CloseAllPostgresClients 关闭全部 postgres db 池并释放底层连接。供接入方在进程优雅 关闭阶段调用。
 
 <a name="CloseAllRedisClients"></a>
-## func CloseAllRedisClients
+## func [CloseAllRedisClients](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis.go#L133>)
 
 ```go
 func CloseAllRedisClients(ctx context.Context)
@@ -198,7 +198,7 @@ func CloseAllRedisClients(ctx context.Context)
 CloseAllRedisClients 关闭全部 redis client 池并销毁存活对象，释放底层连接。 供接入方在进程优雅关闭阶段调用。
 
 <a name="CloseAllSQLiteClients"></a>
-## func CloseAllSQLiteClients
+## func [CloseAllSQLiteClients](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file.go#L71>)
 
 ```go
 func CloseAllSQLiteClients(ctx context.Context)
@@ -207,7 +207,7 @@ func CloseAllSQLiteClients(ctx context.Context)
 CloseAllSQLiteClients 关闭全部 SQLite 文件 db 池并释放底层连接。供进程优雅关闭调用。
 
 <a name="DatasourceTypeKeys"></a>
-## func DatasourceTypeKeys
+## func [DatasourceTypeKeys](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/datasource_plugin.go#L81>)
 
 ```go
 func DatasourceTypeKeys() []string
@@ -216,7 +216,7 @@ func DatasourceTypeKeys() []string
 DatasourceTypeKeys 返回全部已注册类型键，按字典序排序。
 
 <a name="IsDatasourceTypeRegistered"></a>
-## func IsDatasourceTypeRegistered
+## func [IsDatasourceTypeRegistered](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/datasource_plugin.go#L101>)
 
 ```go
 func IsDatasourceTypeRegistered(typ string) bool
@@ -225,7 +225,7 @@ func IsDatasourceTypeRegistered(typ string) bool
 IsDatasourceTypeRegistered 判断类型键是否已有插件注册。
 
 <a name="RegisterDatasourceType"></a>
-## func RegisterDatasourceType
+## func [RegisterDatasourceType](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/datasource_plugin.go#L52>)
 
 ```go
 func RegisterDatasourceType(p DatasourcePlugin)
@@ -234,7 +234,7 @@ func RegisterDatasourceType(p DatasourcePlugin)
 RegisterDatasourceType 注册一种数据源类型；重复 Key 时 panic。
 
 <a name="SQLiteObjectKey"></a>
-## func SQLiteObjectKey
+## func [SQLiteObjectKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file.go#L46>)
 
 ```go
 func SQLiteObjectKey(namespace, name string) string
@@ -243,7 +243,7 @@ func SQLiteObjectKey(namespace, name string) string
 SQLiteObjectKey 计算 sqlite 数据源在 S3 中的对象键。数据源 name 不可变，故对象键在 配置生命周期内稳定，创建时写入、更新时覆盖、删除时清理。对象键语义随类型而定，其它 数据源接入时应各自派生专属键。
 
 <a name="TestConn"></a>
-## func TestConn
+## func [TestConn](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/precheck.go#L28>)
 
 ```go
 func TestConn(ctx context.Context, typ string, cfgData []byte) error
@@ -252,7 +252,7 @@ func TestConn(ctx context.Context, typ string, cfgData []byte) error
 TestConn 按数据源类型建立连接并校验连通性，失败返回带上下文的原因。 redis 经 Ping 探活、mysql/postgres/clickhouse 经 PingContext、 etcd 经 MemberList（覆盖连通\+认证）、mongo 经 Ping\(Primary\) 校验； sqlite\_file 无网络连接，返回「不支持连接测试」错误。
 
 <a name="UnregisterDatasourceType"></a>
-## func UnregisterDatasourceType
+## func [UnregisterDatasourceType](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/datasource_plugin.go#L62>)
 
 ```go
 func UnregisterDatasourceType(typ string)
@@ -261,7 +261,7 @@ func UnregisterDatasourceType(typ string)
 UnregisterDatasourceType 注销一种数据源类型，供测试 Cleanup 使用。
 
 <a name="ValidateConfigJSON"></a>
-## func ValidateConfigJSON
+## func [ValidateConfigJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/register.go#L348>)
 
 ```go
 func ValidateConfigJSON(typ string, cfgData []byte) error
@@ -270,7 +270,7 @@ func ValidateConfigJSON(typ string, cfgData []byte) error
 ValidateConfigJSON 仅校验配置 JSON 与数据源类型的结构一致性（不建立连接、不注册 vtable）。停用场景下处理器仍需校验配置合法性避免非法配置落库，但不希望触发建连 自省，故与 Register 分离为只做解码级校验。
 
 <a name="ValidateLocalName"></a>
-## func ValidateLocalName
+## func [ValidateLocalName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/register.go#L272>)
 
 ```go
 func ValidateLocalName(name string) error
@@ -279,7 +279,7 @@ func ValidateLocalName(name string) error
 ValidateLocalName 校验数据源的本地 name：合法 SQL 标识符。vtable 以裸名注册到各自 命名空间的池，故不再需要 scoped 名场景下的 "\_\_"/尾下划线约束；SQLite 保留关键字由 RegisterDatasource 的 validateDatasourceName 兜底校验。
 
 <a name="ClickHouseConfig"></a>
-## type ClickHouseConfig
+## type [ClickHouseConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/clickhouse.go#L33-L48>)
 
 ClickHouseConfig 描述一个 ClickHouse 实例的接入配置。
 
@@ -303,7 +303,7 @@ type ClickHouseConfig struct {
 ```
 
 <a name="ClickHouseDatasource"></a>
-## type ClickHouseDatasource
+## type [ClickHouseDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/clickhouse_table.go#L32-L36>)
 
 ClickHouseDatasource 是基于 ClickHouse 一张表的 vtable 数据源。
 
@@ -314,7 +314,7 @@ type ClickHouseDatasource struct {
 ```
 
 <a name="NewClickHouseDatasource"></a>
-### func NewClickHouseDatasource
+### func [NewClickHouseDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/clickhouse_table.go#L53>)
 
 ```go
 func NewClickHouseDatasource(ctx context.Context, pool *ClickHousePool, table string) (*ClickHouseDatasource, error)
@@ -323,7 +323,7 @@ func NewClickHouseDatasource(ctx context.Context, pool *ClickHousePool, table st
 NewClickHouseDatasource 自省 pool 指向实例中的 table 表结构并创建数据源。table 必须 是合法 SQL 标识符；表限定于 pool 绑定的 DBName。构造借出一次连接执行 DESCRIBE 后立即归还。
 
 <a name="NewClickHouseDatasourceWithSchema"></a>
-### func NewClickHouseDatasourceWithSchema
+### func [NewClickHouseDatasourceWithSchema](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/clickhouse_table.go#L96>)
 
 ```go
 func NewClickHouseDatasourceWithSchema(pool *ClickHousePool, table string, columns []sqlitevtab.Column) (*ClickHouseDatasource, error)
@@ -332,7 +332,7 @@ func NewClickHouseDatasourceWithSchema(pool *ClickHousePool, table string, colum
 NewClickHouseDatasourceWithSchema 以手动指定的列构建数据源，跳过 DESCRIBE TABLE 自省。 语义同 NewMySQLDatasourceWithSchema。
 
 <a name="ClickHouseDatasource.Open"></a>
-### func \(\*ClickHouseDatasource\) Open
+### func \(\*ClickHouseDatasource\) [Open](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/clickhouse_table.go#L167>)
 
 ```go
 func (d *ClickHouseDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error)
@@ -341,7 +341,7 @@ func (d *ClickHouseDatasource) Open(ctx context.Context, pushdown []sqlitevtab.C
 Open 实现 Datasource.Open：借出连接、按下推约束构建参数化查询、同步取回全部行并 返回内存游标；连接作用域到 fetch 结束即归还。
 
 <a name="ClickHousePool"></a>
-## type ClickHousePool
+## type [ClickHousePool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/clickhouse.go#L80-L84>)
 
 ClickHousePool 是 ClickHouse 的 sqlDBPool 句柄，绑定一个实例配置派生的 Key。
 
@@ -352,7 +352,7 @@ type ClickHousePool struct {
 ```
 
 <a name="NewClickHousePool"></a>
-### func NewClickHousePool
+### func [NewClickHousePool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/clickhouse.go#L60>)
 
 ```go
 func NewClickHousePool(cfg *ClickHouseConfig) *ClickHousePool
@@ -361,7 +361,7 @@ func NewClickHousePool(cfg *ClickHouseConfig) *ClickHousePool
 NewClickHousePool 注入一份 ClickHouse 实例配置并返回其池句柄。db 惰性创建， 构造本身不触发网络连接。（address 为空时跳过 addr 字段，交由驱动默认。）
 
 <a name="ClickHouseTableConfig"></a>
-## type ClickHouseTableConfig
+## type [ClickHouseTableConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/register.go#L161-L177>)
 
 ClickHouseTableConfig 描述一个 ClickHouse 单表数据源的前端配置。 Table 为该实例 DBName 库下要暴露的业务表，注册时经 DESCRIBE TABLE 自省建 schema。
 
@@ -386,7 +386,7 @@ type ClickHouseTableConfig struct {
 ```
 
 <a name="DatasourceColumn"></a>
-## type DatasourceColumn
+## type [DatasourceColumn](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/register.go#L217-L222>)
 
 DatasourceColumn 手动指定的一列：Name 为暴露到 vtable 的列名（合法 SQL 标识符）， Type 为该列值的类型键（any/integer/float/string/blob/bool 之一）。
 
@@ -400,7 +400,7 @@ type DatasourceColumn struct {
 ```
 
 <a name="IntrospectSchema"></a>
-### func IntrospectSchema
+### func [IntrospectSchema](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/precheck.go#L46>)
 
 ```go
 func IntrospectSchema(ctx context.Context, typ string, cfgData []byte, file io.Reader) ([]DatasourceColumn, error)
@@ -409,7 +409,7 @@ func IntrospectSchema(ctx context.Context, typ string, cfgData []byte, file io.R
 IntrospectSchema 按数据源类型解析表结构并返回列定义（列名 \+ 类型键）。 mysql/postgres/clickhouse 经各自 SHOW COLUMNS / information\_schema / DESCRIBE 自省； redis 经 Ping 探活后按 Struct 返回该结构的固定列；etcd 探活后返回固定 key/value 两列； mongo 无固定结构，返回「需手动填写 schema」错误；sqlite\_file 复用同一入口，要求传入 前端上传的 .db 文件（io.Reader），内部经 introspectSQLiteFile 做 PRAGMA table\_info 自省， 未传文件返回错误。非 sqlite\_file 类型传入的 file 被忽略。故障返回带上下文原因。
 
 <a name="DatasourcePlugin"></a>
-## type DatasourcePlugin
+## type [DatasourcePlugin](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/datasource_plugin.go#L27-L43>)
 
 DatasourcePlugin 描述一种第三方数据源类型的插件化接入契约。 实现者提供其唯一类型键（Key）、前端配置的构造/反射、连接探活（TestConn）、表结构自省 （IntrospectSchema）与带参注册（Register）；数据源相关实现集中在各自 \<type\>.go 文件， 通过 init\(\) 自注册，宿主无需感知具体类型。
 
@@ -434,7 +434,7 @@ type DatasourcePlugin interface {
 ```
 
 <a name="DatasourceTypes"></a>
-### func DatasourceTypes
+### func [DatasourceTypes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/datasource_plugin.go#L69>)
 
 ```go
 func DatasourceTypes() []DatasourcePlugin
@@ -443,7 +443,7 @@ func DatasourceTypes() []DatasourcePlugin
 DatasourceTypes 返回全部已注册插件，按 Key 字典序排序。
 
 <a name="EtcdConfig"></a>
-## type EtcdConfig
+## type [EtcdConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/etcd.go#L38-L47>)
 
 EtcdConfig 描述一个 etcd 集群的接入配置。
 
@@ -461,7 +461,7 @@ type EtcdConfig struct {
 ```
 
 <a name="EtcdDatasource"></a>
-## type EtcdDatasource
+## type [EtcdDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/etcd_table.go#L28-L33>)
 
 EtcdDatasource 是基于 etcd 键值对集合的 vtable 数据源。
 
@@ -472,7 +472,7 @@ type EtcdDatasource struct {
 ```
 
 <a name="NewEtcdDatasource"></a>
-### func NewEtcdDatasource
+### func [NewEtcdDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/etcd_table.go#L37>)
 
 ```go
 func NewEtcdDatasource(pool *EtcdPool) *EtcdDatasource
@@ -481,7 +481,7 @@ func NewEtcdDatasource(pool *EtcdPool) *EtcdDatasource
 NewEtcdDatasource 创建 etcd 数据源。pool 由调用方（如 DI provider 或 register 分支） 注入；返回的实例经 SQLitePool.RegisterDatasource 注册后即可查询。
 
 <a name="EtcdDatasource.Open"></a>
-### func \(\*EtcdDatasource\) Open
+### func \(\*EtcdDatasource\) [Open](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/etcd_table.go#L79>)
 
 ```go
 func (d *EtcdDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error)
@@ -490,7 +490,7 @@ func (d *EtcdDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constra
 Open 实现 Datasource.Open：借出连接，按 key 计划读取键值并返回行游标。连接在 fetch 同步取数后即时归还。
 
 <a name="EtcdPool"></a>
-## type EtcdPool
+## type [EtcdPool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/etcd.go#L123-L126>)
 
 EtcdPool 是基于资源池的 etcd 客户端池句柄，绑定一个集群配置派生的 Key。
 
@@ -501,7 +501,7 @@ type EtcdPool struct {
 ```
 
 <a name="NewEtcdPool"></a>
-### func NewEtcdPool
+### func [NewEtcdPool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/etcd.go#L111>)
 
 ```go
 func NewEtcdPool(cfg *EtcdConfig) *EtcdPool
@@ -510,7 +510,7 @@ func NewEtcdPool(cfg *EtcdConfig) *EtcdPool
 NewEtcdPool 注入一份 etcd 集群配置并返回其池句柄。客户端惰性创建，构造本身不触发 网络连接。
 
 <a name="EtcdPool.Acquire"></a>
-### func \(\*EtcdPool\) Acquire
+### func \(\*EtcdPool\) [Acquire](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/etcd.go#L129>)
 
 ```go
 func (p *EtcdPool) Acquire(ctx context.Context) (*clientv3.Client, error)
@@ -519,7 +519,7 @@ func (p *EtcdPool) Acquire(ctx context.Context) (*clientv3.Client, error)
 Acquire 借出并返回一个可用的 \*clientv3.Client（懒建连）。\*clientv3.Client 并发安全。
 
 <a name="EtcdPool.Close"></a>
-### func \(\*EtcdPool\) Close
+### func \(\*EtcdPool\) [Close](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/etcd.go#L139>)
 
 ```go
 func (p *EtcdPool) Close(ctx context.Context)
@@ -528,7 +528,7 @@ func (p *EtcdPool) Close(ctx context.Context)
 Close 销毁该实例池内的闲置客户端（借出中的不受影响）。
 
 <a name="EtcdPool.Release"></a>
-### func \(\*EtcdPool\) Release
+### func \(\*EtcdPool\) [Release](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/etcd.go#L134>)
 
 ```go
 func (p *EtcdPool) Release(ctx context.Context, cli *clientv3.Client)
@@ -537,7 +537,7 @@ func (p *EtcdPool) Release(ctx context.Context, cli *clientv3.Client)
 Release 归还 \*clientv3.Client 以便复用。
 
 <a name="EtcdTableConfig"></a>
-## type EtcdTableConfig
+## type [EtcdTableConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/register.go#L206-L213>)
 
 EtcdTableConfig 描述一个 etcd 键值数据源的前端配置。etcd 无业务表概念，一个数据源 即一张 key/value vtable；Endpoints 为逗号分隔的 host:port 列表。
 
@@ -553,7 +553,7 @@ type EtcdTableConfig struct {
 ```
 
 <a name="MongoCollectionConfig"></a>
-## type MongoCollectionConfig
+## type [MongoCollectionConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/register.go#L193-L202>)
 
 MongoCollectionConfig 描述一个 MongoDB 集合数据源的前端配置。 MongoDB 在数据库层面无固定 schema，故数据源以「一个集合」为一张 vtable 时， schema 必须由前端在注册时完整提供（必填）；查询只能引用 schema 中声明的列。
 
@@ -571,7 +571,7 @@ type MongoCollectionConfig struct {
 ```
 
 <a name="MongoConfig"></a>
-## type MongoConfig
+## type [MongoConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/mongo.go#L34-L43>)
 
 MongoConfig 描述一个 MongoDB 集合的接入配置。
 
@@ -589,7 +589,7 @@ type MongoConfig struct {
 ```
 
 <a name="MongoDatasource"></a>
-## type MongoDatasource
+## type [MongoDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/mongo_table.go#L35-L42>)
 
 MongoDatasource 是一个 Mongo 集合的 vtable 数据源。
 
@@ -600,7 +600,7 @@ type MongoDatasource struct {
 ```
 
 <a name="NewMongoDatasourceWithSchema"></a>
-### func NewMongoDatasourceWithSchema
+### func [NewMongoDatasourceWithSchema](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/mongo_table.go#L51>)
 
 ```go
 func NewMongoDatasourceWithSchema(pool *MongoPool, columns []sqlitevtab.Column) (*MongoDatasource, error)
@@ -609,7 +609,7 @@ func NewMongoDatasourceWithSchema(pool *MongoPool, columns []sqlitevtab.Column) 
 NewMongoDatasourceWithSchema 以手动指定的列构建数据源（Mongo 唯一合法建 schema 路径）。 语义同 NewMySQLDatasourceWithSchema。
 
 <a name="MongoDatasource.Open"></a>
-### func \(\*MongoDatasource\) Open
+### func \(\*MongoDatasource\) [Open](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/mongo_table.go#L75>)
 
 ```go
 func (d *MongoDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error)
@@ -618,7 +618,7 @@ func (d *MongoDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constr
 Open 实现 Datasource.Open：借出客户端，Find\(\{\}\) 取回全部文档并按 schema 列归一化 输出为行游标；客户端在 fetch 同步取数后即时归还。Filterable 为空故不产生下推谓词。
 
 <a name="MongoPool"></a>
-## type MongoPool
+## type [MongoPool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/mongo.go#L114-L121>)
 
 MongoPool 是基于资源池的 Mongo 客户端池句柄，绑定一个集合配置派生的 Key。
 
@@ -629,7 +629,7 @@ type MongoPool struct {
 ```
 
 <a name="NewMongoPool"></a>
-### func NewMongoPool
+### func [NewMongoPool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/mongo.go#L107>)
 
 ```go
 func NewMongoPool(cfg *MongoConfig) *MongoPool
@@ -638,7 +638,7 @@ func NewMongoPool(cfg *MongoConfig) *MongoPool
 NewMongoPool 注入一份 Mongo 集合配置并返回其池句柄。客户端惰性创建，构造本身不触发 网络连接。
 
 <a name="MongoPool.Acquire"></a>
-### func \(\*MongoPool\) Acquire
+### func \(\*MongoPool\) [Acquire](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/mongo.go#L124>)
 
 ```go
 func (p *MongoPool) Acquire(ctx context.Context) (*mongo.Client, error)
@@ -647,7 +647,7 @@ func (p *MongoPool) Acquire(ctx context.Context) (*mongo.Client, error)
 Acquire 借出并返回一个可用的 \*mongo.Client（懒建连）。\*mongo.Client 并发安全。
 
 <a name="MongoPool.Close"></a>
-### func \(\*MongoPool\) Close
+### func \(\*MongoPool\) [Close](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/mongo.go#L134>)
 
 ```go
 func (p *MongoPool) Close(ctx context.Context)
@@ -656,7 +656,7 @@ func (p *MongoPool) Close(ctx context.Context)
 Close 销毁该实例池内的闲置客户端（借出中的不受影响）。
 
 <a name="MongoPool.Release"></a>
-### func \(\*MongoPool\) Release
+### func \(\*MongoPool\) [Release](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/mongo.go#L129>)
 
 ```go
 func (p *MongoPool) Release(ctx context.Context, cli *mongo.Client)
@@ -665,7 +665,7 @@ func (p *MongoPool) Release(ctx context.Context, cli *mongo.Client)
 Release 归还 \*mongo.Client 以便复用。
 
 <a name="MySQLConfig"></a>
-## type MySQLConfig
+## type [MySQLConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/mysql.go#L44-L58>)
 
 MySQLConfig 描述一个 MySQL/MariaDB 实例的接入配置。组件化形态便于多实例的动态 注入与按规范化字段派生彼此独立的连接池 Key。
 
@@ -688,7 +688,7 @@ type MySQLConfig struct {
 ```
 
 <a name="MySQLDatasource"></a>
-## type MySQLDatasource
+## type [MySQLDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/mysql_table.go#L29-L33>)
 
 MySQLDatasource 是基于 MySQL/MariaDB 一张表的 vtable 数据源。
 
@@ -699,7 +699,7 @@ type MySQLDatasource struct {
 ```
 
 <a name="NewMySQLDatasource"></a>
-### func NewMySQLDatasource
+### func [NewMySQLDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/mysql_table.go#L39>)
 
 ```go
 func NewMySQLDatasource(ctx context.Context, pool *MySQLPool, table string) (*MySQLDatasource, error)
@@ -708,7 +708,7 @@ func NewMySQLDatasource(ctx context.Context, pool *MySQLPool, table string) (*My
 NewMySQLDatasource 自省 pool 指向实例中的 table 表结构并创建数据源。构造会借出 一次连接执行 SHOW COLUMNS（随后立即归还）。table 必须是合法 SQL 标识符；返回的 数据源经 SQLitePool.RegisterDatasource 注册（schema 用 ds.datasourceSchema\(\)） 后即可查询。
 
 <a name="NewMySQLDatasourceWithSchema"></a>
-### func NewMySQLDatasourceWithSchema
+### func [NewMySQLDatasourceWithSchema](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/mysql_table.go#L81>)
 
 ```go
 func NewMySQLDatasourceWithSchema(pool *MySQLPool, table string, columns []sqlitevtab.Column) (*MySQLDatasource, error)
@@ -717,7 +717,7 @@ func NewMySQLDatasourceWithSchema(pool *MySQLPool, table string, columns []sqlit
 NewMySQLDatasourceWithSchema 以手动指定的列构建数据源，跳过 SHOW COLUMNS 自省。 适用于接入账号无表结构查看权限、由客户自行提供数据结构的场景；table 仍须为合法 SQL 标识符，columns 至少一列（名称/类型键已在 registerInto 经 parseDatasourceColumns 校验）。
 
 <a name="MySQLDatasource.Open"></a>
-### func \(\*MySQLDatasource\) Open
+### func \(\*MySQLDatasource\) [Open](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/mysql_table.go#L143>)
 
 ```go
 func (d *MySQLDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error)
@@ -726,7 +726,7 @@ func (d *MySQLDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constr
 Open 实现 Datasource.Open：借出连接，依据下推约束构建参数化查询、同步取回全部行 并返回内存游标；连接作用域到 fetch 结束即归还。
 
 <a name="MySQLPool"></a>
-## type MySQLPool
+## type [MySQLPool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/mysql.go#L80-L84>)
 
 MySQLPool 是 mysql 的 sqlDBPool 句柄，绑定一个实例配置派生的 Key（复用通用 \*sql.DB 基座）。\*sql.DB 并发安全，可被局部借出使用；数据源自省表结构时以 pool.db 限定到库。
 
@@ -737,7 +737,7 @@ type MySQLPool struct {
 ```
 
 <a name="NewMySQLPool"></a>
-### func NewMySQLPool
+### func [NewMySQLPool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/mysql.go#L106>)
 
 ```go
 func NewMySQLPool(cfg *MySQLConfig) *MySQLPool
@@ -746,7 +746,7 @@ func NewMySQLPool(cfg *MySQLConfig) *MySQLPool
 NewMySQLPool 注入一份 mysql/mariadb 实例配置并返回其池句柄。db 惰性创建（借出时 才建立），故构造本身不触发网络连接。同一实例配置（Key）重复注入会覆盖。
 
 <a name="MySQLTableConfig"></a>
-## type MySQLTableConfig
+## type [MySQLTableConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/register.go#L120-L136>)
 
 MySQLTableConfig 描述一个 MySQL/MariaDB 单表数据源的前端配置。 Table 为该实例 DBName 库下要暴露的业务表，注册时经 SHOW COLUMNS 自省建 schema。
 
@@ -771,7 +771,7 @@ type MySQLTableConfig struct {
 ```
 
 <a name="Pools"></a>
-## type Pools
+## type [Pools](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L28-L35>)
 
 Pools 是按命名空间持有 SQLitePool 的进程级持有者。粒度：namespace → \*SQLitePool。 并发安全：Pool 在读锁命中快速返回，未命中时进入写锁临界区内 double\-check 建池， 防止并发首建泄漏重复池。另持有 objectStore（可为 nil）：sqlite\_file 数据源注册时的 S3 对象拉取/解密与删除时的对象清理经它完成。
 
@@ -782,7 +782,7 @@ type Pools struct {
 ```
 
 <a name="NewPools"></a>
-### func NewPools
+### func [NewPools](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L39>)
 
 ```go
 func NewPools(store *s3.ObjectCache) *Pools
@@ -791,7 +791,7 @@ func NewPools(store *s3.ObjectCache) *Pools
 NewPools 创建 Pools 持有者，并在构造期注入通用的 S3 对象缓存 store（可为 nil，表示 S3 未启用；此时 sqlite\_file 数据源注册将报「需要启用 S3」）。
 
 <a name="Pools.Close"></a>
-### func \(\*Pools\) Close
+### func \(\*Pools\) [Close](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L119>)
 
 ```go
 func (p *Pools) Close(ctx context.Context)
@@ -800,7 +800,7 @@ func (p *Pools) Close(ctx context.Context)
 Close 关闭全部命名空间池（幂等）。实现对 Pools 的所有权清理。
 
 <a name="Pools.Pool"></a>
-### func \(\*Pools\) Pool
+### func \(\*Pools\) [Pool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L75>)
 
 ```go
 func (p *Pools) Pool(ns string) *sqlitevtab.SQLitePool
@@ -809,7 +809,7 @@ func (p *Pools) Pool(ns string) *sqlitevtab.SQLitePool
 Pool 返回指定命名空间的 SQLitePool，不存在则惰性创建（写锁内 double\-check）。 返回的 \*SQLitePool 已就绪可注册/查询；命名空间应为布尔非空（空命名空间由调用方 （engine/视图层）归一化）。
 
 <a name="Pools.Register"></a>
-### func \(\*Pools\) Register
+### func \(\*Pools\) [Register](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L94>)
 
 ```go
 func (p *Pools) Register(ctx context.Context, ns, name, typ string, cfgData []byte) error
@@ -818,7 +818,7 @@ func (p *Pools) Register(ctx context.Context, ns, name, typ string, cfgData []by
 Register 在指定命名空间的池上以裸名注册一张 vtable。配置解析/建连接池逻辑见 registerInto；注册成功后该命名空间的规则即可经 sqlite.query 以裸 name 查询。
 
 <a name="Pools.RemoveSQLiteObject"></a>
-### func \(\*Pools\) RemoveSQLiteObject
+### func \(\*Pools\) [RemoveSQLiteObject](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L64>)
 
 ```go
 func (p *Pools) RemoveSQLiteObject(ctx context.Context, ns, name string) error
@@ -827,7 +827,7 @@ func (p *Pools) RemoveSQLiteObject(ctx context.Context, ns, name string) error
 RemoveSQLiteObject 删除指定命名空间\+数据源名对应 S3 对象的加密副本并失效本地缓存。 数据源删除/注销后调用，实现对象与配置共存亡。store 未注入或 S3 未配置时返回 ErrSQLiteStoreNotInjected。
 
 <a name="Pools.Shutdown"></a>
-### func \(\*Pools\) Shutdown
+### func \(\*Pools\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L130>)
 
 ```go
 func (p *Pools) Shutdown(ctx context.Context) error
@@ -836,7 +836,7 @@ func (p *Pools) Shutdown(ctx context.Context) error
 Shutdown 实现 do.ShutdownerWithContextAndError，供 samber/do 在优雅关闭阶段驱动 Pools 及其名下全部 SQLitePool 关闭。
 
 <a name="Pools.StoreSQLiteObject"></a>
-### func \(\*Pools\) StoreSQLiteObject
+### func \(\*Pools\) [StoreSQLiteObject](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L53>)
 
 ```go
 func (p *Pools) StoreSQLiteObject(ctx context.Context, ns, name string, r io.Reader) error
@@ -845,7 +845,7 @@ func (p *Pools) StoreSQLiteObject(ctx context.Context, ns, name string, r io.Rea
 StoreSQLiteObject 把命名空间\+数据源名对应 S3 对象的明文读取流流式加密上传并失效旧缓存。 sqlite\_file 数据源创建/更新时调用；store 未注入或 S3 未配置时返回 ErrSQLiteStoreNotInjected。
 
 <a name="Pools.Unregister"></a>
-### func \(\*Pools\) Unregister
+### func \(\*Pools\) [Unregister](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L104>)
 
 ```go
 func (p *Pools) Unregister(ctx context.Context, ns, name string) error
@@ -854,7 +854,7 @@ func (p *Pools) Unregister(ctx context.Context, ns, name string) error
 Unregister 从指定命名空间的池上注销一张 vtable（裸名）。命名空间池不存在或其下 该数据源未注册时幂等忽略。
 
 <a name="PostgresConfig"></a>
-## type PostgresConfig
+## type [PostgresConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/postgres.go#L43-L57>)
 
 PostgresConfig 描述一个 PostgreSQL 实例的接入配置。组件化形态便于多实例的动态注入 与按规范化字段派生彼此独立的连接池 Key。
 
@@ -877,7 +877,7 @@ type PostgresConfig struct {
 ```
 
 <a name="PostgresDatasource"></a>
-## type PostgresDatasource
+## type [PostgresDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/postgres_table.go#L34-L38>)
 
 PostgresDatasource 是基于 PostgreSQL 一张表的 vtable 数据源。
 
@@ -888,7 +888,7 @@ type PostgresDatasource struct {
 ```
 
 <a name="NewPostgresDatasource"></a>
-### func NewPostgresDatasource
+### func [NewPostgresDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/postgres_table.go#L44>)
 
 ```go
 func NewPostgresDatasource(ctx context.Context, pool *PostgresPool, table string) (*PostgresDatasource, error)
@@ -897,7 +897,7 @@ func NewPostgresDatasource(ctx context.Context, pool *PostgresPool, table string
 NewPostgresDatasource 自省 pool 指向实例中的 table 表结构并创建数据源。构造会借出 一次连接执行 information\_schema 查询（随后立即归还）。table 必须是合法 SQL 标识符； 返回的数据源经 SQLitePool.RegisterDatasource 注册（schema 用 ds.datasourceSchema\(\)） 后即可查询。表限定于当前默认 schema（current\_schema\(\)），以匹配 pool 绑定的 DBName。
 
 <a name="NewPostgresDatasourceWithSchema"></a>
-### func NewPostgresDatasourceWithSchema
+### func [NewPostgresDatasourceWithSchema](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/postgres_table.go#L84>)
 
 ```go
 func NewPostgresDatasourceWithSchema(pool *PostgresPool, table string, columns []sqlitevtab.Column) (*PostgresDatasource, error)
@@ -906,7 +906,7 @@ func NewPostgresDatasourceWithSchema(pool *PostgresPool, table string, columns [
 NewPostgresDatasourceWithSchema 以手动指定的列构建数据源，跳过 information\_schema 自省。 语义同 NewMySQLDatasourceWithSchema。
 
 <a name="PostgresDatasource.Open"></a>
-### func \(\*PostgresDatasource\) Open
+### func \(\*PostgresDatasource\) [Open](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/postgres_table.go#L143>)
 
 ```go
 func (d *PostgresDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error)
@@ -915,7 +915,7 @@ func (d *PostgresDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Con
 Open 实现 Datasource.Open：借出连接，依据下推约束构建参数化查询、同步取回全部行 并返回内存游标；连接作用域到 fetch 结束即归还。
 
 <a name="PostgresPool"></a>
-## type PostgresPool
+## type [PostgresPool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/postgres.go#L80-L84>)
 
 PostgresPool 是 postgres 的 sqlDBPool 句柄，绑定一个实例配置派生的 Key（复用通用 \*sql.DB 基座）。\*sql.DB 并发安全，可被局部借出使用；数据源自省表结构时以 pool.db 限定到库。
 
@@ -926,7 +926,7 @@ type PostgresPool struct {
 ```
 
 <a name="NewPostgresPool"></a>
-### func NewPostgresPool
+### func [NewPostgresPool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/postgres.go#L114>)
 
 ```go
 func NewPostgresPool(cfg *PostgresConfig) *PostgresPool
@@ -935,7 +935,7 @@ func NewPostgresPool(cfg *PostgresConfig) *PostgresPool
 NewPostgresPool 注入一份 postgres 实例配置并返回其池句柄。db 惰性创建（借出时才 建立），故构造本身不触发网络连接。同一实例配置（Key）重复注入会覆盖。
 
 <a name="PostgresTableConfig"></a>
-## type PostgresTableConfig
+## type [PostgresTableConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/register.go#L141-L157>)
 
 PostgresTableConfig 描述一个 PostgreSQL 单表数据源的前端配置。 Table 为该实例 DBName 库下（默认 schema）要暴露的业务表，注册时经 information\_schema.columns 自省建 schema。
 
@@ -960,7 +960,7 @@ type PostgresTableConfig struct {
 ```
 
 <a name="RedisConfig"></a>
-## type RedisConfig
+## type [RedisConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/register.go#L105-L116>)
 
 RedisConfig 描述一个 redis 数据源的前端配置。Struct 为要暴露的 Redis 数据结构， 取值 string/hash/list/set/zset，各对应一张 vtable。
 
@@ -980,7 +980,7 @@ type RedisConfig struct {
 ```
 
 <a name="RedisHashDatasource"></a>
-## type RedisHashDatasource
+## type [RedisHashDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis_hash.go#L23-L27>)
 
 RedisHashDatasource 是基于 Redis hash 结构的 vtable 数据源。
 
@@ -991,7 +991,7 @@ type RedisHashDatasource struct {
 ```
 
 <a name="NewRedisHashDatasource"></a>
-### func NewRedisHashDatasource
+### func [NewRedisHashDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis_hash.go#L30>)
 
 ```go
 func NewRedisHashDatasource(pool *RedisPool) *RedisHashDatasource
@@ -1000,7 +1000,7 @@ func NewRedisHashDatasource(pool *RedisPool) *RedisHashDatasource
 NewRedisHashDatasource 创建 redis\_hash 数据源。
 
 <a name="RedisHashDatasource.Open"></a>
-### func \(\*RedisHashDatasource\) Open
+### func \(\*RedisHashDatasource\) [Open](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis_hash.go#L51>)
 
 ```go
 func (d *RedisHashDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error)
@@ -1009,7 +1009,7 @@ func (d *RedisHashDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Co
 Open 实现 Datasource.Open：借出连接，按 key 解析计划与可选的 field 精确等值读取 hash 行并返回行游标。
 
 <a name="RedisListDatasource"></a>
-## type RedisListDatasource
+## type [RedisListDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis_list.go#L21-L23>)
 
 RedisListDatasource 是基于 Redis list 结构的 vtable 数据源。
 
@@ -1020,7 +1020,7 @@ type RedisListDatasource struct {
 ```
 
 <a name="NewRedisListDatasource"></a>
-### func NewRedisListDatasource
+### func [NewRedisListDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis_list.go#L26>)
 
 ```go
 func NewRedisListDatasource(pool *RedisPool) *RedisListDatasource
@@ -1029,7 +1029,7 @@ func NewRedisListDatasource(pool *RedisPool) *RedisListDatasource
 NewRedisListDatasource 创建 redis\_list 数据源。
 
 <a name="RedisListDatasource.Open"></a>
-### func \(\*RedisListDatasource\) Open
+### func \(\*RedisListDatasource\) [Open](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis_list.go#L45>)
 
 ```go
 func (d *RedisListDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error)
@@ -1038,7 +1038,7 @@ func (d *RedisListDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Co
 Open 实现 Datasource.Open：借出连接，按 key 解析计划读取 list 元素行并返回行游标。
 
 <a name="RedisPool"></a>
-## type RedisPool
+## type [RedisPool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis.go#L63-L66>)
 
 RedisPool 是基于 resourcepool 的 redis client 池句柄，绑定一个实例配置派生的 Key。 底层为进程级共享的 resourcepool.Manager\[\*redis.Client\]：按 Key 维护相互独立的 go\-redis client 池，统一驱动「惰性建连 → 借出 → 归还 → 闲置驱逐 → 优雅关闭」。 对 go\-redis 而言一个 client 内部已池化物理连接，这里池化的是「client 实例」： 前端配置可能存在多个 redis 实例，每个配置对应一个 Key 一个 client 池，做到跨实例 复用、失效自动重建与闲置回收。go\-redis client 并发安全，池内可驻留多个 client 以服务并发查询。
 
@@ -1049,7 +1049,7 @@ type RedisPool struct {
 ```
 
 <a name="NewRedisPool"></a>
-### func NewRedisPool
+### func [NewRedisPool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis.go#L99>)
 
 ```go
 func NewRedisPool(opts *redis.Options, namespace string) *RedisPool
@@ -1058,7 +1058,7 @@ func NewRedisPool(opts *redis.Options, namespace string) *RedisPool
 NewRedisPool 注入一份 redis 实例配置并返回其池句柄，连接池 Key 含命名空间维度。 client 惰性创建（借出时才建立），构造本身不触发网络连接。 命名空间维度用于按命名空间隔离连接会话：同一实例在不同命名空间下派生不同 Key、 绝不共用连接（隔离连接与凭据）。redis vtable 接入必须归属命名空间，故仅提供此带 命名空间的构造器。
 
 <a name="RedisPool.Acquire"></a>
-### func \(\*RedisPool\) Acquire
+### func \(\*RedisPool\) [Acquire](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis.go#L116>)
 
 ```go
 func (p *RedisPool) Acquire(ctx context.Context) (*redis.Client, error)
@@ -1067,7 +1067,7 @@ func (p *RedisPool) Acquire(ctx context.Context) (*redis.Client, error)
 Acquire 从该实例的池中借出一个可用 client（借出时经 resourcepool 校验，失效自动 重建）。go\-redis client 并发安全，可被局部借出使用。
 
 <a name="RedisPool.Close"></a>
-### func \(\*RedisPool\) Close
+### func \(\*RedisPool\) [Close](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis.go#L127>)
 
 ```go
 func (p *RedisPool) Close(ctx context.Context)
@@ -1076,7 +1076,7 @@ func (p *RedisPool) Close(ctx context.Context)
 Close 销毁该实例池内的闲置 client（借出中的不受影响），用于配置删除/连接失效场景。 透传 ctx 以维护取消/超时语义。进程级全部 client 池的优雅关闭由接入方统一触发 CloseAll。
 
 <a name="RedisPool.Release"></a>
-### func \(\*RedisPool\) Release
+### func \(\*RedisPool\) [Release](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis.go#L121>)
 
 ```go
 func (p *RedisPool) Release(ctx context.Context, c *redis.Client)
@@ -1085,7 +1085,7 @@ func (p *RedisPool) Release(ctx context.Context, c *redis.Client)
 Release 将 client 归还该实例的池以便复用。
 
 <a name="RedisSetDatasource"></a>
-## type RedisSetDatasource
+## type [RedisSetDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis_set.go#L22-L24>)
 
 RedisSetDatasource 是基于 Redis set 结构的 vtable 数据源。
 
@@ -1096,7 +1096,7 @@ type RedisSetDatasource struct {
 ```
 
 <a name="NewRedisSetDatasource"></a>
-### func NewRedisSetDatasource
+### func [NewRedisSetDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis_set.go#L27>)
 
 ```go
 func NewRedisSetDatasource(pool *RedisPool) *RedisSetDatasource
@@ -1105,7 +1105,7 @@ func NewRedisSetDatasource(pool *RedisPool) *RedisSetDatasource
 NewRedisSetDatasource 创建 redis\_set 数据源。
 
 <a name="RedisSetDatasource.Open"></a>
-### func \(\*RedisSetDatasource\) Open
+### func \(\*RedisSetDatasource\) [Open](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis_set.go#L45>)
 
 ```go
 func (d *RedisSetDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error)
@@ -1114,7 +1114,7 @@ func (d *RedisSetDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Con
 Open 实现 Datasource.Open：借出连接，按 key 解析计划读取 set 成员行并返回行游标。
 
 <a name="RedisStringDatasource"></a>
-## type RedisStringDatasource
+## type [RedisStringDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis_string.go#L21-L23>)
 
 RedisStringDatasource 是基于 Redis string 结构的 vtable 数据源。
 
@@ -1125,7 +1125,7 @@ type RedisStringDatasource struct {
 ```
 
 <a name="NewRedisStringDatasource"></a>
-### func NewRedisStringDatasource
+### func [NewRedisStringDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis_string.go#L28>)
 
 ```go
 func NewRedisStringDatasource(pool *RedisPool) *RedisStringDatasource
@@ -1134,7 +1134,7 @@ func NewRedisStringDatasource(pool *RedisPool) *RedisStringDatasource
 NewRedisStringDatasource 创建 redis\_string 数据源。pool 由调用方（如 DI provider） 注入，同一 redis 实例的五张表共享该池；返回的实例经 SQLitePool.RegisterDatasource 注册后即可查询。
 
 <a name="RedisStringDatasource.Open"></a>
-### func \(\*RedisStringDatasource\) Open
+### func \(\*RedisStringDatasource\) [Open](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis_string.go#L46>)
 
 ```go
 func (d *RedisStringDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error)
@@ -1143,7 +1143,7 @@ func (d *RedisStringDatasource) Open(ctx context.Context, pushdown []sqlitevtab.
 Open 实现 Datasource.Open：借出连接，按 key 解析计划读取 string 键值并返回行游标。
 
 <a name="RedisZSetDatasource"></a>
-## type RedisZSetDatasource
+## type [RedisZSetDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis_zset.go#L21-L23>)
 
 RedisZSetDatasource 是基于 Redis zset 结构的 vtable 数据源。
 
@@ -1154,7 +1154,7 @@ type RedisZSetDatasource struct {
 ```
 
 <a name="NewRedisZSetDatasource"></a>
-### func NewRedisZSetDatasource
+### func [NewRedisZSetDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis_zset.go#L26>)
 
 ```go
 func NewRedisZSetDatasource(pool *RedisPool) *RedisZSetDatasource
@@ -1163,7 +1163,7 @@ func NewRedisZSetDatasource(pool *RedisPool) *RedisZSetDatasource
 NewRedisZSetDatasource 创建 redis\_zset 数据源。
 
 <a name="RedisZSetDatasource.Open"></a>
-### func \(\*RedisZSetDatasource\) Open
+### func \(\*RedisZSetDatasource\) [Open](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/redis_zset.go#L45>)
 
 ```go
 func (d *RedisZSetDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error)
@@ -1172,7 +1172,7 @@ func (d *RedisZSetDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Co
 Open 实现 Datasource.Open：借出连接，按 key 解析计划读取 zset 成员行并返回行游标。
 
 <a name="SQLiteFileConfig"></a>
-## type SQLiteFileConfig
+## type [SQLiteFileConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file.go#L33-L38>)
 
 SQLiteFileConfig 描述一个 SQLite 文件实例的接入配置。 Path 是通用对象缓存 ObjectCache.Materialize 拉取解密得到的本地明文文件绝对路径（进程内缓存， \<= 内存阈值时位于 tmpfs /dev/shm 内存目录）；注册流程负责在构造前完成 Materialize。
 
@@ -1186,7 +1186,7 @@ type SQLiteFileConfig struct {
 ```
 
 <a name="SQLiteFileDatasource"></a>
-## type SQLiteFileDatasource
+## type [SQLiteFileDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file_table.go#L32-L43>)
 
 SQLiteFileDatasource 是一个 SQLite 文件的一张表的 vtable 数据源。
 
@@ -1197,7 +1197,7 @@ type SQLiteFileDatasource struct {
 ```
 
 <a name="NewSQLiteFileDatasource"></a>
-### func NewSQLiteFileDatasource
+### func [NewSQLiteFileDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file_table.go#L52>)
 
 ```go
 func NewSQLiteFileDatasource(ctx context.Context, pool *SQLiteFilePool, table string) (*SQLiteFileDatasource, error)
@@ -1206,7 +1206,7 @@ func NewSQLiteFileDatasource(ctx context.Context, pool *SQLiteFilePool, table st
 NewSQLiteFileDatasource 自省 pool 指向文件中的 table 表结构并创建数据源。table 必须 是合法 SQL 标识符。构造借出一次连接执行 PRAGMA 后立即归还。
 
 <a name="NewSQLiteFileDatasourceWithSchema"></a>
-### func NewSQLiteFileDatasourceWithSchema
+### func [NewSQLiteFileDatasourceWithSchema](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file_table.go#L98>)
 
 ```go
 func NewSQLiteFileDatasourceWithSchema(pool *SQLiteFilePool, table string, columns []sqlitevtab.Column) (*SQLiteFileDatasource, error)
@@ -1215,7 +1215,7 @@ func NewSQLiteFileDatasourceWithSchema(pool *SQLiteFilePool, table string, colum
 NewSQLiteFileDatasourceWithSchema 以手动指定的列构建数据源，跳过 PRAGMA table\_info 自省。 语义同 NewMySQLDatasourceWithSchema。
 
 <a name="SQLiteFileDatasource.Open"></a>
-### func \(\*SQLiteFileDatasource\) Open
+### func \(\*SQLiteFileDatasource\) [Open](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file_table.go#L154>)
 
 ```go
 func (d *SQLiteFileDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error)
@@ -1224,7 +1224,7 @@ func (d *SQLiteFileDatasource) Open(ctx context.Context, pushdown []sqlitevtab.C
 Open 实现 Datasource.Open：借出连接、按下推约束构建参数化查询、同步取回全部行并 返回内存游标；连接作用域到 fetch 结束即归还。
 
 <a name="SQLiteFilePool"></a>
-## type SQLiteFilePool
+## type [SQLiteFilePool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file.go#L66-L68>)
 
 SQLiteFilePool 是 SQLite 文件的 sqlDBPool 句柄，绑定一个文件路径派生的 Key。
 
@@ -1235,7 +1235,7 @@ type SQLiteFilePool struct {
 ```
 
 <a name="NewSQLiteFilePool"></a>
-### func NewSQLiteFilePool
+### func [NewSQLiteFilePool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file.go#L57>)
 
 ```go
 func NewSQLiteFilePool(cfg *SQLiteFileConfig) *SQLiteFilePool
@@ -1244,7 +1244,7 @@ func NewSQLiteFilePool(cfg *SQLiteFileConfig) *SQLiteFilePool
 NewSQLiteFilePool 注入一个 SQLite 文件实例并返回其池句柄。db 惰性创建，构造本身不 触发文件/连接操作。
 
 <a name="SQLiteFileTableConfig"></a>
-## type SQLiteFileTableConfig
+## type [SQLiteFileTableConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/register.go#L182-L188>)
 
 SQLiteFileTableConfig 描述一个 SQLite 文件业务表数据源的前端配置。 .db 文件由前端上传、经 S3 对象存储加密持久化（对象键由命名空间\+数据源名派生，见 SQLiteObjectKey）；Table 为该文件内要暴露的表，注册时经 PRAGMA table\_info 自省。
 
@@ -1259,7 +1259,7 @@ type SQLiteFileTableConfig struct {
 ```
 
 <a name="StaticDatasource"></a>
-## type StaticDatasource
+## type [StaticDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/static.go#L21-L26>)
 
 StaticDatasource 是内存行集的参考数据源实现，演示 Datasource 契约与下推 约束匹配语义，同时可作为测试基准。
 
@@ -1270,7 +1270,7 @@ type StaticDatasource struct {
 ```
 
 <a name="NewStaticDatasource"></a>
-### func NewStaticDatasource
+### func [NewStaticDatasource](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/static.go#L30>)
 
 ```go
 func NewStaticDatasource(schema sqlitevtab.Schema, data [][]any) *StaticDatasource
@@ -1279,7 +1279,7 @@ func NewStaticDatasource(schema sqlitevtab.Schema, data [][]any) *StaticDatasour
 NewStaticDatasource 创建静态数据源。data 每行长度应与 schema.Columns 对齐； 越界行值按 nil 处理。
 
 <a name="StaticDatasource.Open"></a>
-### func \(\*StaticDatasource\) Open
+### func \(\*StaticDatasource\) [Open](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/static.go#L35>)
 
 ```go
 func (d *StaticDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error)

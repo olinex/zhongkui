@@ -23,7 +23,7 @@ const (
 ```
 
 <a name="Extract"></a>
-## func Extract
+## func [Extract](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/cliinput/extractor.go#L81>)
 
 ```go
 func Extract(v *viper.Viper, validate *uv.Validate, target any, prefix string) error

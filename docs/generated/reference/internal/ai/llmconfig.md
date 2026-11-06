@@ -42,7 +42,7 @@ var ErrSlotNotBound = errors.New("ai: no usable model bound to the requested slo
 ```
 
 <a name="SlotInfo"></a>
-## type SlotInfo
+## type [SlotInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L40-L57>)
 
 SlotInfo 是单个档位绑定的展示信息（不含凭据），用于管理端展示与状态自检：无论绑定 是否可用都保留一条记录，供运维定位「已绑定但被禁用/类型不符」的情况。
 
@@ -68,7 +68,7 @@ type SlotInfo struct {
 ```
 
 <a name="Snapshot"></a>
-## type Snapshot
+## type [Snapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L61-L71>)
 
 Snapshot 是一份不可变的 LLM 配置快照：由数据库在某一时刻的状态组装而成，构造后在 运行期内只读，因此可被任意 goroutine 并发读取而无需加锁。
 
@@ -79,7 +79,7 @@ type Snapshot struct {
 ```
 
 <a name="EmptySnapshot"></a>
-### func EmptySnapshot
+### func [EmptySnapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L75>)
 
 ```go
 func EmptySnapshot() *Snapshot
@@ -88,7 +88,7 @@ func EmptySnapshot() *Snapshot
 EmptySnapshot 返回一份未启用且无任何绑定的空快照，用于运行时尚未完成首次装配时的 安全读取（各读取方法均返回零值/错误，不会 panic）。
 
 <a name="Snapshot.Bindings"></a>
-### func \(\*Snapshot\) Bindings
+### func \(\*Snapshot\) [Bindings](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L186>)
 
 ```go
 func (s *Snapshot) Bindings() map[ai.Slot]string
@@ -97,7 +97,7 @@ func (s *Snapshot) Bindings() map[ai.Slot]string
 Bindings 返回「档位 → 绑定模型本地标识」的映射，供管理端展示绑定关系。
 
 <a name="Snapshot.CloseTools"></a>
-### func \(\*Snapshot\) CloseTools
+### func \(\*Snapshot\) [CloseTools](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L232>)
 
 ```go
 func (s *Snapshot) CloseTools() error
@@ -106,7 +106,7 @@ func (s *Snapshot) CloseTools() error
 CloseTools 关闭本快照持有的 MCP 会话（幂等）；nil 接收者或本次装配未拨号时返回 nil。快照在 发布后只读，会话句柄由快照持有：仅供 Runtime 在替换快照后（或关闭时）关闭旧快照的连接时 调用，调用方不得自行关闭，否则会与他人的读取竞争。
 
 <a name="Snapshot.DefaultSlot"></a>
-### func \(\*Snapshot\) DefaultSlot
+### func \(\*Snapshot\) [DefaultSlot](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L115>)
 
 ```go
 func (s *Snapshot) DefaultSlot() ai.Slot
@@ -115,7 +115,7 @@ func (s *Snapshot) DefaultSlot() ai.Slot
 DefaultSlot 返回参数 agent.defaultSlot 的生效值，供状态接口下发「未显式指定档位且会话未记录 档位时使用的默认档位」，使前端无需自持档位字面量；快照尚未完成首次装配时返回空串。
 
 <a name="Snapshot.DisabledReason"></a>
-### func \(\*Snapshot\) DisabledReason
+### func \(\*Snapshot\) [DisabledReason](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L132>)
 
 ```go
 func (s *Snapshot) DisabledReason(lang *base.Language) string
@@ -124,7 +124,7 @@ func (s *Snapshot) DisabledReason(lang *base.Language) string
 DisabledReason 返回 AI 能力整体不可用的原因（按请求语言本地化），供状态接口向运维说明 「为什么没启用」而不是只给一个 false：逐个检查必需的 standard 档位与 embedding 槽位，并把 原因以本地化分隔符连接；AI 可用时返回空串。快照缺失（尚未装配）时同样给出明确原因。 文案取自 translate 的 ai.disabled.\* 消息，占位符为 \[\[.Slot\]\] / \[\[.Model\]\] / \[\[.Want\]\]。
 
 <a name="Snapshot.EmbeddingDimensions"></a>
-### func \(\*Snapshot\) EmbeddingDimensions
+### func \(\*Snapshot\) [EmbeddingDimensions](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L168>)
 
 ```go
 func (s *Snapshot) EmbeddingDimensions() int
@@ -133,7 +133,7 @@ func (s *Snapshot) EmbeddingDimensions() int
 EmbeddingDimensions 返回 embedding 档位绑定模型的向量维度（未绑定或不可用时为 0）。 该值须与 knowledge\_chunks.embedding 列的 pgvector 维度一致。
 
 <a name="Snapshot.Enabled"></a>
-### func \(\*Snapshot\) Enabled
+### func \(\*Snapshot\) [Enabled](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L124>)
 
 ```go
 func (s *Snapshot) Enabled() bool
@@ -142,7 +142,7 @@ func (s *Snapshot) Enabled() bool
 Enabled 报告 AI 能力是否可用：standard（默认对话档位）与 embedding 档位均有可用绑定 时为 true，任一缺失即整体关闭，避免以残缺能力运行。
 
 <a name="Snapshot.ModelConfig"></a>
-### func \(\*Snapshot\) ModelConfig
+### func \(\*Snapshot\) [ModelConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L85>)
 
 ```go
 func (s *Snapshot) ModelConfig(slot ai.Slot) (llm.ModelConfig, error)
@@ -151,7 +151,7 @@ func (s *Snapshot) ModelConfig(slot ai.Slot) (llm.ModelConfig, error)
 ModelConfig 返回档位对应的模型端点配置；档位未绑定或绑定不可用时返回 ErrSlotNotBound，调用方据此报告「指定档位不可用」而非静默降级。
 
 <a name="Snapshot.MountTools"></a>
-### func \(\*Snapshot\) MountTools
+### func \(\*Snapshot\) [MountTools](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L241>)
 
 ```go
 func (s *Snapshot) MountTools(set *ToolSet)
@@ -160,7 +160,7 @@ func (s *Snapshot) MountTools(set *ToolSet)
 MountTools 把一次工具装配的产出挂到快照上：已构建工具、与之一一对应的 schema 清单以及 MCP 会话关闭句柄。仅供 Runtime.build 在快照发布前调用一次（快照发布后即只读，不得再写入）。
 
 <a name="Snapshot.ParamOverrideCount"></a>
-### func \(\*Snapshot\) ParamOverrideCount
+### func \(\*Snapshot\) [ParamOverrideCount](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L106>)
 
 ```go
 func (s *Snapshot) ParamOverrideCount() int
@@ -169,7 +169,7 @@ func (s *Snapshot) ParamOverrideCount() int
 ParamOverrideCount 返回当前值与出厂值（default\_value）不同的参数条数：0 表示全部参数 仍是出厂值，供状态接口展示当前生效值偏离出厂值的规模。
 
 <a name="Snapshot.Params"></a>
-### func \(\*Snapshot\) Params
+### func \(\*Snapshot\) [Params](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L97>)
 
 ```go
 func (s *Snapshot) Params() *config.Params
@@ -178,7 +178,7 @@ func (s *Snapshot) Params() *config.Params
 Params 返回行为参数读取器（值全部取自库内 agent\_params.value；出厂值只由 migrate fixture 注入 default\_value，代码内不持有任何出厂值）。
 
 <a name="Snapshot.SlotContextLimit"></a>
-### func \(\*Snapshot\) SlotContextLimit
+### func \(\*Snapshot\) [SlotContextLimit](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L200>)
 
 ```go
 func (s *Snapshot) SlotContextLimit(slot ai.Slot) int
@@ -187,7 +187,7 @@ func (s *Snapshot) SlotContextLimit(slot ai.Slot) int
 SlotContextLimit 返回档位绑定模型的上下文窗口容量（llm\_models.context\_tokens，token 数）： agent 使用该档位模型时据此计算上下文占用比例并判定是否自动压缩。档位未绑定、绑定不可用或 非对话档位（embedding）时返回 0，表示该档位关闭占用展示与自动压缩。
 
 <a name="Snapshot.Slots"></a>
-### func \(\*Snapshot\) Slots
+### func \(\*Snapshot\) [Slots](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L176>)
 
 ```go
 func (s *Snapshot) Slots() map[ai.Slot]SlotInfo
@@ -196,7 +196,7 @@ func (s *Snapshot) Slots() map[ai.Slot]SlotInfo
 Slots 返回全部档位绑定的展示信息（含不可用绑定），按档位清单顺序。
 
 <a name="Snapshot.ToolInfos"></a>
-### func \(\*Snapshot\) ToolInfos
+### func \(\*Snapshot\) [ToolInfos](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L220>)
 
 ```go
 func (s *Snapshot) ToolInfos() []*schema.ToolInfo
@@ -205,7 +205,7 @@ func (s *Snapshot) ToolInfos() []*schema.ToolInfo
 ToolInfos 返回已启用工具的 schema 清单副本，顺序与 Tools 一一对应；未装配或 AI 未启用时 返回空切片（非 nil）。节点 4 以它作为 model.WithTools 的入参。
 
 <a name="Snapshot.Tools"></a>
-### func \(\*Snapshot\) Tools
+### func \(\*Snapshot\) [Tools](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L209>)
 
 ```go
 func (s *Snapshot) Tools() []tool.BaseTool
@@ -214,7 +214,7 @@ func (s *Snapshot) Tools() []tool.BaseTool
 Tools 返回已启用工具的副本（调用方修改返回值不会影响快照内部状态）；未装配或 AI 未启用 时返回空切片（非 nil）。视图层与 Agent 由它取得可消费的 eino 工具清单。
 
 <a name="Store"></a>
-## type Store
+## type [Store](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L253-L259>)
 
 Store 从 core 库读取 LLM 配置：模型注册表（llm\_models）、档位绑定（llm\_bindings，含 关联的模型实体）与行为参数（agent\_params，出厂值与当前值）。模型绑定携带明文凭据， 故 Store 只应在进程内使用，不得序列化输出。
 
@@ -225,7 +225,7 @@ type Store struct {
 ```
 
 <a name="NewStore"></a>
-### func NewStore
+### func [NewStore](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L267>)
 
 ```go
 func NewStore(db *database.DB) (*Store, error)
@@ -234,7 +234,7 @@ func NewStore(db *database.DB) (*Store, error)
 NewStore 构造 Store；db 为空时返回英文错误。MCP 连接器默认取生产实现（本包不引用 MCP SDK）。
 
 <a name="Store.EmbeddingDimensions"></a>
-### func \(\*Store\) EmbeddingDimensions
+### func \(\*Store\) [EmbeddingDimensions](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L351>)
 
 ```go
 func (s *Store) EmbeddingDimensions(ctx context.Context) (string, int, bool, error)
@@ -243,7 +243,7 @@ func (s *Store) EmbeddingDimensions(ctx context.Context) (string, int, bool, err
 EmbeddingDimensions 返回 embedding 槽位绑定模型的本地标识、向量维度以及该槽位是否已绑定， 服务于「运维调整 knowledge\_chunks.embedding 向量列维度前的绑定冲突检查」：已绑定时 调整维度会与绑定模型冲突，须先解绑（冲突提示需要报出模型名）。未绑定返回 \("", 0, false, nil\)；已绑定返回 \(name, dimensions, true, nil\)，其中 dimensions 为 0 表示 「已绑定但维度未知」（模型尚未经探测写入维度），与「未绑定」是两种不同状态，调用方须分开 处理；读库失败返回 \("", 0, false, err\)。只要存在绑定记录即返回其维度（不要求模型已启用： 禁用模型不改变维度）。
 
 <a name="Store.Load"></a>
-### func \(\*Store\) Load
+### func \(\*Store\) [Load](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L280>)
 
 ```go
 func (s *Store) Load(ctx context.Context) (*Snapshot, error)
@@ -252,7 +252,7 @@ func (s *Store) Load(ctx context.Context) (*Snapshot, error)
 Load 组装一份配置快照：读取全部档位绑定与行为参数，计算可用性，并在 embedding 档位 可用且声明了向量维度时强校验 knowledge\_chunks.embedding 列的维度（不一致返回错误， 由启动路径中止启动并提示用户执行 migrate 子命令校准）。行为参数同样做启动期强校验： 注册表声明的每个键都必须有库内记录且取值可按类型解析，缺失或非法即返回英文错误 （提示执行 migrate up 种子化出厂值）。首次装配时若模型注册表为空，返回未启用的空 快照而非错误。
 
 <a name="Store.LoadTools"></a>
-### func \(\*Store\) LoadTools
+### func \(\*Store\) [LoadTools](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/tools.go#L97>)
 
 ```go
 func (s *Store) LoadTools(ctx context.Context, logger *logging.Logger) (*ToolSet, error)
@@ -261,7 +261,7 @@ func (s *Store) LoadTools(ctx context.Context, logger *logging.Logger) (*ToolSet
 LoadTools 把 llm\_tools 中已启用的行装配为运行时可消费的 eino 工具集：内置工具经 internal/ai/tools 按名解析，MCP 工具经其所属服务器连接按 remote\_name 取回。装配按服务器 粒度降级——某服务器的连接、握手或工具解析失败只跳过该服务器的全部工具并记入 Warnings， 绝不上抛；仅「读 llm\_tools 表失败」这类数据库错误才返回 error。同服务器只拨号一次，本次 建立的会话句柄由返回的 ToolSet 持有，调用方（Runtime）在快照被替换后关闭。行按 id 升序处理， 保证工具与 schema 顺序确定（避免 prompt/schema 抖动）。logger 注入给内置工具的实现。
 
 <a name="Store.ModelConfig"></a>
-### func \(\*Store\) ModelConfig
+### func \(\*Store\) [ModelConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L329>)
 
 ```go
 func (s *Store) ModelConfig(ctx context.Context, slot ai.Slot) (llm.ModelConfig, error)
@@ -270,7 +270,7 @@ func (s *Store) ModelConfig(ctx context.Context, slot ai.Slot) (llm.ModelConfig,
 ModelConfig 读取单个档位的模型端点配置；未绑定或绑定不可用时返回 ErrSlotNotBound。 供不持有运行时快照的场景（如依赖状态探测）按档位单独取值。
 
 <a name="Store.SetJSEngine"></a>
-### func \(\*Store\) SetJSEngine
+### func \(\*Store\) [SetJSEngine](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/store.go#L262>)
 
 ```go
 func (s *Store) SetJSEngine(engine *jsengine.Engine)
@@ -279,7 +279,7 @@ func (s *Store) SetJSEngine(engine *jsengine.Engine)
 SetJSEngine 注入 JS 运行时：由装配层在构造 Store 后、首次 LoadTools 之前调用。
 
 <a name="ToolSet"></a>
-## type ToolSet
+## type [ToolSet](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/tools.go#L53-L66>)
 
 ToolSet 是一次工具装配的产出：已构建的工具、与之一一对应的 schema 清单、本次拨号建立的 MCP 会话关闭句柄，以及按服务器粒度降级时收集的英文告警。Tools 与 Infos 顺序一致且恒为非 nil（空清单是正常结果），Warnings 交由调用方记录。会话句柄由 ToolSet 持有，调用方在快照 不再使用时经 Close 释放。
 
@@ -297,7 +297,7 @@ type ToolSet struct {
 ```
 
 <a name="ToolSet.Close"></a>
-### func \(\*ToolSet\) Close
+### func \(\*ToolSet\) [Close](<https://gitee.com/olinex/zhongkui/blob/master/internal/ai/llmconfig/tools.go#L69>)
 
 ```go
 func (ts *ToolSet) Close() error

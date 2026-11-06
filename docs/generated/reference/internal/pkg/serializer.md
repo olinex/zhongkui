@@ -186,7 +186,7 @@
 
 
 <a name="Capitalize"></a>
-## func Capitalize
+## func [Capitalize](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/strs.go#L182>)
 
 ```go
 func Capitalize(s string) string
@@ -195,7 +195,7 @@ func Capitalize(s string) string
 Capitalize 返回首字母大写后的字符串。
 
 <a name="BibyteSize"></a>
-## type BibyteSize
+## type [BibyteSize](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L99>)
 
 BibyteSize 以字节为单位的存储容量类型，底层使用 uint32 支持 JSON/Text/Binary 多种反序列化格式，可解析如 "10 MB"、"1.5 GiB" 等人类可读的容量字符串
 
@@ -204,7 +204,7 @@ type BibyteSize uint32
 ```
 
 <a name="BibyteSize.GiB"></a>
-### func \(BibyteSize\) GiB
+### func \(BibyteSize\) [GiB](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L139>)
 
 ```go
 func (f BibyteSize) GiB() float32
@@ -213,7 +213,7 @@ func (f BibyteSize) GiB() float32
 GiB 将字节数转换为以 GiB（Gibibyte，1 GiB = 1024 MiB）为单位的浮点数
 
 <a name="BibyteSize.KiB"></a>
-### func \(BibyteSize\) KiB
+### func \(BibyteSize\) [KiB](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L129>)
 
 ```go
 func (f BibyteSize) KiB() float32
@@ -222,7 +222,7 @@ func (f BibyteSize) KiB() float32
 KiB 将字节数转换为以 KiB（Kibibyte，1 KiB = 1024 字节）为单位的浮点数
 
 <a name="BibyteSize.MarshalBinary"></a>
-### func \(BibyteSize\) MarshalBinary
+### func \(BibyteSize\) [MarshalBinary](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L179>)
 
 ```go
 func (s BibyteSize) MarshalBinary() ([]byte, error)
@@ -231,7 +231,7 @@ func (s BibyteSize) MarshalBinary() ([]byte, error)
 MarshalBinary 实现 encoding.BinaryMarshaler 接口，将存储容量序列化为二进制
 
 <a name="BibyteSize.MarshalJSON"></a>
-### func \(BibyteSize\) MarshalJSON
+### func \(BibyteSize\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L155>)
 
 ```go
 func (s BibyteSize) MarshalJSON() ([]byte, error)
@@ -240,7 +240,7 @@ func (s BibyteSize) MarshalJSON() ([]byte, error)
 MarshalJSON 实现 json.Marshaler 接口，将存储容量序列化为 JSON 字符串
 
 <a name="BibyteSize.MarshalText"></a>
-### func \(BibyteSize\) MarshalText
+### func \(BibyteSize\) [MarshalText](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L169>)
 
 ```go
 func (s BibyteSize) MarshalText() ([]byte, error)
@@ -249,7 +249,7 @@ func (s BibyteSize) MarshalText() ([]byte, error)
 MarshalText 实现 encoding.TextMarshaler 接口，将存储容量序列化为文本
 
 <a name="BibyteSize.MiB"></a>
-### func \(BibyteSize\) MiB
+### func \(BibyteSize\) [MiB](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L134>)
 
 ```go
 func (f BibyteSize) MiB() float32
@@ -258,7 +258,7 @@ func (f BibyteSize) MiB() float32
 MiB 将字节数转换为以 MiB（Mebibyte，1 MiB = 1024 KiB）为单位的浮点数
 
 <a name="BibyteSize.String"></a>
-### func \(BibyteSize\) String
+### func \(BibyteSize\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L124>)
 
 ```go
 func (f BibyteSize) String() string
@@ -267,7 +267,7 @@ func (f BibyteSize) String() string
 String 返回容量的人类可读字符串表示，例如 "10 MiB"、"1.5 GiB"
 
 <a name="BibyteSize.UnmarshalBinary"></a>
-### func \(\*BibyteSize\) UnmarshalBinary
+### func \(\*BibyteSize\) [UnmarshalBinary](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L174>)
 
 ```go
 func (s *BibyteSize) UnmarshalBinary(text []byte) error
@@ -276,7 +276,7 @@ func (s *BibyteSize) UnmarshalBinary(text []byte) error
 UnmarshalBinary 实现 encoding.BinaryUnmarshaler 接口，支持从二进制数据中解析存储容量
 
 <a name="BibyteSize.UnmarshalJSON"></a>
-### func \(\*BibyteSize\) UnmarshalJSON
+### func \(\*BibyteSize\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L145>)
 
 ```go
 func (s *BibyteSize) UnmarshalJSON(text []byte) error
@@ -285,7 +285,7 @@ func (s *BibyteSize) UnmarshalJSON(text []byte) error
 UnmarshalJSON 实现 json.Unmarshaler 接口，支持从 JSON 数据中解析存储容量 在将数据传递给内部解析方法之前，会先去除 JSON 字符串的引号
 
 <a name="BibyteSize.UnmarshalText"></a>
-### func \(\*BibyteSize\) UnmarshalText
+### func \(\*BibyteSize\) [UnmarshalText](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L164>)
 
 ```go
 func (s *BibyteSize) UnmarshalText(text []byte) error
@@ -294,7 +294,7 @@ func (s *BibyteSize) UnmarshalText(text []byte) error
 UnmarshalText 实现 encoding.TextUnmarshaler 接口，支持从文本数据中解析存储容量
 
 <a name="BibyteSize64"></a>
-## type BibyteSize64
+## type [BibyteSize64](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L13>)
 
 BibyteSize64 以字节为单位的存储容量类型，底层使用 int64 支持 JSON/Text/Binary 多种反序列化格式，可解析如 "10 MB"、"1.5 GiB" 等人类可读的容量字符串
 
@@ -303,7 +303,7 @@ type BibyteSize64 uint64
 ```
 
 <a name="BibyteSize64.GiB"></a>
-### func \(BibyteSize64\) GiB
+### func \(BibyteSize64\) [GiB](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L53>)
 
 ```go
 func (f BibyteSize64) GiB() float64
@@ -312,7 +312,7 @@ func (f BibyteSize64) GiB() float64
 GiB 将字节数转换为以 GiB（Gibibyte，1 GiB = 1024 MiB）为单位的浮点数
 
 <a name="BibyteSize64.KiB"></a>
-### func \(BibyteSize64\) KiB
+### func \(BibyteSize64\) [KiB](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L43>)
 
 ```go
 func (f BibyteSize64) KiB() float64
@@ -321,7 +321,7 @@ func (f BibyteSize64) KiB() float64
 KiB 将字节数转换为以 KiB（Kibibyte，1 KiB = 1024 字节）为单位的浮点数
 
 <a name="BibyteSize64.MarshalBinary"></a>
-### func \(BibyteSize64\) MarshalBinary
+### func \(BibyteSize64\) [MarshalBinary](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L93>)
 
 ```go
 func (s BibyteSize64) MarshalBinary() ([]byte, error)
@@ -330,7 +330,7 @@ func (s BibyteSize64) MarshalBinary() ([]byte, error)
 MarshalBinary 实现 encoding.BinaryMarshaler 接口，将存储容量序列化为二进制
 
 <a name="BibyteSize64.MarshalJSON"></a>
-### func \(BibyteSize64\) MarshalJSON
+### func \(BibyteSize64\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L69>)
 
 ```go
 func (s BibyteSize64) MarshalJSON() ([]byte, error)
@@ -339,7 +339,7 @@ func (s BibyteSize64) MarshalJSON() ([]byte, error)
 MarshalJSON 实现 json.Marshaler 接口，将存储容量序列化为 JSON 字符串
 
 <a name="BibyteSize64.MarshalText"></a>
-### func \(BibyteSize64\) MarshalText
+### func \(BibyteSize64\) [MarshalText](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L83>)
 
 ```go
 func (s BibyteSize64) MarshalText() ([]byte, error)
@@ -348,7 +348,7 @@ func (s BibyteSize64) MarshalText() ([]byte, error)
 MarshalText 实现 encoding.TextMarshaler 接口，将存储容量序列化为文本
 
 <a name="BibyteSize64.MiB"></a>
-### func \(BibyteSize64\) MiB
+### func \(BibyteSize64\) [MiB](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L48>)
 
 ```go
 func (f BibyteSize64) MiB() float64
@@ -357,7 +357,7 @@ func (f BibyteSize64) MiB() float64
 MiB 将字节数转换为以 MiB（Mebibyte，1 MiB = 1024 KiB）为单位的浮点数
 
 <a name="BibyteSize64.String"></a>
-### func \(BibyteSize64\) String
+### func \(BibyteSize64\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L38>)
 
 ```go
 func (f BibyteSize64) String() string
@@ -366,7 +366,7 @@ func (f BibyteSize64) String() string
 String 返回容量的人类可读字符串表示，例如 "10 MiB"、"1.5 GiB"
 
 <a name="BibyteSize64.UnmarshalBinary"></a>
-### func \(\*BibyteSize64\) UnmarshalBinary
+### func \(\*BibyteSize64\) [UnmarshalBinary](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L88>)
 
 ```go
 func (s *BibyteSize64) UnmarshalBinary(text []byte) error
@@ -375,7 +375,7 @@ func (s *BibyteSize64) UnmarshalBinary(text []byte) error
 UnmarshalBinary 实现 encoding.BinaryUnmarshaler 接口，支持从二进制数据中解析存储容量
 
 <a name="BibyteSize64.UnmarshalJSON"></a>
-### func \(\*BibyteSize64\) UnmarshalJSON
+### func \(\*BibyteSize64\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L59>)
 
 ```go
 func (s *BibyteSize64) UnmarshalJSON(text []byte) error
@@ -384,7 +384,7 @@ func (s *BibyteSize64) UnmarshalJSON(text []byte) error
 UnmarshalJSON 实现 json.Unmarshaler 接口，支持从 JSON 数据中解析存储容量 在将数据传递给内部解析方法之前，会先去除 JSON 字符串的引号
 
 <a name="BibyteSize64.UnmarshalText"></a>
-### func \(\*BibyteSize64\) UnmarshalText
+### func \(\*BibyteSize64\) [UnmarshalText](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/storage_size.go#L78>)
 
 ```go
 func (s *BibyteSize64) UnmarshalText(text []byte) error
@@ -393,7 +393,7 @@ func (s *BibyteSize64) UnmarshalText(text []byte) error
 UnmarshalText 实现 encoding.TextUnmarshaler 接口，支持从文本数据中解析存储容量
 
 <a name="ByteSegments"></a>
-## type ByteSegments
+## type [ByteSegments](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/bytes.go#L17-L22>)
 
 ByteSegments 表示由多个字节段组成的二进制结构，支持二进制与 JSON 编解码。
 
@@ -407,7 +407,7 @@ type ByteSegments struct {
 ```
 
 <a name="NewByteSegments"></a>
-### func NewByteSegments
+### func [NewByteSegments](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/bytes.go#L25>)
 
 ```go
 func NewByteSegments(maxLength uint32) (*ByteSegments, error)
@@ -416,7 +416,7 @@ func NewByteSegments(maxLength uint32) (*ByteSegments, error)
 NewByteSegments 创建指定单段最大长度的 ByteSegments。
 
 <a name="ByteSegments.Append"></a>
-### func \(\*ByteSegments\) Append
+### func \(\*ByteSegments\) [Append](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/bytes.go#L38>)
 
 ```go
 func (b *ByteSegments) Append(segment []byte) error
@@ -425,7 +425,7 @@ func (b *ByteSegments) Append(segment []byte) error
 Append 追加一个字节段，长度超出 MaxLength 时返回错误。
 
 <a name="ByteSegments.ConcatSegments"></a>
-### func \(\*ByteSegments\) ConcatSegments
+### func \(\*ByteSegments\) [ConcatSegments](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/bytes.go#L55>)
 
 ```go
 func (b *ByteSegments) ConcatSegments() (*bytes.Buffer, error)
@@ -434,7 +434,7 @@ func (b *ByteSegments) ConcatSegments() (*bytes.Buffer, error)
 ConcatSegments 将所有字节段按顺序拼接为一个缓冲区。
 
 <a name="ByteSegments.GetSegment"></a>
-### func \(\*ByteSegments\) GetSegment
+### func \(\*ByteSegments\) [GetSegment](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/bytes.go#L47>)
 
 ```go
 func (b *ByteSegments) GetSegment(index int) []byte
@@ -443,7 +443,7 @@ func (b *ByteSegments) GetSegment(index int) []byte
 GetSegment 返回指定下标的字节段，越界返回 nil。
 
 <a name="ByteSegments.Length"></a>
-### func \(\*ByteSegments\) Length
+### func \(\*ByteSegments\) [Length](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/bytes.go#L33>)
 
 ```go
 func (b *ByteSegments) Length() uint32
@@ -452,7 +452,7 @@ func (b *ByteSegments) Length() uint32
 Length 返回当前字节段数量。
 
 <a name="ByteSegments.Marshal"></a>
-### func \(\*ByteSegments\) Marshal
+### func \(\*ByteSegments\) [Marshal](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/bytes.go#L72>)
 
 ```go
 func (b *ByteSegments) Marshal() (*bytes.Buffer, error)
@@ -461,7 +461,7 @@ func (b *ByteSegments) Marshal() (*bytes.Buffer, error)
 Marshal 将 ByteSegments 序列化为二进制格式（魔数、最大长度、段数与各段内容）。
 
 <a name="ByteSegments.MarshalJSON"></a>
-### func \(ByteSegments\) MarshalJSON
+### func \(ByteSegments\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/bytes.go#L129>)
 
 ```go
 func (b ByteSegments) MarshalJSON() ([]byte, error)
@@ -470,7 +470,7 @@ func (b ByteSegments) MarshalJSON() ([]byte, error)
 MarshalJSON 将二进制序列化结果编码为无 padding 的 base64 字符串。
 
 <a name="ByteSegments.Unmarshal"></a>
-### func \(\*ByteSegments\) Unmarshal
+### func \(\*ByteSegments\) [Unmarshal](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/bytes.go#L102>)
 
 ```go
 func (b *ByteSegments) Unmarshal(raw []byte) error
@@ -479,7 +479,7 @@ func (b *ByteSegments) Unmarshal(raw []byte) error
 Unmarshal 从二进制格式解析出 ByteSegments。
 
 <a name="ByteSegments.UnmarshalJSON"></a>
-### func \(\*ByteSegments\) UnmarshalJSON
+### func \(\*ByteSegments\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/bytes.go#L139>)
 
 ```go
 func (b *ByteSegments) UnmarshalJSON(data []byte) error
@@ -488,7 +488,7 @@ func (b *ByteSegments) UnmarshalJSON(data []byte) error
 UnmarshalJSON 从 base64 字符串解码并解析出 ByteSegments。
 
 <a name="CIDR"></a>
-## type CIDR
+## type [CIDR](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L295>)
 
 CIDR 是以 netip.Prefix 为底层的 IP 网段类型，支持数据库、JSON 与文本之间的序列化。
 
@@ -499,7 +499,7 @@ type CIDR netip.Prefix
 ```
 
 <a name="NewCIDR"></a>
-### func NewCIDR
+### func [NewCIDR](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L298>)
 
 ```go
 func NewCIDR(value any) (*CIDR, error)
@@ -508,7 +508,7 @@ func NewCIDR(value any) (*CIDR, error)
 NewCIDR 从任意值（字符串、字节切片或 netip.Prefix）解析并返回一个 \*CIDR。
 
 <a name="CIDR.GormDBDataType"></a>
-### func \(CIDR\) GormDBDataType
+### func \(CIDR\) [GormDBDataType](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L343>)
 
 ```go
 func (c CIDR) GormDBDataType(db *database.DB, field *schema.Field) string
@@ -517,7 +517,7 @@ func (c CIDR) GormDBDataType(db *database.DB, field *schema.Field) string
 GormDBDataType 返回该类型在 GORM 中对应的数据库列类型：postgres 为原生 CIDR 列， clickhouse 无原生网段类型故落 String，其余为空。
 
 <a name="CIDR.MarshalJSON"></a>
-### func \(CIDR\) MarshalJSON
+### func \(CIDR\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L337>)
 
 ```go
 func (c CIDR) MarshalJSON() ([]byte, error)
@@ -526,7 +526,7 @@ func (c CIDR) MarshalJSON() ([]byte, error)
 MarshalJSON 实现 json.Marshaler 接口，将网段序列化为 JSON 字符串。
 
 <a name="CIDR.MarshalText"></a>
-### func \(CIDR\) MarshalText
+### func \(CIDR\) [MarshalText](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L316>)
 
 ```go
 func (c CIDR) MarshalText() ([]byte, error)
@@ -535,7 +535,7 @@ func (c CIDR) MarshalText() ([]byte, error)
 MarshalText 实现 encoding.TextMarshaler 接口，输出网段文本；零值输出空文本。
 
 <a name="CIDR.Scan"></a>
-### func \(\*CIDR\) Scan
+### func \(\*CIDR\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L363>)
 
 ```go
 func (c *CIDR) Scan(value any) error
@@ -544,7 +544,7 @@ func (c *CIDR) Scan(value any) error
 Scan 实现 sql.Scanner 接口，从数据库值解析网段；nil 或空文本置为零值。
 
 <a name="CIDR.String"></a>
-### func \(CIDR\) String
+### func \(CIDR\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L307>)
 
 ```go
 func (c CIDR) String() string
@@ -553,7 +553,7 @@ func (c CIDR) String() string
 String 返回网段的可读字符串表示；零值（无效网段）返回空字符串。
 
 <a name="CIDR.UnmarshalJSON"></a>
-### func \(\*CIDR\) UnmarshalJSON
+### func \(\*CIDR\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L326>)
 
 ```go
 func (c *CIDR) UnmarshalJSON(data []byte) error
@@ -562,7 +562,7 @@ func (c *CIDR) UnmarshalJSON(data []byte) error
 UnmarshalJSON 实现 json.Unmarshaler 接口，从 JSON 值解析网段；null 或空值置为零值。
 
 <a name="CIDR.UnmarshalText"></a>
-### func \(\*CIDR\) UnmarshalText
+### func \(\*CIDR\) [UnmarshalText](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L321>)
 
 ```go
 func (c *CIDR) UnmarshalText(text []byte) error
@@ -571,7 +571,7 @@ func (c *CIDR) UnmarshalText(text []byte) error
 UnmarshalText 实现 encoding.TextUnmarshaler 接口，从网段文本解析；空文本置为零值。
 
 <a name="CIDR.Value"></a>
-### func \(CIDR\) Value
+### func \(CIDR\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L355>)
 
 ```go
 func (c CIDR) Value() (driver.Value, error)
@@ -580,7 +580,7 @@ func (c CIDR) Value() (driver.Value, error)
 Value 实现 driver.Valuer 接口，返回写入数据库的值（网段文本）；零值返回 nil。
 
 <a name="Crypto"></a>
-## type Crypto
+## type [Crypto](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L19-L24>)
 
 Crypto 持有加密字段的明文与密文
 
@@ -594,7 +594,7 @@ type Crypto struct {
 ```
 
 <a name="NewCrypto"></a>
-### func NewCrypto
+### func [NewCrypto](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L27>)
 
 ```go
 func NewCrypto(value []byte) *Crypto
@@ -603,7 +603,7 @@ func NewCrypto(value []byte) *Crypto
 NewCrypto 以明文构造 Crypto 实例，供写库侧使用。
 
 <a name="Crypto.Cipher"></a>
-### func \(\*Crypto\) Cipher
+### func \(\*Crypto\) [Cipher](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L41>)
 
 ```go
 func (c *Crypto) Cipher() []byte
@@ -612,7 +612,7 @@ func (c *Crypto) Cipher() []byte
 Cipher 返回原始密文字节（Scan 读库时保留），供详情输出编码为 base64 密文文本； 写库侧构造或未读库的 Crypto（cipher 为空）返回 nil，避免泄露明文。
 
 <a name="Crypto.MarshalJSON"></a>
-### func \(\*Crypto\) MarshalJSON
+### func \(\*Crypto\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L61>)
 
 ```go
 func (c *Crypto) MarshalJSON() ([]byte, error)
@@ -621,7 +621,7 @@ func (c *Crypto) MarshalJSON() ([]byte, error)
 MarshalJSON 将 Crypto 序列化为 base64 密文 读库场景（详情接口）经 Scan 保留密文后输出密文，前端可回传明文接口解密； 密文为空（如空数据或写库侧构造的 Crypto）时输出空字符串，避免泄露明文。
 
 <a name="Crypto.UnmarshalJSON"></a>
-### func \(\*Crypto\) UnmarshalJSON
+### func \(\*Crypto\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L74>)
 
 ```go
 func (c *Crypto) UnmarshalJSON(data []byte) error
@@ -635,7 +635,7 @@ UnmarshalJSON 从 JSON 恢复 Crypto 实例，支持两种取值形式：
 该能力使标签规则样例等持久化 JSON 文档可反序列化回目标模型 （如 \*network.HttpTransport 的加密字段），与规则运行期样例校验的反序列化路径保持一致。
 
 <a name="Crypto.Value"></a>
-### func \(\*Crypto\) Value
+### func \(\*Crypto\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L32>)
 
 ```go
 func (c *Crypto) Value() []byte
@@ -644,7 +644,7 @@ func (c *Crypto) Value() []byte
 Value 返回明文字节；未设置值（空数据或 nil 指针）时返回 nil。
 
 <a name="CryptoSerializer"></a>
-## type CryptoSerializer
+## type [CryptoSerializer](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L100>)
 
 CryptoSerializer 实现 GORM 加密字段的加解密序列化器。
 
@@ -653,7 +653,7 @@ type CryptoSerializer struct{}
 ```
 
 <a name="CryptoSerializer.Scan"></a>
-### func \(CryptoSerializer\) Scan
+### func \(CryptoSerializer\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L108>)
 
 ```go
 func (cs CryptoSerializer) Scan(ctx context.Context, field *schema.Field, dst reflect.Value, dbValue any) error
@@ -662,7 +662,7 @@ func (cs CryptoSerializer) Scan(ctx context.Context, field *schema.Field, dst re
 Scan 从数据库读取字段值，解密得到明文并保留原始密文。
 
 <a name="CryptoSerializer.Value"></a>
-### func \(CryptoSerializer\) Value
+### func \(CryptoSerializer\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L159>)
 
 ```go
 func (cs CryptoSerializer) Value(ctx context.Context, field *schema.Field, dst reflect.Value, fieldValue any) (any, error)
@@ -671,7 +671,7 @@ func (cs CryptoSerializer) Value(ctx context.Context, field *schema.Field, dst r
 Value 将字段明文加密后写回数据库，空值写入 NULL。
 
 <a name="DateOnly"></a>
-## type DateOnly
+## type [DateOnly](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/date_only.go#L40>)
 
 DateOnly 表示仅包含日期（年月日）的时间类型，底层为 time.Time。 时刻部分归零，用于只需要日期的字段序列化与日期运算。
 
@@ -680,7 +680,7 @@ type DateOnly time.Time
 ```
 
 <a name="Date"></a>
-### func Date
+### func [Date](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/date_only.go#L151>)
 
 ```go
 func Date(year int, month time.Month, day int) DateOnly
@@ -689,7 +689,7 @@ func Date(year int, month time.Month, day int) DateOnly
 Date 创建一个新的 DateOnly
 
 <a name="NowDateOnly"></a>
-### func NowDateOnly
+### func [NowDateOnly](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/date_only.go#L145>)
 
 ```go
 func NowDateOnly() DateOnly
@@ -698,7 +698,7 @@ func NowDateOnly() DateOnly
 NowDateOnly 返回当前本地日期（年月日），时间部分归一化为零值。
 
 <a name="ParseDateOnly"></a>
-### func ParseDateOnly
+### func [ParseDateOnly](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/date_only.go#L27>)
 
 ```go
 func ParseDateOnly(s string) (DateOnly, error)
@@ -707,7 +707,7 @@ func ParseDateOnly(s string) (DateOnly, error)
 ParseDateOnly 解析日期文本为 DateOnly。 依次尝试多种常见日期布局（如 2006\-01\-02、2006/1/2、20060102、200612 等），全部失败时返回错误。
 
 <a name="DateOnly.AddDays"></a>
-### func \(DateOnly\) AddDays
+### func \(DateOnly\) [AddDays](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/date_only.go#L58>)
 
 ```go
 func (d DateOnly) AddDays(days int) DateOnly
@@ -716,7 +716,7 @@ func (d DateOnly) AddDays(days int) DateOnly
 AddDays 返回在日期上增加指定天数后的新日期。
 
 <a name="DateOnly.Day"></a>
-### func \(DateOnly\) Day
+### func \(DateOnly\) [Day](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/date_only.go#L81>)
 
 ```go
 func (d DateOnly) Day() int
@@ -725,7 +725,7 @@ func (d DateOnly) Day() int
 Day 返回日期的日（几号）。
 
 <a name="DateOnly.Format"></a>
-### func \(DateOnly\) Format
+### func \(DateOnly\) [Format](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/date_only.go#L48>)
 
 ```go
 func (d DateOnly) Format(layout string) string
@@ -734,7 +734,7 @@ func (d DateOnly) Format(layout string) string
 Format 按给定布局格式化日期，行为与 time.Time.Format 一致。
 
 <a name="DateOnly.IsZero"></a>
-### func \(DateOnly\) IsZero
+### func \(DateOnly\) [IsZero](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/date_only.go#L53>)
 
 ```go
 func (d DateOnly) IsZero() bool
@@ -743,7 +743,7 @@ func (d DateOnly) IsZero() bool
 IsZero 判断日期是否为零值。
 
 <a name="DateOnly.MarshalJSON"></a>
-### func \(DateOnly\) MarshalJSON
+### func \(DateOnly\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/date_only.go#L103>)
 
 ```go
 func (d DateOnly) MarshalJSON() ([]byte, error)
@@ -752,7 +752,7 @@ func (d DateOnly) MarshalJSON() ([]byte, error)
 MarshalJSON 实现 json.Marshaler，输出 YYYY\-MM\-DD 字符串，零值输出 null。
 
 <a name="DateOnly.Month"></a>
-### func \(DateOnly\) Month
+### func \(DateOnly\) [Month](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/date_only.go#L76>)
 
 ```go
 func (d DateOnly) Month() time.Month
@@ -761,7 +761,7 @@ func (d DateOnly) Month() time.Month
 Month 返回日期的月份。
 
 <a name="DateOnly.Scan"></a>
-### func \(\*DateOnly\) Scan
+### func \(\*DateOnly\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/date_only.go#L111>)
 
 ```go
 func (d *DateOnly) Scan(value any) error
@@ -770,7 +770,7 @@ func (d *DateOnly) Scan(value any) error
 Scan 实现 sql.Scanner，兼容 time.Time、日期字符串与 NULL。
 
 <a name="DateOnly.String"></a>
-### func \(DateOnly\) String
+### func \(DateOnly\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/date_only.go#L43>)
 
 ```go
 func (d DateOnly) String() string
@@ -779,7 +779,7 @@ func (d DateOnly) String() string
 String 返回 YYYY\-MM\-DD 格式的日期字符串。
 
 <a name="DateOnly.Sub"></a>
-### func \(DateOnly\) Sub
+### func \(DateOnly\) [Sub](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/date_only.go#L63>)
 
 ```go
 func (d DateOnly) Sub(other DateOnly) int
@@ -788,7 +788,7 @@ func (d DateOnly) Sub(other DateOnly) int
 Sub 返回与另一日期的天数差（d \- other）。
 
 <a name="DateOnly.UnmarshalJSON"></a>
-### func \(\*DateOnly\) UnmarshalJSON
+### func \(\*DateOnly\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/date_only.go#L91>)
 
 ```go
 func (d *DateOnly) UnmarshalJSON(data []byte) error
@@ -797,7 +797,7 @@ func (d *DateOnly) UnmarshalJSON(data []byte) error
 UnmarshalJSON 实现 json.Unmarshaler，接受 YYYY\-MM\-DD 字符串，null 或空串按零值处理。
 
 <a name="DateOnly.Value"></a>
-### func \(\*DateOnly\) Value
+### func \(\*DateOnly\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/date_only.go#L134>)
 
 ```go
 func (d *DateOnly) Value() (driver.Value, error)
@@ -806,7 +806,7 @@ func (d *DateOnly) Value() (driver.Value, error)
 Value 实现 driver.Valuer，以 YYYY\-MM\-DD 字符串存储，零值写入 NULL。
 
 <a name="DateOnly.Weekday"></a>
-### func \(DateOnly\) Weekday
+### func \(DateOnly\) [Weekday](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/date_only.go#L86>)
 
 ```go
 func (d DateOnly) Weekday() time.Weekday
@@ -815,7 +815,7 @@ func (d DateOnly) Weekday() time.Weekday
 Weekday 返回日期对应的星期。
 
 <a name="DateOnly.Year"></a>
-### func \(DateOnly\) Year
+### func \(DateOnly\) [Year](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/date_only.go#L71>)
 
 ```go
 func (d DateOnly) Year() int
@@ -824,7 +824,7 @@ func (d DateOnly) Year() int
 Year 返回日期的年份。
 
 <a name="DurationMS"></a>
-## type DurationMS
+## type [DurationMS](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L20>)
 
 DurationMS 基于毫秒的时间差类型。 序列化输出整数毫秒（与 gRPC 协议、前端 JSON 契约一致），文本与反序列化 同时接受可读字符串（如 "5s"、"1m30s"）与整数毫秒，用于以毫秒为单位的 时长配置（如抓包读超时时间）的交互输入与配置解析。
 
@@ -833,7 +833,7 @@ type DurationMS int64
 ```
 
 <a name="DurationMS.IsZero"></a>
-### func \(DurationMS\) IsZero
+### func \(DurationMS\) [IsZero](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L38>)
 
 ```go
 func (d DurationMS) IsZero() bool
@@ -842,7 +842,7 @@ func (d DurationMS) IsZero() bool
 IsZero 判断时长是否为 0。
 
 <a name="DurationMS.MarshalJSON"></a>
-### func \(DurationMS\) MarshalJSON
+### func \(DurationMS\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L89>)
 
 ```go
 func (d DurationMS) MarshalJSON() ([]byte, error)
@@ -851,7 +851,7 @@ func (d DurationMS) MarshalJSON() ([]byte, error)
 MarshalJSON 实现 json.Marshaler，输出整数毫秒（与 gRPC 协议保持一致）。
 
 <a name="DurationMS.MarshalText"></a>
-### func \(DurationMS\) MarshalText
+### func \(DurationMS\) [MarshalText](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L67>)
 
 ```go
 func (d DurationMS) MarshalText() ([]byte, error)
@@ -860,7 +860,7 @@ func (d DurationMS) MarshalText() ([]byte, error)
 MarshalText 实现 encoding.TextMarshaler，输出可读字符串（如 "5s"）。
 
 <a name="DurationMS.Milliseconds"></a>
-### func \(DurationMS\) Milliseconds
+### func \(DurationMS\) [Milliseconds](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L33>)
 
 ```go
 func (d DurationMS) Milliseconds() int64
@@ -869,7 +869,7 @@ func (d DurationMS) Milliseconds() int64
 Milliseconds 返回毫秒数。
 
 <a name="DurationMS.Scan"></a>
-### func \(\*DurationMS\) Scan
+### func \(\*DurationMS\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L99>)
 
 ```go
 func (d *DurationMS) Scan(value any) error
@@ -878,7 +878,7 @@ func (d *DurationMS) Scan(value any) error
 Scan 实现 sql.Scanner，兼容整数毫秒、文本时长与 NULL。
 
 <a name="DurationMS.Std"></a>
-### func \(DurationMS\) Std
+### func \(DurationMS\) [Std](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L23>)
 
 ```go
 func (d DurationMS) Std() time.Duration
@@ -887,7 +887,7 @@ func (d DurationMS) Std() time.Duration
 Std 返回 DurationMS 等价的 time.Duration，用于与标准库 time 包协作。
 
 <a name="DurationMS.String"></a>
-### func \(DurationMS\) String
+### func \(DurationMS\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L28>)
 
 ```go
 func (d DurationMS) String() string
@@ -896,7 +896,7 @@ func (d DurationMS) String() string
 String 返回可读的时长字符串，如 "5s"、"1m30s"；零值返回 "0s"。
 
 <a name="DurationMS.UnmarshalJSON"></a>
-### func \(\*DurationMS\) UnmarshalJSON
+### func \(\*DurationMS\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L72>)
 
 ```go
 func (d *DurationMS) UnmarshalJSON(data []byte) error
@@ -905,7 +905,7 @@ func (d *DurationMS) UnmarshalJSON(data []byte) error
 UnmarshalJSON 实现 json.Unmarshaler，接受 "5s" 字符串或整数毫秒。
 
 <a name="DurationMS.UnmarshalText"></a>
-### func \(\*DurationMS\) UnmarshalText
+### func \(\*DurationMS\) [UnmarshalText](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L62>)
 
 ```go
 func (d *DurationMS) UnmarshalText(text []byte) error
@@ -914,7 +914,7 @@ func (d *DurationMS) UnmarshalText(text []byte) error
 UnmarshalText 实现 encoding.TextUnmarshaler，支持 "5s"、"1m30s" 与整数毫秒。
 
 <a name="DurationMS.Value"></a>
-### func \(DurationMS\) Value
+### func \(DurationMS\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L94>)
 
 ```go
 func (d DurationMS) Value() (driver.Value, error)
@@ -923,7 +923,7 @@ func (d DurationMS) Value() (driver.Value, error)
 Value 实现 driver.Valuer，数据库以整数毫秒（BIGINT）存储。
 
 <a name="DurationNS"></a>
-## type DurationNS
+## type [DurationNS](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L123>)
 
 DurationNS 基于 time.DurationNS 的时间差类型。 JSON 与文本序列化统一输出可读字符串（如 "5s"、"1m30s"），反序列化同样接受 该字符串格式（并兼容整数纳秒），保证序列化与反序列化对称。 数据库存储保持整数纳秒（BIGINT），经 Valuer/Scanner 对称读写。
 
@@ -932,7 +932,7 @@ type DurationNS time.Duration
 ```
 
 <a name="DurationNS.Abs"></a>
-### func \(DurationNS\) Abs
+### func \(DurationNS\) [Abs](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L141>)
 
 ```go
 func (d DurationNS) Abs() DurationNS
@@ -941,7 +941,7 @@ func (d DurationNS) Abs() DurationNS
 Abs 返回时长的绝对值。
 
 <a name="DurationNS.Hours"></a>
-### func \(DurationNS\) Hours
+### func \(DurationNS\) [Hours](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L181>)
 
 ```go
 func (d DurationNS) Hours() float64
@@ -950,7 +950,7 @@ func (d DurationNS) Hours() float64
 Hours 返回以小时为单位的时长（浮点数）。
 
 <a name="DurationNS.IsZero"></a>
-### func \(DurationNS\) IsZero
+### func \(DurationNS\) [IsZero](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L136>)
 
 ```go
 func (d DurationNS) IsZero() bool
@@ -959,7 +959,7 @@ func (d DurationNS) IsZero() bool
 IsZero 判断时长是否为 0。
 
 <a name="DurationNS.MarshalJSON"></a>
-### func \(DurationNS\) MarshalJSON
+### func \(DurationNS\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L232>)
 
 ```go
 func (d DurationNS) MarshalJSON() ([]byte, error)
@@ -968,7 +968,7 @@ func (d DurationNS) MarshalJSON() ([]byte, error)
 MarshalJSON 实现 json.Marshaler，输出可读字符串（如 "5s"）。
 
 <a name="DurationNS.MarshalText"></a>
-### func \(DurationNS\) MarshalText
+### func \(DurationNS\) [MarshalText](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L210>)
 
 ```go
 func (d DurationNS) MarshalText() ([]byte, error)
@@ -977,7 +977,7 @@ func (d DurationNS) MarshalText() ([]byte, error)
 MarshalText 实现 encoding.TextMarshaler，输出可读字符串（如 "5s"）。
 
 <a name="DurationNS.Microseconds"></a>
-### func \(DurationNS\) Microseconds
+### func \(DurationNS\) [Microseconds](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L161>)
 
 ```go
 func (d DurationNS) Microseconds() int64
@@ -986,7 +986,7 @@ func (d DurationNS) Microseconds() int64
 Microseconds 返回时长的微秒数。
 
 <a name="DurationNS.Milliseconds"></a>
-### func \(DurationNS\) Milliseconds
+### func \(DurationNS\) [Milliseconds](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L166>)
 
 ```go
 func (d DurationNS) Milliseconds() int64
@@ -995,7 +995,7 @@ func (d DurationNS) Milliseconds() int64
 Milliseconds 返回时长的毫秒数。
 
 <a name="DurationNS.Minutes"></a>
-### func \(DurationNS\) Minutes
+### func \(DurationNS\) [Minutes](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L176>)
 
 ```go
 func (d DurationNS) Minutes() float64
@@ -1004,7 +1004,7 @@ func (d DurationNS) Minutes() float64
 Minutes 返回以分钟为单位的时长（浮点数）。
 
 <a name="DurationNS.Nanoseconds"></a>
-### func \(DurationNS\) Nanoseconds
+### func \(DurationNS\) [Nanoseconds](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L156>)
 
 ```go
 func (d DurationNS) Nanoseconds() int64
@@ -1013,7 +1013,7 @@ func (d DurationNS) Nanoseconds() int64
 Nanoseconds 返回时长的纳秒数。
 
 <a name="DurationNS.Round"></a>
-### func \(DurationNS\) Round
+### func \(DurationNS\) [Round](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L151>)
 
 ```go
 func (d DurationNS) Round(m DurationNS) DurationNS
@@ -1022,7 +1022,7 @@ func (d DurationNS) Round(m DurationNS) DurationNS
 Round 返回将时长四舍五入为 m 的整数倍后得到的时长。
 
 <a name="DurationNS.Scan"></a>
-### func \(\*DurationNS\) Scan
+### func \(\*DurationNS\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L242>)
 
 ```go
 func (d *DurationNS) Scan(value any) error
@@ -1031,7 +1031,7 @@ func (d *DurationNS) Scan(value any) error
 Scan 实现 sql.Scanner，兼容整数纳秒、文本时长与 NULL。
 
 <a name="DurationNS.Seconds"></a>
-### func \(DurationNS\) Seconds
+### func \(DurationNS\) [Seconds](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L171>)
 
 ```go
 func (d DurationNS) Seconds() float64
@@ -1040,7 +1040,7 @@ func (d DurationNS) Seconds() float64
 Seconds 返回以秒为单位的时长（浮点数）。
 
 <a name="DurationNS.Std"></a>
-### func \(DurationNS\) Std
+### func \(DurationNS\) [Std](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L126>)
 
 ```go
 func (d DurationNS) Std() time.Duration
@@ -1049,7 +1049,7 @@ func (d DurationNS) Std() time.Duration
 Std 返回等价的 time.Duration，用于与标准库 time 包协作（参数传递、运算等）。
 
 <a name="DurationNS.String"></a>
-### func \(DurationNS\) String
+### func \(DurationNS\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L131>)
 
 ```go
 func (d DurationNS) String() string
@@ -1058,7 +1058,7 @@ func (d DurationNS) String() string
 String 返回可读的时长字符串，如 "5s"、"1m30s"；零值返回 "0s"。
 
 <a name="DurationNS.Truncate"></a>
-### func \(DurationNS\) Truncate
+### func \(DurationNS\) [Truncate](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L146>)
 
 ```go
 func (d DurationNS) Truncate(m DurationNS) DurationNS
@@ -1067,7 +1067,7 @@ func (d DurationNS) Truncate(m DurationNS) DurationNS
 Truncate 返回将时长截断为 m 的整数倍后得到的时长。
 
 <a name="DurationNS.UnmarshalJSON"></a>
-### func \(\*DurationNS\) UnmarshalJSON
+### func \(\*DurationNS\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L215>)
 
 ```go
 func (d *DurationNS) UnmarshalJSON(data []byte) error
@@ -1076,7 +1076,7 @@ func (d *DurationNS) UnmarshalJSON(data []byte) error
 UnmarshalJSON 实现 json.Unmarshaler，接受 "5s" 字符串或整数纳秒。
 
 <a name="DurationNS.UnmarshalText"></a>
-### func \(\*DurationNS\) UnmarshalText
+### func \(\*DurationNS\) [UnmarshalText](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L205>)
 
 ```go
 func (d *DurationNS) UnmarshalText(text []byte) error
@@ -1085,7 +1085,7 @@ func (d *DurationNS) UnmarshalText(text []byte) error
 UnmarshalText 实现 encoding.TextUnmarshaler，支持 "5s"、"1m30s" 等格式。
 
 <a name="DurationNS.Value"></a>
-### func \(DurationNS\) Value
+### func \(DurationNS\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/duration.go#L237>)
 
 ```go
 func (d DurationNS) Value() (driver.Value, error)
@@ -1094,7 +1094,7 @@ func (d DurationNS) Value() (driver.Value, error)
 Value 实现 driver.Valuer，数据库以整数纳秒（BIGINT）存储。
 
 <a name="Hash"></a>
-## type Hash
+## type [Hash](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L17-L20>)
 
 Hash 是数据库摘要字段的类型化封装：字段持有由 crypto 层预计算的十六进制 HMAC\-SHA256 摘要，序列化器只负责 string/\[\]byte 互转、nil 安全与 JSON，不做 加解密。摘要单向且确定性（同一密钥与内容恒得同一摘要，可等值匹配与建唯一索引）， 与可逆且随机的 Crypto 语义相反，故不能复用 Crypto 承载。
 
@@ -1105,7 +1105,7 @@ type Hash struct {
 ```
 
 <a name="NewHashDigest"></a>
-### func NewHashDigest
+### func [NewHashDigest](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L23>)
 
 ```go
 func NewHashDigest(digest string) Hash
@@ -1114,7 +1114,7 @@ func NewHashDigest(digest string) Hash
 NewHashDigest 以十六进制摘要构造 Hash 实例，供写库侧使用。
 
 <a name="Hash.Digest"></a>
-### func \(Hash\) Digest
+### func \(Hash\) [Digest](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L28>)
 
 ```go
 func (h Hash) Digest() string
@@ -1123,7 +1123,7 @@ func (h Hash) Digest() string
 Digest 返回十六进制摘要；未设置值（零值 Hash）时返回空字符串。
 
 <a name="Hash.MarshalJSON"></a>
-### func \(Hash\) MarshalJSON
+### func \(Hash\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L38>)
 
 ```go
 func (h Hash) MarshalJSON() ([]byte, error)
@@ -1132,7 +1132,7 @@ func (h Hash) MarshalJSON() ([]byte, error)
 MarshalJSON 将 Hash 序列化为 JSON 字符串（零值输出空字符串）。
 
 <a name="Hash.String"></a>
-### func \(Hash\) String
+### func \(Hash\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L33>)
 
 ```go
 func (h Hash) String() string
@@ -1141,7 +1141,7 @@ func (h Hash) String() string
 String 返回十六进制摘要，便于日志输出与字符串拼接。
 
 <a name="Hash.UnmarshalJSON"></a>
-### func \(\*Hash\) UnmarshalJSON
+### func \(\*Hash\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L45>)
 
 ```go
 func (h *Hash) UnmarshalJSON(data []byte) error
@@ -1153,7 +1153,7 @@ UnmarshalJSON 从 JSON 恢复 Hash 实例，支持两种取值形式：
 - null 或空串：视为未设置，恢复零值 Hash。
 
 <a name="HashSerializer"></a>
-## type HashSerializer
+## type [HashSerializer](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L60>)
 
 HashSerializer 实现 GORM 摘要字段的序列化器：仅做类型包装与标签模式校验， 摘要本身由 crypto 层在写库前预计算（见 crypto.DigestForField / crypto.HashKeyForField）。
 
@@ -1162,7 +1162,7 @@ type HashSerializer struct{}
 ```
 
 <a name="HashSerializer.Scan"></a>
-### func \(HashSerializer\) Scan
+### func \(HashSerializer\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L76>)
 
 ```go
 func (hs HashSerializer) Scan(ctx context.Context, field *schema.Field, dst reflect.Value, dbValue any) error
@@ -1171,7 +1171,7 @@ func (hs HashSerializer) Scan(ctx context.Context, field *schema.Field, dst refl
 Scan 从数据库读取字段值，包装为 Hash；空值与空字符串置零值。
 
 <a name="HashSerializer.Value"></a>
-### func \(HashSerializer\) Value
+### func \(HashSerializer\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L94>)
 
 ```go
 func (hs HashSerializer) Value(ctx context.Context, field *schema.Field, dst reflect.Value, fieldValue any) (any, error)
@@ -1180,7 +1180,7 @@ func (hs HashSerializer) Value(ctx context.Context, field *schema.Field, dst ref
 Value 校验字段标签后返回已预计算的十六进制摘要字符串，空摘要返回空字符串 （匹配 CHAR\(64\) NOT NULL DEFAULT ” 列定义）。
 
 <a name="HexUUID"></a>
-## type HexUUID
+## type [HexUUID](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/strs.go#L20>)
 
 HexUUID 是以二进制格式存储的 UUID 类型（底层为 datatypes.BinUUID），实现 JSON、 数据库编解码与 GORM 列类型映射。
 
@@ -1189,7 +1189,7 @@ type HexUUID datatypes.BinUUID
 ```
 
 <a name="HexUUIDv4FromString"></a>
-### func HexUUIDv4FromString
+### func [HexUUIDv4FromString](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/strs.go#L39>)
 
 ```go
 func HexUUIDv4FromString(data string) (HexUUID, error)
@@ -1198,7 +1198,7 @@ func HexUUIDv4FromString(data string) (HexUUID, error)
 HexUUIDv4FromString 由 UUID 字符串解析出 HexUUID，解析失败时返回错误。
 
 <a name="MustHexUUIDv4FromString"></a>
-### func MustHexUUIDv4FromString
+### func [MustHexUUIDv4FromString](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/strs.go#L33>)
 
 ```go
 func MustHexUUIDv4FromString(data string) HexUUID
@@ -1207,7 +1207,7 @@ func MustHexUUIDv4FromString(data string) HexUUID
 MustHexUUIDv4FromString 由 UUID 字符串解析出 HexUUID，解析失败时 panic。
 
 <a name="NewHexUUIDv4"></a>
-### func NewHexUUIDv4
+### func [NewHexUUIDv4](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/strs.go#L23>)
 
 ```go
 func NewHexUUIDv4() HexUUID
@@ -1216,7 +1216,7 @@ func NewHexUUIDv4() HexUUID
 NewHexUUIDv4 生成一个新的随机（v4）HexUUID。
 
 <a name="NewNilHexUUIDv4"></a>
-### func NewNilHexUUIDv4
+### func [NewNilHexUUIDv4](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/strs.go#L28>)
 
 ```go
 func NewNilHexUUIDv4() HexUUID
@@ -1225,7 +1225,7 @@ func NewNilHexUUIDv4() HexUUID
 NewNilHexUUIDv4 返回一个全零（nil）的 HexUUID。
 
 <a name="HexUUID.GormDBDataType"></a>
-### func \(HexUUID\) GormDBDataType
+### func \(HexUUID\) [GormDBDataType](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/strs.go#L125>)
 
 ```go
 func (h HexUUID) GormDBDataType(db *database.DB, field *schema.Field) string
@@ -1234,7 +1234,7 @@ func (h HexUUID) GormDBDataType(db *database.DB, field *schema.Field) string
 GormDBDataType 实现 GORM 的列类型映射：按数据库方言返回 UUID / FixedString\(16\)。
 
 <a name="HexUUID.IsEmpty"></a>
-### func \(HexUUID\) IsEmpty
+### func \(HexUUID\) [IsEmpty](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/strs.go#L54>)
 
 ```go
 func (h HexUUID) IsEmpty() bool
@@ -1243,7 +1243,7 @@ func (h HexUUID) IsEmpty() bool
 IsEmpty 判断该 UUID 是否为空。
 
 <a name="HexUUID.IsNil"></a>
-### func \(HexUUID\) IsNil
+### func \(HexUUID\) [IsNil](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/strs.go#L49>)
 
 ```go
 func (h HexUUID) IsNil() bool
@@ -1252,7 +1252,7 @@ func (h HexUUID) IsNil() bool
 IsNil 判断该 UUID 是否为零值。
 
 <a name="HexUUID.MarshalJSON"></a>
-### func \(HexUUID\) MarshalJSON
+### func \(HexUUID\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/strs.go#L78>)
 
 ```go
 func (h HexUUID) MarshalJSON() ([]byte, error)
@@ -1261,7 +1261,7 @@ func (h HexUUID) MarshalJSON() ([]byte, error)
 MarshalJSON 实现 json.Marshaler，输出 UUID 字符串。
 
 <a name="HexUUID.Scan"></a>
-### func \(\*HexUUID\) Scan
+### func \(\*HexUUID\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/strs.go#L88>)
 
 ```go
 func (h *HexUUID) Scan(value any) error
@@ -1270,7 +1270,7 @@ func (h *HexUUID) Scan(value any) error
 Scan 实现 sql.Scanner，支持 \[16\]byte、\[\]byte、string 与 nil 形式的取值。
 
 <a name="HexUUID.String"></a>
-### func \(HexUUID\) String
+### func \(HexUUID\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/strs.go#L59>)
 
 ```go
 func (h HexUUID) String() string
@@ -1279,7 +1279,7 @@ func (h HexUUID) String() string
 String 返回该 UUID 的字符串形式。
 
 <a name="HexUUID.UnmarshalJSON"></a>
-### func \(\*HexUUID\) UnmarshalJSON
+### func \(\*HexUUID\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/strs.go#L64>)
 
 ```go
 func (h *HexUUID) UnmarshalJSON(data []byte) error
@@ -1288,7 +1288,7 @@ func (h *HexUUID) UnmarshalJSON(data []byte) error
 UnmarshalJSON 实现 json.Unmarshaler，支持 UUID 字符串与 null 形式。
 
 <a name="HexUUID.Value"></a>
-### func \(HexUUID\) Value
+### func \(HexUUID\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/strs.go#L83>)
 
 ```go
 func (h HexUUID) Value() (driver.Value, error)
@@ -1297,7 +1297,7 @@ func (h HexUUID) Value() (driver.Value, error)
 Value 实现 driver.Valuer，返回 UUID 字符串以写入数据库。
 
 <a name="HexUUIDs"></a>
-## type HexUUIDs
+## type [HexUUIDs](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/strs.go#L140>)
 
 HexUUIDs 是 HexUUID 的切片类型，实现 sql.Scanner 与 driver.Valuer， 用于 ClickHouse Array\(UUID\)（驱动返回 \[\]uuid.UUID）与 PostgreSQL JSONB （JSON 数组文本）之间的双向转换；JSON 序列化行为与 \[\]HexUUID 完全一致 （元素各自按 UUID 字符串编码）。
 
@@ -1306,7 +1306,7 @@ type HexUUIDs []HexUUID
 ```
 
 <a name="HexUUIDs.GormDataType"></a>
-### func \(HexUUIDs\) GormDataType
+### func \(HexUUIDs\) [GormDataType](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/strs.go#L177>)
 
 ```go
 func (HexUUIDs) GormDataType() string
@@ -1315,7 +1315,7 @@ func (HexUUIDs) GormDataType() string
 GormDataType 实现 GormDataTypeInterface，返回 string 占位类型， 使 GORM 不将该字段当作关联关系解析（切片字段默认会被当作 has\-many 关联尝试解析）； 实际列类型由字段 gorm tag 的 type 显式指定（如 Array\(UUID\) / JSONB）。
 
 <a name="HexUUIDs.Scan"></a>
-### func \(\*HexUUIDs\) Scan
+### func \(\*HexUUIDs\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/strs.go#L144>)
 
 ```go
 func (h *HexUUIDs) Scan(value any) error
@@ -1324,7 +1324,7 @@ func (h *HexUUIDs) Scan(value any) error
 Scan 实现 sql.Scanner，支持 ClickHouse Array\(UUID\)（\[\]uuid.UUID）、 JSON 数组文本（\[\]byte / string，如 PostgreSQL JSONB 经驱动返回）与 nil。
 
 <a name="HexUUIDs.Value"></a>
-### func \(HexUUIDs\) Value
+### func \(HexUUIDs\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/strs.go#L166>)
 
 ```go
 func (h HexUUIDs) Value() (driver.Value, error)
@@ -1333,7 +1333,7 @@ func (h HexUUIDs) Value() (driver.Value, error)
 Value 实现 driver.Valuer，返回 \[\]uuid.UUID 以匹配 ClickHouse Array\(UUID\) 列的原生驱动类型（Go 侧经 database/sql 透传给驱动的数组绑定）。
 
 <a name="IPAddr"></a>
-## type IPAddr
+## type [IPAddr](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L16>)
 
 IPAddr 是以 net.IP 为底层的通用 IP 地址类型，支持数据库、JSON 与文本之间的序列化。
 
@@ -1342,7 +1342,7 @@ type IPAddr net.IP
 ```
 
 <a name="NewIPAddr"></a>
-### func NewIPAddr
+### func [NewIPAddr](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L19>)
 
 ```go
 func NewIPAddr(value any) (*IPAddr, error)
@@ -1351,7 +1351,7 @@ func NewIPAddr(value any) (*IPAddr, error)
 NewIPAddr 从任意值（字符串或字节切片）解析并返回一个 \*IPAddr。
 
 <a name="IPAddr.GormDBDataType"></a>
-### func \(IPAddr\) GormDBDataType
+### func \(IPAddr\) [GormDBDataType](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L53>)
 
 ```go
 func (i IPAddr) GormDBDataType(db *database.DB, field *schema.Field) string
@@ -1360,7 +1360,7 @@ func (i IPAddr) GormDBDataType(db *database.DB, field *schema.Field) string
 GormDBDataType 返回该类型在 GORM 中对应的数据库列类型（postgres 为 INET， clickhouse 为 IPv6，其余为空）。
 
 <a name="IPAddr.MarshalJSON"></a>
-### func \(IPAddr\) MarshalJSON
+### func \(IPAddr\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L47>)
 
 ```go
 func (i IPAddr) MarshalJSON() ([]byte, error)
@@ -1369,7 +1369,7 @@ func (i IPAddr) MarshalJSON() ([]byte, error)
 MarshalJSON 实现 json.Marshaler 接口，将 IP 地址序列化为 JSON 字符串。
 
 <a name="IPAddr.Scan"></a>
-### func \(\*IPAddr\) Scan
+### func \(\*IPAddr\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L77>)
 
 ```go
 func (i *IPAddr) Scan(value any) error
@@ -1378,7 +1378,7 @@ func (i *IPAddr) Scan(value any) error
 Scan 实现 sql.Scanner 接口，从数据库值解析 IP 地址；nil 值置为空地址。
 
 <a name="IPAddr.String"></a>
-### func \(IPAddr\) String
+### func \(IPAddr\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L28>)
 
 ```go
 func (i IPAddr) String() string
@@ -1387,7 +1387,7 @@ func (i IPAddr) String() string
 String 返回 IP 地址的可读字符串表示。
 
 <a name="IPAddr.UnmarshalJSON"></a>
-### func \(\*IPAddr\) UnmarshalJSON
+### func \(\*IPAddr\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L33>)
 
 ```go
 func (i *IPAddr) UnmarshalJSON(data []byte) error
@@ -1396,7 +1396,7 @@ func (i *IPAddr) UnmarshalJSON(data []byte) error
 UnmarshalJSON 实现 json.Unmarshaler 接口，从 JSON 值解析 IP 地址。
 
 <a name="IPAddr.Value"></a>
-### func \(IPAddr\) Value
+### func \(IPAddr\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L67>)
 
 ```go
 func (i IPAddr) Value() (driver.Value, error)
@@ -1405,7 +1405,7 @@ func (i IPAddr) Value() (driver.Value, error)
 Value 实现 driver.Valuer 接口，返回写入数据库的值（统一为 16 字节形式）；空地址返回 nil。
 
 <a name="IPv4Addr"></a>
-## type IPv4Addr
+## type [IPv4Addr](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L107>)
 
 IPv4Addr 是以 net.IP 为底层的 IPv4 地址类型，支持数据库、JSON 与文本之间的序列化。
 
@@ -1414,7 +1414,7 @@ type IPv4Addr net.IP
 ```
 
 <a name="NewIPv4Addr"></a>
-### func NewIPv4Addr
+### func [NewIPv4Addr](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L110>)
 
 ```go
 func NewIPv4Addr(value any) (*IPv4Addr, error)
@@ -1423,7 +1423,7 @@ func NewIPv4Addr(value any) (*IPv4Addr, error)
 NewIPv4Addr 从任意值（字符串或字节切片）解析并返回一个 \*IPv4Addr。
 
 <a name="IPv4Addr.GormDBDataType"></a>
-### func \(IPv4Addr\) GormDBDataType
+### func \(IPv4Addr\) [GormDBDataType](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L144>)
 
 ```go
 func (i IPv4Addr) GormDBDataType(db *database.DB, field *schema.Field) string
@@ -1432,7 +1432,7 @@ func (i IPv4Addr) GormDBDataType(db *database.DB, field *schema.Field) string
 GormDBDataType 返回该类型在 GORM 中对应的数据库列类型（postgres 为 INET， clickhouse 为 IPv4，其余为空）。
 
 <a name="IPv4Addr.MarshalJSON"></a>
-### func \(IPv4Addr\) MarshalJSON
+### func \(IPv4Addr\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L138>)
 
 ```go
 func (i IPv4Addr) MarshalJSON() ([]byte, error)
@@ -1441,7 +1441,7 @@ func (i IPv4Addr) MarshalJSON() ([]byte, error)
 MarshalJSON 实现 json.Marshaler 接口，将 IPv4 地址序列化为 JSON 字符串。
 
 <a name="IPv4Addr.Scan"></a>
-### func \(\*IPv4Addr\) Scan
+### func \(\*IPv4Addr\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L165>)
 
 ```go
 func (i *IPv4Addr) Scan(value any) error
@@ -1450,7 +1450,7 @@ func (i *IPv4Addr) Scan(value any) error
 Scan 实现 sql.Scanner 接口，从数据库值解析 IPv4 地址；非 IPv4 时返回错误。
 
 <a name="IPv4Addr.String"></a>
-### func \(IPv4Addr\) String
+### func \(IPv4Addr\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L119>)
 
 ```go
 func (i IPv4Addr) String() string
@@ -1459,7 +1459,7 @@ func (i IPv4Addr) String() string
 String 返回 IPv4 地址的可读字符串表示。
 
 <a name="IPv4Addr.UnmarshalJSON"></a>
-### func \(\*IPv4Addr\) UnmarshalJSON
+### func \(\*IPv4Addr\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L124>)
 
 ```go
 func (i *IPv4Addr) UnmarshalJSON(data []byte) error
@@ -1468,7 +1468,7 @@ func (i *IPv4Addr) UnmarshalJSON(data []byte) error
 UnmarshalJSON 实现 json.Unmarshaler 接口，从 JSON 值解析 IPv4 地址。
 
 <a name="IPv4Addr.Value"></a>
-### func \(IPv4Addr\) Value
+### func \(IPv4Addr\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L157>)
 
 ```go
 func (i IPv4Addr) Value() (driver.Value, error)
@@ -1477,7 +1477,7 @@ func (i IPv4Addr) Value() (driver.Value, error)
 Value 实现 driver.Valuer 接口，返回写入数据库的值（4 字节形式）；空地址返回 nil。
 
 <a name="IPv6Addr"></a>
-## type IPv6Addr
+## type [IPv6Addr](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L198>)
 
 IPv6Addr 是以 net.IP 为底层的 IPv6 地址类型，支持数据库、JSON 与文本之间的序列化。
 
@@ -1486,7 +1486,7 @@ type IPv6Addr net.IP
 ```
 
 <a name="NewIPv6Addr"></a>
-### func NewIPv6Addr
+### func [NewIPv6Addr](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L201>)
 
 ```go
 func NewIPv6Addr(value any) (*IPv6Addr, error)
@@ -1495,7 +1495,7 @@ func NewIPv6Addr(value any) (*IPv6Addr, error)
 NewIPv6Addr 从任意值（字符串或字节切片）解析并返回一个 \*IPv6Addr。
 
 <a name="IPv6Addr.GormDBDataType"></a>
-### func \(IPv6Addr\) GormDBDataType
+### func \(IPv6Addr\) [GormDBDataType](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L235>)
 
 ```go
 func (i IPv6Addr) GormDBDataType(db *database.DB, field *schema.Field) string
@@ -1504,7 +1504,7 @@ func (i IPv6Addr) GormDBDataType(db *database.DB, field *schema.Field) string
 GormDBDataType 返回该类型在 GORM 中对应的数据库列类型（postgres 为 INET， clickhouse 为 IPv6，其余为空）。
 
 <a name="IPv6Addr.MarshalJSON"></a>
-### func \(IPv6Addr\) MarshalJSON
+### func \(IPv6Addr\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L229>)
 
 ```go
 func (i IPv6Addr) MarshalJSON() ([]byte, error)
@@ -1513,7 +1513,7 @@ func (i IPv6Addr) MarshalJSON() ([]byte, error)
 MarshalJSON 实现 json.Marshaler 接口，将 IPv6 地址序列化为 JSON 字符串。
 
 <a name="IPv6Addr.Scan"></a>
-### func \(\*IPv6Addr\) Scan
+### func \(\*IPv6Addr\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L256>)
 
 ```go
 func (i *IPv6Addr) Scan(value any) error
@@ -1522,7 +1522,7 @@ func (i *IPv6Addr) Scan(value any) error
 Scan 实现 sql.Scanner 接口，从数据库值解析 IPv6 地址；非 IPv6 时返回错误。
 
 <a name="IPv6Addr.String"></a>
-### func \(IPv6Addr\) String
+### func \(IPv6Addr\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L210>)
 
 ```go
 func (i IPv6Addr) String() string
@@ -1531,7 +1531,7 @@ func (i IPv6Addr) String() string
 String 返回 IPv6 地址的可读字符串表示。
 
 <a name="IPv6Addr.UnmarshalJSON"></a>
-### func \(\*IPv6Addr\) UnmarshalJSON
+### func \(\*IPv6Addr\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L215>)
 
 ```go
 func (i *IPv6Addr) UnmarshalJSON(data []byte) error
@@ -1540,7 +1540,7 @@ func (i *IPv6Addr) UnmarshalJSON(data []byte) error
 UnmarshalJSON 实现 json.Unmarshaler 接口，从 JSON 值解析 IPv6 地址。
 
 <a name="IPv6Addr.Value"></a>
-### func \(IPv6Addr\) Value
+### func \(IPv6Addr\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/ip.go#L248>)
 
 ```go
 func (i IPv6Addr) Value() (driver.Value, error)
@@ -1549,7 +1549,7 @@ func (i IPv6Addr) Value() (driver.Value, error)
 Value 实现 driver.Valuer 接口，返回写入数据库的值（16 字节形式）；空地址返回 nil。
 
 <a name="Location"></a>
-## type Location
+## type [Location](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/location.go#L8>)
 
 Location 表示 IANA 时区名称的字符串类型。
 
@@ -1558,7 +1558,7 @@ type Location string
 ```
 
 <a name="Location.ToSTD"></a>
-### func \(Location\) ToSTD
+### func \(Location\) [ToSTD](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/location.go#L11>)
 
 ```go
 func (l Location) ToSTD() (*time.Location, error)
@@ -1567,7 +1567,7 @@ func (l Location) ToSTD() (*time.Location, error)
 ToSTD 根据时区名称加载并返回对应的 time.Location。
 
 <a name="MacAddr"></a>
-## type MacAddr
+## type [MacAddr](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/mac.go#L15>)
 
 MacAddr 是以 net.HardwareAddr 为底层的 MAC 地址类型，支持数据库、JSON 与文本之间的序列化。
 
@@ -1576,7 +1576,7 @@ type MacAddr net.HardwareAddr
 ```
 
 <a name="NewMacAddr"></a>
-### func NewMacAddr
+### func [NewMacAddr](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/mac.go#L18>)
 
 ```go
 func NewMacAddr(value any) (*MacAddr, error)
@@ -1585,7 +1585,7 @@ func NewMacAddr(value any) (*MacAddr, error)
 NewMacAddr 从任意值（字符串或字节切片）解析并返回一个 \*MacAddr。
 
 <a name="MacAddr.GormDBDataType"></a>
-### func \(MacAddr\) GormDBDataType
+### func \(MacAddr\) [GormDBDataType](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/mac.go#L52>)
 
 ```go
 func (m MacAddr) GormDBDataType(db *database.DB, field *schema.Field) string
@@ -1594,7 +1594,7 @@ func (m MacAddr) GormDBDataType(db *database.DB, field *schema.Field) string
 GormDBDataType 返回该类型在 GORM 中对应的数据库列类型（postgres 为 MACADDR， clickhouse 为 FixedString\(6\)，其余为空）。
 
 <a name="MacAddr.MarshalJSON"></a>
-### func \(MacAddr\) MarshalJSON
+### func \(MacAddr\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/mac.go#L46>)
 
 ```go
 func (m MacAddr) MarshalJSON() ([]byte, error)
@@ -1603,7 +1603,7 @@ func (m MacAddr) MarshalJSON() ([]byte, error)
 MarshalJSON 实现 json.Marshaler 接口，将 MAC 地址序列化为 JSON 字符串。
 
 <a name="MacAddr.Scan"></a>
-### func \(\*MacAddr\) Scan
+### func \(\*MacAddr\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/mac.go#L73>)
 
 ```go
 func (m *MacAddr) Scan(value any) error
@@ -1612,7 +1612,7 @@ func (m *MacAddr) Scan(value any) error
 Scan 实现 sql.Scanner 接口，从数据库值解析 MAC 地址；nil 或空值置为空地址。
 
 <a name="MacAddr.String"></a>
-### func \(MacAddr\) String
+### func \(MacAddr\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/mac.go#L27>)
 
 ```go
 func (m MacAddr) String() string
@@ -1621,7 +1621,7 @@ func (m MacAddr) String() string
 String 返回 MAC 地址的可读字符串表示。
 
 <a name="MacAddr.UnmarshalJSON"></a>
-### func \(\*MacAddr\) UnmarshalJSON
+### func \(\*MacAddr\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/mac.go#L32>)
 
 ```go
 func (m *MacAddr) UnmarshalJSON(data []byte) error
@@ -1630,7 +1630,7 @@ func (m *MacAddr) UnmarshalJSON(data []byte) error
 UnmarshalJSON 实现 json.Unmarshaler 接口，从 JSON 值解析 MAC 地址。
 
 <a name="MacAddr.Value"></a>
-### func \(MacAddr\) Value
+### func \(MacAddr\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/mac.go#L65>)
 
 ```go
 func (m MacAddr) Value() (driver.Value, error)
@@ -1639,7 +1639,7 @@ func (m MacAddr) Value() (driver.Value, error)
 Value 实现 driver.Valuer 接口，返回写入数据库的值；空地址返回 nil。
 
 <a name="TimeOnly"></a>
-## type TimeOnly
+## type [TimeOnly](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L39>)
 
 TimeOnly 表示仅包含时刻（时分秒）的时间类型，底层为 time.Time。 日期部分固定为 0001\-01\-01，用于只需要时刻的字段序列化与时刻运算。
 
@@ -1648,7 +1648,7 @@ type TimeOnly time.Time
 ```
 
 <a name="NowTimeOnly"></a>
-### func NowTimeOnly
+### func [NowTimeOnly](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L156>)
 
 ```go
 func NowTimeOnly() TimeOnly
@@ -1657,7 +1657,7 @@ func NowTimeOnly() TimeOnly
 Now 返回当前时间（只包含时分秒）
 
 <a name="ParseTimeOnly"></a>
-### func ParseTimeOnly
+### func [ParseTimeOnly](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L25>)
 
 ```go
 func ParseTimeOnly(s string) (TimeOnly, error)
@@ -1666,7 +1666,7 @@ func ParseTimeOnly(s string) (TimeOnly, error)
 ParseTimeOnly 解析时间文本为 TimeOnly。 依次尝试多种常见时间布局（如 15:04:05、3:04 PM、150405 等），全部失败时返回错误。
 
 <a name="Time"></a>
-### func Time
+### func [Time](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L162>)
 
 ```go
 func Time(hour, minute, second, nanosecond int) TimeOnly
@@ -1675,7 +1675,7 @@ func Time(hour, minute, second, nanosecond int) TimeOnly
 Time 创建一个新的 TimeOnly
 
 <a name="TimeOnly.Add"></a>
-### func \(TimeOnly\) Add
+### func \(TimeOnly\) [Add](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L77>)
 
 ```go
 func (t TimeOnly) Add(d time.Duration) TimeOnly
@@ -1684,7 +1684,7 @@ func (t TimeOnly) Add(d time.Duration) TimeOnly
 Add 返回在时刻上增加指定时长后的新时刻。
 
 <a name="TimeOnly.After"></a>
-### func \(TimeOnly\) After
+### func \(TimeOnly\) [After](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L92>)
 
 ```go
 func (t TimeOnly) After(other TimeOnly) bool
@@ -1693,7 +1693,7 @@ func (t TimeOnly) After(other TimeOnly) bool
 After 判断时刻是否晚于另一时刻。
 
 <a name="TimeOnly.Before"></a>
-### func \(TimeOnly\) Before
+### func \(TimeOnly\) [Before](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L87>)
 
 ```go
 func (t TimeOnly) Before(other TimeOnly) bool
@@ -1702,7 +1702,7 @@ func (t TimeOnly) Before(other TimeOnly) bool
 Before 判断时刻是否早于另一时刻。
 
 <a name="TimeOnly.Equal"></a>
-### func \(TimeOnly\) Equal
+### func \(TimeOnly\) [Equal](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L97>)
 
 ```go
 func (t TimeOnly) Equal(other TimeOnly) bool
@@ -1711,7 +1711,7 @@ func (t TimeOnly) Equal(other TimeOnly) bool
 Equal 判断时刻是否与另一时刻相等。
 
 <a name="TimeOnly.Format"></a>
-### func \(TimeOnly\) Format
+### func \(TimeOnly\) [Format](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L47>)
 
 ```go
 func (t TimeOnly) Format(layout string) string
@@ -1720,7 +1720,7 @@ func (t TimeOnly) Format(layout string) string
 Format 按给定布局格式化时刻，行为与 time.Time.Format 一致。
 
 <a name="TimeOnly.Hour"></a>
-### func \(TimeOnly\) Hour
+### func \(TimeOnly\) [Hour](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L57>)
 
 ```go
 func (t TimeOnly) Hour() int
@@ -1729,7 +1729,7 @@ func (t TimeOnly) Hour() int
 Hour 返回时刻的小时。
 
 <a name="TimeOnly.IsZero"></a>
-### func \(TimeOnly\) IsZero
+### func \(TimeOnly\) [IsZero](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L52>)
 
 ```go
 func (t TimeOnly) IsZero() bool
@@ -1738,7 +1738,7 @@ func (t TimeOnly) IsZero() bool
 IsZero 判断时刻是否为零值。
 
 <a name="TimeOnly.MarshalJSON"></a>
-### func \(TimeOnly\) MarshalJSON
+### func \(TimeOnly\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L114>)
 
 ```go
 func (t TimeOnly) MarshalJSON() ([]byte, error)
@@ -1747,7 +1747,7 @@ func (t TimeOnly) MarshalJSON() ([]byte, error)
 MarshalJSON 实现 json.Marshaler，输出 HH:mm:ss 字符串，零值输出 null。
 
 <a name="TimeOnly.Minute"></a>
-### func \(TimeOnly\) Minute
+### func \(TimeOnly\) [Minute](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L62>)
 
 ```go
 func (t TimeOnly) Minute() int
@@ -1756,7 +1756,7 @@ func (t TimeOnly) Minute() int
 Minute 返回时刻的分钟。
 
 <a name="TimeOnly.Nanosecond"></a>
-### func \(TimeOnly\) Nanosecond
+### func \(TimeOnly\) [Nanosecond](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L72>)
 
 ```go
 func (t TimeOnly) Nanosecond() int
@@ -1765,7 +1765,7 @@ func (t TimeOnly) Nanosecond() int
 Nanosecond 返回时刻的纳秒部分。
 
 <a name="TimeOnly.Scan"></a>
-### func \(\*TimeOnly\) Scan
+### func \(\*TimeOnly\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L126>)
 
 ```go
 func (t *TimeOnly) Scan(value any) error
@@ -1774,7 +1774,7 @@ func (t *TimeOnly) Scan(value any) error
 Scan 实现 sql.Scanner，兼容 time.Time、时间字符串与 NULL。
 
 <a name="TimeOnly.Second"></a>
-### func \(TimeOnly\) Second
+### func \(TimeOnly\) [Second](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L67>)
 
 ```go
 func (t TimeOnly) Second() int
@@ -1783,7 +1783,7 @@ func (t TimeOnly) Second() int
 Second 返回时刻的秒。
 
 <a name="TimeOnly.String"></a>
-### func \(TimeOnly\) String
+### func \(TimeOnly\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L42>)
 
 ```go
 func (t TimeOnly) String() string
@@ -1792,7 +1792,7 @@ func (t TimeOnly) String() string
 String 返回 HH:mm:ss 格式的时刻字符串。
 
 <a name="TimeOnly.Sub"></a>
-### func \(TimeOnly\) Sub
+### func \(TimeOnly\) [Sub](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L82>)
 
 ```go
 func (t TimeOnly) Sub(other TimeOnly) time.Duration
@@ -1801,7 +1801,7 @@ func (t TimeOnly) Sub(other TimeOnly) time.Duration
 Sub 返回与另一时刻的时间差。
 
 <a name="TimeOnly.UnmarshalJSON"></a>
-### func \(\*TimeOnly\) UnmarshalJSON
+### func \(\*TimeOnly\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L102>)
 
 ```go
 func (t *TimeOnly) UnmarshalJSON(data []byte) error
@@ -1810,7 +1810,7 @@ func (t *TimeOnly) UnmarshalJSON(data []byte) error
 UnmarshalJSON 实现 json.Unmarshaler，接受 HH:mm:ss 字符串，null 或空串按零值处理。
 
 <a name="TimeOnly.Value"></a>
-### func \(TimeOnly\) Value
+### func \(TimeOnly\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L148>)
 
 ```go
 func (t TimeOnly) Value() (driver.Value, error)

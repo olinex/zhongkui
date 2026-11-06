@@ -20,7 +20,7 @@ const (
 ```
 
 <a name="HttpApiMeta"></a>
-## type HttpApiMeta
+## type [HttpApiMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/api/http.go#L17-L34>)
 
 HttpApiMeta 表示接口访问的元信息聚合记录。
 
@@ -46,7 +46,7 @@ type HttpApiMeta struct {
 ```
 
 <a name="HttpApiNode"></a>
-## type HttpApiNode
+## type [HttpApiNode](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/api/http.go#L37-L80>)
 
 HttpApiNode 表示接口路径按分段构建的节点树中的单个节点记录。
 
