@@ -37,27 +37,91 @@ pnpm dev
 
 ## 4. 提交与分支
 
-- 使用 Conventional Commits：`feat:`、`fix:`、`docs:`、`refactor:`、`test:`、`chore:`。
+- 使用 Conventional Commits（Angular 规范）：`build`、`ci`、`docs`、`feat`、`fix`、`perf`、`refactor`、`revert`、`style`、`test`、`chore`。
 - 一个提交只做一件事；格式化与重命名尽量独立提交。
 - 功能开发使用特性分支，合并前保持 `make ci` 通过。
 - 不要提交生成的二进制、覆盖率文件或本地配置。
 
-## 5. 版本与发布
+### 分支与提交脚本
 
-版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)，首个发布版本为 `v0.1.0`：
-
-- `v1.0.0` 之前允许破坏性变更，`minor` 承载功能与破坏性调整，`patch` 仅用于修复。
-- 版本号唯一来源是打在 `master` 发布提交上的 annotated tag `vX.Y.Z`，禁止在代码或配置中硬编码。
-- 分支流转：`feature/*` → `develop`；发布时从 `develop` 切出 `release/vX.Y.Z`，验证后合入 `master` 并打 tag，最后回合并 `develop`。
-- 发布前必须更新 `CHANGELOG.md` 的 `## [X.Y.Z] - YYYY-MM-DD` 段，并将 `web/package.json` 的 `version` 对齐到同一版本号。
-- 开发构建不注入 SemVer，`zki version` 回落显示 commit hash；只有 release 构建注入语义化版本。
-
-发布命令（Gitee 为主仓）：
+`master`、`develop`、`release/*` 受保护，只能通过 PR 合入。`scripts/gitflow.sh` 把常见的分支创建、同步、推送与对比页跳转组合成一条命令：
 
 ```bash
-make build-release VERSION=v0.1.0   # 校验版本号并编译 release 二进制
-make release VERSION=v0.1.0         # 校验分支/工作区/CHANGELOG/前端版本，执行 make ci 后创建标签
-make dist VERSION=v0.1.0            # 打包 zki_<version>_<os>_<arch>.tar.gz 与 sha256
+scripts/gitflow.sh feature start login-fix   # develop → feature/login-fix
+scripts/gitflow.sh feature finish            # 推送并打开 feature → develop 的 PR
+scripts/gitflow.sh release start v1.2.3      # develop → release/v1.2.3
+scripts/gitflow.sh release finish v1.2.3     # 打开 release → master 的 PR；
+                                             # PR 合并后重跑，创建标签并打开回合并 PR
+scripts/gitflow.sh hotfix start fix-null     # master → hotfix/fix-null
+scripts/gitflow.sh hotfix finish             # 推送并打开 hotfix → master 的 PR
+scripts/gitflow.sh sync                      # fetch --prune 并快进 develop / master
+scripts/gitflow.sh status                    # 查看保护状态与领先/落后
+scripts/gitflow.sh clean                     # 清理已合入目标分支的本地分支
+scripts/gitflow.sh commit -t feat -s gitflow -m "新增提交助手" -y
+```
+
+- `commit` 按 Angular 规范拼装并校验 message；省略 `-t` 或 `-m` 时进入交互问答。
+- `--breaking` 自动生成 `!` 与 `BREAKING CHANGE:` 页脚，`-i 12,#34` 生成 `Closes #12, #34`。
+- `--dry-run` 只预览 message；`-a` 暂存已跟踪文件，`-- <文件>` 指定待提交文件。
+- `master`、`develop` 上禁止提交，需先切到特性分支。
+- PR 描述仍在 Gitee 页面填写，脚本只负责推送分支并打开对比页；`--no-open` 只打印链接。
+- `--ci` 在推送前执行 `make ci`，`--force` 使用 `--force-with-lease`。
+- 标签仍由 `make release` 创建，`release finish` 在 PR 合入后调用它并只推送 tag，不推送受保护分支。
+- `release/*` 同样禁止直接推送，推送被拒绝时脚本会提示由有权限的维护者推送或在 Gitee 页面创建分支。
+
+## 5. 版本与发布
+
+版本号遵循 [语义化版本 2.0.0](https://semver.org/lang/zh-CN/)，首个发布版本为 `v0.1.0`。
+
+### 版本号格式
+
+**正式版本**：`vX.Y.Z`
+
+- `X`（Major）：破坏性变更升级
+- `Y`（Minor）：向后兼容的功能新增，`v1.0.0` 前也承载破坏性调整
+- `Z`（Patch）：向后兼容的 bug 修复
+
+**预发布版本**：`vX.Y.Z-{label}.{n}`
+
+| Label | 阶段 | 含义 | 示例 |
+| --- | --- | --- | --- |
+| `alpha` | 内部测试 | 功能仍在迭代，API 可能随时变更 | `v1.2.3-alpha.1` |
+| `beta` | 公开测试 | 功能冻结，邀请外部用户试用，专注修复 bug | `v1.2.3-beta.1` |
+| `rc` | 候选发布 | 若测试通过即可作为正式版发布 | `v1.2.3-rc.1` |
+
+- 预发布序列号 `.n` 从 1 开始递增，同一 X.Y.Z 内修复 bug 只递增 `.n`，不升 Y/Z
+- 功能变更或范围调整时，升 minor 或 patch 后从 `alpha.1` 重新开始
+- 预发布阶段可跳过，直接从 alpha → rc 或 beta → rc
+- 正式发布时创建不带预发布后缀的 tag，与该 X.Y.Z 的预发布 tag 并存
+
+**版本号演进示例**：
+
+```
+v1.2.3-alpha.1 → v1.2.3-alpha.2 → v1.2.3-beta.1 → v1.2.3-rc.1 → v1.2.3
+```
+
+### 发布流程
+
+- 版本号唯一来源是 annotated tag，禁止在代码或配置中硬编码。
+- 分支流转：`feature/*` → `develop`；发布时从 `develop` 切出 `release/vX.Y.Z`，验证后合入 `master` 并打 tag，最后回合并 `develop`。
+- 正式发布前必须更新 `CHANGELOG.md` 的 `## [X.Y.Z] - YYYY-MM-DD` 段，并将 `web/package.json` 的 `version` 对齐到同一版本号（预发布版本的 CHANGELOG 可选更新，正式发布前必须补齐）。
+- 开发构建不注入 SemVer，`zki version` 回落显示 commit hash；只有 release 构建注入语义化版本。
+
+### 发布命令（Gitee 为主仓）
+
+```bash
+# 编译 release 二进制（支持正式版和预发布版）
+make build-release VERSION=v1.2.3            # 正式版
+make build-release VERSION=v1.2.3-alpha.1    # 预发布版
+
+# 创建 annotated tag（会校验版本号格式、分支、工作区、CHANGELOG 等）
+make release VERSION=v1.2.3
+make release VERSION=v1.2.3-rc.1
+
+# 打包制品
+make dist VERSION=v1.2.3
+
+# 推送 tag 到 Gitee
 git push origin master --follow-tags
 ```
 
