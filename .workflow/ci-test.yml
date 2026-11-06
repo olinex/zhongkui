@@ -101,6 +101,12 @@ stages:
         memory: "4"
 triggers:
   trigger: auto
+  push:
+    branches:
+      prefix: []
+      precise:
+      - develop
+      include: []
   pr:
     branches:
       prefix: []
