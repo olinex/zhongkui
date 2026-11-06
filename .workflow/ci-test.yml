@@ -24,7 +24,11 @@ stages:
       path: .cicd/golang-report
       file: report.jsonl
       index: index.html
-    checkpoints: {}
+    checkpoints:
+      key: TestPassRate
+      relationalOperator: '>='
+      value: "0"
+      logicalOperator: '&&'
     caches:
     - /go/pkg/mod
     notify: []
@@ -92,7 +96,14 @@ stages:
         cpu: "2"
         memory: "4"
 triggers:
-  trigger: manual
+  trigger: auto
+  push:
+    branches:
+      prefix: []
+      precise:
+      - develop
+      include: []
+  pr: {}
 notify: []
 strategy:
   blocking: true
