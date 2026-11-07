@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.7
 #
 # zhongkui 后端镜像（原生架构）。
 # 构建上下文为仓库根目录；如需注入版本号，先执行 `make dist` 生成 dist/build.env。
@@ -10,7 +9,11 @@
 #     -v "$PWD/config.toml:/app/config.toml:ro" \
 #     -v "$PWD/certs:/app/certs:ro" zhongkui:local
 
-FROM golang:1.27.3-bookworm AS build
+# 基础镜像可通过 --build-arg 覆盖（CI 中指向国内镜像加速地址），默认为 docker.io 官方镜像。
+ARG GOLANG_IMAGE=golang:1.27.3-bookworm
+ARG DEBIAN_IMAGE=debian:bookworm-slim
+
+FROM ${GOLANG_IMAGE} AS build
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libpcap-dev ca-certificates \
@@ -38,7 +41,7 @@ RUN set -eu; \
         -X zhongkuisec.com/zhongkui/internal/pkg/version.Builder=${BUILDER}" \
       -o /out/zki ./cmd/zki
 
-FROM debian:bookworm-slim
+FROM ${DEBIAN_IMAGE}
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libpcap0.8 ca-certificates tzdata \
@@ -51,3 +54,4 @@ EXPOSE 8080 8081
 
 ENTRYPOINT ["/usr/local/bin/zki"]
 CMD ["run", "web", "--config", "/app/config.toml"]
+
