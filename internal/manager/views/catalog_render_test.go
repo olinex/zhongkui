@@ -36,6 +36,13 @@ type catalogRenderTestRecursive struct {
 	Next *catalogRenderTestRecursive `json:"next"`
 }
 
+// catalogRenderTestCredential 用于验证凭证字段使用占位符而非普通字符串示例。
+type catalogRenderTestCredential struct {
+	Password string `json:"password"`
+	Total    int64  `json:"total"`
+	Context  string `json:"context"`
+}
+
 // catalogRenderTestOut 是示例生成测试用出参结构体。
 type catalogRenderTestOut struct {
 	Total int64                   `json:"total"`
@@ -271,6 +278,25 @@ func TestBuildJSONExample(t *testing.T) {
 
 		So(json.Valid([]byte(example)), ShouldBeTrue)
 		So(example, ShouldContainSubstring, `"keyword": "markdown"`)
+	})
+
+	Convey("凭证字段示例应使用占位符而非普通字符串", t, func() {
+		example := BuildJSONExample(reflect.TypeFor[catalogRenderTestCredential]())
+
+		So(json.Valid([]byte(example)), ShouldBeTrue)
+		So(example, ShouldContainSubstring, `"password": "<password>"`)
+		// 非凭证字段与数值字段保持原占位方式
+		So(example, ShouldContainSubstring, `"context": "string"`)
+		So(example, ShouldContainSubstring, `"total": 0`)
+	})
+
+	Convey("凭证字段判定不应误伤计数类字段", t, func() {
+		So(isCredentialFieldName("password"), ShouldBeTrue)
+		So(isCredentialFieldName("newPassword"), ShouldBeTrue)
+		So(isCredentialFieldName("accessKeySecret"), ShouldBeTrue)
+		So(isCredentialFieldName("apiKey"), ShouldBeTrue)
+		So(isCredentialFieldName("maxTokens"), ShouldBeFalse)
+		So(isCredentialFieldName("contextTokens"), ShouldBeFalse)
 	})
 
 	Convey("非结构体类型返回空示例", t, func() {

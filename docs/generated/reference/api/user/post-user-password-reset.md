@@ -16,8 +16,8 @@
 
 ```json
 {
-  "token": "string",
-  "newPassword": "string"
+  "token": "<token>",
+  "newPassword": "<newPassword>"
 }
 ```
 
