@@ -516,13 +516,24 @@ test:
 # test-report - 以 Gitee Go 可直接解析的格式运行单元测试，并生成覆盖率报告
 # 产物均位于 .cicd/golang-report/：report.jsonl 测试报告、index.html 覆盖率页面、coverage.txt 汇总
 # 与 test 的区别：JSON 不刷屏，失败时打印失败包名并保留完整报告供 CI 上传
+# 注意: go test -json 在少数情况下会输出非 JSON 行（如 cgo 库直接向 stdout 打印），
+#       而 Gitee Go 的 UT 插件用 jq 解析 report.jsonl 时要求每行都是 JSON 对象，
+#       否则会报 "Cannot index string with string key"。因此先写到 report.raw.jsonl，
+#       再用 jq 过滤只保留合法 JSON 对象行生成最终 report.jsonl。
 # 用法: make test-report
 test-report:
 	@mkdir -p $(GOLANG_REPORT_DIR)
 	@set +e; \
+	raw=$(GOLANG_REPORT_DIR)/report.raw.jsonl; \
 	go test -v -json -cover -coverprofile=$(GOLANG_REPORT_DIR)/cover.out ./... \
-		> $(GOLANG_REPORT_DIR)/report.jsonl 2> $(GOLANG_REPORT_DIR)/stderr.log; \
+		> $$raw 2> $(GOLANG_REPORT_DIR)/stderr.log; \
 	status=$$?; \
+	if command -v jq >/dev/null 2>&1; then \
+		jq -R -c 'fromjson? | select(type=="object")' $$raw > $(GOLANG_REPORT_DIR)/report.jsonl; \
+	else \
+		grep -E '^\{.*\}$$' $$raw > $(GOLANG_REPORT_DIR)/report.jsonl || true; \
+	fi; \
+	rm -f $$raw; \
 	go tool cover -html=$(GOLANG_REPORT_DIR)/cover.out -o $(GOLANG_REPORT_DIR)/index.html 2>/dev/null || true; \
 	go tool cover -func=$(GOLANG_REPORT_DIR)/cover.out > $(GOLANG_REPORT_DIR)/coverage.txt 2>/dev/null || true; \
 	tail -n 1 $(GOLANG_REPORT_DIR)/coverage.txt 2>/dev/null || true; \
