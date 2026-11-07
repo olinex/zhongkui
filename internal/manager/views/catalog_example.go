@@ -8,6 +8,11 @@
 // 取值约定：不臆造业务样例数据，一律使用类型化占位——枚举字段取枚举类首个 value、
 // 有 default 标签时取该默认值、字符串 "string"、数值 0、布尔 false、对象递归展开、
 // 数组取单个元素示例。递归设深度上限并以类型名集合防环，避免自引用类型导致无限展开。
+//
+// 凭证类字段（如 password / secret / token）例外：示例值改为 <字段名> 形式。
+// 这类字面量既更贴近占位符语义，也不会被密钥扫描器误判为真实泄露——例如 password
+// 字段原先输出的普通字符串占位会被 Titus 的 np.generic.17（键名含 password 且值为
+// 6~100 字符的普通字符串）命中，而 "<password>" 因含尖括号不匹配该正则。
 package views
 
 import (
@@ -102,7 +107,7 @@ func exampleObject(t reflect.Type, depth, indent int, seen map[string]bool) stri
 		if name == "" {
 			continue
 		}
-		value := exampleFieldValue(field, classBindings[name], depth, indent+1, seen)
+		value := exampleFieldValue(name, field, classBindings[name], depth, indent+1, seen)
 		lines = append(lines, pad+strconv.Quote(name)+": "+value)
 	}
 	if len(lines) == 0 {
@@ -112,14 +117,38 @@ func exampleObject(t reflect.Type, depth, indent int, seen map[string]bool) stri
 }
 
 // exampleFieldValue 渲染单个字段的示例值：有 default 标签且可解析时优先使用该默认值，
-// 否则按类型与枚举绑定推导（见 exampleValue）。
-func exampleFieldValue(field reflect.StructField, enumClass string, depth, indent int, seen map[string]bool) string {
+// 否则按类型与枚举绑定推导（见 exampleValue）。凭证类字符串字段改用 <字段名> 占位。
+func exampleFieldValue(name string, field reflect.StructField, enumClass string, depth, indent int, seen map[string]bool) string {
 	if raw := field.Tag.Get("default"); raw != "" {
 		if literal, ok := renderDefaultLiteral(kindForType(field.Type), raw); ok {
 			return literal
 		}
 	}
+	if tt := derefType(field.Type); tt != nil && tt.Kind() == reflect.String && isCredentialFieldName(name) {
+		return strconv.Quote("<" + name + ">")
+	}
 	return exampleValue(field.Type, enumClass, depth+1, indent, seen)
+}
+
+// isCredentialFieldName 判断字段名是否为凭证语义（密码、密钥、令牌等）。
+// 命中时示例值改用 <字段名> 占位，避免密钥扫描器把文档示例当作真实泄露。
+// 只匹配明确的凭证名，避免把 maxTokens / contextTokens 这类计数误判。
+func isCredentialFieldName(name string) bool {
+	lower := strings.ToLower(name)
+	switch lower {
+	case "password", "passwd", "pwd", "pass",
+		"secret", "token", "authorization",
+		"apikey", "api_key", "privatekey", "private_key",
+		"credential", "credentials", "secretkey", "secret_key":
+		return true
+	}
+	for _, suffix := range []string{"password", "passwd", "secret", "apikey", "privatekey"} {
+		if strings.HasSuffix(lower, suffix) {
+			return true
+		}
+	}
+	// token 只认单数结尾，排除 contextTokens / maxTokens 这类复数计数
+	return strings.HasSuffix(lower, "token")
 }
 
 // renderDefaultLiteral 把 default 标签字面量按字段 kind 解析后渲染为 JSON 文本；

@@ -19,7 +19,7 @@
   "name": "string",
   "kind": "chat",
   "baseURL": "string",
-  "apiKey": "string",
+  "apiKey": "<apiKey>",
   "model": "string",
   "timeoutSeconds": 60,
   "temperature": 0.2,

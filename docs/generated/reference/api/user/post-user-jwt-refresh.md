@@ -22,6 +22,6 @@ JWT令牌刷新
 
 ```json
 {
-  "token": "string"
+  "token": "<token>"
 }
 ```
