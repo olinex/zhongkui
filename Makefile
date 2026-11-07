@@ -21,6 +21,7 @@ SUDO ?= sudo
 REPORT_ROOT ?= .cicd
 REPORT_DIR ?= $(REPORT_ROOT)/reports
 GOLANG_REPORT_DIR ?= $(REPORT_ROOT)/golang-report
+export REPORT_ROOT REPORT_DIR GOLANG_REPORT_DIR
 
 .PHONY: bench-fast
 .PHONY: bench-prepare
@@ -56,6 +57,11 @@ GOLANG_REPORT_DIR ?= $(REPORT_ROOT)/golang-report
 .PHONY: remove-dev-deps
 .PHONY: run
 .PHONY: run-dev-deps
+.PHONY: secret-scan
+.PHONY: secret-scan-all
+.PHONY: secret-scan-baseline
+.PHONY: secret-scan-install
+.PHONY: secret-scan-staged
 .PHONY: stop-dev-deps
 .PHONY: test
 .PHONY: test-integration
@@ -78,159 +84,27 @@ GOLANG_REPORT_DIR ?= $(REPORT_ROOT)/golang-report
 # create-test-dbs - 在 dev-deps (postgres/clickhouse) 内创建测试库 core_test / raw_test（幂等）
 # 用法: make create-test-dbs
 create-test-dbs:
-	@echo "创建测试数据库 core_test (postgres) 与 raw_test (clickhouse)..."
-	@case "$(UNAME_S)" in \
-		Darwin|MINGW*|MSYS*|CYGWIN*) \
-			cmd=docker; \
-			clickhouse_cli="$$cmd exec clickhouse-server clickhouse-client"; \
-			psql_cli="PGPASSWORD=root_password $$cmd exec postgres psql -U postgres";; \
-		Linux) \
-			cmd=nerdctl; \
-			clickhouse_cli="$$cmd exec clickhouse-server clickhouse-client"; \
-			psql_cli="PGPASSWORD=root_password $$cmd exec postgres psql -U postgres";; \
-		*) \
-			echo "警告: 不支持的操作系统 '$(UNAME_S)'，请手动执行 psql/clickhouse-client 创建测试库。"; \
-			exit 1 ;; \
-	esac; \
-	$$psql_cli -tAc "SELECT 1 FROM pg_database WHERE datname='core_test'" | grep -q 1 \
-		&& echo "  core_test 已存在" \
-		|| $$psql_cli -c "CREATE DATABASE core_test"; \
-	$$clickhouse_cli -q "CREATE DATABASE IF NOT EXISTS raw_test"; \
-	echo "测试库就绪 (core_test@postgres, raw_test@clickhouse)"
+	@scripts/dev-deps.sh create-dbs
 
 # pull-dev-deps - 按本机 CPU 架构重新拉取开发依赖镜像 (解决 platform 不匹配 warning)
-# 通过 uname -m 探测宿主架构并显式指定 --platform，避免拉取到架构不匹配的镜像
 # 用法: make pull-dev-deps
 pull-dev-deps:
-	@case "$(UNAME_S)" in \
-		Darwin|MINGW*|MSYS*|CYGWIN*) \
-			cmd=docker ;; \
-		Linux) \
-			cmd=nerdctl ;; \
-		*) \
-			echo "警告: 不支持的操作系统 '$(UNAME_S)'。" ; \
-			exit 1 ;; \
-	esac; \
-	arch=$$(uname -m); \
-	case "$$arch" in \
-		arm64|aarch64) \
-			platform=linux/arm64 ;; \
-		x86_64|amd64) \
-			platform=linux/amd64 ;; \
-		*) \
-			echo "警告: 无法识别的架构 '$$arch'，缺省使用 linux/amd64"; \
-			platform=linux/amd64 ;; \
-	esac; \
-	echo "检测到宿主架构: $$arch，拉取平台: $$platform"; \
-	for item in \
-		"redis redis:8.2.1" \
-		"etcd quay.io/coreos/etcd:v3.6.5" \
-		"clickhouse clickhouse:25.3.3" \
-		"postgres pgvector/pgvector:pg17" \
-		"rustfs rustfs/rustfs:latest"; \
-	do \
-		set -- $$item; \
-		name=$$1; img=$$2; \
-		echo "=== 拉取 $$name ($$platform) ==="; \
-		$$cmd pull --platform "$$platform" "$$img" || echo "  !! 拉取 $$name 失败，镜像可能不提供 $$platform 架构"; \
-	done
+	@scripts/dev-deps.sh pull
 
 # run-dev-deps - 启动开发依赖容器 (redis, etcd, clickhouse, postgres, rustfs)
 # 用法: make run-dev-deps
 run-dev-deps:
-	@case "$(UNAME_S)" in \
-		Darwin|MINGW*|MSYS*|CYGWIN*) \
-			echo "使用 docker 启动依赖容器..."; \
-			docker run -itd --restart unless-stopped --name redis --network host \
-				redis:8.2.1; \
-			docker run -itd --restart unless-stopped --name etcd --network host \
-				quay.io/coreos/etcd:v3.6.5; \
-			docker run -itd --restart unless-stopped --name clickhouse-server --network host \
-				--ulimit nofile=262144:262144 \
-				-v "$(CURDIR)/config/clickhouse/config.d:/etc/clickhouse-server/config.d:ro" \
-				-e CLICKHOUSE_PASSWORD=root_password \
-				clickhouse:25.3.3; \
-			docker run -itd --restart unless-stopped --name postgres --network host \
-				-e POSTGRES_PASSWORD=root_password \
-				-e POSTGRES_USER=postgres \
-				-e POSTGRES_DB=default \
-				pgvector/pgvector:pg17; \
-			docker run -itd --restart unless-stopped --name rustfs --network host \
-				-e RUSTFS_ADDRESS=localhost:9002 \
-				-e RUSTFS_CONSOLE_ENABLE=true \
-				-e RUSTFS_ACCESS_KEY=rustfsadmin \
-				-e RUSTFS_SECRET_KEY=rustfsadmin \
-				rustfs/rustfs:latest ;; \
-		Linux) \
-			echo "使用 nerdctl 启动依赖容器..."; \
-			nerdctl run -td --restart=always --name redis --net=host \
-				redis:8.2.1; \
-			nerdctl run -td --restart=always --name etcd --net=host \
-				quay.io/coreos/etcd:v3.6.5; \
-			nerdctl run -td --restart=always --name clickhouse-server --net=host \
-				--ulimit nofile=262144:262144 \
-				-v "$(CURDIR)/config/clickhouse/config.d:/etc/clickhouse-server/config.d:ro" \
-				-e CLICKHOUSE_PASSWORD=root_password \
-				clickhouse:25.3.3; \
-			nerdctl run -td --restart=always --name postgres --net=host \
-				-e POSTGRES_PASSWORD=root_password \
-				-e POSTGRES_USER=postgres \
-				-e POSTGRES_DB=default \
-				pgvector/pgvector:pg17; \
-			nerdctl run -td --restart=always --name rustfs --net=host \
-				-e RUSTFS_ADDRESS=localhost:9002 \
-				-e RUSTFS_CONSOLE_ENABLE=true \
-				-e RUSTFS_ACCESS_KEY=rustfsadmin \
-				-e RUSTFS_SECRET_KEY=rustfsadmin \
-				rustfs/rustfs:latest ;; \
-		*) \
-			echo "警告: 不支持的操作系统 '$(UNAME_S)'，请手动启动依赖服务。"; \
-			exit 1 ;; \
-	esac
+	@scripts/dev-deps.sh start
 
 # stop-dev-deps - 停止所有开发依赖容器 (不删除容器，保留数据)
 # 用法: make stop-dev-deps
 stop-dev-deps:
-	@echo "停止开发依赖容器..."
-	@case "$(UNAME_S)" in \
-		Darwin|MINGW*|MSYS*|CYGWIN*) \
-			cmd=docker ;; \
-		Linux) \
-			cmd=nerdctl ;; \
-		*) \
-			echo "警告: 不支持的操作系统 '$(UNAME_S)'。"; \
-			exit 1 ;; \
-	esac; \
-	for container in redis etcd clickhouse-server postgres rustfs; do \
-		if $$cmd ps --format '{{.Names}}' | grep -q "^$$container$$" 2>/dev/null; then \
-			echo "  正在停止 $$container..."; \
-			$$cmd stop $$container; \
-		else \
-			echo "  $$container 未在运行，跳过"; \
-		fi \
-	done
+	@scripts/dev-deps.sh stop
 
 # remove-dev-deps - 停止并删除所有开发依赖容器 (数据将丢失)
 # 用法: make remove-dev-deps
-remove-dev-deps: stop-dev-deps
-	@echo "删除开发依赖容器..."
-	@case "$(UNAME_S)" in \
-		Darwin|MINGW*|MSYS*|CYGWIN*) \
-			cmd=docker ;; \
-		Linux) \
-			cmd=nerdctl ;; \
-		*) \
-			echo "警告: 不支持的操作系统 '$(UNAME_S)'。"; \
-			exit 1 ;; \
-	esac; \
-	for container in redis etcd clickhouse-server postgres rustfs; do \
-		if $$cmd ps -a --format '{{.Names}}' | grep -q "^$$container$$" 2>/dev/null; then \
-			echo "  正在删除 $$container..."; \
-			$$cmd rm -f $$container; \
-		else \
-			echo "  $$container 不存在，跳过"; \
-		fi \
-	done
+remove-dev-deps:
+	@scripts/dev-deps.sh remove
 
 # dev-tools - 安装 Go 开发辅助工具 (asynq mon, pkgsite, goconvey)
 # 用法: make dev-tools
@@ -242,73 +116,17 @@ dev-tools:
 # protobuf-tools - 安装 protobuf 编译器及 Go 插件 (protoc-gen-go, protoc-gen-go-grpc)
 # 用法: make protobuf-tools
 protobuf-tools:
-	@case "$(UNAME_S)" in \
-		Darwin) \
-			HOMEBREW_NO_AUTO_UPDATE=1 brew install protobuf ;; \
-		Linux) \
-			apt install -y protobuf-compiler ;; \
-		MINGW*|MSYS*|CYGWIN*) \
-			echo "请从 https://github.com/protocolbuffers/protobuf/releases 手动安装 protobuf" ;; \
-		*) \
-			echo "警告: 不支持的操作系统 '$(UNAME_S)'，请手动安装 protobuf。" ;; \
-	esac
-	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-	@case "$(UNAME_S)" in \
-		Darwin) \
-			shell_profile=~/.zshrc; \
-			if [ -f ~/.bash_profile ]; then shell_profile=~/.bash_profile; fi; \
-			echo 'export PATH=$$PATH:~/go/bin' >> $$shell_profile ;; \
-		*) \
-			echo 'export PATH=$$PATH:~/go/bin' >> ~/.bashrc ;; \
-	esac
+	@scripts/install-tools.sh protobuf
 
 # ts-tools - 安装 TypeScript/Node.js 开发工具链 (node, npm, pnpm)
 # 用法: make ts-tools
 ts-tools:
-	@case "$(UNAME_S)" in \
-		Darwin) \
-			if ! command -v node >/dev/null 2>&1; then \
-				HOMEBREW_NO_AUTO_UPDATE=1 brew install node; \
-			else \
-				echo "node 已安装，跳过"; \
-			fi ;; \
-		Linux) \
-			if ! command -v node >/dev/null 2>&1; then \
-				curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt install -y nodejs; \
-			else \
-				echo "node 已安装，跳过"; \
-			fi ;; \
-		MINGW*|MSYS*|CYGWIN*) \
-			if ! command -v node >/dev/null 2>&1; then \
-				echo "请从 https://nodejs.org 安装 Node.js 后重新执行该目标"; \
-				exit 1; \
-			fi ;; \
-		*) \
-			if ! command -v node >/dev/null 2>&1; then \
-				echo "警告: 不支持的操作系统 '$(UNAME_S)'，请从 https://nodejs.org 手动安装 Node.js"; \
-				exit 1; \
-			fi ;; \
-	esac
-	npm config set registry=https://registry.npmjs.org/
-	npm install -g npm@10
-	npm install -g pnpm@latest-10
-	pnpm self-update
+	@scripts/install-tools.sh ts
 
 # pcap-tools - 安装 libpcap 开发库 (抓包必需依赖)
 # 用法: make pcap-tools
 pcap-tools:
-	@case "$(UNAME_S)" in \
-		Darwin) \
-			xcode-select -p >/dev/null 2>&1 || xcode-select --install; \
-			echo "libpcap 已包含在 macOS Xcode Command Line Tools 中" ;; \
-		Linux) \
-			apt install -y libpcap-dev ;; \
-		MINGW*|MSYS*|CYGWIN*) \
-			echo "请从 https://npcap.com/dist/ 安装 Npcap SDK" ;; \
-		*) \
-			echo "警告: 不支持的操作系统 '$(UNAME_S)'，请手动安装 libpcap。" ;; \
-	esac
+	@scripts/install-tools.sh pcap
 
 # ============================================================
 # 构建与版本管理
@@ -337,9 +155,6 @@ VERSION ?=
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_TIME ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILDER  ?= $(shell whoami)
-
-# 语义化版本（SemVer 2.0.0）：vX.Y.Z，可带预发布与构建元数据
-SEMVER_PATTERN := ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?(\+([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$$
 
 # 开发构建只注入 commit 等信息，SemVer 留空，避免把 git describe 的非语义化结果当成版本号
 DEV_LDFLAGS = -X zhongkuisec.com/zhongkui/internal/pkg/version.Commit=$(COMMIT) \
@@ -376,19 +191,10 @@ internal/manager/views/search.go internal/manager/views/enum_bindings.go: cmd/te
 	gofmt -w internal/manager/views/search.go internal/manager/views/enum_bindings.go
 
 # p0f-update - 从社区维护的 p0f3 签名库刷新内嵌的上游 p0f.fp，并运行指纹测试
-# 本地定制签名保存在 p0f.local.fp，不会被上游覆盖；刷新后若指纹基线变化，
-# 需人工确认 TestFingerprintFromPcap 的结果并更新 internal/network/detectors/fingerprint_pcap_test.go
 # 用法: make p0f-update
 # 自定义上游源: make p0f-update P0F_UPSTREAM_URL=<新地址>
 p0f-update:
-	@echo "=== 下载上游 p0f 签名库: $(P0F_UPSTREAM_URL) ==="
-	@curl -fsSL "$(P0F_UPSTREAM_URL)" -o "$(P0F_FP).tmp" || { echo "下载失败，请检查网络或 P0F_UPSTREAM_URL"; exit 1; }
-	@echo "=== 下载完成，校验格式（行数/首个 section）==="
-	@wc -l "$(P0F_FP).tmp"
-	@grep -m1 '^\[tcp:request\]' "$(P0F_FP).tmp" >/dev/null || { echo "校验失败：下载内容不含 [tcp:request] section，中止"; rm -f "$(P0F_FP).tmp"; exit 1; }
-	@mv "$(P0F_FP).tmp" "$(P0F_FP)"
-	@echo "=== 运行指纹测试验证 ==="
-	go test ./internal/network/detectors -run '^TestFingerprintFromPcap$$' -v
+	@scripts/p0f-update.sh "$(P0F_UPSTREAM_URL)"
 
 # build - 编译 zki 二进制 (开发版本，版本显示回落为 commit hash)
 # 用法: make build
@@ -398,77 +204,18 @@ build: internal/pkg/protobuf/reporter/v1/reporter.pb.go internal/pkg/protobuf/re
 # build-release - 编译 release 版本 (需手动指定并通过校验的语义化版本号，支持正式版和预发布版)
 # 用法: make build-release VERSION=v1.2.3  或  make build-release VERSION=v1.2.3-alpha.1
 build-release:
-	@if [ -z "$(VERSION)" ]; then \
-		echo "ERROR: 请设置 VERSION 为语义化版本号，例如: make build-release VERSION=v1.2.3"; \
-		exit 1; \
-	fi
-	@echo '$(VERSION)' | grep -Eq '$(SEMVER_PATTERN)' || { \
-		echo "ERROR: VERSION '$(VERSION)' 不是合法的语义化版本号，示例: v1.2.3 或 v0.1.0-alpha.1"; \
-		exit 1; \
-	}
+	@scripts/validate-semver.sh "$(VERSION)"
 	go build -ldflags "$(RELEASE_LDFLAGS)" -o bin/zki cmd/zki/main.go
 
 # release - 在 master 上创建发布标签 (要求 CHANGELOG 与 web/package.json 已对齐)
 # 用法: make release VERSION=v1.2.3  或  make release VERSION=v1.2.3-rc.1
-# 前置: 当前分支为 master、工作区干净、CHANGELOG 存在对应版本段、版本标签未创建
 release:
-	@if [ -z "$(VERSION)" ]; then \
-		echo "ERROR: 请设置 VERSION 为语义化版本号，例如: make release VERSION=v1.2.3"; \
-		exit 1; \
-	fi
-	@echo '$(VERSION)' | grep -Eq '$(SEMVER_PATTERN)' || { \
-		echo "ERROR: VERSION '$(VERSION)' 不是合法的语义化版本号"; \
-		exit 1; \
-	}
-	@if [ "$$(git rev-parse --abbrev-ref HEAD)" != "master" ]; then \
-		echo "ERROR: 发布必须在 master 分支上进行，当前为 $$(git rev-parse --abbrev-ref HEAD)"; \
-		exit 1; \
-	fi
-	@if [ -n "$$(git status --porcelain)" ]; then \
-		echo "ERROR: 工作区不干净，请先提交或清理改动"; \
-		exit 1; \
-	fi
-	@if git rev-parse -q --verify "refs/tags/$(VERSION)" >/dev/null 2>&1; then \
-		echo "ERROR: 标签 $(VERSION) 已存在"; \
-		exit 1; \
-	fi
-	@version_number=$$(echo '$(VERSION)' | sed 's/^v//'); \
-	grep -Fq "## [$$version_number] - " CHANGELOG.md || { \
-		echo "ERROR: CHANGELOG.md 缺少 '## [$$version_number] - YYYY-MM-DD' 版本段"; \
-		exit 1; \
-	}; \
-	grep -Fq "\"version\": \"$$version_number\"" web/package.json || { \
-		echo "ERROR: web/package.json 的 version 未对齐 $$version_number"; \
-		exit 1; \
-	}
-	$(MAKE) ci
-	git tag -a "$(VERSION)" -m "zhongkui $(VERSION)"
-	@echo "已创建标签 $(VERSION)；推送: git push origin master --follow-tags"
+	@scripts/release.sh "$(VERSION)"
 
 # dist - 打包 release 制品与 sha256 校验和 (供 Gitee Release 上传)
 # 用法: make dist VERSION=v1.2.3  或  make dist VERSION=v1.2.3-beta.1
 dist:
-	@if [ -z "$(VERSION)" ]; then \
-		echo "ERROR: 请设置 VERSION 为语义化版本号，例如: make dist VERSION=v1.2.3"; \
-		exit 1; \
-	fi
-	@echo '$(VERSION)' | grep -Eq '$(SEMVER_PATTERN)' || { \
-		echo "ERROR: VERSION '$(VERSION)' 不是合法的语义化版本号"; \
-		exit 1; \
-	}
-	$(MAKE) build-release VERSION=$(VERSION)
-	@version_number=$$(echo '$(VERSION)' | sed 's/^v//'); \
-	os=$$(go env GOOS); arch=$$(go env GOARCH); \
-	archive="zki_$${version_number}_$${os}_$${arch}.tar.gz"; \
-	mkdir -p dist; \
-	cp bin/zki LICENSE NOTICE THIRD_PARTY_LICENSES.md dist/; \
-	tar -C dist -czf "dist/$$archive" zki LICENSE NOTICE THIRD_PARTY_LICENSES.md; \
-	if command -v sha256sum >/dev/null 2>&1; then \
-		sha256sum "dist/$$archive" > "dist/$$archive.sha256"; \
-	else \
-		shasum -a 256 "dist/$$archive" > "dist/$$archive.sha256"; \
-	fi; \
-	echo "已生成 dist/$$archive 与 dist/$$archive.sha256"
+	@scripts/dist.sh "$(VERSION)"
 
 # run - 使用 go run 直接运行 zki
 # 用法: make run ARGS="version" 或 make run ARGS="run web --config=config.toml"
@@ -495,12 +242,7 @@ lint:
 # fmt-check - 检查已跟踪的 Go 文件是否符合 gofmt
 # 用法: make fmt-check
 fmt-check:
-	@unformatted=$$(gofmt -l $$(git ls-files '*.go') $$(git ls-files --others --exclude-standard '*.go')); \
-	if [ -n "$$unformatted" ]; then \
-		echo "以下文件未通过 gofmt:"; \
-		echo "$$unformatted"; \
-		exit 1; \
-	fi
+	@scripts/fmt-check.sh
 
 # vet - 运行 go vet
 # 用法: make vet
@@ -515,40 +257,44 @@ test:
 
 # test-report - 以 Gitee Go 可直接解析的格式运行单元测试，并生成覆盖率报告
 # 产物均位于 .cicd/golang-report/：report.jsonl 测试报告、index.html 覆盖率页面、coverage.txt 汇总
-# 与 test 的区别：JSON 不刷屏，失败时打印失败包名并保留完整报告供 CI 上传
-# 注意: go test -json 在少数情况下会输出非 JSON 行（如 cgo 库直接向 stdout 打印），
-#       而 Gitee Go 的 UT 插件用 jq 解析 report.jsonl 时要求每行都是 JSON 对象，
-#       否则会报 "Cannot index string with string key"。因此先写到 report.raw.jsonl，
-#       再用 jq 过滤只保留合法 JSON 对象行生成最终 report.jsonl。
 # 用法: make test-report
 test-report:
-	@mkdir -p $(GOLANG_REPORT_DIR)
-	@set +e; \
-	raw=$(GOLANG_REPORT_DIR)/report.raw.jsonl; \
-	go test -v -json -cover -coverprofile=$(GOLANG_REPORT_DIR)/cover.out ./... \
-		> $$raw 2> $(GOLANG_REPORT_DIR)/stderr.log; \
-	status=$$?; \
-	if command -v jq >/dev/null 2>&1; then \
-		jq -R -c 'fromjson? | select(type=="object")' $$raw > $(GOLANG_REPORT_DIR)/report.jsonl; \
-	else \
-		grep -E '^\{.*\}$$' $$raw > $(GOLANG_REPORT_DIR)/report.jsonl || true; \
-	fi; \
-	rm -f $$raw; \
-	go tool cover -html=$(GOLANG_REPORT_DIR)/cover.out -o $(GOLANG_REPORT_DIR)/index.html 2>/dev/null || true; \
-	go tool cover -func=$(GOLANG_REPORT_DIR)/cover.out > $(GOLANG_REPORT_DIR)/coverage.txt 2>/dev/null || true; \
-	tail -n 1 $(GOLANG_REPORT_DIR)/coverage.txt 2>/dev/null || true; \
-	if [ $$status -ne 0 ]; then \
-		echo "单元测试失败，完整报告: $(GOLANG_REPORT_DIR)/report.jsonl"; \
-		grep '"Action":"fail"' $(GOLANG_REPORT_DIR)/report.jsonl | tail -n 20 || true; \
-		tail -n 40 $(GOLANG_REPORT_DIR)/stderr.log || true; \
-	fi; \
-	exit $$status
+	@scripts/test-report.sh
 
 # test-integration - 运行依赖外部服务的集成测试（PostgreSQL / ClickHouse）
 # 前置条件：make run-dev-deps && make create-test-dbs，或提供 ZKI_DATABASE_CORE_TEST_DSN / ZKI_DATABASE_RAW_TEST_DSN
 # 用法: make test-integration
 test-integration:
 	ZKI_TEST_INTEGRATION=1 go test ./...
+
+# secret-scan - 本地密钥扫描：只扫「将要提交」的文件，与 CI 的 Betterleaks 门禁一致
+# 只扫描待提交文件，避免构建产物与既有测试夹具产生大量噪音；报告落在 .cicd/secret-scan/
+# 用法: make secret-scan
+secret-scan:
+	@scripts/secret-scan.sh --changed
+
+# secret-scan-staged - 仅扫描暂存区，适合接到 pre-commit 钩子
+# 用法: make secret-scan-staged
+secret-scan-staged:
+	@scripts/secret-scan.sh --staged
+
+# secret-scan-all - 扫描全部受版本控制的文件（与 CI 全量扫描口径一致，会包含测试夹具）
+# 用法: make secret-scan-all
+secret-scan-all:
+	@scripts/secret-scan.sh --all
+
+# secret-scan-baseline - 把当前扫描结果记为基线，后续只对新增发现失败
+# 基线文件位于 .cicd/secret-scan/baseline.tsv（不纳入版本控制）
+# 用法: make secret-scan-baseline
+secret-scan-baseline:
+	@scripts/secret-scan.sh --all --baseline
+
+# secret-scan-install - 安装 Betterleaks（macOS / Linux / Windows Git Bash，x64 与 arm64）
+# 默认从 GitHub Release 下载预编译二进制到 ~/.local/bin；偏好 Homebrew 可加 --brew
+# 用法: make secret-scan-install
+#       make secret-scan-install INSTALL_ARGS="--brew"
+secret-scan-install:
+	@scripts/install-betterleaks.sh $(INSTALL_ARGS)
 
 # build-check - 编译全部包但不产出二进制，作为 CI 的构建门禁
 # 用法: make build-check
@@ -605,26 +351,8 @@ ci: fmt-check build-check vet test lint license-check docs-check
 #   2. 每项输出写入 $(REPORT_DIR)/<检查名>.log；
 #   3. 测试改用 test-report，额外产出 Gitee Go 可解析的 .cicd/golang-report/。
 # 用法: make ci-report
-CI_CHECKS := fmt-check build-check vet test-report lint license-check docs-check
-
 ci-report:
-	@mkdir -p $(REPORT_DIR)
-	@failed=""; \
-	for check in $(CI_CHECKS); do \
-		printf '\n===== %s =====\n' "$$check"; \
-		if $(MAKE) --no-print-directory "$$check" > "$(REPORT_DIR)/$$check.log" 2>&1; then \
-			printf 'PASS  %s\n' "$$check"; \
-		else \
-			printf 'FAIL  %s\n' "$$check"; \
-			failed="$$failed $$check"; \
-			tail -n 40 "$(REPORT_DIR)/$$check.log"; \
-		fi; \
-	done; \
-	if [ -n "$$failed" ]; then \
-		printf '\nCI 检查未通过，失败项:%s\n逐项日志目录: %s\n' "$$failed" "$(REPORT_DIR)"; \
-		exit 1; \
-	fi; \
-	printf '\nCI 检查全部通过\n'
+	@scripts/ci-report.sh
 
 # ============================================================
 # Wire 抓包实现基线测试
@@ -633,26 +361,7 @@ ci-report:
 # bench-prepare - 下载 tcpreplay 采样流量并生成 fallback pcap
 # 用法: make bench-prepare
 bench-prepare:
-	@echo "=== 下载 tcpreplay 采样流量 ==="
-	@mkdir -p internal/benchmark/capture/testdata
-	@curl -sL -o internal/benchmark/capture/testdata/test.pcap \
-		https://s3.amazonaws.com/tcpreplay-pcap-files/test.pcap && \
-		echo "  test.pcap (141 包)     \xe2\x9c\x93" || \
-		echo "  test.pcap              \xe2\x9c\x97"
-	@curl -sL -o internal/benchmark/capture/testdata/smallFlows.pcap \
-		https://s3.amazonaws.com/tcpreplay-pcap-files/smallFlows.pcap && \
-		echo "  smallFlows.pcap (14k 包) \xe2\x9c\x93" || \
-		echo "  smallFlows.pcap          \xe2\x9c\x97"
-	@curl -sL -o internal/benchmark/capture/testdata/bigFlows.pcap \
-		https://s3.amazonaws.com/tcpreplay-pcap-files/bigFlows.pcap && \
-		echo "  bigFlows.pcap (790k 包)   \xe2\x9c\x93" || \
-		echo "  bigFlows.pcap             \xe2\x9c\x97"
-	@echo "=== 生成 fallback pcap (10,000 包) ==="
-	@go run cmd/template/main.go gen-fallback-pcap \
-		--output internal/benchmark/capture/testdata/fallback.pcap \
-		--numPackets 10000
-	@echo "=== 完成 ==="
-	@ls -lh internal/benchmark/capture/testdata/
+	@scripts/bench-prepare.sh
 
 # bench-smoke - 快速冒烟测试 (无需 sudo，仅用内嵌 test.pcap)
 # 用法: make bench-smoke
@@ -742,249 +451,47 @@ bench-probe:
 # 项目地址: https://github.com/uptrace/uptrace
 
 UPTRACE_VERSION ?= 2.0.3
-UPTRACE_BIN := $(GOBIN)/uptrace
-UPTRACE_CONFIG := config/uptrace.yml
-UPTRACE_PID := /tmp/uptrace.pid
-ifeq ($(UNAME_S),Linux)
-UPTRACE_DOCKER_CMD := nerdctl
-else
-UPTRACE_DOCKER_CMD := docker
-endif
-
-# sed 原地编辑参数（macOS 的 BSD sed 需要 -i '' 写法，Linux GNU sed 为 -i）
-ifeq ($(UNAME_S),Darwin)
-SED_I := sed -i ''
-else
-SED_I := sed -i
-endif
+export UPTRACE_VERSION
 
 # uptrace-install - 下载并安装 uptrace 二进制（已安装则跳过）
 # 用法: make uptrace-install
 uptrace-install:
-	@if [ -f $(UPTRACE_BIN) ] && [ -x $(UPTRACE_BIN) ]; then \
-		echo "uptrace 已安装: $(UPTRACE_BIN)"; \
-		$(UPTRACE_BIN) version || true; \
-		exit 0; \
-	fi
-	@echo "=== 安装 uptrace v$(UPTRACE_VERSION) ==="
-	@mkdir -p $(GOBIN)
-	@case "$(UNAME_S)" in \
-		Darwin) \
-			arch=$$(uname -m); \
-			if [ "$$arch" = "arm64" ]; then \
-				url="https://github.com/uptrace/uptrace/releases/download/v$(UPTRACE_VERSION)/uptrace_darwin_arm64"; \
-			else \
-				url="https://github.com/uptrace/uptrace/releases/download/v$(UPTRACE_VERSION)/uptrace_darwin_amd64"; \
-			fi ;; \
-		Linux) \
-			arch=$$(uname -m); \
-			if [ "$$arch" = "aarch64" ]; then \
-				url="https://github.com/uptrace/uptrace/releases/download/v$(UPTRACE_VERSION)/uptrace_linux_arm64"; \
-			else \
-				url="https://github.com/uptrace/uptrace/releases/download/v$(UPTRACE_VERSION)/uptrace_linux_amd64"; \
-			fi ;; \
-		*) \
-			echo "不支持的平台，请手动下载: https://github.com/uptrace/uptrace/releases"; \
-			exit 1 ;; \
-	esac; \
-	echo "  下载: $$url"; \
-	curl -sL -o $(UPTRACE_BIN) "$$url" && chmod +x $(UPTRACE_BIN)
-	@echo "  已安装到 $(UPTRACE_BIN)"
-	@$(UPTRACE_BIN) version || true
+	@scripts/uptrace.sh install
 
 # uptrace-config - 使用 uptrace 官方命令生成配置文件，并修改为本机连接信息
 # 用法: make uptrace-config
-# 依赖: make uptrace-install
 uptrace-config:
-	@if [ ! -f $(UPTRACE_BIN) ]; then \
-		echo "uptrace 未安装，请先运行 make uptrace-install"; \
-		exit 1; \
-	fi
-	@if [ -f $(UPTRACE_CONFIG) ]; then \
-		echo "配置文件已存在: $(UPTRACE_CONFIG)，跳过生成"; \
-	else \
-		echo "=== 生成配置文件 $(UPTRACE_CONFIG) ==="; \
-		mkdir -p $$(dirname $(UPTRACE_CONFIG)); \
-		$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) config create; \
-		$(SED_I) '/^pg:/,/^[a-z]/{s/^  user: .*/  user: postgres/;s/^  password: .*/  password: root_password/;}' $(UPTRACE_CONFIG); \
-		$(SED_I) '/^ch_cluster:/,/^[a-z]/{s/^          user: .*/          user: default/;s/^          password: .*/          password: ""/;}' $(UPTRACE_CONFIG); \
-		$(SED_I) 's|^    addr: :80|    addr: :14318|' $(UPTRACE_CONFIG); \
-		$(SED_I) 's|^  url: http://uptrace.local|  url: http://localhost:14318|' $(UPTRACE_CONFIG); \
-		$(SED_I) 's|^  dsn: http://project1_secret@uptrace.local?grpc=4317|  dsn: http://project1_secret@localhost:14318?grpc=4317|' $(UPTRACE_CONFIG); \
-		$(SED_I) '/^redis_cache:/,/^[a-z]/{s/^  password: .*/  password: ""/;}' $(UPTRACE_CONFIG); \
-		echo "  配置文件已生成 ($(UPTRACE_CONFIG))"; \
-	fi
+	@scripts/uptrace.sh config
 
 # uptrace-init - 初始化数据库（按官方文档顺序执行迁移和种子数据）
 # 用法: make uptrace-init
 # 前置条件: make run-dev-deps, make uptrace-install, make uptrace-config
 uptrace-init:
-	@if [ ! -f $(UPTRACE_BIN) ]; then \
-		echo "uptrace 未安装，请先运行 make uptrace-install"; \
-		exit 1; \
-	fi
-	@if [ ! -f $(UPTRACE_CONFIG) ]; then \
-		echo "配置文件 $(UPTRACE_CONFIG) 不存在，请先运行 make uptrace-config"; \
-		exit 1; \
-	fi
-	@echo "=== 创建 ClickHouse 数据库 ==="
-	@$(UPTRACE_DOCKER_CMD) exec clickhouse-server clickhouse-client -q "CREATE DATABASE IF NOT EXISTS uptrace" 2>/dev/null; \
-	if [ $$? -ne 0 ]; then \
-		echo "  ClickHouse 不可用，请先运行 make run-dev-deps"; \
-		exit 1; \
-	fi
-	@echo "  数据库已就绪"
-	@echo ""
-	@echo "=== 创建 PostgreSQL 数据库 ==="
-	@$(UPTRACE_DOCKER_CMD) exec postgres psql -U postgres -c "CREATE DATABASE uptrace" 2>/dev/null || true
-	@echo "  数据库已就绪"
-	@echo ""
-	@echo "=== 初始化 PostgreSQL ==="
-	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) pg init
-	@echo ""
-	@echo "=== 运行 PostgreSQL 迁移 ==="
-	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) pg migrate
-	@echo ""
-	@echo "=== 初始化 ClickHouse ==="
-	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) ch init
-	@echo ""
-	@echo "=== 运行 ClickHouse 迁移 ==="
-	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) ch migrate
-	@echo ""
-	@echo "=== 创建 ClickHouse 分布式表 ==="
-	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) ch dist
-	@echo ""
-	@echo "=== 写入种子数据 ==="
-	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) db seed 2>/dev/null || echo "  (种子数据将在 serve 首次启动时加载)"
-	@echo ""
-	@echo "数据库初始化完成"
+	@scripts/uptrace.sh init
 
 # uptrace-start - 后台启动 uptrace serve
 # 用法: make uptrace-start
 # 前置条件: make uptrace-init
 uptrace-start:
-	@if [ ! -f $(UPTRACE_BIN) ]; then \
-		echo "uptrace 未安装，请先运行 make uptrace-install"; \
-		exit 1; \
-	elif [ -f $(UPTRACE_PID) ] && kill -0 $$(cat $(UPTRACE_PID)) 2>/dev/null; then \
-		echo "uptrace 已在运行 (PID $$(cat $(UPTRACE_PID)))"; \
-		exit 0; \
-	else \
-		echo "=== 后台启动 uptrace serve ==="; \
-		nohup $(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) serve > /tmp/uptrace.log 2>&1 & echo $$! > $(UPTRACE_PID); \
-		sleep 3; \
-		if kill -0 $$(cat $(UPTRACE_PID)) 2>/dev/null; then \
-			echo "uptrace 已启动 (PID $$(cat $(UPTRACE_PID)))"; \
-		else \
-			echo "uptrace 启动失败，查看日志:"; \
-			tail -20 /tmp/uptrace.log; \
-			rm -f $(UPTRACE_PID); \
-			exit 1; \
-		fi; \
-	fi
-	@echo ""
-	@echo "┌──────────────────────────────────────────────────────────┐"
-	@echo "│  uptrace Web UI (traces / metrics / logs 可视化)         │"
-	@echo "│    http://localhost:14318                                  │"
-	@echo "├──────────────────────────────────────────────────────────┤"
-	@echo "│  OTLP gRPC 端点 (应用上报地址)                              │"
-	@echo "│    localhost:4317                                          │"
-	@echo "├──────────────────────────────────────────────────────────┤"
-	@echo "│  OTLP HTTP 端点                                            │"
-	@echo "│    http://localhost:4318                                   │"
-	@echo "├──────────────────────────────────────────────────────────┤"
-	@echo "│  首次使用请在 Web UI 中创建项目，复制项目的 DSN            │"
-	@echo "│  (Data Source Name)，格式如下:                             │"
-	@echo "│    https://<token>@localhost:14318?grpc=4317             │"
-	@echo "└──────────────────────────────────────────────────────────┘"
-	@echo ""
-	@echo "在运行应用之前，设置以下环境变量以启用 OpenTelemetry 上报:"
-	@echo ""
-	@echo "  export OTEL_SERVICE_NAME=zki"
-	@echo "  export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317"
-	@echo '  export OTEL_EXPORTER_OTLP_HEADERS="uptrace-dsn=http://project1_secret@localhost:14318?grpc=4317"'
-	@echo "  export OTEL_EXPORTER_OTLP_COMPRESSION=gzip"
-	@echo "  export OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=DELTA"
-	@echo "  export OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION=BASE2_EXPONENTIAL_BUCKET_HISTOGRAM"
-	@echo ""
-	@echo "  # 然后正常运行应用:"
-	@echo "  go run cmd/zki/main.go run"
-	@echo ""
-	@echo "日志文件: tail -f /tmp/uptrace.log"
-	@echo "CLI 帮助: make uptrace-cli-help"
-	@echo "停止服务: make uptrace-stop"
+	@scripts/uptrace.sh start
 
 # uptrace-stop - 停止后台运行的 uptrace serve
 # 用法: make uptrace-stop
 uptrace-stop:
-	@if [ -f $(UPTRACE_PID) ] && kill -0 $$(cat $(UPTRACE_PID)) 2>/dev/null; then \
-		pid=$$(cat $(UPTRACE_PID)); \
-		echo "=== 停止 uptrace (PID $$pid) ==="; \
-		kill $$pid 2>/dev/null || true; \
-		sleep 1; \
-		if kill -0 $$pid 2>/dev/null; then \
-			echo "强制终止..."; \
-			kill -9 $$pid 2>/dev/null || true; \
-		fi; \
-		rm -f $(UPTRACE_PID); \
-		echo "已停止"; \
-	else \
-		echo "uptrace 未在运行"; \
-		rm -f $(UPTRACE_PID); \
-	fi
+	@scripts/uptrace.sh stop
 
 # uptrace-clear - 清除 uptrace-init 创建的数据库及数据
 # 用法: make uptrace-clear
 # 注意: 此操作不可逆，将重置 ClickHouse 和 PostgreSQL 中的 uptrace schema
 uptrace-clear:
-	@if [ -f $(UPTRACE_PID) ] && kill -0 $$(cat $(UPTRACE_PID)) 2>/dev/null; then \
-		echo "uptrace 正在运行，请先执行 make uptrace-stop"; \
-		exit 1; \
-	fi
-	@if [ ! -f $(UPTRACE_BIN) ]; then \
-		echo "uptrace 未安装，请先运行 make uptrace-install"; \
-		exit 1; \
-	fi
-	@echo "=== 清除 uptrace 数据 ==="
-	@echo ""
-	@echo "--- 重置 ClickHouse schema ---"
-	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) ch reset
-	@echo ""
-	@echo "--- 重置 PostgreSQL schema ---"
-	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) pg reset
-	@echo ""
-	@echo "清除完成，可通过 make uptrace-init 重新初始化"
+	@scripts/uptrace.sh clear
 
 # uptrace-uninstall - 卸载 uptrace 二进制和配置文件
 # 用法: make uptrace-uninstall
 uptrace-uninstall:
-	@if [ -f $(UPTRACE_PID) ] && kill -0 $$(cat $(UPTRACE_PID)) 2>/dev/null; then \
-		echo "uptrace 正在运行，请先执行 make uptrace-stop"; \
-		exit 1; \
-	fi
-	@echo "=== 卸载 uptrace ==="
-	@rm -f $(UPTRACE_BIN) && echo "  已删除 $(UPTRACE_BIN)" || true
-	@rm -f $(UPTRACE_CONFIG) && echo "  已删除 $(UPTRACE_CONFIG)" || true
-	@rm -f $(UPTRACE_PID)
-	@echo "卸载完成"
+	@scripts/uptrace.sh uninstall
 
 # uptrace-cli-help - 打印 uptrace CLI 常用命令参考
 # 用法: make uptrace-cli-help
 uptrace-cli-help:
-	@echo "uptrace CLI 常用命令:"
-	@echo ""
-	@echo "  uptrace version         - 查看版本"
-	@echo "  uptrace serve           - 前台启动服务 (调试用)"
-	@echo "  uptrace config create   - 生成配置文件模板"
-	@echo "  uptrace config validate - 验证配置文件"
-	@echo ""
-	@echo "  数据库管理 (按官方文档顺序):"
-	@echo "  uptrace pg init         - 初始化 PostgreSQL (仅首次)"
-	@echo "  uptrace pg migrate      - 运行 PostgreSQL 迁移"
-	@echo "  uptrace ch init         - 初始化 ClickHouse (仅首次)"
-	@echo "  uptrace ch migrate      - 运行 ClickHouse 迁移"
-	@echo "  uptrace ch dist         - 创建 ClickHouse 分布式表"
-	@echo "  uptrace db seed         - 写入项目/用户种子数据"
-	@echo ""
-	@echo "  在浏览器打开 http://localhost:14318 查看 Web UI"
-
+	@scripts/uptrace.sh cli-help

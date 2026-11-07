@@ -17,7 +17,7 @@
 ```json
 {
   "username": "string",
-  "password": "string"
+  "password": "<password>"
 }
 ```
 
@@ -38,6 +38,6 @@
 
 ```json
 {
-  "token": "string"
+  "token": "<token>"
 }
 ```

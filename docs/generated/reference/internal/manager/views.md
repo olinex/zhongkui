@@ -341,7 +341,7 @@ func BatchExecute[T any](c *gin.Context, items []T, idOf func(T) string, act fun
 batchExecute 批量执行骨架：逐条调用 act，错误捕获进 Failed（不中断后续条目）， 最终统一返回 BatchResultOut 汇总（HTTP 200 表达批量结果，失败在明细中体现）。
 
 <a name="BuildJSONExample"></a>
-## func [BuildJSONExample](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/catalog_example.go#L31>)
+## func [BuildJSONExample](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/catalog_example.go#L36>)
 
 ```go
 func BuildJSONExample(t reflect.Type) string

@@ -53,38 +53,8 @@ stages:
     redact: "true"
     failOnFindings: "true"
     configPath: ""
-    baselinePath: ""
+    baselinePath: .betterleaks-baseline.json
     maxFileMb: "0"
-    strategy:
-      retry: "0"
-      resource:
-        cpu: "2"
-        memory: "4"
-  - step: sc@kingfisher
-    name: 7048220d-8038-4c0a-90b9-2579224faa1d
-    displayName: Kingfisher 密钥扫描
-    scanPath: ./
-    confidence: medium
-    redact: "true"
-    failOnFindings: "true"
-    exclude: ""
-    jobs: "0"
-    maxFileMb: "256"
-    strategy:
-      retry: "0"
-      resource:
-        cpu: "2"
-        memory: "4"
-  - step: sc@titus
-    name: b54b5263-b7fb-4c40-8f4c-e73e3fd98402
-    displayName: Titus 密钥扫描
-    scanPath: ./
-    failOnFindings: "false"
-    workers: "0"
-    maxFileMb: "10"
-    ignoreFile: ""
-    ruleset: default
-    includeNoisy: "false"
     strategy:
       retry: "0"
       resource:

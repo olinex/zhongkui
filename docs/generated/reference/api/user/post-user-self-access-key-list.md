@@ -32,7 +32,7 @@
 {
   "enabled": false,
   "accessKeyID": "string",
-  "accessKeySecret": "string",
+  "accessKeySecret": "<accessKeySecret>",
   "description": "string",
   "expiredAt": "1970-01-01T00:00:00Z",
   "lastAccessAt": "1970-01-01T00:00:00Z"

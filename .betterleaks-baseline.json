@@ -1,0 +1,2627 @@
+[
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 168,
+  "EndLine": 168,
+  "StartColumn": 5,
+  "EndColumn": 20,
+  "Match": "psw:   \"nginx/\",",
+  "Secret": "nginx/",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/pkg/huginn/types_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/pkg/huginn/types_test.go:generic-password:168",
+  "File": "internal/pkg/huginn/types_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.251629,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 444,
+  "EndLine": 444,
+  "StartColumn": 5,
+  "EndColumn": 26,
+  "Match": "psw:   \"nginx/1.18.0\",",
+  "Secret": "nginx/1.18.0",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/pkg/huginn/distances_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/pkg/huginn/distances_test.go:generic-password:444",
+  "File": "internal/pkg/huginn/distances_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.0849626,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 450,
+  "EndLine": 450,
+  "StartColumn": 5,
+  "EndColumn": 20,
+  "Match": "psw:   \"nginx/\",",
+  "Secret": "nginx/",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/pkg/huginn/distances_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/pkg/huginn/distances_test.go:generic-password:450",
+  "File": "internal/pkg/huginn/distances_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.251629,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 474,
+  "EndLine": 474,
+  "StartColumn": 8,
+  "EndColumn": 25,
+  "Match": "psw = \"Apache/2.4\"",
+  "Secret": "Apache/2.4",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/pkg/huginn/distances_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/pkg/huginn/distances_test.go:generic-password:474",
+  "File": "internal/pkg/huginn/distances_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.321928,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 31,
+  "EndLine": 31,
+  "StartColumn": 40,
+  "EndColumn": 64,
+  "Match": "Password: \"Password123!\"}",
+  "Secret": "Password123!",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/pkg/validator/base_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/pkg/validator/base_test.go:generic-password:31",
+  "File": "internal/pkg/validator/base_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.4182959,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 119,
+  "EndLine": 119,
+  "StartColumn": 6,
+  "EndColumn": 30,
+  "Match": "Password: \"Password123!\",",
+  "Secret": "Password123!",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/pkg/validator/base_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/pkg/validator/base_test.go:generic-password:119",
+  "File": "internal/pkg/validator/base_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.4182959,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 243,
+  "EndLine": 243,
+  "StartColumn": 33,
+  "EndColumn": 57,
+  "Match": "Password: \"Password123!\"}",
+  "Secret": "Password123!",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/pkg/validator/base_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/pkg/validator/base_test.go:generic-password:243",
+  "File": "internal/pkg/validator/base_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.4182959,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 34,
+  "EndLine": 34,
+  "StartColumn": 11,
+  "EndColumn": 37,
+  "Match": "Password = \"strongPassword\"",
+  "Secret": "strongPassword",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/pkg/validator/string.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/pkg/validator/string.go:generic-password:34",
+  "File": "internal/pkg/validator/string.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.182006,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 114,
+  "EndLine": 114,
+  "StartColumn": 5,
+  "EndColumn": 26,
+  "Match": "psw:   \"nginx/1.18.0\",",
+  "Secret": "nginx/1.18.0",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/pkg/huginn/database_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/pkg/huginn/database_test.go:generic-password:114",
+  "File": "internal/pkg/huginn/database_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.0849626,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 125,
+  "EndLine": 125,
+  "StartColumn": 5,
+  "EndColumn": 18,
+  "Match": "psw: \"nginx/\",",
+  "Secret": "nginx/",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/pkg/huginn/database_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/pkg/huginn/database_test.go:generic-password:125",
+  "File": "internal/pkg/huginn/database_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.251629,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "jwt",
+  "Description": "Uncovered a JSON Web Token, which may lead to unauthorized access to web applications and sensitive user data.",
+  "StartLine": 8,
+  "EndLine": 8,
+  "StartColumn": 28,
+  "EndColumn": 3671,
+  "Match": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA\r",
+  "Secret": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA",
+  "Attributes": {
+   "confidence": "high",
+   "path": "internal/network/tcp/testdata/rustfs/stream_2_tx_17.json",
+   "resource": "fs.content"
+  },
+  "Tags": [
+   "decoded:hex",
+   "decode-depth:1"
+  ],
+  "Fingerprint": "internal/network/tcp/testdata/rustfs/stream_2_tx_17.json:jwt:8",
+  "File": "internal/network/tcp/testdata/rustfs/stream_2_tx_17.json",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.622342,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "jwt",
+  "Description": "Uncovered a JSON Web Token, which may lead to unauthorized access to web applications and sensitive user data.",
+  "StartLine": 8,
+  "EndLine": 8,
+  "StartColumn": 28,
+  "EndColumn": 3681,
+  "Match": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA\r",
+  "Secret": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA",
+  "Attributes": {
+   "confidence": "high",
+   "path": "internal/network/tcp/testdata/rustfs/stream_2_tx_21.json",
+   "resource": "fs.content"
+  },
+  "Tags": [
+   "decoded:hex",
+   "decode-depth:1"
+  ],
+  "Fingerprint": "internal/network/tcp/testdata/rustfs/stream_2_tx_21.json:jwt:8",
+  "File": "internal/network/tcp/testdata/rustfs/stream_2_tx_21.json",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.622342,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 513,
+  "EndLine": 513,
+  "StartColumn": 29,
+  "EndColumn": 50,
+  "Match": "password\":\"secret123\",",
+  "Secret": "secret123",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/pkg/crypto/mode/aes_gcm_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/pkg/crypto/mode/aes_gcm_test.go:generic-password:513",
+  "File": "internal/pkg/crypto/mode/aes_gcm_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.947703,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-credential-uri",
+  "Description": "Detected a password embedded in a service connection URI, which may expose direct access to the referenced service.",
+  "StartLine": 194,
+  "EndLine": 194,
+  "StartColumn": 40,
+  "EndColumn": 74,
+  "Match": "mongodb://user:pass@127.0.0.1:27017",
+  "Secret": "pass",
+  "CaptureGroups": {
+   "host": "127.0.0.1",
+   "password": "pass",
+   "scheme": "mongodb",
+   "uri": "mongodb://user:pass@127.0.0.1:27017",
+   "username": "user"
+  },
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/pkg/sqlitevtab/vtab/register.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/pkg/sqlitevtab/vtab/register.go:generic-credential-uri:194",
+  "File": "internal/pkg/sqlitevtab/vtab/register.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 1.5,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 172,
+  "EndLine": 172,
+  "StartColumn": 7,
+  "EndColumn": 179,
+  "Match": "Password = \"The field must be a strong password (containing at least one lowercase letter, one uppercase letter, one number, and one special character @$!%*?\u0026 respectively)\"",
+  "Secret": "The field must be a strong password (containing at least one lowercase letter, one uppercase letter, one number, and one special character @$!%*?\u0026 respectively)",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/pkg/translate/locales/en.toml",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/pkg/translate/locales/en.toml:generic-password:172",
+  "File": "internal/pkg/translate/locales/en.toml",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 4.296855,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 172,
+  "EndLine": 172,
+  "StartColumn": 7,
+  "EndColumn": 119,
+  "Match": "Password = \"字段须为强密码（至少各包含一个小写字母/大写字母/数字/特殊字符@$!%*?\u0026）\"",
+  "Secret": "字段须为强密码（至少各包含一个小写字母/大写字母/数字/特殊字符@$!%*?\u0026）",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/pkg/translate/locales/zh-Hans.toml",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/pkg/translate/locales/zh-Hans.toml:generic-password:172",
+  "File": "internal/pkg/translate/locales/zh-Hans.toml",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.4538972,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 51,
+  "EndLine": 51,
+  "StartColumn": 6,
+  "EndColumn": 48,
+  "Match": "Password: 用户输入的原始明文密码",
+  "Secret": "用户输入的原始明文密码",
+  "Attributes": {
+   "confidence": "low",
+   "path": "docs/generated/reference/internal/pkg/crypto.md",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "docs/generated/reference/internal/pkg/crypto.md:generic-password:51",
+  "File": "docs/generated/reference/internal/pkg/crypto.md",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 1.6814647,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 179,
+  "EndLine": 179,
+  "StartColumn": 3,
+  "EndColumn": 39,
+  "Match": "password: 用户的原始明文密码",
+  "Secret": "用户的原始明文密码",
+  "Attributes": {
+   "confidence": "low",
+   "path": "docs/generated/reference/internal/pkg/crypto.md",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "docs/generated/reference/internal/pkg/crypto.md:generic-password:179",
+  "File": "docs/generated/reference/internal/pkg/crypto.md",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 1.5849625,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 184,
+  "EndLine": 184,
+  "StartColumn": 70,
+  "EndColumn": 88,
+  "Match": "password\":\"secret\",",
+  "Secret": "secret",
+  "Attributes": {
+   "confidence": "medium",
+   "path": "internal/manager/views/notification/notification_channel_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 184,
+      "EndLine": 184,
+      "StartColumn": 50,
+      "EndColumn": 68,
+      "Match": "\"username\":\"alice\",",
+      "Secret": "alice"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/manager/views/notification/notification_channel_test.go:generic-password:184",
+  "File": "internal/manager/views/notification/notification_channel_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.251629,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 84,
+  "EndLine": 84,
+  "StartColumn": 7,
+  "EndColumn": 27,
+  "Match": "Password = \"testpass\"",
+  "Secret": "testpass",
+  "Attributes": {
+   "confidence": "medium",
+   "path": "internal/pkg/redis/config_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 83,
+      "EndLine": 83,
+      "StartColumn": 6,
+      "EndColumn": 27,
+      "Match": ".Username = \"testuser\"",
+      "Secret": "testuser"
+     }
+    ]
+   },
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 85,
+      "EndLine": 85,
+      "StartColumn": 6,
+      "EndColumn": 32,
+      "Match": ".ClientName = \"test-client\"",
+      "Secret": "test-client"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/pkg/redis/config_test.go:generic-password:84",
+  "File": "internal/pkg/redis/config_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.1556392,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 135,
+  "EndLine": 135,
+  "StartColumn": 15,
+  "EndColumn": 39,
+  "Match": "Password = \"sentinelpass\"",
+  "Secret": "sentinelpass",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/pkg/redis/config_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 140,
+      "EndLine": 140,
+      "StartColumn": 6,
+      "EndColumn": 28,
+      "Match": ".Username = \"redisuser\"",
+      "Secret": "redisuser"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/pkg/redis/config_test.go:generic-password:135",
+  "File": "internal/pkg/redis/config_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.8553886,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 141,
+  "EndLine": 141,
+  "StartColumn": 7,
+  "EndColumn": 28,
+  "Match": "Password = \"redispass\"",
+  "Secret": "redispass",
+  "Attributes": {
+   "confidence": "medium",
+   "path": "internal/pkg/redis/config_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 140,
+      "EndLine": 140,
+      "StartColumn": 6,
+      "EndColumn": 28,
+      "Match": ".Username = \"redisuser\"",
+      "Secret": "redisuser"
+     }
+    ]
+   },
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 142,
+      "EndLine": 142,
+      "StartColumn": 6,
+      "EndColumn": 36,
+      "Match": ".ClientName = \"sentinel-client\"",
+      "Secret": "sentinel-client"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/pkg/redis/config_test.go:generic-password:141",
+  "File": "internal/pkg/redis/config_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.6416042,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 103,
+  "EndLine": 103,
+  "StartColumn": 85,
+  "EndColumn": 109,
+  "Match": "password: root_password/;",
+  "Secret": "root_password/",
+  "Attributes": {
+   "confidence": "medium",
+   "path": "scripts/uptrace.sh",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 103,
+      "EndLine": 103,
+      "StartColumn": 48,
+      "EndColumn": 64,
+      "Match": " user: postgres/;",
+      "Secret": "postgres/"
+     }
+    ]
+   },
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 104,
+      "EndLine": 104,
+      "StartColumn": 72,
+      "EndColumn": 87,
+      "Match": " user: default/;",
+      "Secret": "default/"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "scripts/uptrace.sh:generic-password:103",
+  "File": "scripts/uptrace.sh",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.182006,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "jwt",
+  "Description": "Uncovered a JSON Web Token, which may lead to unauthorized access to web applications and sensitive user data.",
+  "StartLine": 8,
+  "EndLine": 8,
+  "StartColumn": 28,
+  "EndColumn": 3681,
+  "Match": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA\r",
+  "Secret": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA",
+  "Attributes": {
+   "confidence": "high",
+   "path": "internal/network/tcp/testdata/rustfs/stream_2_tx_19.json",
+   "resource": "fs.content"
+  },
+  "Tags": [
+   "decoded:hex",
+   "decode-depth:1"
+  ],
+  "Fingerprint": "internal/network/tcp/testdata/rustfs/stream_2_tx_19.json:jwt:8",
+  "File": "internal/network/tcp/testdata/rustfs/stream_2_tx_19.json",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.622342,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "jwt",
+  "Description": "Uncovered a JSON Web Token, which may lead to unauthorized access to web applications and sensitive user data.",
+  "StartLine": 8,
+  "EndLine": 8,
+  "StartColumn": 28,
+  "EndColumn": 3109,
+  "Match": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA\r",
+  "Secret": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA",
+  "Attributes": {
+   "confidence": "high",
+   "path": "internal/network/tcp/testdata/rustfs/stream_3_tx_7.json",
+   "resource": "fs.content"
+  },
+  "Tags": [
+   "decoded:hex",
+   "decode-depth:1"
+  ],
+  "Fingerprint": "internal/network/tcp/testdata/rustfs/stream_3_tx_7.json:jwt:8",
+  "File": "internal/network/tcp/testdata/rustfs/stream_3_tx_7.json",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.622342,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 86,
+  "EndLine": 86,
+  "StartColumn": 14,
+  "EndColumn": 40,
+  "Match": "Password = \"strongPassword\"",
+  "Secret": "strongPassword",
+  "Attributes": {
+   "confidence": "low",
+   "path": "docs/generated/reference/internal/pkg/validator.md",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "docs/generated/reference/internal/pkg/validator.md:generic-password:86",
+  "File": "docs/generated/reference/internal/pkg/validator.md",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.182006,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 98,
+  "EndLine": 98,
+  "StartColumn": 5,
+  "EndColumn": 23,
+  "Match": "Password: \"secret\",",
+  "Secret": "secret",
+  "Attributes": {
+   "confidence": "low",
+   "path": "docs/generated/reference/internal/pkg/redis.md",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "docs/generated/reference/internal/pkg/redis.md:generic-password:98",
+  "File": "docs/generated/reference/internal/pkg/redis.md",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.251629,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 52,
+  "EndLine": 52,
+  "StartColumn": 8,
+  "EndColumn": 26,
+  "Match": "Password: \"secret\",",
+  "Secret": "secret",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/pkg/redis/client.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/pkg/redis/client.go:generic-password:52",
+  "File": "internal/pkg/redis/client.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.251629,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-credential-uri",
+  "Description": "Detected a password embedded in a service connection URI, which may expose direct access to the referenced service.",
+  "StartLine": 562,
+  "EndLine": 562,
+  "StartColumn": 43,
+  "EndColumn": 77,
+  "Match": "mongodb://user:pass@127.0.0.1:27017",
+  "Secret": "pass",
+  "CaptureGroups": {
+   "host": "127.0.0.1",
+   "password": "pass",
+   "scheme": "mongodb",
+   "uri": "mongodb://user:pass@127.0.0.1:27017",
+   "username": "user"
+  },
+  "Attributes": {
+   "confidence": "low",
+   "path": "docs/generated/reference/internal/pkg/sqlitevtab/vtab.md",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "docs/generated/reference/internal/pkg/sqlitevtab/vtab.md:generic-credential-uri:562",
+  "File": "docs/generated/reference/internal/pkg/sqlitevtab/vtab.md",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 1.5,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 1176,
+  "EndLine": 1176,
+  "StartColumn": 3,
+  "EndColumn": 69,
+  "Match": "password: 新的明文密码，将在方法内部进行加密处理",
+  "Secret": "新的明文密码，将在方法内部进行加密处理",
+  "Attributes": {
+   "confidence": "low",
+   "path": "docs/generated/reference/internal/models/core.md",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "docs/generated/reference/internal/models/core.md:generic-password:1176",
+  "File": "docs/generated/reference/internal/models/core.md",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 1.9092089,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "jwt",
+  "Description": "Uncovered a JSON Web Token, which may lead to unauthorized access to web applications and sensitive user data.",
+  "StartLine": 8,
+  "EndLine": 8,
+  "StartColumn": 28,
+  "EndColumn": 3103,
+  "Match": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA\r",
+  "Secret": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA",
+  "Attributes": {
+   "confidence": "high",
+   "path": "internal/network/tcp/testdata/rustfs/stream_2_tx_5.json",
+   "resource": "fs.content"
+  },
+  "Tags": [
+   "decoded:hex",
+   "decode-depth:1"
+  ],
+  "Fingerprint": "internal/network/tcp/testdata/rustfs/stream_2_tx_5.json:jwt:8",
+  "File": "internal/network/tcp/testdata/rustfs/stream_2_tx_5.json",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.622342,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-api-key",
+  "Description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+  "StartLine": 9,
+  "EndLine": 9,
+  "StartColumn": 29,
+  "EndColumn": 528,
+  "Match": "access_key\":\"QNO6D8OR4AWKWYP5GMT9\"",
+  "Secret": "QNO6D8OR4AWKWYP5GMT9",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/network/tcp/testdata/rustfs/stream_2_tx_5.json",
+   "resource": "fs.content"
+  },
+  "Tags": [
+   "decoded:hex",
+   "decode-depth:1"
+  ],
+  "Fingerprint": "internal/network/tcp/testdata/rustfs/stream_2_tx_5.json:generic-api-key:9",
+  "File": "internal/network/tcp/testdata/rustfs/stream_2_tx_5.json",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 4.121928,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "jwt",
+  "Description": "Uncovered a JSON Web Token, which may lead to unauthorized access to web applications and sensitive user data.",
+  "StartLine": 8,
+  "EndLine": 8,
+  "StartColumn": 28,
+  "EndColumn": 3119,
+  "Match": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA\r",
+  "Secret": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA",
+  "Attributes": {
+   "confidence": "high",
+   "path": "internal/network/tcp/testdata/rustfs/stream_4_tx_17.json",
+   "resource": "fs.content"
+  },
+  "Tags": [
+   "decoded:hex",
+   "decode-depth:1"
+  ],
+  "Fingerprint": "internal/network/tcp/testdata/rustfs/stream_4_tx_17.json:jwt:8",
+  "File": "internal/network/tcp/testdata/rustfs/stream_4_tx_17.json",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.622342,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-api-key",
+  "Description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+  "StartLine": 9,
+  "EndLine": 9,
+  "StartColumn": 29,
+  "EndColumn": 528,
+  "Match": "access_key\":\"QNO6D8OR4AWKWYP5GMT9\"",
+  "Secret": "QNO6D8OR4AWKWYP5GMT9",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/network/tcp/testdata/rustfs/stream_4_tx_17.json",
+   "resource": "fs.content"
+  },
+  "Tags": [
+   "decoded:hex",
+   "decode-depth:1"
+  ],
+  "Fingerprint": "internal/network/tcp/testdata/rustfs/stream_4_tx_17.json:generic-api-key:9",
+  "File": "internal/network/tcp/testdata/rustfs/stream_4_tx_17.json",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 4.121928,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 28,
+  "EndLine": 28,
+  "StartColumn": 8,
+  "EndColumn": 28,
+  "Match": "Password = \"testpass\"",
+  "Secret": "testpass",
+  "Attributes": {
+   "confidence": "medium",
+   "path": "internal/pkg/redis/client_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 27,
+      "EndLine": 27,
+      "StartColumn": 7,
+      "EndColumn": 28,
+      "Match": ".Username = \"testuser\"",
+      "Secret": "testuser"
+     }
+    ]
+   },
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 29,
+      "EndLine": 29,
+      "StartColumn": 7,
+      "EndColumn": 33,
+      "Match": ".ClientName = \"test-client\"",
+      "Secret": "test-client"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/pkg/redis/client_test.go:generic-password:28",
+  "File": "internal/pkg/redis/client_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.1556392,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 75,
+  "EndLine": 75,
+  "StartColumn": 16,
+  "EndColumn": 40,
+  "Match": "Password = \"sentinelpass\"",
+  "Secret": "sentinelpass",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/pkg/redis/client_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 80,
+      "EndLine": 80,
+      "StartColumn": 7,
+      "EndColumn": 29,
+      "Match": ".Username = \"redisuser\"",
+      "Secret": "redisuser"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/pkg/redis/client_test.go:generic-password:75",
+  "File": "internal/pkg/redis/client_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.8553886,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 81,
+  "EndLine": 81,
+  "StartColumn": 8,
+  "EndColumn": 29,
+  "Match": "Password = \"redispass\"",
+  "Secret": "redispass",
+  "Attributes": {
+   "confidence": "medium",
+   "path": "internal/pkg/redis/client_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 80,
+      "EndLine": 80,
+      "StartColumn": 7,
+      "EndColumn": 29,
+      "Match": ".Username = \"redisuser\"",
+      "Secret": "redisuser"
+     }
+    ]
+   },
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 82,
+      "EndLine": 82,
+      "StartColumn": 7,
+      "EndColumn": 37,
+      "Match": ".ClientName = \"sentinel-client\"",
+      "Secret": "sentinel-client"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/pkg/redis/client_test.go:generic-password:81",
+  "File": "internal/pkg/redis/client_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.6416042,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 40,
+  "EndLine": 40,
+  "StartColumn": 67,
+  "EndColumn": 86,
+  "Match": "password\": \"secret\",",
+  "Secret": "secret",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/pkg/message/email.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 40,
+      "EndLine": 40,
+      "StartColumn": 46,
+      "EndColumn": 64,
+      "Match": "\"username\": \"user\",",
+      "Secret": "user"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/pkg/message/email.go:generic-password:40",
+  "File": "internal/pkg/message/email.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.251629,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 190,
+  "EndLine": 190,
+  "StartColumn": 7,
+  "EndColumn": 24,
+  "Match": "password: Password",
+  "Secret": "Password",
+  "Attributes": {
+   "confidence": "low",
+   "path": "web/src/locales/en.yaml",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 189,
+      "EndLine": 189,
+      "StartColumn": 6,
+      "EndColumn": 24,
+      "Match": " username: Username",
+      "Secret": "Username"
+     }
+    ]
+   },
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 193,
+      "EndLine": 193,
+      "StartColumn": 6,
+      "EndColumn": 18,
+      "Match": " email: Email",
+      "Secret": "Email"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "web/src/locales/en.yaml:generic-password:190",
+  "File": "web/src/locales/en.yaml",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.75,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 618,
+  "EndLine": 618,
+  "StartColumn": 7,
+  "EndColumn": 24,
+  "Match": "password: Password",
+  "Secret": "Password",
+  "Attributes": {
+   "confidence": "medium",
+   "path": "web/src/locales/en.yaml",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 621,
+      "EndLine": 621,
+      "StartColumn": 6,
+      "EndColumn": 20,
+      "Match": " user: Username",
+      "Secret": "Username"
+     }
+    ]
+   },
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 622,
+      "EndLine": 622,
+      "StartColumn": 6,
+      "EndColumn": 24,
+      "Match": " username: Username",
+      "Secret": "Username"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "web/src/locales/en.yaml:generic-password:618",
+  "File": "web/src/locales/en.yaml",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.75,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 1987,
+  "EndLine": 1987,
+  "StartColumn": 9,
+  "EndColumn": 26,
+  "Match": "password: Password",
+  "Secret": "Password",
+  "Attributes": {
+   "confidence": "medium",
+   "path": "web/src/locales/en.yaml",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 1986,
+      "EndLine": 1986,
+      "StartColumn": 8,
+      "EndColumn": 26,
+      "Match": " username: Username",
+      "Secret": "Username"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "web/src/locales/en.yaml:generic-password:1987",
+  "File": "web/src/locales/en.yaml",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.75,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 673,
+  "EndLine": 673,
+  "StartColumn": 6,
+  "EndColumn": 29,
+  "Match": "Password: \"password123\",",
+  "Secret": "password123",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/admin/admin_user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 672,
+      "EndLine": 672,
+      "StartColumn": 5,
+      "EndColumn": 26,
+      "Match": "\tUsername: \"testuser\",",
+      "Secret": "testuser"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/manager/views/admin/admin_user_test.go:generic-password:673",
+  "File": "internal/manager/views/admin/admin_user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.2776134,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 690,
+  "EndLine": 690,
+  "StartColumn": 6,
+  "EndColumn": 29,
+  "Match": "Password: \"password123\",",
+  "Secret": "password123",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/admin/admin_user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 689,
+      "EndLine": 689,
+      "StartColumn": 5,
+      "EndColumn": 26,
+      "Match": "\tUsername: \"zhangsan\",",
+      "Secret": "zhangsan"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/manager/views/admin/admin_user_test.go:generic-password:690",
+  "File": "internal/manager/views/admin/admin_user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.2776134,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 721,
+  "EndLine": 721,
+  "StartColumn": 6,
+  "EndColumn": 35,
+  "Match": "password\":   \"Str0ngP@ssw0rd\",",
+  "Secret": "Str0ngP@ssw0rd",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/admin/admin_user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 720,
+      "EndLine": 720,
+      "StartColumn": 5,
+      "EndColumn": 28,
+      "Match": "\"username\":   \"newuser\",",
+      "Secret": "newuser"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/manager/views/admin/admin_user_test.go:generic-password:721",
+  "File": "internal/manager/views/admin/admin_user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.3787835,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 758,
+  "EndLine": 758,
+  "StartColumn": 6,
+  "EndColumn": 35,
+  "Match": "password\":   \"Str0ngP@ssw0rd\",",
+  "Secret": "Str0ngP@ssw0rd",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/admin/admin_user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 757,
+      "EndLine": 757,
+      "StartColumn": 5,
+      "EndColumn": 30,
+      "Match": "\"username\":   \"duplicate\",",
+      "Secret": "duplicate"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/manager/views/admin/admin_user_test.go:generic-password:758",
+  "File": "internal/manager/views/admin/admin_user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.3787835,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 775,
+  "EndLine": 775,
+  "StartColumn": 124,
+  "EndColumn": 147,
+  "Match": "password\":\"password123\",",
+  "Secret": "password123",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/admin/admin_user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 775,
+      "EndLine": 775,
+      "StartColumn": 102,
+      "EndColumn": 122,
+      "Match": "\"username\":\"nofield\",",
+      "Secret": "nofield"
+     }
+    ]
+   },
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 775,
+      "EndLine": 775,
+      "StartColumn": 148,
+      "EndColumn": 177,
+      "Match": "\"email\":\"nofield@example.com\"}",
+      "Secret": "nofield@example.com"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/manager/views/admin/admin_user_test.go:generic-password:775",
+  "File": "internal/manager/views/admin/admin_user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.2776134,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 207,
+  "EndLine": 207,
+  "StartColumn": 5,
+  "EndColumn": 27,
+  "Match": "Password: \"Str0ngP@ss\",",
+  "Secret": "Str0ngP@ss",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 206,
+      "EndLine": 206,
+      "StartColumn": 4,
+      "EndColumn": 25,
+      "Match": "\tUsername: \"testuser\",",
+      "Secret": "testuser"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:207",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.121928,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 216,
+  "EndLine": 216,
+  "StartColumn": 5,
+  "EndColumn": 28,
+  "Match": "Password: \"An0therP@ss\",",
+  "Secret": "An0therP@ss",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 215,
+      "EndLine": 215,
+      "StartColumn": 4,
+      "EndColumn": 26,
+      "Match": "\tUsername: \"loginuser\",",
+      "Secret": "loginuser"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:216",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.2776134,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 236,
+  "EndLine": 236,
+  "StartColumn": 6,
+  "EndColumn": 32,
+  "Match": "Password: \"Str0ngP@ssw0rd\",",
+  "Secret": "Str0ngP@ssw0rd",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 235,
+      "EndLine": 235,
+      "StartColumn": 5,
+      "EndColumn": 25,
+      "Match": "\tUsername: \"reguser\",",
+      "Secret": "reguser"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:236",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.3787835,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 253,
+  "EndLine": 253,
+  "StartColumn": 6,
+  "EndColumn": 28,
+  "Match": "Password: \"Ser1alP@ss\",",
+  "Secret": "Ser1alP@ss",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 252,
+      "EndLine": 252,
+      "StartColumn": 5,
+      "EndColumn": 28,
+      "Match": "\tUsername: \"serialuser\",",
+      "Secret": "serialuser"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:253",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.121928,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 268,
+  "EndLine": 268,
+  "StartColumn": 8,
+  "EndColumn": 31,
+  "Match": "Password: \"OldP@ssw0rd\",",
+  "Secret": "OldP@ssw0rd",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:268",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.0957952,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 269,
+  "EndLine": 269,
+  "StartColumn": 8,
+  "EndColumn": 31,
+  "Match": "Password: \"NewP@ssw0rd\",",
+  "Secret": "NewP@ssw0rd",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:269",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.0957952,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 277,
+  "EndLine": 277,
+  "StartColumn": 8,
+  "EndColumn": 27,
+  "Match": "Password: \"oldpass\",",
+  "Secret": "oldpass",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:277",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.5216405,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 278,
+  "EndLine": 278,
+  "StartColumn": 8,
+  "EndColumn": 27,
+  "Match": "Password: \"newpass\",",
+  "Secret": "newpass",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:278",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.5216405,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 416,
+  "EndLine": 416,
+  "StartColumn": 6,
+  "EndColumn": 29,
+  "Match": "password\": \"Str0ngP@ss\",",
+  "Secret": "Str0ngP@ss",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 415,
+      "EndLine": 415,
+      "StartColumn": 5,
+      "EndColumn": 28,
+      "Match": "\"username\": \"loginuser\",",
+      "Secret": "loginuser"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:416",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.121928,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 443,
+  "EndLine": 443,
+  "StartColumn": 6,
+  "EndColumn": 29,
+  "Match": "password\": \"Str0ngP@ss\",",
+  "Secret": "Str0ngP@ss",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 442,
+      "EndLine": 442,
+      "StartColumn": 5,
+      "EndColumn": 30,
+      "Match": "\"username\": \"nonexistent\",",
+      "Secret": "nonexistent"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:443",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.121928,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 460,
+  "EndLine": 460,
+  "StartColumn": 6,
+  "EndColumn": 29,
+  "Match": "password\": \"WrongP@ss1\",",
+  "Secret": "WrongP@ss1",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 459,
+      "EndLine": 459,
+      "StartColumn": 5,
+      "EndColumn": 31,
+      "Match": "\"username\": \"wrongpwduser\",",
+      "Secret": "wrongpwduser"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:460",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.121928,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 478,
+  "EndLine": 478,
+  "StartColumn": 6,
+  "EndColumn": 29,
+  "Match": "password\": \"Str0ngP@ss\",",
+  "Secret": "Str0ngP@ss",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "ComponentSets": [
+   {
+    "components": [
+     {
+      "RuleID": "generic-username",
+      "Optional": true,
+      "StartLine": 477,
+      "EndLine": 477,
+      "StartColumn": 5,
+      "EndColumn": 32,
+      "Match": "\"username\": \"inactiveuser2\",",
+      "Secret": "inactiveuser2"
+     }
+    ]
+   }
+  ],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:478",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.121928,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 520,
+  "EndLine": 520,
+  "StartColumn": 9,
+  "EndColumn": 33,
+  "Match": "Password\": \"OldP@ssw0rd\",",
+  "Secret": "OldP@ssw0rd",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:520",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.0957952,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 521,
+  "EndLine": 521,
+  "StartColumn": 9,
+  "EndColumn": 33,
+  "Match": "Password\": \"NewP@ssw0rd\",",
+  "Secret": "NewP@ssw0rd",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:521",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.0957952,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 539,
+  "EndLine": 539,
+  "StartColumn": 9,
+  "EndColumn": 34,
+  "Match": "Password\": \"WrongOldP@ss\",",
+  "Secret": "WrongOldP@ss",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:539",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.4182959,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 540,
+  "EndLine": 540,
+  "StartColumn": 9,
+  "EndColumn": 33,
+  "Match": "Password\": \"NewP@ssw0rd\",",
+  "Secret": "NewP@ssw0rd",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:540",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.0957952,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 554,
+  "EndLine": 554,
+  "StartColumn": 9,
+  "EndColumn": 33,
+  "Match": "Password\": \"OldP@ssw0rd\",",
+  "Secret": "OldP@ssw0rd",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:554",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.0957952,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 1444,
+  "EndLine": 1444,
+  "StartColumn": 63,
+  "EndColumn": 87,
+  "Match": "Password\": \"NewP@ssw0rd\"}",
+  "Secret": "NewP@ssw0rd",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:1444",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.0957952,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 1462,
+  "EndLine": 1462,
+  "StartColumn": 92,
+  "EndColumn": 116,
+  "Match": "Password\": \"NewP@ssw0rd\"}",
+  "Secret": "NewP@ssw0rd",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:1462",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.0957952,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 1478,
+  "EndLine": 1478,
+  "StartColumn": 63,
+  "EndColumn": 87,
+  "Match": "Password\": \"NewP@ssw0rd\"}",
+  "Secret": "NewP@ssw0rd",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:1478",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.0957952,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-password",
+  "Description": "Detected a potential hardcoded password literal, which may expose account credentials.",
+  "StartLine": 1494,
+  "EndLine": 1494,
+  "StartColumn": 63,
+  "EndColumn": 87,
+  "Match": "Password\": \"NewP@ssw0rd\"}",
+  "Secret": "NewP@ssw0rd",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/manager/views/user/user_test.go",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/manager/views/user/user_test.go:generic-password:1494",
+  "File": "internal/manager/views/user/user_test.go",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.0957952,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "jwt",
+  "Description": "Uncovered a JSON Web Token, which may lead to unauthorized access to web applications and sensitive user data.",
+  "StartLine": 6251,
+  "EndLine": 6251,
+  "StartColumn": 23,
+  "EndColumn": 202,
+  "Match": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA\r",
+  "Secret": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA",
+  "Attributes": {
+   "confidence": "high",
+   "path": "internal/network/detectors/testdata/fp/rustfs.pcapng",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/network/detectors/testdata/fp/rustfs.pcapng:jwt:6251",
+  "File": "internal/network/detectors/testdata/fp/rustfs.pcapng",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.622342,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "jwt",
+  "Description": "Uncovered a JSON Web Token, which may lead to unauthorized access to web applications and sensitive user data.",
+  "StartLine": 6251,
+  "EndLine": 6251,
+  "StartColumn": 23,
+  "EndColumn": 202,
+  "Match": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA\r",
+  "Secret": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA",
+  "Attributes": {
+   "confidence": "high",
+   "path": "internal/network/tcp/testdata/rustfs.pcapng",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/network/tcp/testdata/rustfs.pcapng:jwt:6251",
+  "File": "internal/network/tcp/testdata/rustfs.pcapng",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.622342,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-api-key",
+  "Description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+  "StartLine": 6272,
+  "EndLine": 6272,
+  "StartColumn": 19,
+  "EndColumn": 52,
+  "Match": "access_key\":\"QNO6D8OR4AWKWYP5GMT9\"",
+  "Secret": "QNO6D8OR4AWKWYP5GMT9",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/network/detectors/testdata/fp/rustfs.pcapng",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/network/detectors/testdata/fp/rustfs.pcapng:generic-api-key:6272",
+  "File": "internal/network/detectors/testdata/fp/rustfs.pcapng",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 4.121928,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-api-key",
+  "Description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+  "StartLine": 6272,
+  "EndLine": 6272,
+  "StartColumn": 19,
+  "EndColumn": 52,
+  "Match": "access_key\":\"QNO6D8OR4AWKWYP5GMT9\"",
+  "Secret": "QNO6D8OR4AWKWYP5GMT9",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/network/tcp/testdata/rustfs.pcapng",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/network/tcp/testdata/rustfs.pcapng:generic-api-key:6272",
+  "File": "internal/network/tcp/testdata/rustfs.pcapng",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 4.121928,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "jwt",
+  "Description": "Uncovered a JSON Web Token, which may lead to unauthorized access to web applications and sensitive user data.",
+  "StartLine": 6393,
+  "EndLine": 6393,
+  "StartColumn": 23,
+  "EndColumn": 202,
+  "Match": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA\r",
+  "Secret": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA",
+  "Attributes": {
+   "confidence": "high",
+   "path": "internal/network/detectors/testdata/fp/rustfs.pcapng",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/network/detectors/testdata/fp/rustfs.pcapng:jwt:6393",
+  "File": "internal/network/detectors/testdata/fp/rustfs.pcapng",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.622342,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "jwt",
+  "Description": "Uncovered a JSON Web Token, which may lead to unauthorized access to web applications and sensitive user data.",
+  "StartLine": 6393,
+  "EndLine": 6393,
+  "StartColumn": 23,
+  "EndColumn": 202,
+  "Match": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA\r",
+  "Secret": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA",
+  "Attributes": {
+   "confidence": "high",
+   "path": "internal/network/tcp/testdata/rustfs.pcapng",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/network/tcp/testdata/rustfs.pcapng:jwt:6393",
+  "File": "internal/network/tcp/testdata/rustfs.pcapng",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.622342,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "jwt",
+  "Description": "Uncovered a JSON Web Token, which may lead to unauthorized access to web applications and sensitive user data.",
+  "StartLine": 9977,
+  "EndLine": 9977,
+  "StartColumn": 23,
+  "EndColumn": 202,
+  "Match": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA\r",
+  "Secret": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA",
+  "Attributes": {
+   "confidence": "high",
+   "path": "internal/network/detectors/testdata/fp/rustfs.pcapng",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/network/detectors/testdata/fp/rustfs.pcapng:jwt:9977",
+  "File": "internal/network/detectors/testdata/fp/rustfs.pcapng",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.622342,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "jwt",
+  "Description": "Uncovered a JSON Web Token, which may lead to unauthorized access to web applications and sensitive user data.",
+  "StartLine": 9977,
+  "EndLine": 9977,
+  "StartColumn": 23,
+  "EndColumn": 202,
+  "Match": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA\r",
+  "Secret": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA",
+  "Attributes": {
+   "confidence": "high",
+   "path": "internal/network/tcp/testdata/rustfs.pcapng",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/network/tcp/testdata/rustfs.pcapng:jwt:9977",
+  "File": "internal/network/tcp/testdata/rustfs.pcapng",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.622342,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "jwt",
+  "Description": "Uncovered a JSON Web Token, which may lead to unauthorized access to web applications and sensitive user data.",
+  "StartLine": 10333,
+  "EndLine": 10333,
+  "StartColumn": 23,
+  "EndColumn": 202,
+  "Match": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA\r",
+  "Secret": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA",
+  "Attributes": {
+   "confidence": "high",
+   "path": "internal/network/detectors/testdata/fp/rustfs.pcapng",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/network/detectors/testdata/fp/rustfs.pcapng:jwt:10333",
+  "File": "internal/network/detectors/testdata/fp/rustfs.pcapng",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.622342,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-api-key",
+  "Description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+  "StartLine": 10408,
+  "EndLine": 10408,
+  "StartColumn": 19,
+  "EndColumn": 52,
+  "Match": "access_key\":\"QNO6D8OR4AWKWYP5GMT9\"",
+  "Secret": "QNO6D8OR4AWKWYP5GMT9",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/network/detectors/testdata/fp/rustfs.pcapng",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/network/detectors/testdata/fp/rustfs.pcapng:generic-api-key:10408",
+  "File": "internal/network/detectors/testdata/fp/rustfs.pcapng",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 4.121928,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "jwt",
+  "Description": "Uncovered a JSON Web Token, which may lead to unauthorized access to web applications and sensitive user data.",
+  "StartLine": 10333,
+  "EndLine": 10333,
+  "StartColumn": 23,
+  "EndColumn": 202,
+  "Match": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA\r",
+  "Secret": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA",
+  "Attributes": {
+   "confidence": "high",
+   "path": "internal/network/tcp/testdata/rustfs.pcapng",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/network/tcp/testdata/rustfs.pcapng:jwt:10333",
+  "File": "internal/network/tcp/testdata/rustfs.pcapng",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.622342,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "jwt",
+  "Description": "Uncovered a JSON Web Token, which may lead to unauthorized access to web applications and sensitive user data.",
+  "StartLine": 10544,
+  "EndLine": 10544,
+  "StartColumn": 23,
+  "EndColumn": 202,
+  "Match": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA\r",
+  "Secret": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA",
+  "Attributes": {
+   "confidence": "high",
+   "path": "internal/network/detectors/testdata/fp/rustfs.pcapng",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/network/detectors/testdata/fp/rustfs.pcapng:jwt:10544",
+  "File": "internal/network/detectors/testdata/fp/rustfs.pcapng",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.622342,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "generic-api-key",
+  "Description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+  "StartLine": 10408,
+  "EndLine": 10408,
+  "StartColumn": 19,
+  "EndColumn": 52,
+  "Match": "access_key\":\"QNO6D8OR4AWKWYP5GMT9\"",
+  "Secret": "QNO6D8OR4AWKWYP5GMT9",
+  "Attributes": {
+   "confidence": "low",
+   "path": "internal/network/tcp/testdata/rustfs.pcapng",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/network/tcp/testdata/rustfs.pcapng:generic-api-key:10408",
+  "File": "internal/network/tcp/testdata/rustfs.pcapng",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 4.121928,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "jwt",
+  "Description": "Uncovered a JSON Web Token, which may lead to unauthorized access to web applications and sensitive user data.",
+  "StartLine": 10544,
+  "EndLine": 10544,
+  "StartColumn": 23,
+  "EndColumn": 202,
+  "Match": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA\r",
+  "Secret": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA",
+  "Attributes": {
+   "confidence": "high",
+   "path": "internal/network/tcp/testdata/rustfs.pcapng",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/network/tcp/testdata/rustfs.pcapng:jwt:10544",
+  "File": "internal/network/tcp/testdata/rustfs.pcapng",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.622342,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "jwt",
+  "Description": "Uncovered a JSON Web Token, which may lead to unauthorized access to web applications and sensitive user data.",
+  "StartLine": 10636,
+  "EndLine": 10636,
+  "StartColumn": 23,
+  "EndColumn": 202,
+  "Match": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA\r",
+  "Secret": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA",
+  "Attributes": {
+   "confidence": "high",
+   "path": "internal/network/detectors/testdata/fp/rustfs.pcapng",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/network/detectors/testdata/fp/rustfs.pcapng:jwt:10636",
+  "File": "internal/network/detectors/testdata/fp/rustfs.pcapng",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.622342,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ },
+ {
+  "RuleID": "jwt",
+  "Description": "Uncovered a JSON Web Token, which may lead to unauthorized access to web applications and sensitive user data.",
+  "StartLine": 10636,
+  "EndLine": 10636,
+  "StartColumn": 23,
+  "EndColumn": 202,
+  "Match": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA\r",
+  "Secret": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3ODUyNzM0MzIsInBhcmVudCI6InJ1c3Rmc2FkbWluIn0.bbuVnxDh2MLCK37r3w04TCy5FHQkp6CZ9xrNfSKl2wkSl7pntEBKLJpbmWdK3bsLI-SemEMMvI-L4oOe3wb1WA",
+  "Attributes": {
+   "confidence": "high",
+   "path": "internal/network/tcp/testdata/rustfs.pcapng",
+   "resource": "fs.content"
+  },
+  "Tags": [],
+  "Fingerprint": "internal/network/tcp/testdata/rustfs.pcapng:jwt:10636",
+  "File": "internal/network/tcp/testdata/rustfs.pcapng",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.622342,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": ""
+ }
+]

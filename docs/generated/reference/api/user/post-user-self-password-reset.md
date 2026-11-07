@@ -16,8 +16,8 @@
 
 ```json
 {
-  "oldPassword": "string",
-  "newPassword": "string"
+  "oldPassword": "<oldPassword>",
+  "newPassword": "<newPassword>"
 }
 ```
 
