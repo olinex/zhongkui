@@ -17,7 +17,7 @@
 
 ```json
 {
-  "password": "string"
+  "password": "<password>"
 }
 ```
 
@@ -37,6 +37,6 @@
 
 ```json
 {
-  "password": "string"
+  "password": "<password>"
 }
 ```

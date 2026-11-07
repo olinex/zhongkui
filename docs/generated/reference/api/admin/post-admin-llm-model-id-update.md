@@ -19,7 +19,7 @@
 {
   "name": "string",
   "baseURL": "string",
-  "apiKey": "string",
+  "apiKey": "<apiKey>",
   "model": "string",
   "timeoutSeconds": 0,
   "temperature": 0,
