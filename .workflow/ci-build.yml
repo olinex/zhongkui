@@ -15,16 +15,14 @@ stages:
     tag: "${GITEE_PIPELINE_BUILD_NUMBER}"
     dockerfile: ./Dockerfile
     context: ""
-    # 构建环境无法访问 docker.io，通过构建参数将基础镜像指向加速地址
-    # REGISTRY_MIRROR 在 Gitee 流水线「自定义参数/环境变量」中配置（可设为私密），不入库
-    args:
-      GOLANG_IMAGE: ${REGISTRY_MIRROR}/library/golang:1.27.3-bookworm
-      DEBIAN_IMAGE: ${REGISTRY_MIRROR}/library/debian:bookworm-slim
     artifacts: []
     isCache: true
     processorType:
     - amd64
     - arm64
+    parameter:
+      GOLANG_IMAGE: "${REGISTRY_MIRROR}/library/golang:1.27.3-bookworm"
+      DEBIAN_IMAGE: "${REGISTRY_MIRROR}/library/debian:bookworm-slim"
     strategy:
       retry: "0"
       resource:
