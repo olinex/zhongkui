@@ -9,17 +9,28 @@
 #     -v "$PWD/config.toml:/app/config.toml:ro" \
 #     -v "$PWD/certs:/app/certs:ro" zhongkui:local
 
-# 基础镜像可通过 --build-arg 覆盖（CI 中指向国内镜像加速地址），默认为 docker.io 官方镜像。
+# 基础镜像、apt 源、Go 模块代理均可通过 --build-arg 覆盖（CI 中指向国内/内网地址）。
 ARG GOLANG_IMAGE=golang:1.27.3-bookworm
 ARG DEBIAN_IMAGE=debian:bookworm-slim
+ARG APT_MIRROR=mirrors.aliyun.com
+ARG GOPROXY=https://goproxy.cn,https://mirrors.aliyun.com/goproxy/,direct
 
 FROM ${GOLANG_IMAGE} AS build
 
-RUN apt-get update \
+ARG APT_MIRROR
+ARG GOPROXY
+
+RUN set -eu; \
+    for f in /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources; do \
+      if [ -f "$f" ]; then \
+        sed -i "s|deb.debian.org|${APT_MIRROR}|g; s|security.debian.org|${APT_MIRROR}|g" "$f"; \
+      fi; \
+    done; \
+    apt-get update \
     && apt-get install -y --no-install-recommends libpcap-dev ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-ENV GOPROXY=https://goproxy.cn,https://mirrors.aliyun.com/goproxy/,direct \
+ENV GOPROXY=${GOPROXY} \
     GOSUMDB=sum.golang.google.cn \
     CGO_ENABLED=1
 
@@ -43,7 +54,15 @@ RUN set -eu; \
 
 FROM ${DEBIAN_IMAGE}
 
-RUN apt-get update \
+ARG APT_MIRROR
+
+RUN set -eu; \
+    for f in /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources; do \
+      if [ -f "$f" ]; then \
+        sed -i "s|deb.debian.org|${APT_MIRROR}|g; s|security.debian.org|${APT_MIRROR}|g" "$f"; \
+      fi; \
+    done; \
+    apt-get update \
     && apt-get install -y --no-install-recommends libpcap0.8 ca-certificates tzdata \
     && rm -rf /var/lib/apt/lists/*
 
