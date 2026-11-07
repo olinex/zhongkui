@@ -40,3 +40,5 @@ triggers:
 notify: []
 strategy:
   blocking: true
+ref_variable:
+- REGISTRY_MIRROR
