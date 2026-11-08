@@ -52,7 +52,7 @@ done
 cd "$ROOT_DIR" || exit 2
 
 if ! command -v betterleaks >/dev/null 2>&1; then
-	echo "未安装 betterleaks，请执行：make secret-scan-install" >&2
+	echo "未安装 betterleaks，请执行：scripts/install-betterleaks.sh" >&2
 	exit 2
 fi
 if ! command -v jq >/dev/null 2>&1; then
@@ -136,7 +136,7 @@ jq -r '.[:30][] | "  \(.File):\(.StartLine)  \(.RuleID)"' "$REPORT" 2>/dev/null
 
 if [ ! -f "$BASELINE" ]; then
 	echo ""
-	echo "提示：若确认这些是测试夹具等既有内容，可执行 make secret-scan-baseline 建立基线。"
+	echo "提示：若确认这些是测试夹具等既有内容，可执行 scripts/secret-scan.sh --all --baseline 建立基线。"
 fi
 
 exit 1

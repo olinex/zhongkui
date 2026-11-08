@@ -2,7 +2,7 @@
 # uptrace.sh - OpenTelemetry 后端 (uptrace/uptrace) 工具集
 #
 # uptrace 是一个开源 APM 平台，支持 traces / metrics / logs 全链路监控。
-# 依赖 ClickHouse + PostgreSQL + Redis（通过 make run-dev-deps 启动）。
+# 依赖 ClickHouse + PostgreSQL + Redis（通过 scripts/dev-deps.sh start 启动）。
 #   - Web UI:      http://localhost:14318
 #   - OTLP gRPC:   localhost:4317
 #   - OTLP HTTP:   http://localhost:4318
@@ -87,7 +87,7 @@ cmd_install() {
 
 cmd_config() {
 	if [ ! -f "$UPTRACE_BIN" ]; then
-		echo "uptrace 未安装，请先运行 make uptrace-install" >&2
+		echo "uptrace 未安装，请先运行 scripts/uptrace.sh install" >&2
 		exit 1
 	fi
 
@@ -112,17 +112,17 @@ cmd_config() {
 
 cmd_init() {
 	if [ ! -f "$UPTRACE_BIN" ]; then
-		echo "uptrace 未安装，请先运行 make uptrace-install" >&2
+		echo "uptrace 未安装，请先运行 scripts/uptrace.sh install" >&2
 		exit 1
 	fi
 	if [ ! -f "$UPTRACE_CONFIG" ]; then
-		echo "配置文件 $UPTRACE_CONFIG 不存在，请先运行 make uptrace-config" >&2
+		echo "配置文件 $UPTRACE_CONFIG 不存在，请先运行 scripts/uptrace.sh config" >&2
 		exit 1
 	fi
 
 	echo "=== 创建 ClickHouse 数据库 ==="
 	if ! $UPTRACE_DOCKER_CMD exec clickhouse-server clickhouse-client -q "CREATE DATABASE IF NOT EXISTS uptrace" 2>/dev/null; then
-		echo "  ClickHouse 不可用，请先运行 make run-dev-deps" >&2
+		echo "  ClickHouse 不可用，请先运行 scripts/dev-deps.sh start" >&2
 		exit 1
 	fi
 	echo "  数据库已就绪"
@@ -154,7 +154,7 @@ cmd_init() {
 
 cmd_start() {
 	if [ ! -f "$UPTRACE_BIN" ]; then
-		echo "uptrace 未安装，请先运行 make uptrace-install" >&2
+		echo "uptrace 未安装，请先运行 scripts/uptrace.sh install" >&2
 		exit 1
 	fi
 
@@ -205,8 +205,8 @@ cmd_start() {
 	echo "  go run cmd/zki/main.go run"
 	echo ""
 	echo "日志文件: tail -f /tmp/uptrace.log"
-	echo "CLI 帮助: make uptrace-cli-help"
-	echo "停止服务: make uptrace-stop"
+	echo "CLI 帮助: scripts/uptrace.sh cli-help"
+	echo "停止服务: scripts/uptrace.sh stop"
 }
 
 cmd_stop() {
@@ -230,11 +230,11 @@ cmd_stop() {
 
 cmd_clear() {
 	if [ -f "$UPTRACE_PID" ] && kill -0 "$(cat "$UPTRACE_PID")" 2>/dev/null; then
-		echo "uptrace 正在运行，请先执行 make uptrace-stop" >&2
+		echo "uptrace 正在运行，请先执行 scripts/uptrace.sh stop" >&2
 		exit 1
 	fi
 	if [ ! -f "$UPTRACE_BIN" ]; then
-		echo "uptrace 未安装，请先运行 make uptrace-install" >&2
+		echo "uptrace 未安装，请先运行 scripts/uptrace.sh install" >&2
 		exit 1
 	fi
 
@@ -246,12 +246,12 @@ cmd_clear() {
 	echo "--- 重置 PostgreSQL schema ---"
 	"$UPTRACE_BIN" --config="$UPTRACE_CONFIG" pg reset
 	echo ""
-	echo "清除完成，可通过 make uptrace-init 重新初始化"
+	echo "清除完成，可通过 scripts/uptrace.sh init 重新初始化"
 }
 
 cmd_uninstall() {
 	if [ -f "$UPTRACE_PID" ] && kill -0 "$(cat "$UPTRACE_PID")" 2>/dev/null; then
-		echo "uptrace 正在运行，请先执行 make uptrace-stop" >&2
+		echo "uptrace 正在运行，请先执行 scripts/uptrace.sh stop" >&2
 		exit 1
 	fi
 

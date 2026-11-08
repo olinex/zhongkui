@@ -14,119 +14,27 @@ else
 LAN_IP := localhost
 endif
 
-# 抓包基准测试需要 root 权限，默认使用 sudo；可通过 SUDO= make bench-slow 显式跳过
-SUDO ?= sudo
-
 # CI/CD 临时产物根目录：测试报告、逐项检查日志，整体不入库、不进镜像
 REPORT_ROOT ?= .cicd
 REPORT_DIR ?= $(REPORT_ROOT)/reports
 GOLANG_REPORT_DIR ?= $(REPORT_ROOT)/golang-report
 export REPORT_ROOT REPORT_DIR GOLANG_REPORT_DIR
 
-.PHONY: bench-fast
-.PHONY: bench-prepare
-.PHONY: bench-probe
-.PHONY: bench-raw
-.PHONY: bench-slow
-.PHONY: bench-smoke
-.PHONY: bench-xdp-phys
-.PHONY: bench-xdp-phys-raw
 .PHONY: build
 .PHONY: build-check
 .PHONY: build-release
 .PHONY: ci
-.PHONY: ci-report
 .PHONY: clean
-.PHONY: create-test-dbs
-.PHONY: dev-tools
 .PHONY: docs
-.PHONY: docs-build
 .PHONY: docs-check
-.PHONY: docs-dev
-.PHONY: docs-install
-.PHONY: docs-preview
 .PHONY: fmt-check
 .PHONY: license-check
 .PHONY: lint
 .PHONY: p0f-update
-.PHONY: pcap-tools
-.PHONY: release
-.PHONY: dist
-.PHONY: protobuf-tools
-.PHONY: pull-dev-deps
-.PHONY: remove-dev-deps
-.PHONY: run
-.PHONY: run-dev-deps
-.PHONY: secret-scan
-.PHONY: secret-scan-all
-.PHONY: secret-scan-baseline
-.PHONY: secret-scan-install
-.PHONY: secret-scan-staged
-.PHONY: stop-dev-deps
+.PHONY: rag-snapshot
 .PHONY: test
-.PHONY: test-integration
-.PHONY: test-report
-.PHONY: ts-tools
-.PHONY: uptrace-clear
-.PHONY: uptrace-cli-help
-.PHONY: uptrace-config
-.PHONY: uptrace-init
-.PHONY: uptrace-install
-.PHONY: uptrace-start
-.PHONY: uptrace-stop
-.PHONY: uptrace-uninstall
+.PHONY: version-env
 .PHONY: vet
-
-# ============================================================
-# 依赖工具构建
-# ============================================================
-
-# create-test-dbs - 在 dev-deps (postgres/clickhouse) 内创建测试库 core_test / raw_test（幂等）
-# 用法: make create-test-dbs
-create-test-dbs:
-	@scripts/dev-deps.sh create-dbs
-
-# pull-dev-deps - 按本机 CPU 架构重新拉取开发依赖镜像 (解决 platform 不匹配 warning)
-# 用法: make pull-dev-deps
-pull-dev-deps:
-	@scripts/dev-deps.sh pull
-
-# run-dev-deps - 启动开发依赖容器 (redis, etcd, clickhouse, postgres, rustfs)
-# 用法: make run-dev-deps
-run-dev-deps:
-	@scripts/dev-deps.sh start
-
-# stop-dev-deps - 停止所有开发依赖容器 (不删除容器，保留数据)
-# 用法: make stop-dev-deps
-stop-dev-deps:
-	@scripts/dev-deps.sh stop
-
-# remove-dev-deps - 停止并删除所有开发依赖容器 (数据将丢失)
-# 用法: make remove-dev-deps
-remove-dev-deps:
-	@scripts/dev-deps.sh remove
-
-# dev-tools - 安装 Go 开发辅助工具 (asynq mon, pkgsite, goconvey)
-# 用法: make dev-tools
-dev-tools:
-	go install github.com/hibiken/asynq/tools/asynq@latest
-	go install golang.org/x/pkgsite/cmd/pkgsite@latest
-	go install github.com/smartystreets/goconvey@v1.8.1
-
-# protobuf-tools - 安装 protobuf 编译器及 Go 插件 (protoc-gen-go, protoc-gen-go-grpc)
-# 用法: make protobuf-tools
-protobuf-tools:
-	@scripts/install-tools.sh protobuf
-
-# ts-tools - 安装 TypeScript/Node.js 开发工具链 (node, npm, pnpm)
-# 用法: make ts-tools
-ts-tools:
-	@scripts/install-tools.sh ts
-
-# pcap-tools - 安装 libpcap 开发库 (抓包必需依赖)
-# 用法: make pcap-tools
-pcap-tools:
-	@scripts/install-tools.sh pcap
 
 # ============================================================
 # 构建与版本管理
@@ -135,7 +43,7 @@ pcap-tools:
 # 版本号规则:
 #   - 正式版本: vX.Y.Z（示例: v1.2.3）
 #   - 预发布版本: vX.Y.Z-{alpha|beta|rc}.n（示例: v1.2.3-alpha.1, v1.2.3-rc.2）
-#   - 版本号唯一来源是 annotated tag，由 make release 创建
+#   - 版本号唯一来源是 annotated tag，由 scripts/release.sh 创建
 #   - 开发构建不注入 SemVer，版本显示回落为 commit hash，如 "c2d4d21"
 #   - Release 构建必须显式指定 VERSION，如 make build-release VERSION=v1.2.3-rc.1
 #
@@ -191,36 +99,79 @@ internal/manager/views/search.go internal/manager/views/enum_bindings.go: cmd/te
 	gofmt -w internal/manager/views/search.go internal/manager/views/enum_bindings.go
 
 # p0f-update - 从社区维护的 p0f3 签名库刷新内嵌的上游 p0f.fp，并运行指纹测试
+# 产物是提交进 git 的源码文件，属于构建输入维护
 # 用法: make p0f-update
 # 自定义上游源: make p0f-update P0F_UPSTREAM_URL=<新地址>
 p0f-update:
 	@scripts/p0f-update.sh "$(P0F_UPSTREAM_URL)"
 
+# RAG 知识快照（编译期嵌入二进制）：
+# 发布二进制不含源码树与 Go 工具链，zki sync docs / sync schema 在运行期回退到该快照；
+# 任一 Go 源文件、迁移 SQL 或 go.mod 变化都会触发重新烘焙，漂移校验见 make docs-check。
+# 生成代码（protobuf / views）带独立生成规则且不影响快照内容，排除在快照依赖外，
+# 避免在未安装 protoc 的镜像构建环境中被间接触发。
+RAG_SNAPSHOT := internal/docs/ragdata/snapshot.json
+GENERATED_SRCS := internal/pkg/protobuf/reporter/v1/reporter.pb.go \
+                  internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go \
+                  internal/manager/views/search.go \
+                  internal/manager/views/enum_bindings.go
+RAG_SNAPSHOT_DEPS := $(filter-out $(GENERATED_SRCS), $(shell find cmd internal -type f \( -name '*.go' -o -name '*.sql' \) 2>/dev/null)) go.mod
+
+$(RAG_SNAPSHOT): $(RAG_SNAPSHOT_DEPS)
+	@echo ">>> 烘焙 RAG 知识快照 $@"
+	go run cmd/docsnap/main.go -root .
+
+# rag-snapshot - 强制重新烘焙 RAG 知识快照（普通构建会按需自动触发）
+# 用法: make rag-snapshot
+rag-snapshot: $(RAG_SNAPSHOT)
+
+# 构建产物依赖：生成代码与 RAG 快照必须在编译前与源码对齐
+# protoc 只存在于开发机；镜像构建环境没有 protoc，此时只依赖 RAG 快照，
+# 避免间接触发代码生成规则导致构建失败（生成码由仓库提交、CI build-check 把关）
+HAVE_PROTOC := $(shell command -v protoc >/dev/null 2>&1 && echo yes || { [ -x "$(GOBIN)/protoc" ] && echo yes; })
+ifeq ($(HAVE_PROTOC),yes)
+BUILD_DEPS := $(GENERATED_SRCS) $(RAG_SNAPSHOT)
+else
+BUILD_DEPS := $(RAG_SNAPSHOT)
+endif
+
+# 编译参数全局统一：所有二进制产物都使用 -trimpath + 剥离符号，
+# 入口之间只允许版本信息（DEV / RELEASE）与输出路径不同。
+#   OUT      产物路径（镜像构建由 scripts/build-image-binary.sh 传入 /out/zki）
+#   LDFLAGS  链接参数（版本信息注入；-s -w 属于链接参数）
+OUT ?= bin/zki
+LDFLAGS ?= -s -w $(DEV_LDFLAGS)
+define GO_BUILD
+mkdir -p "$(dir $(OUT))" && go build -trimpath -ldflags "$(LDFLAGS)" -o $(OUT) cmd/zki/main.go
+endef
+
 # build - 编译 zki 二进制 (开发版本，版本显示回落为 commit hash)
 # 用法: make build
-build: internal/pkg/protobuf/reporter/v1/reporter.pb.go internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go internal/manager/views/search.go internal/manager/views/enum_bindings.go
-	go build -ldflags "$(DEV_LDFLAGS)" -o bin/zki cmd/zki/main.go
+build: OUT := bin/zki
+build: LDFLAGS := -s -w $(DEV_LDFLAGS)
+build: $(BUILD_DEPS)
+	@$(GO_BUILD)
 
-# build-release - 编译 release 版本 (需手动指定并通过校验的语义化版本号，支持正式版和预发布版)
+# build-release - 编译 release 版本 (需手动指定语义化版本号，正式版和预发布版均支持)
+# 镜像构建同样复用本目标（通过 scripts/build-image-binary.sh 传入 OUT=/out/zki），
+# 保证与宿主机发布产物参数一致
 # 用法: make build-release VERSION=v1.2.3  或  make build-release VERSION=v1.2.3-alpha.1
-build-release:
+build-release: OUT := bin/zki
+build-release: LDFLAGS := -s -w $(RELEASE_LDFLAGS)
+build-release: $(BUILD_DEPS)
+	@if [ "$(VERSION)" != "unknown" ]; then scripts/validate-semver.sh "$(VERSION)"; fi
+	@$(GO_BUILD)
+
+# version-env - 只生成 dist/build.env（VERSION/COMMIT/BUILD_TIME/BUILDER），不编译任何产物
+# scripts/dist.sh 与 Dockerfile 构建阶段都直接调用本目标，避免各自重复实现版本元数据生成
+# 用法: make version-env VERSION=v1.2.3
+version-env:
+	@test -n "$(VERSION)" || { echo "ERROR: 请设置版本号，例如: make version-env VERSION=v1.2.3" >&2; exit 1; }
 	@scripts/validate-semver.sh "$(VERSION)"
-	go build -ldflags "$(RELEASE_LDFLAGS)" -o bin/zki cmd/zki/main.go
-
-# release - 在 master 上创建发布标签 (要求 CHANGELOG 与 web/package.json 已对齐)
-# 用法: make release VERSION=v1.2.3  或  make release VERSION=v1.2.3-rc.1
-release:
-	@scripts/release.sh "$(VERSION)"
-
-# dist - 打包 release 制品与 sha256 校验和 (供 Gitee Release 上传)
-# 用法: make dist VERSION=v1.2.3  或  make dist VERSION=v1.2.3-beta.1
-dist:
-	@scripts/dist.sh "$(VERSION)"
-
-# run - 使用 go run 直接运行 zki
-# 用法: make run ARGS="version" 或 make run ARGS="run web --config=config.toml"
-run:
-	go run cmd/zki/main.go $(ARGS)
+	@mkdir -p dist
+	@printf 'VERSION=%s\nCOMMIT=%s\nBUILD_TIME=%s\nBUILDER=%s\n' \
+	  "$(VERSION)" "$(COMMIT)" "$(BUILD_TIME)" "$(BUILDER)" > dist/build.env
+	@echo "已生成 dist/build.env"
 
 # clean - 删除自动生成的 protobuf 代码
 # 用法: make clean
@@ -229,7 +180,7 @@ clean:
 	rm -f internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go
 
 # ============================================================
-# 代码检查
+# 代码检查与构建验证
 # ============================================================
 
 # lint - 运行自建注释检查 analyzer (cmd/commentlint)，校验包注释与导出声明的注释完备性
@@ -255,82 +206,23 @@ vet:
 test:
 	go test ./...
 
-# test-report - 以 Gitee Go 可直接解析的格式运行单元测试，并生成覆盖率报告
-# 产物均位于 .cicd/golang-report/：report.jsonl 测试报告、index.html 覆盖率页面、coverage.txt 汇总
-# 用法: make test-report
-test-report:
-	@scripts/test-report.sh
-
-# test-integration - 运行依赖外部服务的集成测试（PostgreSQL / ClickHouse）
-# 前置条件：make run-dev-deps && make create-test-dbs，或提供 ZKI_DATABASE_CORE_TEST_DSN / ZKI_DATABASE_RAW_TEST_DSN
-# 用法: make test-integration
-test-integration:
-	ZKI_TEST_INTEGRATION=1 go test ./...
-
-# secret-scan - 本地密钥扫描：只扫「将要提交」的文件，与 CI 的 Betterleaks 门禁一致
-# 只扫描待提交文件，避免构建产物与既有测试夹具产生大量噪音；报告落在 .cicd/secret-scan/
-# 用法: make secret-scan
-secret-scan:
-	@scripts/secret-scan.sh --changed
-
-# secret-scan-staged - 仅扫描暂存区，适合接到 pre-commit 钩子
-# 用法: make secret-scan-staged
-secret-scan-staged:
-	@scripts/secret-scan.sh --staged
-
-# secret-scan-all - 扫描全部受版本控制的文件（与 CI 全量扫描口径一致，会包含测试夹具）
-# 用法: make secret-scan-all
-secret-scan-all:
-	@scripts/secret-scan.sh --all
-
-# secret-scan-baseline - 把当前扫描结果记为基线，后续只对新增发现失败
-# 基线文件位于 .cicd/secret-scan/baseline.tsv（不纳入版本控制）
-# 用法: make secret-scan-baseline
-secret-scan-baseline:
-	@scripts/secret-scan.sh --all --baseline
-
-# secret-scan-install - 安装 Betterleaks（macOS / Linux / Windows Git Bash，x64 与 arm64）
-# 默认从 GitHub Release 下载预编译二进制到 ~/.local/bin；偏好 Homebrew 可加 --brew
-# 用法: make secret-scan-install
-#       make secret-scan-install INSTALL_ARGS="--brew"
-secret-scan-install:
-	@scripts/install-betterleaks.sh $(INSTALL_ARGS)
-
 # build-check - 编译全部包但不产出二进制，作为 CI 的构建门禁
 # 用法: make build-check
 build-check:
 	go build ./...
 
-# docs - 生成文档：叙述页、参考页、总目录与导航文件
+# docs - 生成文档：叙述页、参考页、总目录与导航文件，并烘焙 RAG 知识快照
+# 产物提交进 git，属于构建输入维护
 # 用法: make docs
 docs:
 	go run cmd/zki/main.go create docs
+	go run cmd/docsnap/main.go -root .
 
-# docs-check - 校验生成文档与代码声明一致，不写盘；CI 用它拦截文档漂移
+# docs-check - 校验生成文档与 RAG 快照均与代码声明一致，不写盘；CI 用它拦截漂移
 # 用法: make docs-check
 docs-check:
 	go run cmd/zki/main.go create docs --check
-
-# docs-install - 安装文档站点依赖（VitePress）
-# 用法: make docs-install
-docs-install:
-	cd docs && pnpm install
-
-# docs-dev - 本地启动文档站点（默认 http://localhost:5173）
-# 用法: make docs-dev
-docs-dev:
-	cd docs && pnpm dev
-
-# docs-build - 构建静态文档站点到 docs/.vitepress/dist
-# 部署到子路径时用 DOCS_BASE 覆盖，例如 DOCS_BASE=/zhongkui/ make docs-build
-# 用法: make docs-build
-docs-build:
-	cd docs && pnpm build
-
-# docs-preview - 预览已构建的文档站点
-# 用法: make docs-preview
-docs-preview:
-	cd docs && pnpm preview
+	go run cmd/docsnap/main.go -root . -check
 
 # license-check - 第三方依赖许可证门禁：拒绝 GPL/AGPL/LGPL/SSPL/非商业与未知许可证
 # Go 侧检查链接进 cmd/zki 的模块；Web 侧检查 pnpm 生产依赖（需要 pnpm）
@@ -340,158 +232,7 @@ license-check:
 	go run cmd/licensecheck/main.go --root .
 
 # ci - 提交与 CI 的统一入口：格式、构建、vet、测试、注释检查、许可证与文档漂移检查
-# 失败即停，适合本地提交前快速自查
+# 失败即停，适合本地提交前快速自查；生成报告日志的 CI 汇总走 scripts/ci-report.sh
 # 用法: make ci
 ci: fmt-check build-check vet test lint license-check docs-check
 	@echo "CI 检查全部通过"
-
-# ci-report - 汇总式 CI：逐项执行检查并留存日志，跑完全部检查后再统一判失败
-# 与 ci 的区别：
-#   1. 不在第一个失败处中断，一次暴露所有问题；
-#   2. 每项输出写入 $(REPORT_DIR)/<检查名>.log；
-#   3. 测试改用 test-report，额外产出 Gitee Go 可解析的 .cicd/golang-report/。
-# 用法: make ci-report
-ci-report:
-	@scripts/ci-report.sh
-
-# ============================================================
-# Wire 抓包实现基线测试
-# ============================================================
-
-# bench-prepare - 下载 tcpreplay 采样流量并生成 fallback pcap
-# 用法: make bench-prepare
-bench-prepare:
-	@scripts/bench-prepare.sh
-
-# bench-smoke - 快速冒烟测试 (无需 sudo，仅用内嵌 test.pcap)
-# 用法: make bench-smoke
-bench-smoke:
-	@echo "=== Wire 抓包实现冒烟测试 (-short) ==="
-	@echo "注意：完整抓包测试需要 sudo 权限，当前仅验证编译与跳过逻辑"
-	@echo ""
-	go test -v -bench=. -short -benchtime=1x ./internal/benchmark/capture/
-
-# bench-slow - 慢速重放测试 (1ms 间隔，验证低速下丢包率)
-# 用法: make bench-slow
-bench-slow:
-	@echo "=== Wire 抓包实现慢速重放测试 (1ms 间隔) ==="
-	@if [ ! -f internal/benchmark/capture/testdata/smallFlows.pcap ]; then \
-		echo "错误：smallFlows.pcap 不存在，请先运行 make bench-prepare"; \
-		exit 1; \
-	fi
-	@echo "使用 $(SUDO) 运行慢速重放 Benchmark..."
-	@echo ""
-	$(SUDO) go test -v -bench=Slow -benchtime=1x ./internal/benchmark/capture/
-
-# bench-fast - 全速基线测试 (排除 Slow，需 sudo + 已下载 smallFlows.pcap)
-# 用法: make bench-fast
-bench-fast:
-	@echo "=== Wire 抓包实现全速基线测试 ==="
-	@if [ ! -f internal/benchmark/capture/testdata/smallFlows.pcap ]; then \
-		echo "错误：smallFlows.pcap 不存在，请先运行 make bench-prepare"; \
-		exit 1; \
-	fi
-	@echo "使用 $(SUDO) 运行全速 Benchmark..."
-	@echo ""
-	$(SUDO) go test -v -bench='^(BenchmarkPlatform|BenchmarkLibpcap|BenchmarkXdp|BenchmarkAfpacket)(Smoke|SmallFlows|BigFlows)$$' -benchtime=1x ./internal/benchmark/capture/
-
-# bench-raw - 纯计数基线测试 (skip copy，测量裸 capture 吞吐上限)
-# 用法: make bench-raw
-bench-raw:
-	@echo "=== 纯计数捕获上限测试 (skip copy) ==="
-	@if [ ! -f internal/benchmark/capture/testdata/smallFlows.pcap ]; then \
-		echo "错误：smallFlows.pcap 不存在，请先运行 make bench-prepare"; \
-		exit 1; \
-	fi
-	@echo "使用 $(SUDO) 运行 Raw Benchmark..."
-	@echo ""
-	$(SUDO) go test -v -bench='^BenchmarkRaw' -benchtime=1x ./internal/benchmark/capture/
-
-# bench-xdp-phys - 物理网卡 XDP 测试 (需 2 张 AF_XDP 兼容网卡互联)
-# 用法: make bench-xdp-phys
-bench-xdp-phys:
-	@echo "=== XDP 物理网卡测试 (需 2 张 AF_XDP 兼容网卡互联) ==="
-	@if [ ! -f internal/benchmark/capture/testdata/smallFlows.pcap ]; then \
-		echo "错误：smallFlows.pcap 不存在，请先运行 make bench-prepare"; \
-		exit 1; \
-	fi
-	@echo "使用 $(SUDO) 运行物理网卡 XDP Benchmark..."
-	@echo ""
-	$(SUDO) go test -v -bench='^BenchmarkXdpNative' -benchtime=1x ./internal/benchmark/capture/
-
-# bench-xdp-phys-raw - 物理网卡 XDP raw capture (skip copy) 测试
-# 用法: make bench-xdp-phys-raw
-bench-xdp-phys-raw:
-	@echo "=== XDP 物理网卡 Raw Capture 测试 (需 2 张 AF_XDP 兼容网卡互联) ==="
-	@if [ ! -f internal/benchmark/capture/testdata/smallFlows.pcap ]; then \
-		echo "错误：smallFlows.pcap 不存在，请先运行 make bench-prepare"; \
-		exit 1; \
-	fi
-	@echo "使用 $(SUDO) 运行物理网卡 XDP Raw Benchmark..."
-	@echo ""
-	$(SUDO) go test -v -bench='^BenchmarkRawXdpNative' -benchtime=1x ./internal/benchmark/capture/
-
-# bench-probe - 探测本机网卡 XDP 支持情况
-# 用法: make bench-probe
-bench-probe:
-	@echo "=== 网卡 XDP 支持探测 ==="
-	go build -o /tmp/nic_probe ./cmd/nic_probe/
-	$(SUDO) /tmp/nic_probe
-	@rm -f /tmp/nic_probe
-
-# ============================================================
-# OpenTelemetry 后端工具 (uptrace/uptrace)
-# ============================================================
-# uptrace 是一个开源 APM 平台，支持 traces / metrics / logs 全链路监控。
-# 依赖 ClickHouse + PostgreSQL + Redis（通过 make run-dev-deps 启动）。
-#   - Web UI:      http://localhost:14318
-#   - OTLP gRPC:   localhost:4317
-#   - OTLP HTTP:   http://localhost:4318
-# 安装流程参考: https://uptrace.dev/get/hosted/install
-# 项目地址: https://github.com/uptrace/uptrace
-
-UPTRACE_VERSION ?= 2.0.3
-export UPTRACE_VERSION
-
-# uptrace-install - 下载并安装 uptrace 二进制（已安装则跳过）
-# 用法: make uptrace-install
-uptrace-install:
-	@scripts/uptrace.sh install
-
-# uptrace-config - 使用 uptrace 官方命令生成配置文件，并修改为本机连接信息
-# 用法: make uptrace-config
-uptrace-config:
-	@scripts/uptrace.sh config
-
-# uptrace-init - 初始化数据库（按官方文档顺序执行迁移和种子数据）
-# 用法: make uptrace-init
-# 前置条件: make run-dev-deps, make uptrace-install, make uptrace-config
-uptrace-init:
-	@scripts/uptrace.sh init
-
-# uptrace-start - 后台启动 uptrace serve
-# 用法: make uptrace-start
-# 前置条件: make uptrace-init
-uptrace-start:
-	@scripts/uptrace.sh start
-
-# uptrace-stop - 停止后台运行的 uptrace serve
-# 用法: make uptrace-stop
-uptrace-stop:
-	@scripts/uptrace.sh stop
-
-# uptrace-clear - 清除 uptrace-init 创建的数据库及数据
-# 用法: make uptrace-clear
-# 注意: 此操作不可逆，将重置 ClickHouse 和 PostgreSQL 中的 uptrace schema
-uptrace-clear:
-	@scripts/uptrace.sh clear
-
-# uptrace-uninstall - 卸载 uptrace 二进制和配置文件
-# 用法: make uptrace-uninstall
-uptrace-uninstall:
-	@scripts/uptrace.sh uninstall
-
-# uptrace-cli-help - 打印 uptrace CLI 常用命令参考
-# 用法: make uptrace-cli-help
-uptrace-cli-help:
-	@scripts/uptrace.sh cli-help
