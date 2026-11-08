@@ -16,7 +16,9 @@ stages:
         dockerfile: ./Dockerfile
         context: ""
         artifacts: []
-        isCache: true
+        # ACR 个人版拒收 buildkit 缓存 manifest（unknown manifest class for
+        # application/vnd.buildkit.cacheconfig.v0），开启后导入/导出缓存都会失败。
+        isCache: false
         processorType:
           - amd64
           - arm64

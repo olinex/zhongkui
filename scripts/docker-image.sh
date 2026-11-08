@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# docker-image.sh - 构建后端镜像
+# docker-image.sh - 构建后端镜像（支持按平台架构参数化）
 #
 # 版本信息通过 --build-arg 传入，由 Dockerfile 在构建阶段内部生成 dist/build.env，
 # 不再依赖宿主机预先执行 make version-env；镜像与宿主机发布产物参数保持一致。
@@ -10,13 +10,21 @@
 #   slim    基于 scratch 的最小镜像，tag 自动追加 -slim 后缀
 # 两种变体分两次执行本脚本分别构建；IMAGE 环境变量可完全覆盖默认 tag。
 #
+# 目标平台由环境变量 PLATFORMS 控制（docker buildx 的 --platform 语法，逗号分隔）：
+#   未设置  跟随构建机原生架构，走 docker build
+#   单平台  走 docker buildx，默认追加 --load 载入本地，tag 自动追加架构后缀
+#   多平台  走 docker buildx 生成 manifest list，需自行追加 --push 或 --output
+#
 # 用法：
-#   scripts/docker-image.sh v1.2.3                # 构建 zhongkui:v1.2.3
-#   VARIANT=slim scripts/docker-image.sh v1.2.3   # 构建 zhongkui:v1.2.3-slim
+#   scripts/docker-image.sh v1.2.3                                # 本机架构，zhongkui:v1.2.3
+#   VARIANT=slim scripts/docker-image.sh v1.2.3                   # zhongkui:v1.2.3-slim
+#   PLATFORMS=linux/arm64 scripts/docker-image.sh v1.2.3          # zhongkui:v1.2.3-arm64
+#   PLATFORMS=linux/amd64 scripts/docker-image.sh v1.2.3          # zhongkui:v1.2.3-amd64
+#   PLATFORMS=linux/amd64,linux/arm64 scripts/docker-image.sh v1.2.3 --push
 #   IMAGE=zhongkui:latest scripts/docker-image.sh v1.2.3
 #   scripts/docker-image.sh v1.2.3 --no-cache --progress=plain
 #
-# 参数：第一个参数为版本号（也可用环境变量 VERSION），其余参数原样传给 docker build。
+# 参数：第一个参数为版本号（也可用环境变量 VERSION），其余参数原样传给 docker build(x)。
 # 退出码：0 成功；1 失败。
 set -uo pipefail
 
@@ -39,21 +47,50 @@ if [ "$VARIANT" != "slim" ] && [ "$VARIANT" != "normal" ]; then
 	exit 1
 fi
 
+PLATFORMS="${PLATFORMS:-}"
+
+# 默认 tag：normal 无后缀，slim 追加 -slim；显式指定单平台时再追加架构后缀，
+# 避免与构建机原生架构的镜像 tag 相互覆盖（linux/arm/v7 -> arm-v7）。
+default_tag="zhongkui:${VERSION}"
 if [ "$VARIANT" = "slim" ]; then
-	IMAGE="${IMAGE:-zhongkui:${VERSION}-slim}"
+	default_tag="${default_tag}-slim"
+fi
+if [ -n "$PLATFORMS" ] && [[ "$PLATFORMS" != *,* ]]; then
+	platform_arch="${PLATFORMS#*/}"
+	default_tag="${default_tag}-${platform_arch//\//-}"
+fi
+IMAGE="${IMAGE:-$default_tag}"
+
+# 是否已显式指定产物去向；缺省时单平台自动 --load，多平台必须由调用方指定
+has_output=0
+for arg in "$@"; do
+	case "$arg" in
+		--push | --load | --output | --output=* | -o) has_output=1 ;;
+	esac
+done
+
+if [ -n "$PLATFORMS" ]; then
+	build_cmd=(docker buildx build --platform "$PLATFORMS")
+	if [ "$has_output" -eq 0 ]; then
+		if [[ "$PLATFORMS" == *,* ]]; then
+			echo "ERROR: 多平台构建产出 manifest list，无法 --load 到本地，请追加 --push 或 --output" >&2
+			exit 1
+		fi
+		build_cmd+=(--load)
+	fi
 else
-	IMAGE="${IMAGE:-zhongkui:${VERSION}}"
+	build_cmd=(docker build)
 fi
 
 scripts/validate-semver.sh "$VERSION" || exit 1
 COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
 BUILDER=$(whoami)
 
-docker build "$@" \
+"${build_cmd[@]}" "$@" \
 	--build-arg VERSION="$VERSION" \
 	--build-arg COMMIT="$COMMIT" \
 	--build-arg BUILDER="$BUILDER" \
 	--build-arg IMAGE_VARIANT="$VARIANT" \
 	-t "$IMAGE" . || exit 1
 
-echo "镜像已构建: $IMAGE"
+echo "镜像已构建: ${IMAGE}（平台: ${PLATFORMS:-构建机原生架构}）"

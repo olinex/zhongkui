@@ -22,6 +22,7 @@ export REPORT_ROOT REPORT_DIR GOLANG_REPORT_DIR
 
 .PHONY: build
 .PHONY: build-check
+.PHONY: build-image
 .PHONY: build-release
 .PHONY: ci
 .PHONY: clean
@@ -153,12 +154,24 @@ build: $(BUILD_DEPS)
 	@$(GO_BUILD)
 
 # build-release - 编译 release 版本 (需手动指定语义化版本号，正式版和预发布版均支持)
-# 镜像构建同样复用本目标（通过 scripts/build-image-binary.sh 传入 OUT=/out/zki），
-# 保证与宿主机发布产物参数一致
+# 镜像构建由 scripts/build-image-binary.sh 独立完成：编译参数与本目标一致，
+# 区别是复用仓库内已提交的 RAG 快照、不在构建环境内按需重烘焙
 # 用法: make build-release VERSION=v1.2.3  或  make build-release VERSION=v1.2.3-alpha.1
 build-release: OUT := bin/zki
 build-release: LDFLAGS := -s -w $(RELEASE_LDFLAGS)
 build-release: $(BUILD_DEPS)
+	@if [ "$(VERSION)" != "unknown" ]; then scripts/validate-semver.sh "$(VERSION)"; fi
+	@$(GO_BUILD)
+
+# build-image - 镜像构建专用编译目标：只编译二进制，复用仓库内已提交的 RAG 快照
+# 与 build-release 的唯一区别是跳过 $(BUILD_DEPS) 的按需重烘焙：镜像构建环境没有增量编译优势，
+# 而 arm64 经 QEMU 执行时重新烘焙快照会占掉单次构建约一半时间，且快照内容与 CPU 架构无关。
+# 快照与应用代码的一致性由 CI 的 docs-check（make ci-report）在合入前把关。
+# 用法: make build-image（由 scripts/build-image-binary.sh 调用，OUT 固定为 /out/zki）
+build-image: OUT := /out/zki
+build-image: LDFLAGS := -s -w $(RELEASE_LDFLAGS)
+build-image:
+	@test -f $(RAG_SNAPSHOT) || { echo "ERROR: 缺少已提交的 RAG 快照 $(RAG_SNAPSHOT)" >&2; exit 1; }
 	@if [ "$(VERSION)" != "unknown" ]; then scripts/validate-semver.sh "$(VERSION)"; fi
 	@$(GO_BUILD)
 
