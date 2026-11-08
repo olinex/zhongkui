@@ -13,18 +13,18 @@
 前置：Go 1.27.3+、Node.js 26+ 与 pnpm、Docker（本地依赖容器）。
 
 ```bash
-make run-dev-deps   # 启动 PostgreSQL / ClickHouse / Redis / etcd / S3
-make dev-tools      # 安装开发辅助工具
-make ts-tools       # 安装前端工具链（如需改 web/）
-go run cmd/zki/main.go migrate up
+scripts/install-tools.sh dev    # 安装 asynq / pkgsite / goconvey
+scripts/install-tools.sh ts     # 安装前端工具链（如需改 web/）
+scripts/install-tools.sh pcap   # 安装 libpcap 开发库（首次编译）
+scripts/dev-deps.sh start       # 启动 PostgreSQL / ClickHouse / Redis / etcd / S3
+scripts/migrate.sh up           # 执行数据库迁移
 ```
 
 前端：
 
 ```bash
-cd web
-pnpm install
-pnpm dev
+scripts/web.sh install
+scripts/web.sh dev
 ```
 
 ## 3. 代码规范
@@ -66,10 +66,22 @@ scripts/gitflow.sh commit -t feat -s gitflow -m "新增提交助手" -y
 - `master`、`develop` 上禁止提交，需先切到特性分支。
 - PR 描述仍在 Gitee 页面填写，脚本只负责推送分支并打开对比页；`--no-open` 只打印链接。
 - `--ci` 在推送前执行 `make ci`，`--force` 使用 `--force-with-lease`。
-- 标签仍由 `make release` 创建，`release finish` 在 PR 合入后调用它并只推送 tag，不推送受保护分支。
+- 标签仍由 `scripts/release.sh` 创建，`release finish` 在 PR 合入后调用它并只推送 tag，不推送受保护分支。
 - `release/*` 同样禁止直接推送，推送被拒绝时脚本会提示由有权限的维护者推送或在 Gitee 页面创建分支。
 
-## 5. 版本与发布
+## 5. 构建与脚本边界
+
+本项目约定三层职责：
+
+| 层 | 职责 | 允许 | 禁止 |
+|---|---|---|---|
+| **Makefile** | 项目文件构建 | 编译二进制、生成代码、格式化、静态检查、单元测试、构建依赖管理（生成码、RAG 快照） | 安装系统/第三方依赖、启动/停止外部服务、调用 `docker`/`scripts/*.sh`、发布 tag、运行长期进程 |
+| **scripts/** | 操作与编排 | 安装依赖、启动/停止服务、CI/测试报告、打包发布、构建镜像、部署 | 反向被 Makefile 调用 |
+| **Dockerfile** | 镜像构建 | 调用 `scripts/` 内的脚本完成编译；调用 `make version-env` 生成版本元数据 | 直接调用 `make build` / `make build-release`；在 Dockerfile 内重复实现 `dist/build.env` 生成 |
+
+依赖方向单向：`scripts/` → `Makefile`，`Dockerfile` → `scripts/`；`Dockerfile` 仅可直接调用 `make version-env` 这一版本元数据目标。
+
+## 6. 版本与发布
 
 版本号遵循 [语义化版本 2.0.0](https://semver.org/lang/zh-CN/)，首个发布版本为 `v0.1.0`。
 
@@ -115,11 +127,15 @@ make build-release VERSION=v1.2.3            # 正式版
 make build-release VERSION=v1.2.3-alpha.1    # 预发布版
 
 # 创建 annotated tag（会校验版本号格式、分支、工作区、CHANGELOG 等）
-make release VERSION=v1.2.3
-make release VERSION=v1.2.3-rc.1
+scripts/release.sh v1.2.3
+scripts/release.sh v1.2.3-rc.1
 
 # 打包制品
-make dist VERSION=v1.2.3
+scripts/dist.sh v1.2.3
+
+# 构建后端镜像（自动生成版本元数据，镜像内 zki version 显示该版本）
+scripts/docker-image.sh v1.2.3                # normal 变体：zhongkui:v1.2.3（默认，debian 基底便于排障）
+VARIANT=slim scripts/docker-image.sh v1.2.3   # slim 变体：zhongkui:v1.2.3-slim（scratch 最小镜像）
 
 # 推送 tag 到 Gitee
 git push origin master --follow-tags
@@ -127,7 +143,7 @@ git push origin master --follow-tags
 
 推送 tag 后在 Gitee 创建 Release，并上传 `dist/` 下的制品与校验和。GitHub 为只读镜像，不发布 Release；Gitee Go 的发布流水线在 Gitee 控制台配置，命令与上面一致（见 `.gitee/README.md`）。
 
-## 6. 测试与检查
+## 7. 测试与检查
 
 提交前必须执行：
 
@@ -149,12 +165,12 @@ make ci
 
 ### 测试分层
 
-- `make test`、`make test-report`、`make ci` 默认不需要 PostgreSQL、ClickHouse、Redis、S3；依赖外部服务的用例会自动跳过（SKIP）。
-- 运行集成测试：先执行 `make run-dev-deps && make create-test-dbs`，再执行 `make test-integration`。
+- `make test` 与 `make ci` 默认不需要 PostgreSQL、ClickHouse、Redis、S3；依赖外部服务的用例会自动跳过（SKIP）。
+- 运行集成测试：执行 `scripts/test-integration.sh`，脚本会自动启动开发依赖容器、创建测试库，并以 `ZKI_TEST_INTEGRATION=1` 运行全部测试；额外参数原样传给 `go test`（如 `scripts/test-integration.sh -v -run TestFoo`）。
 - 也可自行提供 DSN：设置 `ZKI_TEST_INTEGRATION=1`，并配置 `ZKI_DATABASE_CORE_TEST_DSN`（PostgreSQL）/ `ZKI_DATABASE_RAW_TEST_DSN`（ClickHouse）；DSN 也可写在 `config.toml` 的 `[database.core_test]` / `[database.raw_test]` 中。
 - 开关取值为 `1` 才启用；未设置或为 `0` 时跳过。开启后若 DSN 缺失或连接失败，测试会直接失败而不是跳过。
 
-前端改动还需在 `web/` 下执行 `pnpm lint` 与 `pnpm type-check`（若脚本存在）。
+前端改动还需执行 `scripts/web.sh lint` 与 `scripts/web.sh type-check`。
 
 许可证门禁会拒绝 GPL/AGPL/LGPL/SSPL/非商业与未知许可证。新增依赖若使用未收录的许可证，需先人工核对，再按以下方式登记：
 
@@ -165,7 +181,7 @@ make ci
 
 `make license-check` 的 Web 侧需要 `pnpm`；只读 `web/pnpm-lock.yaml`，无需安装 `node_modules`。CI 通过 `LICENSE_CHECK_REQUIRE_WEB=1` 强制要求 Web 检查。
 
-## 7. 文档要求
+## 8. 文档要求
 
 文档按来源分两个目录，边界由生成器与守卫强制：
 
@@ -185,23 +201,23 @@ make ci
 文档站点（VitePress，源码即 `docs/` 下的 Markdown）：
 
 ```bash
-make docs-install   # 首次安装站点依赖
-make docs-dev       # 本地预览（默认 http://localhost:5173）
-make docs-build     # 构建静态站点到 docs/.vitepress/dist
+scripts/docs.sh install   # 首次安装站点依赖
+scripts/docs.sh dev       # 本地预览（默认 http://localhost:5173）
+scripts/docs.sh build     # 构建静态站点到 docs/.vitepress/dist
 ```
 
 站点配置在 `docs/.vitepress/config.mts`，侧边栏由 `docs/nav.json` 自动生成。不要手工编辑 `nav.json` 或 `index.md`，它们是 `make docs` 的产物。
 
-站点启用 `cleanUrls`：`index.md` 的规范路由是所在目录（如 `/generated/reference/`）。请通过 `make docs-dev` 或 `make docs-preview` 访问，不要用 `file://` 直接打开 `dist/index.html`。部署到 Gitee/GitHub 项目页（子路径）时指定 base：
+站点启用 `cleanUrls`：`index.md` 的规范路由是所在目录（如 `/generated/reference/`）。请通过 `scripts/docs.sh dev` 或 `scripts/docs.sh preview` 访问，不要用 `file://` 直接打开 `dist/index.html`。部署到 Gitee/GitHub 项目页（子路径）时指定 base：
 
 ```bash
-DOCS_BASE=/zhongkui/ make docs-build
+DOCS_BASE=/zhongkui/ scripts/docs.sh build
 ```
 
-## 8. Pull Request 检查清单
+## 9. Pull Request 检查清单
 
 - [ ] `make ci` 通过
-- [ ] 前端改动已通过 `pnpm lint`
+- [ ] 前端改动已通过 `scripts/web.sh lint`
 - [ ] 新增/修改接口已在 `RegisterApi` / `RegisterListApi` 声明用途与入参出参
 - [ ] 新增模型字段已带中文注释与 gorm tag
 - [ ] 新增枚举已在归属包注册并补齐中英 label
@@ -210,6 +226,6 @@ DOCS_BASE=/zhongkui/ make docs-build
 - [ ] 没有复制字段表、枚举值或接口签名到策展文档
 - [ ] 没有提交密钥、凭据或本地配置
 
-## 9. 许可证
+## 10. 许可证
 
 贡献即表示你同意以 Apache-2.0 许可发布你的贡献。第三方代码必须兼容该许可证，并在 [NOTICE](NOTICE) 与 [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) 中登记来源、版本与许可证。

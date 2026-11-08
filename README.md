@@ -6,7 +6,7 @@ zhongkui 从网络流量出发，完成「采集 → 结构化 → 打标 → �
 
 - 许可证：Apache-2.0
 - 文档语言：中文
-- 文档站点：[docs/.vitepress](docs/.vitepress/config.mts)（`make docs-dev` 本地预览）
+- 文档站点：[docs/.vitepress](docs/.vitepress/config.mts)（`scripts/docs.sh dev` 本地预览）
 - 代码规范与架构约束：[AGENTS.md](AGENTS.md)
 
 ## 核心能力
@@ -46,7 +46,7 @@ Reporter（gRPC） ──► ClickHouse（raw 库）
 
 ```bash
 # 1. 启动依赖（PostgreSQL / ClickHouse / Redis / etcd / S3）
-make run-dev-deps
+scripts/dev-deps.sh start
 
 # 2. 执行数据库迁移并创建管理员
 go run cmd/zki/main.go migrate up

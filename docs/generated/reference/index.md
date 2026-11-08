@@ -4,6 +4,7 @@
 > 分类：参考 · 说明：后端全部包自动导出的符号参考，按导入路径排序。
 
 - [main 参考](cmd/commentlint.md) — 来源 `zhongkuisec.com/zhongkui/cmd/commentlint`
+- [main 参考](cmd/docsnap.md) — 来源 `zhongkuisec.com/zhongkui/cmd/docsnap`
 - [main 参考](cmd/licensecheck.md) — 来源 `zhongkuisec.com/zhongkui/cmd/licensecheck`
 - [main 参考](cmd/nic_probe.md) — 来源 `zhongkuisec.com/zhongkui/cmd/nic_probe`
 - [main 参考](cmd/template.md) — 来源 `zhongkuisec.com/zhongkui/cmd/template`

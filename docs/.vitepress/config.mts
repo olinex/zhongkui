@@ -66,7 +66,7 @@ export default defineConfig({
   lang: "zh-CN",
   title: "zhongkui 文档",
   description: "网络流量采集、标签计算与风险告警平台",
-  // 部署到子路径时通过 DOCS_BASE 覆盖，例如 DOCS_BASE=/zhongkui/ make docs-build
+  // 部署到子路径时通过 DOCS_BASE 覆盖，例如 DOCS_BASE=/zhongkui/ scripts/docs.sh build
   base: process.env.DOCS_BASE || "/",
   cleanUrls: true,
   lastUpdated: true,
