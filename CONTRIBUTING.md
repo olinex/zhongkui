@@ -137,6 +137,11 @@ scripts/dist.sh v1.2.3
 scripts/docker-image.sh v1.2.3                # normal 变体：zhongkui:v1.2.3（默认，debian 基底便于排障）
 VARIANT=slim scripts/docker-image.sh v1.2.3   # slim 变体：zhongkui:v1.2.3-slim（scratch 最小镜像）
 
+# 按平台架构构建（PLATFORMS 走 buildx；单平台 tag 自动追加架构后缀，多平台需 --push）
+PLATFORMS=linux/amd64 scripts/docker-image.sh v1.2.3                     # zhongkui:v1.2.3-amd64
+PLATFORMS=linux/arm64 scripts/docker-image.sh v1.2.3                     # zhongkui:v1.2.3-arm64
+PLATFORMS=linux/amd64,linux/arm64 scripts/docker-image.sh v1.2.3 --push   # 多平台 manifest
+
 # 推送 tag 到 Gitee
 git push origin master --follow-tags
 ```
