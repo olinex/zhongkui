@@ -155,5 +155,5 @@ fi
 echo "已安装 $tag → $dest"
 case ":$PATH:" in
 *":$PREFIX:"*) : ;;
-*) echo "提示：$PREFIX 不在 PATH 中，请加入后再运行 make secret-scan。" ;;
+*) echo "提示：$PREFIX 不在 PATH 中，请加入后再运行 scripts/secret-scan.sh --changed。" ;;
 esac

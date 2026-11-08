@@ -8,22 +8,22 @@
 
 本文是一篇从零开始的教程：假设你已拿到源码仓库，按顺序完成依赖准备、配置、初始化与启动， 最终在管理端看到一个可用的（内容为空的）风险列表，即表示采集、识别、存储与展示整条链路已经打通。
 
-所有命令都经同一入口 cmd/zki/main.go 暴露。下文用 `go run cmd/zki/main.go {子命令}` 表示未安装二进制时的执行方式，它等价于 `make run ARGS="{子命令}"`；执行 `make build` 后即可改用生成的 `bin/zki` 直接替换该前缀。
+所有命令都经同一入口 cmd/zki/main.go 暴露。下文用 `go run cmd/zki/main.go {子命令}` 表示未安装二进制时的执行方式；执行 `make build` 后即可改用生成的 `bin/zki` 直接替换该前缀。数据库迁移可直接使用 `scripts/migrate.sh`。
 
 ## 1. 准备工具链
 
 先确认本机 Go 版本与 go.mod 的 `go` 指令一致。随后安装项目脚本工具与抓包所需的系统依赖：
 
-- `make dev-tools`：安装开发辅助工具（asynq、pkgsite、goconvey 等）。
-- `make pcap-tools`：安装采集侧依赖（pcap 相关系统库）；只有需要本地跑 `run capture` 时才必须。
+- `scripts/install-tools.sh dev`：安装开发辅助工具（asynq、pkgsite、goconvey 等）。
+- `scripts/install-tools.sh pcap`：安装采集侧依赖（pcap 相关系统库）；只有需要本地跑 `run capture` 时才必须。
 
 ## 2. 启动依赖容器
 
 zhongkui 依赖 PostgreSQL（core 库）、ClickHouse（raw 库）、Redis、etcd 与 S3 兼容对象存储：
 
-- `make pull-dev-deps`：拉取上述依赖镜像。
-- `make run-dev-deps`：以 host 网络启动同名容器（PostgreSQL 口令为 `root_password`）。
-- 调试结束后用 `make stop-dev-deps` 停止，`make remove-dev-deps` 一并删除容器。
+- `scripts/dev-deps.sh pull`：拉取上述依赖镜像。
+- `scripts/dev-deps.sh start`：以 host 网络启动同名容器（PostgreSQL 口令为 `root_password`）。
+- 调试结束后用 `scripts/dev-deps.sh stop` 停止，`scripts/dev-deps.sh remove` 一并删除容器。
 
 ## 3. 准备配置
 

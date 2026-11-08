@@ -7,7 +7,10 @@
 - [Constants](<#constants>)
 - [func Check\(ctx context.Context, projectRoot string, root \*cobra.Command\) error](<#Check>)
 - [func Export\(ctx context.Context, opts Options\) error](<#Export>)
+- [func MarshalRAGSnapshot\(snapshot \*RAGSnapshot\) \(\[\]byte, error\)](<#MarshalRAGSnapshot>)
+- [func RAGSnapshotPath\(projectRoot string\) string](<#RAGSnapshotPath>)
 - [func RenderPackage\(projectRoot, importPath string, narrative bool\) \(string, error\)](<#RenderPackage>)
+- [func WriteRAGSnapshotFile\(projectRoot string\) error](<#WriteRAGSnapshotFile>)
 - [type AiIngest](<#AiIngest>)
   - [func \(i AiIngest\) Valid\(\) bool](<#AiIngest.Valid>)
 - [type Category](<#Category>)
@@ -24,6 +27,10 @@
   - [func GeneratedNarrativeDocuments\(projectRoot string\) \(\[\]NarrativeDocument, error\)](<#GeneratedNarrativeDocuments>)
 - [type Options](<#Options>)
 - [type Projection](<#Projection>)
+- [type RAGDocument](<#RAGDocument>)
+- [type RAGSnapshot](<#RAGSnapshot>)
+  - [func BuildRAGSnapshot\(projectRoot string\) \(\*RAGSnapshot, error\)](<#BuildRAGSnapshot>)
+  - [func EmbeddedRAGSnapshot\(\) \(\*RAGSnapshot, error\)](<#EmbeddedRAGSnapshot>)
 - [type Role](<#Role>)
   - [func Roles\(\) \[\]Role](<#Roles>)
   - [func \(r Role\) Label\(\) string](<#Role.Label>)
@@ -75,6 +82,24 @@ func Export(ctx context.Context, opts Options) error
 
 Export 执行完整导出流程：叙述档生成、投影页、参考档生成、参考索引、文档总目录与导航文件。 所有输出文件均幂等覆盖，目录按需创建；只写生成域，不触碰策展目录。
 
+<a name="MarshalRAGSnapshot"></a>
+## func [MarshalRAGSnapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/snapshot.go#L87>)
+
+```go
+func MarshalRAGSnapshot(snapshot *RAGSnapshot) ([]byte, error)
+```
+
+MarshalRAGSnapshot 以稳定格式序列化快照：生成器写盘与守卫测试比对共用本函数，保证零漂移。
+
+<a name="RAGSnapshotPath"></a>
+## func [RAGSnapshotPath](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/snapshot.go#L96>)
+
+```go
+func RAGSnapshotPath(projectRoot string) string
+```
+
+RAGSnapshotPath 返回快照文件在源码树中的路径。
+
 <a name="RenderPackage"></a>
 ## func [RenderPackage](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/render.go#L116>)
 
@@ -85,6 +110,15 @@ func RenderPackage(projectRoot, importPath string, narrative bool) (string, erro
 RenderPackage 按导入路径加载单个包并按选定档位渲染 Markdown。 narrative 为 true 时按叙述档渲染（仅包注释）；为 false 时按参考档渲染（仅符号小节）。 projectRoot 为项目根目录，用于解析导入路径对应的包目录。
 
 若目录不存在（真正的包缺失）则返回包装后的错误；若目录存在但不含 Go 源码 （如仅作为子包命名空间的目录），则视为无需渲染，返回空字符串。
+
+<a name="WriteRAGSnapshotFile"></a>
+## func [WriteRAGSnapshotFile](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/snapshot.go#L101>)
+
+```go
+func WriteRAGSnapshotFile(projectRoot string) error
+```
+
+WriteRAGSnapshotFile 在源码树内渲染快照并写入快照文件，供生成器调用。
 
 <a name="AiIngest"></a>
 ## type [AiIngest](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L100>)
@@ -332,6 +366,56 @@ type Projection struct {
     Content string
 }
 ```
+
+<a name="RAGDocument"></a>
+## type [RAGDocument](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/snapshot.go#L29-L36>)
+
+RAGDocument 是一篇可入 RAG 的知识文档。
+
+```go
+type RAGDocument struct {
+    // Key 稳定去重键。
+    Key string `json:"key"`
+    // Title 文档标题，作为入库与同步判定的稳定键。
+    Title string `json:"title"`
+    // Content Markdown 正文。
+    Content string `json:"content"`
+}
+```
+
+<a name="RAGSnapshot"></a>
+## type [RAGSnapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/snapshot.go#L39-L46>)
+
+RAGSnapshot 是编译期嵌入的 RAG 知识快照：两个分区与 sync docs / sync schema 一一对应。
+
+```go
+type RAGSnapshot struct {
+    // Version 快照结构版本。
+    Version int `json:"version"`
+    // Narratives 叙述页分区：由包注释渲染而来。
+    Narratives []RAGDocument `json:"narratives"`
+    // Schemas 数据表分区：每张已迁移表一篇。
+    Schemas []RAGDocument `json:"schemas"`
+}
+```
+
+<a name="BuildRAGSnapshot"></a>
+### func [BuildRAGSnapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/snapshot.go#L50>)
+
+```go
+func BuildRAGSnapshot(projectRoot string) (*RAGSnapshot, error)
+```
+
+BuildRAGSnapshot 在源码树内渲染 RAG 知识快照，供生成器烘焙到快照文件。 projectRoot 为项目根目录；该操作需要源码与 Go 工具链，只能在构建期执行。
+
+<a name="EmbeddedRAGSnapshot"></a>
+### func [EmbeddedRAGSnapshot](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/snapshot.go#L75>)
+
+```go
+func EmbeddedRAGSnapshot() (*RAGSnapshot, error)
+```
+
+EmbeddedRAGSnapshot 返回编译期嵌入的 RAG 知识快照。 返回值只读，调用方不得修改其中的切片与字符串。
 
 <a name="Role"></a>
 ## type [Role](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/role.go#L6>)

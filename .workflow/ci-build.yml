@@ -2,34 +2,38 @@ version: "1.0"
 name: 构建、上传、发布
 displayName: 构建发布
 stages:
-- name: 构建
-  displayName: 构建
-  strategy: naturally
-  trigger: auto
-  steps:
-  - step: image-build-plus@buildkitd
-    name: da30ea79-8f23-4a8e-a7ea-ed1958400a52
-    displayName: 镜像构建
-    dockerCerts:
-    - uuid: ecd6bdc0-bca1-013f-becb-4e858993359a
-    tag: "${REGISTRY_TAG_PREFIX}:${GITEE_PIPELINE_BUILD_NUMBER}"
-    dockerfile: ./Dockerfile
-    context: ""
-    artifacts: []
-    isCache: true
-    processorType:
-    - amd64
-    - arm64
-    parameter:
-      GOLANG_IMAGE: "${REGISTRY_MIRROR}/library/golang:1.27.3-bookworm"
-      DEBIAN_IMAGE: "${REGISTRY_MIRROR}/library/debian:bookworm-slim"
-      APT_MIRROR: "${APT_MIRROR}"
-      GOPROXY: "${GOPROXY}"
-    strategy:
-      retry: "0"
-      resource:
-        cpu: "2"
-        memory: "4"
+  - name: 构建
+    displayName: 构建
+    strategy: naturally
+    trigger: auto
+    steps:
+      - step: image-build-plus@buildkitd
+        name: da30ea79-8f23-4a8e-a7ea-ed1958400a52
+        displayName: 镜像构建
+        dockerCerts:
+          - uuid: ecd6bdc0-bca1-013f-becb-4e858993359a
+        tag: "${REGISTRY_TAG_PREFIX}:${GITEE_BRANCH}"
+        dockerfile: ./Dockerfile
+        context: ""
+        artifacts: []
+        isCache: true
+        processorType:
+          - amd64
+          - arm64
+        parameter:
+          GOLANG_IMAGE: "${REGISTRY_MIRROR}/library/golang:1.27.3-bookworm"
+          RUNTIME_IMAGE: "${REGISTRY_MIRROR}/library/debian:bookworm-slim"
+          APT_MIRROR: "${APT_MIRROR}"
+          GOPROXY: "${GOPROXY}"
+          VERSION: "${GITEE_BRANCH}"
+          COMMIT: "${GITEE_SHORT_COMMIT}"
+          BUILDER: "${GITEE_PIPELINE_TRIGGER_USER}@${GITEE_PIPELINE_NAME}:${GITEE_PIPELINE_BUILD_NUMBER}"
+          IMAGE_VARIANT: "normal"
+        strategy:
+          retry: "0"
+          resource:
+            cpu: "2"
+            memory: "4"
 triggers:
   trigger: auto
   push:
@@ -37,13 +41,13 @@ triggers:
       prefix: []
       precise: []
       include:
-      - "^v(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-(?:alpha|beta|rc)\\.[1-9]\\\
-        d*)?$"
+        - "^v(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-(?:alpha|beta|rc)\\.[1-9]\\\
+          d*)?$"
 notify: []
 strategy:
   blocking: true
 ref_variable:
-- REGISTRY_MIRROR
-- APT_MIRROR
-- GOPROXY
-- REGISTRY_TAG_PREFIX
+  - REGISTRY_MIRROR
+  - APT_MIRROR
+  - GOPROXY
+  - REGISTRY_TAG_PREFIX

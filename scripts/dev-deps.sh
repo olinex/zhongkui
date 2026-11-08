@@ -78,7 +78,21 @@ cmd_pull() {
 	done
 }
 
+# 所有依赖容器都在运行时返回 0，供重复执行 start 时跳过
+all_running() {
+	local cmd c
+	cmd=$(detect_runtime)
+	for c in "${CONTAINERS[@]}"; do
+		$cmd ps --format '{{.Names}}' 2>/dev/null | grep -qx "$c" || return 1
+	done
+}
+
 cmd_start() {
+	if all_running; then
+		echo "开发依赖容器已在运行，跳过启动"
+		return 0
+	fi
+
 	case "$(uname -s)" in
 	Darwin | MINGW* | MSYS* | CYGWIN*)
 		echo "使用 docker 启动依赖容器..."
