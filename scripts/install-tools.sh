@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# install-tools.sh - 安装开发辅助工具链（protobuf / TypeScript / libpcap）
+# install-tools.sh - 安装开发辅助工具链（protobuf / TypeScript / libpcap / Go 开发工具）
 #
-# 把 protobuf-tools / ts-tools / pcap-tools 三个目标的跨平台安装逻辑
+# 把 protobuf-tools / ts-tools / pcap-tools 等目标的跨平台安装逻辑
 # 从 Makefile 抽出来。每个子命令对应一个工具集，按需执行。
 #
 # 用法：
 #   scripts/install-tools.sh protobuf   # 安装 protoc + Go 插件
 #   scripts/install-tools.sh ts         # 安装 node/npm/pnpm
 #   scripts/install-tools.sh pcap       # 安装 libpcap 开发库
+#   scripts/install-tools.sh dev        # 安装 asynq / pkgsite / goconvey
 #
 # 退出码：0 成功；1 失败。
 set -uo pipefail
@@ -81,14 +82,23 @@ cmd_pcap() {
 	esac
 }
 
+cmd_dev() {
+	echo "安装 Go 开发辅助工具 (asynq / pkgsite / goconvey)..."
+	go install github.com/hibiken/asynq/tools/asynq@latest || exit 1
+	go install golang.org/x/pkgsite/cmd/pkgsite@latest || exit 1
+	go install github.com/smartystreets/goconvey@v1.8.1 || exit 1
+	echo "安装完成，可执行文件位于 $(go env GOPATH)/bin"
+}
+
 usage() {
-	sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
+	sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 case "${1:-}" in
 protobuf) cmd_protobuf ;;
 ts) cmd_ts ;;
 pcap) cmd_pcap ;;
+dev) cmd_dev ;;
 -h | --help | "") usage ;;
 *)
 	echo "未知子命令: $1" >&2

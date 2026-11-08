@@ -5,6 +5,7 @@ import (
 	// 标准库
 	"context"
 	"os"
+	"path/filepath"
 	"strings"
 
 	// 第三方
@@ -56,15 +57,11 @@ var syncDocsCmd = &cobra.Command{
 			pterm.Error.Println(translate.T("cli.sync.docs.failed", map[string]any{"Err": err}))
 			return
 		}
-		// 叙述页分区：由注册表中的自动生成条目渲染包注释为叙述档文档。
-		narratives, err := docs.GeneratedNarrativeDocuments(cwd)
+		// 叙述页分区：源码树内按包注释渲染，发布二进制回退到编译期快照。
+		narrativeDocs, err := narrativeKnowledgeDocs(cwd)
 		if err != nil {
 			pterm.Error.Println(translate.T("cli.sync.docs.failed", map[string]any{"Err": err}))
 			return
-		}
-		narrativeDocs := make([]knowledge.GeneratedKnowledgeDoc, 0, len(narratives))
-		for _, n := range narratives {
-			narrativeDocs = append(narrativeDocs, knowledge.GeneratedKnowledgeDoc{Key: n.Key, Title: n.Title, Content: n.Content})
 		}
 		model := embeddingModelName(rt)
 		if err := rt.Current().Knowledge.SyncGeneratedDocs(ctx, base.SystemNamespace, docconv.FormatGenerated, narrativeDocs, newSyncProgress(base.SystemNamespace, model)); err != nil {
@@ -132,14 +129,11 @@ var syncSchemaCmd = &cobra.Command{
 			pterm.Error.Println(translate.T("cli.sync.schema.failed", map[string]any{"Err": err}))
 			return
 		}
-		generated, err := docs.SchemaKnowledgeDocuments(cwd)
+		// 数据表分区：源码树内按模型声明渲染，发布二进制回退到编译期快照。
+		tableDocs, err := schemaKnowledgeDocs(cwd)
 		if err != nil {
 			pterm.Error.Println(translate.T("cli.sync.schema.failed", map[string]any{"Err": err}))
 			return
-		}
-		tableDocs := make([]knowledge.GeneratedKnowledgeDoc, 0, len(generated))
-		for _, doc := range generated {
-			tableDocs = append(tableDocs, knowledge.GeneratedKnowledgeDoc{Key: doc.Key, Title: doc.Title, Content: doc.Content})
 		}
 		model := embeddingModelName(rt)
 		if err := rt.Current().Knowledge.SyncGeneratedDocs(ctx, base.SystemNamespace, docconv.FormatSchema, tableDocs, newSyncProgress(base.SystemNamespace, model)); err != nil {
@@ -288,6 +282,61 @@ func reconcileCoreAISchema(ctx context.Context, gormDB *database.DB, target int)
 		pterm.Success.Println(translate.T("cli.sync.embedding-dimensions-in-sync", nil))
 	}
 	return nil
+}
+
+// hasSourceTree 报告 root 是否为携带 go.mod 的源码树。发布二进制内没有源码树与 Go 工具链，
+// 据此跳过必然失败的源码渲染，直接使用编译期快照。
+func hasSourceTree(root string) bool {
+	info, err := os.Stat(filepath.Join(root, "go.mod"))
+	return err == nil && !info.IsDir()
+}
+
+// narrativeKnowledgeDocs 产出叙述页 RAG 文档：源码树可用时按包注释实时渲染，保证开发期
+// 与文档零漂移；发布二进制（无源码与 Go 工具链）回退到编译期烘焙的快照。
+func narrativeKnowledgeDocs(projectRoot string) ([]knowledge.GeneratedKnowledgeDoc, error) {
+	if hasSourceTree(projectRoot) {
+		narratives, err := docs.GeneratedNarrativeDocuments(projectRoot)
+		if err == nil {
+			out := make([]knowledge.GeneratedKnowledgeDoc, 0, len(narratives))
+			for _, n := range narratives {
+				out = append(out, knowledge.GeneratedKnowledgeDoc{Key: n.Key, Title: n.Title, Content: n.Content})
+			}
+			return out, nil
+		}
+	}
+	snapshot, err := docs.EmbeddedRAGSnapshot()
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	out := make([]knowledge.GeneratedKnowledgeDoc, 0, len(snapshot.Narratives))
+	for _, doc := range snapshot.Narratives {
+		out = append(out, knowledge.GeneratedKnowledgeDoc{Key: doc.Key, Title: doc.Title, Content: doc.Content})
+	}
+	return out, nil
+}
+
+// schemaKnowledgeDocs 与 narrativeKnowledgeDocs 同构：源码树可用时按已迁移表与模型声明渲染，
+// 否则回退到编译期快照。
+func schemaKnowledgeDocs(projectRoot string) ([]knowledge.GeneratedKnowledgeDoc, error) {
+	if hasSourceTree(projectRoot) {
+		generated, err := docs.SchemaKnowledgeDocuments(projectRoot)
+		if err == nil {
+			out := make([]knowledge.GeneratedKnowledgeDoc, 0, len(generated))
+			for _, doc := range generated {
+				out = append(out, knowledge.GeneratedKnowledgeDoc{Key: doc.Key, Title: doc.Title, Content: doc.Content})
+			}
+			return out, nil
+		}
+	}
+	snapshot, err := docs.EmbeddedRAGSnapshot()
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	out := make([]knowledge.GeneratedKnowledgeDoc, 0, len(snapshot.Schemas))
+	for _, doc := range snapshot.Schemas {
+		out = append(out, knowledge.GeneratedKnowledgeDoc{Key: doc.Key, Title: doc.Title, Content: doc.Content})
+	}
+	return out, nil
 }
 
 func init() {

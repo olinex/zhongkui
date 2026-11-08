@@ -33,7 +33,7 @@ go run cmd/zki/main.go describe deps    # 探测数据库、Redis、etcd、S3 �
 
 - 未迁移：`go run cmd/zki/main.go migrate up`。
 - 配置缺项：对照 `describe config` 的输出补齐，不要凭记忆手写。
-- 依赖容器未启动：`make run-dev-deps`，确认容器状态后再启动服务。
+- 依赖容器未启动：`scripts/dev-deps.sh start`，确认容器状态后再启动服务。
 
 ## 3. 数据库迁移失败
 
@@ -137,13 +137,13 @@ go run cmd/zki/main.go describe deps    # 探测数据库、Redis、etcd、S3 �
 
 **症状**：`go test ./...` 偶发失败，错误含 `code: 241`、`memory limit exceeded`、`OvercommitTracker`，且失败点常在一条很小的 `INSERT` 上。
 
-**原因**：开发容器的 ClickHouse 系统日志（尤其 `trace_log` / `text_log`）长期累积，后台 merge 与系统表缓存占用内存，使普通写入被 OvercommitTracker 选中终止。仓库已在 `config/clickhouse/config.d/99-dev-logs.xml` 中关闭 trace/text 日志并限制其余系统日志的 TTL；该配置通过 `make run-dev-deps` 挂载，需重建容器后生效。
+**原因**：开发容器的 ClickHouse 系统日志（尤其 `trace_log` / `text_log`）长期累积，后台 merge 与系统表缓存占用内存，使普通写入被 OvercommitTracker 选中终止。仓库已在 `config/clickhouse/config.d/99-dev-logs.xml` 中关闭 trace/text 日志并限制其余系统日志的 TTL；该配置通过 `scripts/dev-deps.sh start` 挂载，需重建容器后生效。
 
 **处理**：
 
 ```bash
-make remove-dev-deps
-make run-dev-deps
+scripts/dev-deps.sh remove
+scripts/dev-deps.sh start
 ```
 
 已有容器中体积过大的系统表需要先强制清理（超过 `max_table_size_to_drop` 时须放开限制）：

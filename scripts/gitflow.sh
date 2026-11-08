@@ -4,7 +4,7 @@
 #
 # 在分支保护（master / develop / release/* 仅允许 PR）前提下，把常见的
 # 分支创建、远程同步、推送与 Gitee 对比页跳转组合成一条命令。
-# 脚本不替代 make release / make ci，只负责需要人工决策以外的重复动作。
+# 脚本不替代 scripts/release.sh / make ci，只负责需要人工决策以外的重复动作。
 #
 # 用法: scripts/gitflow.sh help
 
@@ -135,7 +135,7 @@ validate_name() {
 		die "分支名 '$1' 不符合 Git 引用格式"
 }
 
-# validate_semver 只做入参的粗校验，完整版本规则与发布前检查由 make release 负责
+# validate_semver 只做入参的粗校验，完整版本规则与发布前检查由 scripts/release.sh 负责
 validate_semver() {
 	printf '%s' "$1" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$' ||
 		die "版本号 '$1' 不是合法 SemVer，示例: v1.2.3 或 v1.2.3-rc.1"
@@ -649,8 +649,8 @@ finalize_release() {
 	if tag_exists "$version"; then
 		info "标签 $version 已存在，跳过创建"
 	else
-		info "执行 make release VERSION=${version}（含发布前检查）"
-		make release VERSION="$version"
+		info "执行 scripts/release.sh ${version}（含发布前检查）"
+		scripts/release.sh "$version"
 	fi
 	if git ls-remote --exit-code --tags "$REMOTE" "$tag_ref" >/dev/null 2>&1; then
 		info "标签 $version 已存在于远程"

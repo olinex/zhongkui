@@ -33,7 +33,9 @@ tag `vX.Y.Z` 触发的发布流水线依次执行：
 export TAG=v0.1.0            # 替换为本次发布 tag
 export LICENSE_CHECK_REQUIRE_WEB=1
 make ci-report
-make dist VERSION="$TAG"
+scripts/dist.sh "$TAG"
 ```
 
 产物为 `dist/zki_<version>_<os>_<arch>.tar.gz` 及对应 `.sha256`，上传到 Gitee Release。GitHub 为只读镜像，不承担发布。
+
+镜像构建由 tag 触发的构建发布流水线（`.workflow/ci-build.yml`）完成：直接把 `Dockerfile` 作为构建定义，版本信息经构建参数传入（`VERSION=${GITEE_BRANCH}`、`COMMIT=${GITEE_SHORT_COMMIT}`、`BUILDER=触发用户@流水线:构建号`），容器内执行 `make version-env` 生成 `dist/build.env`；默认构建 normal 变体（debian 基底，便于排障），需要 scratch 最小镜像时把 `IMAGE_VARIANT` 改为 `slim`。本地手工构建用 `scripts/docker-image.sh vX.Y.Z`（默认 normal，`VARIANT=slim` 构建 slim 变体）。

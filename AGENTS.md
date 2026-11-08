@@ -1197,7 +1197,7 @@ const option = computed(() =>
 - 2-space 缩进（`.editorconfig` 强制）；UTF-8；EOF 须有换行；去除行尾空白
 - ESLint v9 flat config；允许 `&&` 短路与三元表达式
 - 组件经 `unplugin-vue-components` 自动注册，禁止手动 import `src/components/` 下的组件
-- 提交前必跑项：`pnpm lint`（ESLint）+ `pnpm lint:style`（Stylelint，覆盖 `src/**/*.{css,scss,vue}`）+ `pnpm type-check`（vue-tsc）**三者全部通过**
+- 提交前必跑项：`scripts/web.sh lint`（ESLint）+ `scripts/web.sh lint:style`（Stylelint，覆盖 `src/**/*.{css,scss,vue}`）+ `scripts/web.sh type-check`（vue-tsc）**三者全部通过**
 
 ### SFC Structure
 
@@ -1274,7 +1274,8 @@ meta:
 7. API：RESTful 资源命名 + POST，URL 模式 `{resource}/{id}/{action}`；集合化动作（delete / enable / disable / activate / deactivate）统一 `POST /{resource}/{action}`、标识符入 body（见「动作接口批量化（Batch Operations）」），`join-group` / `leave-group` / `password/reset` 等非集合化动作保留路径标识符
 8. 测试文件与被测源码放在一起（`_test.go` / `_test.ts`）
 9. 代码与注释中禁止 emoji，除非显式要求
-10. 提交前运行 `pnpm lint`（web 前端 ESLint）、`pnpm lint:style`（Stylelint）与 `pnpm type-check`（vue-tsc），三者全部通过
+10. 提交前运行 `scripts/web.sh lint`（web 前端 ESLint）、`scripts/web.sh lint:style`（Stylelint）与 `scripts/web.sh type-check`（vue-tsc），三者全部通过
 11. 分层边界：`internal/pkg/llm` 只承载 AI 能力薄封装——OpenAI 兼容客户端、端点配置快照（`ModelConfig`）、embedding 探针与 Markdown 分块器，以及客户端入参契约所需的 `ModelKind` 取值与解析（模型档位 `Slot` 及其取值空间 `AllSlots` / 解析 helper 归 `internal/models/ai`，与该取值空间的定义处同包，并因被持久化模型 `agent_sessions.slot` 用作 GORM 字段类型）；LLM 行为参数注册表（`Specs` / `Params`）与内置工具元信息（`ToolSpecs`）归 `internal/ai/config`，pgvector 列校准（`ReconcileEmbeddingColumn` 等）与 embedding 兼容性判定（`VerifyEmbeddingCompat`）归 `internal/ai/llminfra`，业务数据清洗（`SanitizeBusinessData`）归 `agentkit`；业务枚举按取值空间归 `internal/models/ai`（`ToolSource` / `llmToolSource`、`Slot` / `llmSlot`、`AgentKind` / `AgentRunStatus` / `SessionStatus` / `MessageRole` / `MemoryKind` / `MemoryStatus`），禁止再上移进 `internal/pkg/llm`
 12. 提交前运行 `make lint`（Go 注释完备性检查，见「Comments」），并保证 `gofmt`、`go build ./...`、`go vet ./...` 通过
 13. 第三方依赖许可证门禁：新增 Go 运行时依赖或 Web 生产依赖前必须通过 `make license-check`；GPL/AGPL/LGPL/SSPL/非商业与未知许可证一律拒绝，例外只允许以「组件@版本 → 已核对 SPDX」登记在 `internal/lint/licensecheck`，并同步更新 `THIRD_PARTY_LICENSES.md`
+14. 构建与脚本边界：Makefile 只负责项目文件构建（编译、生成码、静态检查、单元测试、构建依赖管理）；安装、服务启停、测试报告、发布、镜像构建等操作统一封装在 `scripts/` 中；`scripts/` 可以调用 `make`，但 `Makefile` 不得调用 `scripts/*.sh`；`Dockerfile` 可以调用 `scripts/`，并可直接调用 `make version-env` 生成版本元数据（不得在 Dockerfile 内重复实现 `dist/build.env` 的生成逻辑），但不得直接调用 `make build` / `make build-release`
