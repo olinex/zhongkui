@@ -133,6 +133,49 @@ stages:
       resource:
         cpu: "2"
         memory: "4"
+- name: 提取制品
+  displayName: 提取制品
+  strategy: fast
+  trigger: auto
+  steps:
+  - step: execute@docker
+    name: cbaa695f-0392-4093-ac5d-9e85d79a322b
+    displayName: slim core arm64 binary 提取
+    certificate: ecd6bdc0-bca1-013f-becb-4e858993359a
+    image: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-arm64-slim"
+    command:
+    - "# 提取zki"
+    - ls -lha $(which zki)
+    - mv $(which zki) /root/workspace
+    artifacts:
+    - name: zki_core_arm64
+      path:
+      - /root/workspace/zki
+      type: .tar.gz
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "2"
+        memory: "4"
+  - step: execute@docker
+    name: d2bb545d-f481-40d6-842e-678d64e3e60c
+    displayName: slim core amd64 binary 提取
+    certificate: ecd6bdc0-bca1-013f-becb-4e858993359a
+    image: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-amd64-slim"
+    command:
+    - "# 提取zki"
+    - ls -lha $(which zki)
+    - mv $(which zki) /root/workspace/zki
+    artifacts:
+    - name: zki_core_amd64
+      path:
+      - /root/workspace/zki
+      type: .tar.gz
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "2"
+        memory: "4"
 triggers:
   trigger: auto
   push:
