@@ -142,7 +142,7 @@ stages:
   steps:
   - step: manifest-merge@crane
     name: 81eff12b-a585-4ed8-9945-32362a2199da
-    displayName: slim 镜像 Manifest 合并
+    displayName: slim core 镜像 Manifest 合并
     dockerCerts:
     - uuid: ecd6bdc0-bca1-013f-becb-4e858993359a
     targetImageName: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-slim"
@@ -173,9 +173,9 @@ stages:
   steps:
   - step: execute@docker
     name: cbaa695f-0392-4093-ac5d-9e85d79a322b
-    displayName: slim core arm64 binary 提取
+    displayName: core arm64 binary 提取
     certificate: ecd6bdc0-bca1-013f-becb-4e858993359a
-    image: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-arm64-slim"
+    image: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-arm64"
     command:
     - "# 提取zki"
     - ls -lha $(which zki)
@@ -192,9 +192,9 @@ stages:
         memory: "4"
   - step: execute@docker
     name: d2bb545d-f481-40d6-842e-678d64e3e60c
-    displayName: slim core amd64 binary 提取
+    displayName: core amd64 binary 提取
     certificate: ecd6bdc0-bca1-013f-becb-4e858993359a
-    image: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-amd64-slim"
+    image: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-amd64"
     command:
     - "# 提取zki"
     - ls -lha $(which zki)
