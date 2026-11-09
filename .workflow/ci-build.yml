@@ -176,6 +176,25 @@ stages:
       resource:
         cpu: "2"
         memory: "4"
+- name: 上传制品
+  displayName: 上传制品
+  strategy: fast
+  trigger: auto
+  steps:
+  - step: publish@general_artifacts
+    name: 431290a8-79e0-483d-a6cc-7da0258d98eb
+    displayName: core arm64 binary 上传
+    dependArtifact: zki_core_amd64
+    artifactName: zki_core_arm64.tar.gz
+    strategy:
+      retry: "0"
+  - step: publish@general_artifacts
+    name: ae7548d0-ba82-4cb7-8663-f33ffce50716
+    displayName: core amd64 binary 上传
+    dependArtifact: zki_core_arm64
+    artifactName: zki_core_amd64.tar.gz
+    strategy:
+      retry: "0"
 triggers:
   trigger: auto
   push:
