@@ -352,6 +352,12 @@ other = "Generate Diátaxis-classified documentation from code comments"
 [cmd.create.docs.long]
 other = "Scan the documentation registry, use gomarkdoc to export each package's comments as Markdown (tutorials/how-to/reference/explanation), and generate the project-root README.md (cover + table of contents) as the documentation entry point."
 
+[cmd.create.default-config.short]
+other = "Generate a default config.toml file"
+
+[cmd.create.default-config.long]
+other = "Create a config.toml template with common defaults at the specified path. Sensitive fields (passwords, secrets) are placeholders in <...> and must be replaced before starting the service."
+
 [cmd.sync.short]
 other = "Sync comment-generated docs and embedding vectors, and reconcile the embedding column dimension"
 
@@ -568,6 +574,12 @@ other = "pcap file path (required)"
 
 [flag.create.testcase.output]
 other = "output directory for test case files"
+
+[flag.create.default-config.output]
+other = "config file output path"
+
+[flag.create.default-config.force]
+other = "force overwrite existing target file"
 
 [flag.completion.bash.no-descriptions]
 other = "disable completion descriptions"
@@ -974,6 +986,15 @@ other = "TLS key file [[.Path]] was created"
 
 [cli.tls.cert-created]
 other = "TLS cert file [[.Path]] was created"
+
+[cli.create.default-config.exists]
+other = "Target file [[.Path]] already exists; use --force to overwrite"
+
+[cli.create.default-config.created]
+other = "Default config file generated at [[.Path]]"
+
+[cli.create.default-config.hint]
+other = "Replace all <...> placeholders with actual values before starting the service"
 
 [cli.testcase.generated]
 other = "Test cases generated at [[.Dir]]"

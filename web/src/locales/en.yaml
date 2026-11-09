@@ -1224,6 +1224,7 @@ action:
   signOut: Sign Out
   language: Language
   aiAssistant: AI Assistant
+  docs: Docs
   toggleTheme: Toggle theme
   accountMenu: Account menu
   pwdForget: Forgot Password
