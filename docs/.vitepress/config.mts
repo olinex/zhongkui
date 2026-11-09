@@ -62,6 +62,23 @@ function sidebarOf(): DefaultTheme.SidebarItem[] {
   return [{ text: "文档总目录", link: "/" }, ...groups];
 }
 
+// VitePress 会给内部链接套上 base（/docs/ 下 "/" 会变成 "/docs/"），且仅凭
+// target="_blank" 无法绕过（normalizeLink 只按协议判断外部链接）。
+// 因此默认使用相对 base 的 /console，由 nginx 302 到控制台根路径；
+// 若控制台在独立域名，可通过 DOCS_CONSOLE_URL 传完整 URL。
+// 本地 dev 未设置 DOCS_CONSOLE_URL 时不渲染该入口，避免指向文档站自身的 404。
+const consoleURL = process.env.DOCS_CONSOLE_URL;
+const consoleNav: DefaultTheme.NavItem[] = consoleURL
+  ? [
+      {
+        text: "管理控制台",
+        link: consoleURL,
+        target: "_blank",
+        rel: "noopener",
+      },
+    ]
+  : [];
+
 export default defineConfig({
   lang: "zh-CN",
   title: "zhongkui 文档",
@@ -69,11 +86,13 @@ export default defineConfig({
   // 部署到子路径时通过 DOCS_BASE 覆盖，例如 DOCS_BASE=/zhongkui/ scripts/docs.sh build
   base: process.env.DOCS_BASE || "/",
   cleanUrls: true,
-  lastUpdated: true,
+  // 镜像构建上下文不含 .git，无法读取提交时间，通过 DOCS_LAST_UPDATED=false 关闭
+  lastUpdated: process.env.DOCS_LAST_UPDATED !== "false",
   // 模板含占位符与起草须知，只用于写作，不进入站点。
   srcExclude: ["templates/**"],
   themeConfig: {
     nav: [
+      ...consoleNav,
       { text: "开始使用", link: "/curated/tutorials/quick-start" },
       { text: "核心概念", link: "/curated/explanation/system-overview" },
       { text: "参考", link: "/generated/reference/" },

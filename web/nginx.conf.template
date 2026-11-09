@@ -21,6 +21,23 @@ server {
         proxy_send_timeout 300s;
     }
 
+    # 文档站点：VitePress 构建产物位于 /usr/share/nginx/html/docs
+    location = /docs {
+        return 301 /docs/;
+    }
+
+    # cleanUrls=true：页面实际落盘为 xxx.html，路由不带后缀，需回退 $uri.html；
+    # 未命中时交给 VitePress 自带的 404 页面。
+    location /docs/ {
+        try_files $uri $uri.html $uri/ /docs/404.html;
+    }
+
+    # 文档站「管理控制台」入口：VitePress 会给内部链接加上 /docs/ 前缀，
+    # 这里把 /docs/console 重定向回控制台根路径。
+    location = /docs/console {
+        return 302 /;
+    }
+
     location / {
         try_files $uri $uri/ /index.html;
     }

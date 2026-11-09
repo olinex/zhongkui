@@ -6,6 +6,7 @@
 
 - [func ExtractConfig\[C any\]\(v \*viper.Viper, validate \*validator.Validate, prefix string\) \(\*C, error\)](<#ExtractConfig>)
 - [func GetContextParam\[T any\]\(ctx context.Context, name string\) \(\*T, error\)](<#GetContextParam>)
+- [func MarshalTOML\(v any\) \(\[\]byte, error\)](<#MarshalTOML>)
 - [func NewDefaultViper\(flags \*pflag.FlagSet\) \*viper.Viper](<#NewDefaultViper>)
 - [func NewDefaultViperWithCmd\(cmd \*cobra.Command\) \*viper.Viper](<#NewDefaultViperWithCmd>)
 - [func NewViper\(envPrefix string, configName string, configType string, configPath string, flags \*pflag.FlagSet\) \*viper.Viper](<#NewViper>)
@@ -84,6 +85,27 @@ GetContextParam 从 context 中按指定键提取参数映射并解码为泛型�
 
 - \*T: 成功时返回解码并填充默认值的配置结构体指针
 - error: 上下文无该键、键值类型不匹配或解码失败时返回错误
+
+<a name="MarshalTOML"></a>
+## func [MarshalTOML](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/config/toml.go#L36>)
+
+```go
+func MarshalTOML(v any) ([]byte, error)
+```
+
+MarshalTOML 将配置结构体实例序列化为带注释的 TOML 文本。
+
+序列化规则与项目配置加载链路保持一致：
+
+- 字段名取自 mapstructure 标签（其次 toml/json，最后回退字段名），"\-" 表示忽略；
+- comment 标签输出为该字段/表的行前注释；
+- 结构体（未实现 encoding.TextMarshaler）输出为独立子表；
+- 匿名嵌入结构体（如 grpc.BaseConfig）内联到父表；
+- 实现 encoding.TextMarshaler 的类型（DurationNS/BibyteSize/CIDR 等）按文本值输出；
+- time.Duration 输出为可读时长字符串（如 "1m"）；
+- map\[string\]结构体 输出为逐个键的子表，其余 map 输出为内联表。
+
+这样默认配置的字段集合、层级与注释完全由结构体定义驱动，新增字段会自动出现在 生成的配置中，避免手写模板与代码定义漂移。
 
 <a name="NewDefaultViper"></a>
 ## func [NewDefaultViper](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/config/config.go#L119>)
