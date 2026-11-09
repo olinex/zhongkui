@@ -37,12 +37,12 @@ func MarshalTOML(v any) ([]byte, error) {
 	rv := reflect.ValueOf(v)
 	for rv.Kind() == reflect.Pointer {
 		if rv.IsNil() {
-			return nil, errors.New("MarshalTOML: 配置实例为 nil")
+			return nil, errors.New("MarshalTOML: config instance is nil")
 		}
 		rv = rv.Elem()
 	}
 	if rv.Kind() != reflect.Struct {
-		return nil, errors.Newf("MarshalTOML: 期望结构体，实际为 %s", rv.Kind())
+		return nil, errors.Newf("MarshalTOML: expected struct, got %s", rv.Kind())
 	}
 	table, err := buildTOMLTable(rv, "", "")
 	if err != nil {
@@ -321,7 +321,7 @@ func quoteTOMLKey(key string) string {
 func formatTOMLValue(v reflect.Value) (string, error) {
 	v = indirect(v)
 	if !v.IsValid() {
-		return "", errors.New("formatTOMLValue: 无效值")
+		return "", errors.New("formatTOMLValue: invalid value")
 	}
 	if v.Type() == durationType {
 		return tomlQuoteString(v.Interface().(time.Duration).String())
@@ -329,7 +329,7 @@ func formatTOMLValue(v reflect.Value) (string, error) {
 	if marshaler, ok := v.Interface().(encoding.TextMarshaler); ok {
 		text, err := marshaler.MarshalText()
 		if err != nil {
-			return "", errors.Wrapf(err, "序列化 %s 失败", v.Type())
+			return "", errors.Wrapf(err, "failed to marshal %s", v.Type())
 		}
 		return tomlQuoteString(string(text))
 	}
@@ -359,7 +359,7 @@ func formatTOMLValue(v reflect.Value) (string, error) {
 	case reflect.Map:
 		return formatTOMLInlineTable(v)
 	default:
-		return "", errors.Newf("formatTOMLValue: 不支持的类型 %s", v.Type())
+		return "", errors.Newf("formatTOMLValue: unsupported type %s", v.Type())
 	}
 }
 
@@ -385,7 +385,7 @@ func formatTOMLInlineTable(v reflect.Value) (string, error) {
 func tomlQuoteString(s string) (string, error) {
 	encoded, err := toml.Marshal(map[string]any{"k": s})
 	if err != nil {
-		return "", errors.Wrapf(err, "序列化 TOML 字符串失败")
+		return "", errors.Wrapf(err, "failed to marshal TOML string")
 	}
 	line := strings.TrimSpace(string(encoded))
 	return strings.TrimPrefix(line, "k = "), nil
