@@ -117,6 +117,8 @@ stages:
   - step: manifest-merge@crane
     name: 81eff12b-a585-4ed8-9945-32362a2199da
     displayName: slim 镜像 Manifest 合并
+    dockerCerts:
+    - uuid: ecd6bdc0-bca1-013f-becb-4e858993359a
     targetImageName: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-slim"
     sourceImageAmd: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-amd64-slim"
     sourceImageArm: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-arm64-slim"
@@ -128,6 +130,8 @@ stages:
   - step: manifest-merge@crane
     name: 4bc1af80-4db6-4565-8410-9c9edef62451
     displayName: normal core 镜像 Manifest 合并
+    dockerCerts:
+    - uuid: ecd6bdc0-bca1-013f-becb-4e858993359a
     targetImageName: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}"
     sourceImageAmd: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-amd64"
     sourceImageArm: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-arm64"
