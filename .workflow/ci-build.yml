@@ -178,6 +178,8 @@ stages:
     displayName: core arm64 binary 提取
     certificate: ecd6bdc0-bca1-013f-becb-4e858993359a
     image: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-arm64"
+    processorType:
+    - arm64
     command:
     - "# 提取 zki（容器内以 app 用户执行，/tmp 1777 可写）"
     - ls -lha $(which zki)
@@ -197,6 +199,8 @@ stages:
     displayName: core amd64 binary 提取
     certificate: ecd6bdc0-bca1-013f-becb-4e858993359a
     image: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-amd64"
+    processorType:
+    - amd64
     command:
     - "# 提取 zki（容器内以 app 用户执行，/tmp 1777 可写）"
     - ls -lha $(which zki)
