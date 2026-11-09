@@ -38,6 +38,15 @@ var RootCmd = &cobra.Command{
     SilenceErrors: true,
     SilenceUsage:  true,
     PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+
+        if shouldSkipInjectorInit(cmd) {
+            ctx := cmd.Context()
+            ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+            ctx = context.WithValue(ctx, SignalCtxName, stop)
+            cmd.SetContext(ctx)
+            return nil
+        }
+
         var i = do.New()
         ctx := cmd.Context()
 
@@ -101,6 +110,15 @@ var RootCmd = &cobra.Command{
         return nil
     },
     PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+
+        if shouldSkipInjectorInit(cmd) {
+            ctx := cmd.Context()
+            if cancel := getSignalCancel(ctx); cancel != nil {
+                cancel()
+            }
+            return nil
+        }
+
         ctx, i := cmdToolBox(cmd)
 
         if cancel := getSignalCancel(ctx); cancel != nil {
@@ -124,7 +142,7 @@ var RootCmd = &cobra.Command{
 ```
 
 <a name="Execute"></a>
-## func [Execute](<https://gitee.com/olinex/zhongkui/blob/master/internal/cmd/root.go#L144>)
+## func [Execute](<https://gitee.com/olinex/zhongkui/blob/master/internal/cmd/root.go#L178>)
 
 ```go
 func Execute()

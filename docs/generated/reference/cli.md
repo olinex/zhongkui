@@ -194,6 +194,19 @@ zhongkui 根命令
 | `--timeout` | 1m0s | 数据库操作超时时间 |
 | `--version` | - | 抓包器版本 |
 
+### zki create default-config
+
+生成默认 config.toml 配置文件
+
+在指定路径生成一份包含常用默认值的 config.toml 模板文件；敏感字段（密码、密钥等）以 <...> 占位，需替换为实际值后再启动服务。
+
+参数：
+
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `-f, --force` | false | 强制覆盖已存在的目标文件 |
+| `-o, --output` | config.toml | 配置文件输出路径 |
+
 ### zki create docs
 
 从代码注释生成 Diátaxis 分类文档
