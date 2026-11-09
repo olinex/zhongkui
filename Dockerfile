@@ -38,6 +38,20 @@ ARG GOPROXY=https://goproxy.cn,https://mirrors.aliyun.com/goproxy/,direct
 # 最终镜像变体：normal 或 slim（见文件头注释）
 ARG IMAGE_VARIANT=normal
 
+# -----------------------------------------------------------------------------
+# BuildKit 自动注入的平台参数（显式声明便于 Dockerfile 自解释）：
+#   BUILDPLATFORM 构建机原生平台（FROM --platform=$BUILDPLATFORM 使用）
+#   TARGETOS / TARGETARCH / TARGETVARIANT 目标平台（由 --platform 指定）
+#   BUILDARCH 构建机架构（在 RUN 中可用）
+# 这些参数在启用 BuildKit（buildx / DOCKER_BUILDKIT=1）并指定 --platform 时
+# 由 BuildKit 自动填充；不传 --platform 时 TARGETOS/TARGETARCH 默认等于 host。
+# -----------------------------------------------------------------------------
+ARG BUILDPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+ARG TARGETVARIANT
+ARG BUILDARCH
+
 # 构建阶段固定跑在构建机原生架构上（BUILDPLATFORM），配合下方 aarch64 交叉工具链，
 # 避免 arm64 目标经 QEMU 模拟执行整个 cgo 编译（实测慢 8 倍以上）。
 FROM --platform=$BUILDPLATFORM ${GOLANG_IMAGE} AS build
@@ -128,12 +142,14 @@ RUN --mount=type=cache,id=go-mod,target=/go/pkg/mod \
     set -a; . ./dist/build.env; set +a; \
     scripts/build-image-binary.sh
 
-# 运行期公共基底：仅安装 libpcap（CGO 抓包必需）、CA 证书与时区数据，
-# 供 normal 变体直接使用，也是 slim 变体收集最小文件集的来源。
+# 运行期公共基底：安装运行时依赖，创建非 root 运行用户。
+# normal 变体直接继承本基底，slim 变体从本基底 COPY --from 组装最小 rootfs。
 FROM ${RUNTIME_IMAGE} AS runtime-base
 
 ARG APT_MIRROR
 
+# gosu 用于 normal 变体降权（比 sudo 轻量）；libcap2-bin 提供 setcap，
+# 给 zki 二进制授予抓包所需的 CAP_NET_RAW/CAP_NET_ADMIN，让非 root 用户也能抓包。
 RUN set -eu; \
     for f in /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources; do \
       if [ -f "$f" ]; then \
@@ -141,10 +157,24 @@ RUN set -eu; \
       fi; \
     done; \
     apt-get update \
-    && apt-get install -y --no-install-recommends libpcap0.8 ca-certificates tzdata \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y --no-install-recommends libpcap0.8 ca-certificates tzdata gosu libcap2-bin \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -g 1000 app \
+    && useradd  -u 1000 -g app -d /app -s /usr/sbin/nologin -M app \
+    && mkdir -p /app \
+    && chown app:app /app
 
 COPY --from=build /out/zki /usr/local/bin/zki
+# 给 zki 授予抓包所需的 CAP_NET_RAW/CAP_NET_ADMIN，让非 root 用户也能抓包。
+# 部分运行时（QEMU/OrbStack）setcap 写入成功但 exec 时 EPERM，
+# 这里用 gosu app 做兼容性探测，失败则主动清除 capability 扩展属性。
+RUN setcap cap_net_raw,cap_net_admin=eip /usr/local/bin/zki 2>/dev/null || true; \
+    if gosu app /usr/local/bin/zki --help >/dev/null 2>&1; then \
+      echo "OK: file capability 在当前运行时生效"; \
+    else \
+      echo "WARN: file capability 不兼容，清除 setcap（非 root 抓包将不可用）"; \
+      setcap -r /usr/local/bin/zki 2>/dev/null || true; \
+    fi
 
 # slim 变体的最小文件集装配：二进制、动态库闭包、CA 证书、时区数据与最小 etc 配置。
 FROM runtime-base AS slim-prep
@@ -178,19 +208,28 @@ RUN set -eu; \
     chmod 1777 "$root/tmp"
 
 # normal 变体：保留 debian 基底的 shell 与系统工具，便于线上排障。
+# 注入 entrypoint wrapper（放在仓库 scripts/docker-entrypoint.sh 里维护）：
+#   1. 默认模式（CMD 传入 zki 子命令）：wrapper 直接 exec /usr/local/bin/zki
+#   2. 外部工具（如 execute@docker）：传入 shell 命令数组，wrapper 用 /bin/sh -c 执行
+#      这解决了 ENTRYPOINT 是二进制时 execute@docker 无法正确执行 shell 命令的问题。
 FROM runtime-base AS final-normal
+
+COPY scripts/docker-entrypoint.sh /entrypoint.sh
+RUN chmod 0755 /entrypoint.sh
 
 WORKDIR /app
 EXPOSE 8080 8081
 
-ENTRYPOINT ["/usr/local/bin/zki"]
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["run", "web", "--config", "/app/config.toml"]
 
 # slim 变体：基于 scratch，不含 shell/包管理器，体积最小、攻击面最小。
+# 以 app 用户（uid=1000）非 root 运行；zki 通过 setcap 已授予抓包 capability。
 FROM scratch AS final-slim
 
 COPY --from=slim-prep /rootfs/ /
 
+USER 1000:1000
 WORKDIR /app
 EXPOSE 8080 8081
 
