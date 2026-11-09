@@ -22,7 +22,22 @@ const (
 	InjectorCtxName = "inj"
 	// SignalCtxName 是信号监听停止函数在 context 中存储的键名。
 	SignalCtxName = "sig"
+
+	// annotationSkipInjectorInit 是 cobra.Command.Annotations 的键，标记该命令（含其父链）
+	// 不需要初始化依赖注入器即可运行，例如 create default-config 这类"bootstrap"命令。
+	annotationSkipInjectorInit = "zhongkui/skip-injector-init"
 )
+
+// shouldSkipInjectorInit 判断当前命令链是否标记了跳过注入器初始化。
+// 沿 cmd.Parent() 向上查找，允许在父命令上统一标记（例如未来整个 create 组都不需要注入器）。
+func shouldSkipInjectorInit(cmd *cobra.Command) bool {
+	for c := cmd; c != nil; c = c.Parent() {
+		if _, ok := c.Annotations[annotationSkipInjectorInit]; ok {
+			return true
+		}
+	}
+	return false
+}
 
 func cmdToolBox(cmd *cobra.Command) (context.Context, do.Injector) {
 	ctx := cmd.Context()
@@ -45,6 +60,16 @@ var RootCmd = &cobra.Command{
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// bootstrap 命令（如 create default-config）无需 config.toml 即可运行，
+		// 跳过所有依赖 config 的 provider 初始化，仅保留信号处理与 context 传递。
+		if shouldSkipInjectorInit(cmd) {
+			ctx := cmd.Context()
+			ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+			ctx = context.WithValue(ctx, SignalCtxName, stop)
+			cmd.SetContext(ctx)
+			return nil
+		}
+
 		var i = do.New()
 		ctx := cmd.Context()
 
@@ -112,6 +137,15 @@ var RootCmd = &cobra.Command{
 		return nil
 	},
 	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+		// bootstrap 命令未初始化依赖注入器，仅需释放信号监听。
+		if shouldSkipInjectorInit(cmd) {
+			ctx := cmd.Context()
+			if cancel := getSignalCancel(ctx); cancel != nil {
+				cancel()
+			}
+			return nil
+		}
+
 		ctx, i := cmdToolBox(cmd)
 
 		// 调用信号取消函数，确保信号监听资源被释放
@@ -237,6 +271,7 @@ func init() {
 	createCmd.AddCommand(createPasswordBookCmd)
 	createCmd.AddCommand(generateTestcaseCmd)
 	createCmd.AddCommand(createDocsCmd)
+	createCmd.AddCommand(createDefaultConfigCmd)
 	RootCmd.AddCommand(createCmd)
 	// sync
 	syncCmd.AddCommand(syncDocsCmd)

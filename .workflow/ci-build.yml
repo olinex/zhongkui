@@ -137,6 +137,52 @@ stages:
       resource:
         cpu: "2"
         memory: "4"
+  - step: image-build-plus@buildkitd
+    name: 44667782-dd61-475d-ad34-23ba3ea3daea
+    displayName: normal arm64 web 镜像构建
+    dockerCerts:
+    - uuid: ecd6bdc0-bca1-013f-becb-4e858993359a
+    tag: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-web:${GITEE_BRANCH}-arm64"
+    dockerfile: ./web/Dockerfile
+    context: ""
+    artifacts: []
+    isCache: false
+    processorType:
+    - arm64
+    parameter:
+      NODE_IMAGE: "${REGISTRY_MIRROR}/library/node:22-bookworm-slim"
+      NGINX_IMAGE: "${REGISTRY_MIRROR}/library/nginx:1.27-alpine"
+      VITE_DOCS_URL: /docs/
+      DOCS_BASE: /docs/
+      DOCS_CONSOLE_URL: /console
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "2"
+        memory: "8"
+  - step: image-build-plus@buildkitd
+    name: b5586f09-be48-46e7-88f9-05c08c23a566
+    displayName: normal amd64 web 镜像构建
+    dockerCerts:
+    - uuid: ecd6bdc0-bca1-013f-becb-4e858993359a
+    tag: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-web:${GITEE_BRANCH}-amd64"
+    dockerfile: ./web/Dockerfile
+    context: ""
+    artifacts: []
+    isCache: false
+    processorType:
+    - amd64
+    parameter:
+      NODE_IMAGE: "${REGISTRY_MIRROR}/library/node:22-bookworm-slim"
+      NGINX_IMAGE: "${REGISTRY_MIRROR}/library/nginx:1.27-alpine"
+      VITE_DOCS_URL: /docs/
+      DOCS_BASE: /docs/
+      DOCS_CONSOLE_URL: /console
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "2"
+        memory: "8"
 - name: 合并镜像
   displayName: 合并镜像
   strategy: naturally
@@ -163,6 +209,19 @@ stages:
     targetImageName: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}"
     sourceImageAmd: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-amd64"
     sourceImageArm: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-arm64"
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "1"
+        memory: "2"
+  - step: manifest-merge@crane
+    name: d0d41543-3c31-4ec6-bcb0-1b7638a3d649
+    displayName: web 镜像 Manifest 合并
+    dockerCerts:
+    - uuid: ecd6bdc0-bca1-013f-becb-4e858993359a
+    targetImageName: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-web:${GITEE_BRANCH}"
+    sourceImageAmd: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-web:${GITEE_BRANCH}-amd64"
+    sourceImageArm: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-web:${GITEE_BRANCH}-arm64"
     strategy:
       retry: "0"
       resource:

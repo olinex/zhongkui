@@ -591,6 +591,15 @@ other = "TLS 密钥文件 [[.Path]] 已创建"
 [cli.tls.cert-created]
 other = "TLS 证书文件 [[.Path]] 已创建"
 
+[cli.create.default-config.exists]
+other = "目标文件 [[.Path]] 已存在，使用 --force 覆盖"
+
+[cli.create.default-config.created]
+other = "默认配置文件已生成到 [[.Path]]"
+
+[cli.create.default-config.hint]
+other = "请将文件中所有 <...> 占位替换为实际值后再启动服务"
+
 [cli.testcase.generated]
 other = "测试用例已生成到 [[.Dir]]"
 
@@ -1559,6 +1568,12 @@ other = "从代码注释生成 Diátaxis 分类文档"
 [cmd.create.docs.long]
 other = "扫描文档注册表，调用 gomarkdoc 将各功能包的注释导出为 Markdown（教程/操作指南/参考/解释），并生成项目根 README.md（封面 + 目录）作为文档入口。"
 
+[cmd.create.default-config.short]
+other = "生成默认 config.toml 配置文件"
+
+[cmd.create.default-config.long]
+other = "在指定路径生成一份包含常用默认值的 config.toml 模板文件；敏感字段（密码、密钥等）以 <...> 占位，需替换为实际值后再启动服务。"
+
 [cmd.sync.short]
 other = "同步注释生成文档与 embedding 向量，并对齐 embedding 列维度"
 
@@ -1768,6 +1783,12 @@ other = "pcap 文件路径（必填）"
 
 [flag.create.testcase.output]
 other = "测试用例文件的输出目录"
+
+[flag.create.default-config.output]
+other = "配置文件输出路径"
+
+[flag.create.default-config.force]
+other = "强制覆盖已存在的目标文件"
 
 [flag.completion.bash.no-descriptions]
 other = "禁用补全描述"
