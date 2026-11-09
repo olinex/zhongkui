@@ -2,6 +2,32 @@ version: "1.0"
 name: 构建、上传、发布
 displayName: 构建发布
 stages:
+- name: 预处理
+  displayName: 预处理
+  strategy: fast
+  trigger: auto
+  steps:
+  - step: out-param@tools
+    name: 39db0d5e-3026-44df-8783-f9d2f3681ab1
+    displayName: SemVer Part 参数产出
+    params:
+      SEMVER_MAJOR: "$(echo ${GITEE_BRANCH} | sed -E 's/^v([0-9]+)\\..*/\\1/')"
+      SEMVER_MINOR: "$(echo ${GITEE_BRANCH} | sed -E 's/^v[0-9]+\\.([0-9]+)\\..*/\\\
+        1/')"
+      SEMVER_PATCH: "$(echo ${GITEE_BRANCH} | sed -E 's/^v[0-9]+\\.[0-9]+\\.([0-9]+).*/\\\
+        1/')"
+      SEMVER_PRERELEASE: "$(echo ${GITEE_BRANCH} | sed -E 's/^v[0-9]+\\.[0-9]+\\.[0-9]+-(alpha|beta|rc)\\\
+        .([1-9][0-9]*)$/\\2/; t; s/.*/0/')"
+    strategy:
+      retry: "0"
+  - step: out-param@tools
+    name: d9fc2f24-db48-4c11-8b67-7c3d90c82167
+    displayName: SemVer Release 参数产出
+    params:
+      SEMVER_RELEASE: "${SEMVER_MAJOR}.${SEMVER_MINOR}.${SEMVER_PATCH}.${SEMVER_PRERELEASE}"
+    strategy:
+      retry: "0"
+    dependsOn: 39db0d5e-3026-44df-8783-f9d2f3681ab1
 - name: 构建镜像
   displayName: 构建镜像
   strategy: naturally
@@ -200,6 +226,27 @@ stages:
     displayName: core amd64 binary 上传
     dependArtifact: zki_core_arm64
     artifactName: zki_core_amd64.tar.gz
+    strategy:
+      retry: "0"
+- name: 正式发布
+  displayName: 正式发布
+  strategy: fast
+  trigger: auto
+  steps:
+  - step: publish@release_artifacts
+    name: 574cba1d-3f03-4ef8-8647-c644819efb25
+    displayName: core arm64 发布
+    dependArtifact: zki_core_arm64.tar.gz
+    version: "${SEMVER_RELEASE}"
+    autoIncrement: false
+    strategy:
+      retry: "0"
+  - step: publish@release_artifacts
+    name: 4aaeabee-4bf3-4a5c-bc82-30f1cf34fd05
+    displayName: core amd64 发布
+    dependArtifact: zki_core_amd64.tar.gz
+    version: "${SEMVER_RELEASE}"
+    autoIncrement: false
     strategy:
       retry: "0"
 triggers:
