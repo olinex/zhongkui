@@ -159,7 +159,7 @@ stages:
       retry: "0"
       resource:
         cpu: "2"
-        memory: "8"
+        memory: "4"
   - step: image-build-plus@buildkitd
     name: b5586f09-be48-46e7-88f9-05c08c23a566
     displayName: normal amd64 web 镜像构建
@@ -182,7 +182,7 @@ stages:
       retry: "0"
       resource:
         cpu: "2"
-        memory: "8"
+        memory: "4"
 - name: 合并镜像
   displayName: 合并镜像
   strategy: naturally
@@ -237,8 +237,6 @@ stages:
     displayName: core arm64 binary 提取
     certificate: ecd6bdc0-bca1-013f-becb-4e858993359a
     image: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-arm64"
-    processorType:
-    - arm64
     command:
     - "# 提取 zki（容器内以 app 用户执行，/tmp 1777 可写）"
     - ls -lha $(which zki)
@@ -258,8 +256,6 @@ stages:
     displayName: core amd64 binary 提取
     certificate: ecd6bdc0-bca1-013f-becb-4e858993359a
     image: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-amd64"
-    processorType:
-    - amd64
     command:
     - "# 提取 zki（容器内以 app 用户执行，/tmp 1777 可写）"
     - ls -lha $(which zki)
