@@ -2,8 +2,8 @@ version: "1.0"
 name: 构建、上传、发布
 displayName: 构建发布
 stages:
-- name: 构建
-  displayName: 构建
+- name: 构建镜像
+  displayName: 构建镜像
   strategy: naturally
   trigger: auto
   steps:
@@ -32,18 +32,6 @@ stages:
       resource:
         cpu: "2"
         memory: "4"
-  - step: manifest-merge@crane
-    name: 4bc1af80-4db6-4565-8410-9c9edef62451
-    displayName: normal core 镜像 Manifest 合并
-    targetImageName: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}"
-    sourceImageAmd: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-amd64"
-    sourceImageArm: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-arm64"
-    strategy:
-      retry: "0"
-      resource:
-        cpu: "1"
-        memory: "2"
-    dependsOn: da30ea79-8f23-4a8e-a7ea-ed1958400a52
   - step: image-build-plus@buildkitd
     name: ecd9f8e2-e7ba-4ae3-96c9-852a58e50ebb
     displayName: normal amd64 core 镜像构建
@@ -95,18 +83,6 @@ stages:
       resource:
         cpu: "2"
         memory: "4"
-  - step: manifest-merge@crane
-    name: 81eff12b-a585-4ed8-9945-32362a2199da
-    displayName: slim 镜像 Manifest 合并
-    targetImageName: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-slim"
-    sourceImageAmd: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-amd64-slim"
-    sourceImageArm: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-arm64-slim"
-    strategy:
-      retry: "0"
-      resource:
-        cpu: "1"
-        memory: "2"
-    dependsOn: 6acefe26-d61b-417b-aef7-09cea931f155
   - step: image-build-plus@buildkitd
     name: fa79664f-7a6a-481e-b55b-600a75f6604b
     displayName: slim amd64 core 镜像构建
@@ -133,6 +109,33 @@ stages:
       resource:
         cpu: "2"
         memory: "4"
+- name: 合并镜像
+  displayName: 合并镜像
+  strategy: naturally
+  trigger: auto
+  steps:
+  - step: manifest-merge@crane
+    name: 81eff12b-a585-4ed8-9945-32362a2199da
+    displayName: slim 镜像 Manifest 合并
+    targetImageName: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-slim"
+    sourceImageAmd: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-amd64-slim"
+    sourceImageArm: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-arm64-slim"
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "1"
+        memory: "2"
+  - step: manifest-merge@crane
+    name: 4bc1af80-4db6-4565-8410-9c9edef62451
+    displayName: normal core 镜像 Manifest 合并
+    targetImageName: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}"
+    sourceImageAmd: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-amd64"
+    sourceImageArm: "${TARGET_REGISTRY_MIRROR}/zhongkui/zhongkui-core:${GITEE_BRANCH}-arm64"
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "1"
+        memory: "2"
 - name: 提取制品
   displayName: 提取制品
   strategy: fast
