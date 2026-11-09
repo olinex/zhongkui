@@ -37,6 +37,15 @@
     </template>
     <template #append>
       <v-btn
+        variant="text"
+        icon="mdi-book-open-page-variant-outline"
+        :href="docsURL"
+        target="_blank"
+        rel="noopener"
+        :title="$t('action.docs')"
+        :aria-label="$t('action.docs')"
+      />
+      <v-btn
         v-show="userStore.valid"
         variant="text"
         icon="mdi-robot-outline"
@@ -130,6 +139,9 @@ const userStore = useUserStore();
 const assistantStore = useAssistantStore();
 
 const avaliableNamespaces = ref([] as string[]);
+
+// 文档站默认与前端同源部署在 /docs/，可通过 VITE_DOCS_URL 覆盖
+const docsURL = import.meta.env.VITE_DOCS_URL || "/docs/";
 
 const loginCurrent = computed(() => {
   return route.name === "Sign In";

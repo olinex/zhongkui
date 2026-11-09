@@ -24,10 +24,13 @@
 #   docker build --build-arg VERSION=v1.2.3 --build-arg COMMIT=$(git rev-parse --short HEAD) .
 # 未指定合法 VERSION 时构建直接失败，不允许产出 unknown 版本的镜像。
 #
-# 运行（配置文件与证书通过挂载提供）：
+# 运行（镜像内置 /app/default-config.toml，由 zki create default-config 生成）：
+#   docker run --rm -p 8080:8080 -p 8081:8081 zhongkui:local
+# 生产环境建议挂载自有配置覆盖默认项：
 #   docker run --rm -p 8080:8080 -p 8081:8081 \
 #     -v "$PWD/config.toml:/app/config.toml:ro" \
-#     -v "$PWD/certs:/app/certs:ro" zhongkui:local
+#     -v "$PWD/certs:/app/certs:ro" zhongkui:local \
+#     run web --config /app/config.toml
 
 # 基础镜像、apt 源、Go 模块代理均可通过 --build-arg 覆盖（CI 中指向国内/内网地址）。
 # 基础镜像均为多架构镜像，--platform 指定的目标架构会自动选取对应 manifest。
@@ -176,6 +179,11 @@ RUN setcap cap_net_raw,cap_net_admin=eip /usr/local/bin/zki 2>/dev/null || true;
       setcap -r /usr/local/bin/zki 2>/dev/null || true; \
     fi
 
+# 生成镜像内置的默认配置：该命令依据代码中的配置结构体序列化 TOML，无需外部 config.toml，
+# 产物 /app/default-config.toml 供默认 CMD 使用；生产环境可挂载自有配置覆盖。
+RUN /usr/local/bin/zki create default-config -o /app/default-config.toml \
+    && test -s /app/default-config.toml
+
 # slim 变体的最小文件集装配：二进制、动态库闭包、CA 证书、时区数据与最小 etc 配置。
 FROM runtime-base AS slim-prep
 
@@ -205,6 +213,8 @@ RUN set -eu; \
     for f in nsswitch.conf passwd group services protocols; do \
       if [ -f "/etc/$f" ]; then cp -a "/etc/$f" "$root/etc/"; fi; \
     done; \
+    # 4) 镜像内置默认配置（供默认 CMD 使用）
+    cp -a /app/default-config.toml "$root/app/default-config.toml"; \
     chmod 1777 "$root/tmp"
 
 # normal 变体：保留 debian 基底的 shell 与系统工具，便于线上排障。
@@ -221,7 +231,7 @@ WORKDIR /app
 EXPOSE 8080 8081
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["run", "web", "--config", "/app/config.toml"]
+CMD ["run", "web", "--config", "/app/default-config.toml"]
 
 # slim 变体：基于 scratch，不含 shell/包管理器，体积最小、攻击面最小。
 # 以 app 用户（uid=1000）非 root 运行；zki 通过 setcap 已授予抓包 capability。
@@ -234,7 +244,7 @@ WORKDIR /app
 EXPOSE 8080 8081
 
 ENTRYPOINT ["/usr/local/bin/zki"]
-CMD ["run", "web", "--config", "/app/config.toml"]
+CMD ["run", "web", "--config", "/app/default-config.toml"]
 
 # 按 IMAGE_VARIANT 选择最终镜像；变体名非法时此处找不到目标阶段，构建直接失败。
 FROM final-${IMAGE_VARIANT} AS final
