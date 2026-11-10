@@ -1,10 +1,12 @@
 #
-# zhongkui 前端镜像（原生架构）。
+# zhongkui 前端镜像（支持交叉构建）。
 # 构建上下文为仓库根目录；Vite 构建时把 API 基址固定为同源 /api/v1，
 # 由 Nginx 反向代理到 ZKI_API_UPSTREAM（默认 http://zki:8080）。
 #
-# 文档站（docs/，VitePress）在同一镜像内独立构建，产物挂载到 /docs/，
-# 与 Go 后端镜像解耦，避免文档体积进入核心进程镜像。
+# 前端产物为纯静态文件、与架构无关，Node 构建阶段固定在宿主机架构
+# （--platform=$BUILDPLATFORM）上原生执行，跨架构构建（如 amd64 CI 构建
+# arm64 镜像）时避免 QEMU 模拟 Node 导致的数倍减速；仅最终 nginx 阶段
+# 使用目标架构。交叉构建需 BuildKit（docker buildx / DOCKER_BUILDKIT=1）。
 #
 #   docker build -f web/Dockerfile -t zhongkui-web:local .
 #
@@ -18,7 +20,7 @@
 ARG NODE_IMAGE=node:22-bookworm-slim
 ARG NGINX_IMAGE=nginx:1.27-alpine
 
-FROM ${NODE_IMAGE} AS build
+FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS build
 
 ENV npm_config_registry=https://registry.npmmirror.com
 RUN corepack enable && corepack prepare pnpm@10 --activate
