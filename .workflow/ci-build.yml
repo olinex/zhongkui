@@ -37,7 +37,7 @@ stages:
     name: 1d0fda73-b7c3-4308-a08a-4ccea22247d4
     displayName: core 交叉编译
     certificate: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    image: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-builder:go1.27.3"
+    image: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core-builder:go1.27.3"
     command:
     - "# 请在此输入您想执行的脚本"
     - "export VERSION=${GITEE_BRANCH} COMMIT=${GITEE_SHORT_COMMIT} BUILDER=${GITEE_PIPELINE_TRIGGER_USER}@${GITEE_PIPELINE_NAME}:${GITEE_PIPELINE_BUILD_NUMBER}"
