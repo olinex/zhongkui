@@ -16,7 +16,7 @@ stages:
     dockerfile: ./deploys/build/core.builder.Dockerfile
     context: ""
     artifacts: []
-    isCache: false
+    isCache: true
     processorType:
     - amd64
     - arm64
@@ -66,3 +66,9 @@ triggers:
 notify: []
 strategy:
   blocking: true
+ref_variable:
+- REGISTRY_MIRROR
+- APT_MIRROR
+- GOPROXY
+- TARGET_REGISTRY_MIRROR
+- NPM_MIRROR
