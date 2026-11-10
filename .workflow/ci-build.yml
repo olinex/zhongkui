@@ -28,58 +28,6 @@ stages:
     strategy:
       retry: "0"
     dependsOn: 39db0d5e-3026-44df-8783-f9d2f3681ab1
-- name: 构建二进制
-  displayName: 构建二进制
-  strategy: fast
-  trigger: auto
-  steps:
-  - step: execute@docker
-    name: 1d0fda73-b7c3-4308-a08a-4ccea22247d4
-    displayName: core 交叉编译
-    certificate: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    image: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core-builder:go1.27.3"
-    command:
-    - "# 请在此输入您想执行的脚本"
-    - "export VERSION=${GITEE_BRANCH} COMMIT=${GITEE_SHORT_COMMIT} BUILDER=${GITEE_PIPELINE_TRIGGER_USER}@${GITEE_PIPELINE_NAME}:${GITEE_PIPELINE_BUILD_NUMBER}"
-    - deploys/build/build-binary.sh
-    artifacts:
-    - name: zki_core_linux_arm64
-      path:
-      - dist/bin/zki-linux-arm64
-      type: .tar.gz
-    - name: zki_core_linux_amd64
-      path:
-      - dist/bin/zki-linux-amd64
-      type: .tar.gz
-    caches:
-    - /go/pkg/mod
-    - /root/.cache/go-build
-    strategy:
-      retry: "0"
-      resource:
-        cpu: "2"
-        memory: "4"
-  - step: execute@docker
-    name: f83e607c-146d-4fb9-9156-5dc55b654d96
-    displayName: web 静态产物编译
-    certificate: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    image: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-web-builder:node22"
-    command:
-    - export VITE_DOCS_URL=/docs/ DOCS_BASE=/docs/ DOCS_CONSOLE_URL=/console
-    - deploys/build/build-web.sh
-    artifacts:
-    - name: web_dist
-      path:
-      - web/dist
-      - docs/.vitepress/dist
-      type: .tar.gz
-    caches:
-    - /root/.local/share/pnpm/store
-    strategy:
-      retry: "0"
-      resource:
-        cpu: "2"
-        memory: "4"
 - name: 构建镜像
   displayName: 构建镜像
   strategy: naturally
@@ -93,17 +41,19 @@ stages:
     tag: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core:${GITEE_BRANCH}"
     dockerfile: ./deploys/build/core.Dockerfile
     context: ""
-    artifacts:
-    - "${zki_core_linux_amd64}"
-    - "${zki_core_linux_arm64}"
     isCache: true
     processorType:
     - arm64
     - amd64
     parameter:
+      GOLANG_IMAGE: "${REGISTRY_MIRROR}/library/golang:1.27.3-bookworm"
       RUNTIME_IMAGE: "${REGISTRY_MIRROR}/library/debian:bookworm-slim"
       APT_MIRROR: "${APT_MIRROR}"
+      GOPROXY: "${GOPROXY}"
       IMAGE_VARIANT: normal
+      VERSION: "${GITEE_BRANCH}"
+      COMMIT: "${GITEE_SHORT_COMMIT}"
+      BUILDER: "${GITEE_PIPELINE_TRIGGER_USER}@${GITEE_PIPELINE_NAME}:${GITEE_PIPELINE_BUILD_NUMBER}"
     strategy:
       retry: "0"
       resource:
@@ -114,20 +64,22 @@ stages:
     displayName: slim core 镜像构建
     dockerCerts:
     - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    tag: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core:${GITEE_BRANCH}-slim"
+    tag: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core-slim:${GITEE_BRANCH}"
     dockerfile: ./deploys/build/core.Dockerfile
     context: ""
-    artifacts:
-    - "${zki_core_linux_amd64}"
-    - "${zki_core_linux_arm64}"
     isCache: true
     processorType:
     - arm64
     - amd64
     parameter:
+      GOLANG_IMAGE: "${REGISTRY_MIRROR}/library/golang:1.27.3-bookworm"
       RUNTIME_IMAGE: "${REGISTRY_MIRROR}/library/debian:bookworm-slim"
       APT_MIRROR: "${APT_MIRROR}"
+      GOPROXY: "${GOPROXY}"
       IMAGE_VARIANT: slim
+      VERSION: "${GITEE_BRANCH}"
+      COMMIT: "${GITEE_SHORT_COMMIT}"
+      BUILDER: "${GITEE_PIPELINE_TRIGGER_USER}@${GITEE_PIPELINE_NAME}:${GITEE_PIPELINE_BUILD_NUMBER}"
     strategy:
       retry: "0"
       resource:
@@ -141,14 +93,18 @@ stages:
     tag: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-web:${GITEE_BRANCH}"
     dockerfile: ./deploys/build/web.Dockerfile
     context: ""
-    artifacts:
-    - "${web_dist}"
+    artifacts: []
     isCache: true
     processorType:
     - arm64
     - amd64
     parameter:
+      NODE_IMAGE: "${REGISTRY_MIRROR}/library/node:22-bookworm-slim"
       NGINX_IMAGE: "${REGISTRY_MIRROR}/library/nginx:1.27-alpine"
+      NPM_REGISTRY: "${NPM_MIRROR}"
+      VITE_DOCS_URL: /docs/
+      DOCS_BASE: /docs/
+      DOCS_CONSOLE_URL: /console
     strategy:
       retry: "0"
       resource:

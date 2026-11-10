@@ -138,7 +138,7 @@ endif
 
 # 编译参数全局统一：所有二进制产物都使用 -trimpath + 剥离符号，
 # 入口之间只允许版本信息（DEV / RELEASE）与输出路径不同。
-#   OUT      产物路径（CI 二进制构建由 deploys/build/build-binary.sh 指定 dist/bin/zki-linux-<arch>）
+#   OUT      产物路径（镜像构建由 deploys/build/core.Dockerfile 的 build 阶段指定 /out/zki）
 #   LDFLAGS  链接参数（版本信息注入；-s -w 属于链接参数）
 OUT ?= bin/zki
 LDFLAGS ?= -s -w $(DEV_LDFLAGS)
@@ -154,7 +154,7 @@ build: $(BUILD_DEPS)
 	@$(GO_BUILD)
 
 # build-release - 编译 release 版本 (需手动指定语义化版本号，正式版和预发布版均支持)
-# 镜像/CI 二进制构建由 deploys/build/build-binary.sh 独立完成：编译参数与本目标一致，
+# 镜像构建由 deploys/build/core.Dockerfile 的 build 阶段完成：编译参数与本目标一致，
 # 区别是复用仓库内已提交的 RAG 快照、不在构建环境内按需重烘焙
 # 用法: make build-release VERSION=v1.2.3  或  make build-release VERSION=v1.2.3-alpha.1
 build-release: OUT := bin/zki
@@ -165,9 +165,9 @@ build-release: $(BUILD_DEPS)
 
 # build-image - 镜像构建专用编译目标：只编译二进制，复用仓库内已提交的 RAG 快照
 # 与 build-release 的唯一区别是跳过 $(BUILD_DEPS) 的按需重烘焙：镜像构建环境没有增量编译优势，
-# 而 arm64 经 QEMU 执行时重新烘焙快照会占掉单次构建约一半时间，且快照内容与 CPU 架构无关。
+# 重新烘焙快照只会拖慢镜像构建，而快照内容与 CPU 架构无关。
 # 快照与应用代码的一致性由 CI 的 docs-check（make ci-report）在合入前把关。
-# 用法: make build-image（由 deploys/build/build-binary.sh 调用，OUT 为 dist/bin/zki-linux-<arch>）
+# 用法: make build-image（由 deploys/build/core.Dockerfile 的 build 阶段调用，OUT 为 /out/zki）
 build-image: LDFLAGS := -s -w $(RELEASE_LDFLAGS)
 build-image:
 	@test -f $(RAG_SNAPSHOT) || { echo "ERROR: 缺少已提交的 RAG 快照 $(RAG_SNAPSHOT)" >&2; exit 1; }
