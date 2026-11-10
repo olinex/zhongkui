@@ -37,7 +37,7 @@ stages:
     name: da30ea79-8f23-4a8e-a7ea-ed1958400a52
     displayName: normal arm64 core 镜像构建
     dockerCerts:
-    - uuid: ecd6bdc0-bca1-013f-becb-4e858993359a
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
     tag: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core:${GITEE_BRANCH}-arm64"
     dockerfile: ./Dockerfile
     context: ""
@@ -63,7 +63,7 @@ stages:
     name: ecd9f8e2-e7ba-4ae3-96c9-852a58e50ebb
     displayName: normal amd64 core 镜像构建
     dockerCerts:
-    - uuid: ecd6bdc0-bca1-013f-becb-4e858993359a
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
     tag: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core:${GITEE_BRANCH}-amd64"
     dockerfile: ./Dockerfile
     context: ""
@@ -89,7 +89,7 @@ stages:
     name: 6acefe26-d61b-417b-aef7-09cea931f155
     displayName: slim arm64 core 镜像构建
     dockerCerts:
-    - uuid: ecd6bdc0-bca1-013f-becb-4e858993359a
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
     tag: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core:${GITEE_BRANCH}-arm64-slim"
     dockerfile: ./Dockerfile
     context: ""
@@ -115,7 +115,7 @@ stages:
     name: fa79664f-7a6a-481e-b55b-600a75f6604b
     displayName: slim amd64 core 镜像构建
     dockerCerts:
-    - uuid: ecd6bdc0-bca1-013f-becb-4e858993359a
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
     tag: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core:${GITEE_BRANCH}-amd64-slim"
     dockerfile: ./Dockerfile
     context: ""
@@ -141,7 +141,7 @@ stages:
     name: 44667782-dd61-475d-ad34-23ba3ea3daea
     displayName: normal arm64 web 镜像构建
     dockerCerts:
-    - uuid: ecd6bdc0-bca1-013f-becb-4e858993359a
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
     tag: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-web:${GITEE_BRANCH}-arm64"
     dockerfile: ./web/Dockerfile
     context: ""
@@ -164,7 +164,7 @@ stages:
     name: b5586f09-be48-46e7-88f9-05c08c23a566
     displayName: normal amd64 web 镜像构建
     dockerCerts:
-    - uuid: ecd6bdc0-bca1-013f-becb-4e858993359a
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
     tag: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-web:${GITEE_BRANCH}-amd64"
     dockerfile: ./web/Dockerfile
     context: ""
@@ -192,7 +192,7 @@ stages:
     name: 81eff12b-a585-4ed8-9945-32362a2199da
     displayName: slim core 镜像 Manifest 合并
     dockerCerts:
-    - uuid: ecd6bdc0-bca1-013f-becb-4e858993359a
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
     targetImageName: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core:${GITEE_BRANCH}-slim"
     sourceImageAmd: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core:${GITEE_BRANCH}-amd64-slim"
     sourceImageArm: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core:${GITEE_BRANCH}-arm64-slim"
@@ -205,7 +205,7 @@ stages:
     name: 4bc1af80-4db6-4565-8410-9c9edef62451
     displayName: normal core 镜像 Manifest 合并
     dockerCerts:
-    - uuid: ecd6bdc0-bca1-013f-becb-4e858993359a
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
     targetImageName: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core:${GITEE_BRANCH}"
     sourceImageAmd: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core:${GITEE_BRANCH}-amd64"
     sourceImageArm: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core:${GITEE_BRANCH}-arm64"
@@ -218,7 +218,7 @@ stages:
     name: d0d41543-3c31-4ec6-bcb0-1b7638a3d649
     displayName: web 镜像 Manifest 合并
     dockerCerts:
-    - uuid: ecd6bdc0-bca1-013f-becb-4e858993359a
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
     targetImageName: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-web:${GITEE_BRANCH}"
     sourceImageAmd: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-web:${GITEE_BRANCH}-amd64"
     sourceImageArm: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-web:${GITEE_BRANCH}-arm64"
@@ -235,7 +235,7 @@ stages:
   - step: execute@docker
     name: cbaa695f-0392-4093-ac5d-9e85d79a322b
     displayName: core arm64 binary 提取
-    certificate: ecd6bdc0-bca1-013f-becb-4e858993359a
+    certificate: b4d9b4c0-be7a-013f-40b9-362eca6107d0
     image: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core:${GITEE_BRANCH}-arm64"
     command:
     - "# 提取 zki（容器内以 app 用户执行，/tmp 1777 可写）"
@@ -254,7 +254,7 @@ stages:
   - step: execute@docker
     name: d2bb545d-f481-40d6-842e-678d64e3e60c
     displayName: core amd64 binary 提取
-    certificate: ecd6bdc0-bca1-013f-becb-4e858993359a
+    certificate: b4d9b4c0-be7a-013f-40b9-362eca6107d0
     image: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core:${GITEE_BRANCH}-amd64"
     command:
     - "# 提取 zki（容器内以 app 用户执行，/tmp 1777 可写）"
