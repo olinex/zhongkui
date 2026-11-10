@@ -26,6 +26,8 @@ bin/
 bin-debug/
 bin-release/
 build/
+# 例外：deploys/build/ 是镜像与二进制构建的脚本/Dockerfile 集中目录，必须随工程提交
+!deploys/build/
 vendor/
 # 例外：huginn-net-db 的仓库内补丁副本（[patch.crates-io] 依赖，必须随工程提交）
 !third_party/huginn-net/vendor/

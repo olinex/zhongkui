@@ -76,10 +76,10 @@ scripts/gitflow.sh commit -t feat -s gitflow -m "新增提交助手" -y
 | 层 | 职责 | 允许 | 禁止 |
 |---|---|---|---|
 | **Makefile** | 项目文件构建 | 编译二进制、生成代码、格式化、静态检查、单元测试、构建依赖管理（生成码、RAG 快照） | 安装系统/第三方依赖、启动/停止外部服务、调用 `docker`/`scripts/*.sh`、发布 tag、运行长期进程 |
-| **scripts/** | 操作与编排 | 安装依赖、启动/停止服务、CI/测试报告、打包发布、构建镜像、部署 | 反向被 Makefile 调用 |
-| **Dockerfile** | 镜像构建 | 调用 `scripts/` 内的脚本完成编译；调用 `make version-env` 生成版本元数据 | 直接调用 `make build` / `make build-release`；在 Dockerfile 内重复实现 `dist/build.env` 生成 |
+| **scripts/** | 操作与编排 | 安装依赖、启动/停止服务、CI/测试报告、打包发布、部署 | 反向被 Makefile 调用 |
+| **deploys/build/** | 镜像与二进制构建 | 前后端 Dockerfile（`core.Dockerfile`/`web.Dockerfile`）、构建环境镜像（`core.builder.Dockerfile`/`web.builder.Dockerfile`）、多架构二进制与 web 静态产物编译（`build-binary.sh`/`build-web.sh`）、本地构建脚本集中于此；前后端 Dockerfile 只装配 `dist/bin/`、`web/dist` 等预编译产物 | 在 Dockerfile 内编译源码、直接调用 `make build` / `make build-release`、重复实现 `dist/build.env` 生成 |
 
-依赖方向单向：`scripts/` → `Makefile`，`Dockerfile` → `scripts/`；`Dockerfile` 仅可直接调用 `make version-env` 这一版本元数据目标。
+依赖方向单向：`scripts/` → `Makefile`，`deploys/build/` 内脚本 → `Makefile`（`build-binary.sh` 仅可调用 `make version-env` 与 `make build-image` 两个目标，`build-web.sh` 不依赖 Makefile）；`core.Dockerfile`/`web.Dockerfile` 不再编译源码，只装配 `dist/bin/` 与 `web/dist`、`docs/.vitepress/dist` 预编译产物。
 
 ## 6. 版本与发布
 
@@ -134,13 +134,13 @@ scripts/release.sh v1.2.3-rc.1
 scripts/dist.sh v1.2.3
 
 # 构建后端镜像（自动生成版本元数据，镜像内 zki version 显示该版本）
-scripts/docker-image.sh v1.2.3                # normal 变体：zhongkui:v1.2.3（默认，debian 基底便于排障）
-VARIANT=slim scripts/docker-image.sh v1.2.3   # slim 变体：zhongkui:v1.2.3-slim（scratch 最小镜像）
+deploys/build/docker-image.sh v1.2.3                # normal 变体：zhongkui:v1.2.3（默认，debian 基底便于排障）
+VARIANT=slim deploys/build/docker-image.sh v1.2.3   # slim 变体：zhongkui:v1.2.3-slim（scratch 最小镜像）
 
 # 按平台架构构建（PLATFORMS 走 buildx；单平台 tag 自动追加架构后缀，多平台需 --push）
-PLATFORMS=linux/amd64 scripts/docker-image.sh v1.2.3                     # zhongkui:v1.2.3-amd64
-PLATFORMS=linux/arm64 scripts/docker-image.sh v1.2.3                     # zhongkui:v1.2.3-arm64
-PLATFORMS=linux/amd64,linux/arm64 scripts/docker-image.sh v1.2.3 --push   # 多平台 manifest
+PLATFORMS=linux/amd64 deploys/build/docker-image.sh v1.2.3                     # zhongkui:v1.2.3-amd64
+PLATFORMS=linux/arm64 deploys/build/docker-image.sh v1.2.3                     # zhongkui:v1.2.3-arm64
+PLATFORMS=linux/amd64,linux/arm64 deploys/build/docker-image.sh v1.2.3 --push   # 多平台 manifest
 
 # 推送 tag 到 Gitee
 git push origin master --follow-tags
