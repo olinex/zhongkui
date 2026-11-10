@@ -155,6 +155,7 @@ stages:
       VITE_DOCS_URL: /docs/
       DOCS_BASE: /docs/
       DOCS_CONSOLE_URL: /console
+      NPM_REGISTRY: "${NPM_MIRROR}"
     strategy:
       retry: "0"
       resource:
@@ -178,6 +179,7 @@ stages:
       VITE_DOCS_URL: /docs/
       DOCS_BASE: /docs/
       DOCS_CONSOLE_URL: /console
+      NPM_REGISTRY: "${NPM_MIRROR}"
     strategy:
       retry: "0"
       resource:
@@ -327,3 +329,4 @@ ref_variable:
 - APT_MIRROR
 - GOPROXY
 - TARGET_REGISTRY_MIRROR
+- NPM_MIRROR
