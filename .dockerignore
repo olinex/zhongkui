@@ -11,11 +11,9 @@ dist/*.tar.gz
 dist/*.sha256
 node_modules
 web/node_modules
-web/dist
 docs/node_modules
 docs/.vitepress/cache
 docs/.vitepress/.temp
-docs/.vitepress/dist
 .cicd
 config.toml
 certs
