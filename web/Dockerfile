@@ -14,6 +14,7 @@
 #   VITE_DOCS_URL      控制台跳转文档站的地址，默认 /docs/
 #   DOCS_BASE          文档站部署子路径，默认 /docs/
 #   DOCS_CONSOLE_URL   文档站回跳控制台的地址，默认 /console（由 nginx 302 到 /）
+#   NPM_REGISTRY       依赖下载源，默认 https://repo.huaweicloud.com/repository/npm
 #
 
 # 基础镜像可通过 --build-arg 覆盖（CI 中指向国内镜像加速地址），默认为 docker.io 官方镜像。
@@ -22,12 +23,23 @@ ARG NGINX_IMAGE=nginx:1.27-alpine
 
 FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS build
 
-ENV npm_config_registry=https://registry.npmmirror.com
+# 公共镜像源与超时配置抽成 ARG，两个 Node 阶段各声明一次（ARG 不跨阶段继承）。
+# 默认用华为云镜像；registry.npmmirror.com 在部分 CI 节点上频繁超时。
+# 备选：https://mirrors.cloud.tencent.com/npm（腾讯云）、https://registry.npmjs.org（官方）
+ARG NPM_REGISTRY=https://repo.huaweicloud.com/repository/npm
+ENV npm_config_registry=${NPM_REGISTRY} \
+    npm_config_fetch_retries=5 \
+    npm_config_fetch_timeout=600000 \
+    npm_config_fetch_retry_mintimeout=10000 \
+    npm_config_fetch_retry_maxtimeout=60000
+
 RUN corepack enable && corepack prepare pnpm@10 --activate
 
 WORKDIR /app
 COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
+# store 缓存挂载让重复构建复用已下载的包，缓存丢失时也能命中 registry 层缓存
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
+    pnpm install --frozen-lockfile
 COPY web/ .
 
 ARG VITE_ZHONGKUI_BASE_URL=/api/v1
@@ -47,12 +59,19 @@ FROM ${NODE_IMAGE} AS docs-build
 # 两个 Node 构建并发会触发 OOM。
 COPY --from=build /app/package.json /tmp/.web-build-done
 
-ENV npm_config_registry=https://registry.npmmirror.com
+ARG NPM_REGISTRY=https://repo.huaweicloud.com/repository/npm
+ENV npm_config_registry=${NPM_REGISTRY} \
+    npm_config_fetch_retries=5 \
+    npm_config_fetch_timeout=600000 \
+    npm_config_fetch_retry_mintimeout=10000 \
+    npm_config_fetch_retry_maxtimeout=60000
+
 RUN corepack enable && corepack prepare pnpm@10 --activate
 
 WORKDIR /app
 COPY docs/package.json docs/pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
+    pnpm install --frozen-lockfile
 COPY docs/ .
 
 # 文档站部署在 /docs/ 子路径；DOCS_CONSOLE_URL 是文档站回跳控制台的地址，
