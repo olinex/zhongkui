@@ -2,10 +2,9 @@
 #
 # docker-image.sh - 构建后端镜像（支持按平台架构参数化）
 #
-# 镜像不再内嵌编译：zki 二进制由构建环境镜像（deploys/build/core.builder.Dockerfile）
-# 预编译到 dist/bin/zki-linux-<arch>。本脚本在镜像构建前检查目标架构二进制是否齐备，
-# 缺失时自动经构建环境镜像补齐（多架构二进制同批编译、版本元数据一致）。
-# 注意：二进制按存在性复用，源码变更后需删除 dist/bin/ 或设 REBUILD=1 强制重编译。
+# 编译器与运行环境在同一条 Dockerfile（deploys/build/core.Dockerfile）内完成：
+# 步骤 1 交叉编译环境 → 步骤 2 运行环境 → 步骤 3 Go 包环境 → 步骤 4 编译制品 →
+# 步骤 5 注入运行环境。源码在镜像构建阶段内编译，无需宿主机预编译二进制。
 #
 # 镜像变体由环境变量 VARIANT 控制（normal 或 slim，默认 normal）：
 #   normal  基于 debian:bookworm-slim 的完整镜像，保留 shell 便于排障
@@ -16,9 +15,7 @@
 #   未设置  跟随构建机原生架构，走 docker build
 #   单平台  走 docker buildx，默认追加 --load 载入本地，tag 自动追加架构后缀
 #   多平台  走 docker buildx 生成 manifest list，需自行追加 --push 或 --output
-#
-# 构建环境镜像由环境变量 BUILDER_IMAGE 指定（默认 zhongkui-builder:go1.27.3），
-# 本地不存在时由 deploys/build/core.builder.Dockerfile 自动构建；CI 流水线使用 registry 中的镜像。
+# 无论哪种平台组合，交叉编译都在构建环境阶段完成，不经 QEMU 模拟执行。
 #
 # 用法：
 #   deploys/build/docker-image.sh v1.2.3                                # 本机架构，zhongkui:v1.2.3
@@ -53,17 +50,7 @@ if [ "$VARIANT" != "slim" ] && [ "$VARIANT" != "normal" ]; then
 fi
 
 PLATFORMS="${PLATFORMS:-}"
-BUILDER_IMAGE="${BUILDER_IMAGE:-zhongkui-builder:go1.27.3}"
 
-# 目标平台 → 需要的 GOARCH 列表（未指定平台时取构建机原生架构）
-host_goarch=
-case "$(uname -m)" in
-	x86_64) host_goarch=amd64 ;;
-	aarch64 | arm64) host_goarch=arm64 ;;
-	*) echo "ERROR: 不支持的构建机架构: $(uname -m)" >&2; exit 1 ;;
-esac
-
-arches=()
 if [ -n "$PLATFORMS" ]; then
 	IFS=',' read -ra platform_list <<<"$PLATFORMS"
 	for p in "${platform_list[@]}"; do
@@ -73,37 +60,7 @@ if [ -n "$PLATFORMS" ]; then
 			amd64 | arm64) ;;
 			*) echo "ERROR: 仅支持 linux/amd64 与 linux/arm64，当前: $p" >&2; exit 1 ;;
 		esac
-		arches+=("$arch")
 	done
-else
-	arches+=("$host_goarch")
-fi
-
-# 补齐缺失架构的二进制：经构建环境镜像执行 build-binary.sh（容器内 root 产出，
-# HOST_UID/HOST_GID 让产物 chown 回当前用户；Go 模块/编译缓存走命名卷复用）。
-# REBUILD=1 无视已有产物强制重编译。
-missing=()
-for arch in "${arches[@]}"; do
-	if [ "${REBUILD:-}" = "1" ] || [ ! -f "dist/bin/zki-linux-${arch}" ]; then
-		missing+=("$arch")
-	fi
-done
-if [ "${#missing[@]}" -gt 0 ]; then
-	scripts/validate-semver.sh "$VERSION" || exit 1
-	if ! docker image inspect "$BUILDER_IMAGE" >/dev/null 2>&1; then
-		echo ">>> 构建环境镜像 $BUILDER_IMAGE 不存在，本地构建"
-		docker build -f deploys/build/core.builder.Dockerfile -t "$BUILDER_IMAGE" . || exit 1
-	fi
-	echo ">>> 经构建环境镜像编译缺失架构: ${missing[*]}"
-	docker run --rm \
-		-v "$ROOT_DIR:/root/workspace" \
-		-v zhongkui-go-mod:/go/pkg/mod \
-		-v zhongkui-go-build:/root/.cache/go-build \
-		-e VERSION="$VERSION" \
-		-e COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)" \
-		-e BUILDER="$(whoami)" \
-		-e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
-		"$BUILDER_IMAGE" deploys/build/build-binary.sh "${missing[@]}" || exit 1
 fi
 
 # 默认 tag：normal 无后缀，slim 追加 -slim；显式指定单平台时再追加架构后缀，
@@ -144,6 +101,9 @@ scripts/validate-semver.sh "$VERSION" || exit 1
 "${build_cmd[@]}" "$@" \
 	-f deploys/build/core.Dockerfile \
 	--build-arg IMAGE_VARIANT="$VARIANT" \
+	--build-arg VERSION="$VERSION" \
+	--build-arg COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)" \
+	--build-arg BUILDER="$(whoami)" \
 	-t "$IMAGE" . || exit 1
 
 echo "镜像已构建: ${IMAGE}（平台: ${PLATFORMS:-构建机原生架构}）"
