@@ -44,6 +44,7 @@ stages:
     isCache: true
     processorType:
     - amd64
+    - arm64
     parameter:
       GOLANG_IMAGE: "${REGISTRY_MIRROR}/library/golang:1.27.3-bookworm"
       RUNTIME_IMAGE: "${REGISTRY_MIRROR}/library/debian:bookworm-slim"
@@ -63,7 +64,7 @@ stages:
     displayName: all core 镜像转推
     sourceImage: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:${GITEE_BRANCH}"
     targetImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:latest
-    arch: linux/amd64
+    arch: all
     strategy:
       retry: "0"
     dependsOn: a1b2c3d4-e5f6-7890-abcd-ef1234567890
@@ -144,6 +145,15 @@ stages:
       resource:
         cpu: "2"
         memory: "4"
+  - step: image-copy@skopeo
+    name: 7673b09e-4559-47c1-af86-fa042eb328d5
+    displayName: normal web 镜像转推
+    sourceImage: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:${GITEE_BRANCH}"
+    targetImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:latest
+    arch: all
+    strategy:
+      retry: "0"
+    dependsOn: 44667782-dd61-475d-ad34-23ba3ea3daea
 - name: 构建制品
   displayName: 构建制品
   strategy: fast
@@ -165,6 +175,28 @@ stages:
       path:
       - /root/workspace/out/zki-linux-amd64
       - /root/workspace/out/zki-linux-arm64
+      type: .tar.gz
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "1"
+        memory: "2"
+  - step: execute@docker
+    name: f214080c-f65d-4b23-b66e-9e9e45db976f
+    displayName: normal web 制品提取
+    certificate: b4d9b4c0-be7a-013f-40b9-362eca6107d0
+    image: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:latest
+    command:
+    - "# 移动两份构造制品"
+    - ls -lha /out
+    - mkdir -p /root/workspace/out
+    - cp /etc/nginx/templates/default.conf.template /root/workspace/out
+    - cp -R /usr/share/nginx/html /root/workspace/out
+    artifacts:
+    - name: zki_web
+      path:
+      - /root/workspace/out/default.conf.template
+      - /root/workspace/out/html
       type: .tar.gz
     strategy:
       retry: "0"
