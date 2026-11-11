@@ -77,8 +77,8 @@ FROM builder AS deps
 COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./web/
 COPY docs/package.json docs/pnpm-lock.yaml ./docs/
 
-RUN cd web && pnpm install --frozen-lockfile
-RUN cd docs && pnpm install --frozen-lockfile
+RUN cd web && pnpm install --frozen-lockfile \
+ && cd ../docs && pnpm install --frozen-lockfile
 
 # ============================================================
 # 步骤 4：引入源码并编译静态产物
@@ -101,13 +101,17 @@ ENV VITE_ZHONGKUI_BASE_URL=${VITE_ZHONGKUI_BASE_URL} \
 
 COPY . .
 
-RUN echo ">>> 构建控制台（web/）" && cd web && pnpm build-only
-RUN echo ">>> 构建文档站（docs/）" && cd docs && pnpm build
+RUN echo ">>> 构建控制台（web/）" && cd web && pnpm build-only \
+ && echo ">>> 构建文档站（docs/）" && cd ../docs && pnpm build
 
 # ============================================================
 # 步骤 5：把制品注入最终运行环境
 # ============================================================
 FROM runtime AS final
+
+# nginx 基底自带 busybox wget，探测根路径即可（默认配置返回 404 但不影响进程存活）。
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget -qO- http://localhost/ >/dev/null || exit 1
 
 COPY web/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /src/web/dist /usr/share/nginx/html

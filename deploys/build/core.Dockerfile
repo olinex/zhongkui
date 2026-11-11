@@ -104,7 +104,7 @@ RUN set -eu; \
       fi; \
     done; \
     apt-get update \
-    && apt-get install -y --no-install-recommends libpcap0.8 ca-certificates tzdata gosu libcap2-bin \
+    && apt-get install -y --no-install-recommends libpcap0.8 ca-certificates tzdata gosu libcap2-bin wget \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -g 1000 app \
     && useradd  -u 1000 -g app -d /app -s /usr/sbin/nologin -M app \
@@ -207,10 +207,24 @@ COPY deploys/build/docker-entrypoint.sh /entrypoint.sh
 RUN chmod 0755 /entrypoint.sh
 
 WORKDIR /app
-EXPOSE 8080 8081
+EXPOSE 8080 8081 19090
+
+# 项目内置健康探针服务（端口 19090）暴露 k8s 语义端点：
+#   /healthz  live 探测：进程存活且未进入关机
+#   /readyz   ready 探测：依赖（etcd 等）均就绪
+#   /startupz startup 探测：启动完成
+# 这里用 /healthz 做 liveness probe，进程崩/探针崩都会让 wget 失败。
+# scratch 的 slim 变体没有 shell 和 wget，不加 HEALTHCHECK。
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://localhost:19090/healthz >/dev/null || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["run", "web", "--config", "/app/default-config.toml"]
+
+# slim 变体的 HEALTHCHECK 辅助工具：busybox-static 单文件二进制（约 800KB），
+# 提供 wget / sh 等 applet，scratch 基底无 shell 时作为唯一可执行工具。
+FROM alpine:3.20 AS slim-tools
+RUN apk add --no-cache busybox-static
 
 # slim 变体的最小文件集装配：二进制、动态库闭包、CA 证书、时区数据与最小 etc 配置。
 FROM app AS slim-prep
@@ -243,6 +257,11 @@ RUN set -eu; \
     done; \
     # 5) 镜像内置默认配置（供默认 CMD 使用）
     cp -a /app/default-config.toml "$root/app/default-config.toml"; \
+    # 6) busybox（静态，约 800KB），提供 wget / sh 供 HEALTHCHECK 与紧急排障使用
+    mkdir -p "$root/bin"; \
+    cp -a --from=slim-tools /bin/busybox "$root/usr/local/bin/busybox"; \
+    ln -s /usr/local/bin/busybox "$root/bin/wget"; \
+    ln -s /usr/local/bin/busybox "$root/bin/sh"; \
     chmod 1777 "$root/tmp"
 
 # slim 变体：基于 scratch，不含 shell/包管理器，体积最小、攻击面最小。
@@ -253,7 +272,13 @@ COPY --from=slim-prep /rootfs/ /
 
 USER 1000:1000
 WORKDIR /app
-EXPOSE 8080 8081
+EXPOSE 8080 8081 19090
+
+# slim 变体用 busybox wget 探测健康探针服务端口 19090/healthz，
+# 与 normal 变体完全一致的探针逻辑；busybox 静态二进制在 /usr/local/bin/busybox，
+# /bin/wget 为其 symlink（cp 时已创建）。
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD /bin/wget -qO- http://localhost:19090/healthz >/dev/null || exit 1
 
 ENTRYPOINT ["/usr/local/bin/zki"]
 CMD ["run", "web", "--config", "/app/default-config.toml"]
