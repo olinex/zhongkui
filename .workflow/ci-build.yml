@@ -34,11 +34,45 @@ stages:
   trigger: auto
   steps:
   - step: image-build-plus@buildkitd
+    name: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    displayName: all core 镜像构建
+    dockerCerts:
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
+    tag: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:${GITEE_BRANCH}"
+    dockerfile: ./deploys/build/core.Dockerfile
+    context: ""
+    isCache: true
+    processorType:
+    - amd64
+    parameter:
+      GOLANG_IMAGE: "${REGISTRY_MIRROR}/library/golang:1.27.3-bookworm"
+      RUNTIME_IMAGE: "${REGISTRY_MIRROR}/library/debian:bookworm-slim"
+      APT_MIRROR: "${APT_MIRROR}"
+      GOPROXY: "${GOPROXY}"
+      IMAGE_VARIANT: all
+      VERSION: "${GITEE_BRANCH}"
+      COMMIT: "${GITEE_SHORT_COMMIT}"
+      BUILDER: "${GITEE_PIPELINE_TRIGGER_USER}@${GITEE_PIPELINE_NAME}:${GITEE_PIPELINE_BUILD_NUMBER}"
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "2"
+        memory: "4"
+  - step: image-copy@skopeo
+    name: 8f9c9226-63b9-4378-b392-e113b9d0c47f
+    displayName: all core 镜像转推
+    sourceImage: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:${GITEE_BRANCH}"
+    targetImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:latest
+    arch: linux/amd64
+    strategy:
+      retry: "0"
+    dependsOn: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+  - step: image-build-plus@buildkitd
     name: 76fb5131-0471-4244-a872-cec21139136f
     displayName: normal core 镜像构建
     dockerCerts:
     - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    tag: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core:${GITEE_BRANCH}"
+    tag: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core:${GITEE_BRANCH}"
     dockerfile: ./deploys/build/core.Dockerfile
     context: ""
     isCache: true
@@ -64,7 +98,7 @@ stages:
     displayName: slim core 镜像构建
     dockerCerts:
     - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    tag: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core-slim:${GITEE_BRANCH}"
+    tag: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-slim:${GITEE_BRANCH}"
     dockerfile: ./deploys/build/core.Dockerfile
     context: ""
     isCache: true
@@ -86,38 +120,11 @@ stages:
         cpu: "2"
         memory: "4"
   - step: image-build-plus@buildkitd
-    name: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-    displayName: all core 镜像构建
-    dockerCerts:
-    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    tag: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core-all:${GITEE_BRANCH}"
-    dockerfile: ./deploys/build/core.Dockerfile
-    context: ""
-    isCache: true
-    # all 变体内含 amd64 + arm64 两份二进制，两种构建机产出完全一致，
-    # 仅在 amd64 节点构建一次即可，避免重复编译浪费时间。
-    processorType:
-    - amd64
-    parameter:
-      GOLANG_IMAGE: "${REGISTRY_MIRROR}/library/golang:1.27.3-bookworm"
-      RUNTIME_IMAGE: "${REGISTRY_MIRROR}/library/debian:bookworm-slim"
-      APT_MIRROR: "${APT_MIRROR}"
-      GOPROXY: "${GOPROXY}"
-      IMAGE_VARIANT: all
-      VERSION: "${GITEE_BRANCH}"
-      COMMIT: "${GITEE_SHORT_COMMIT}"
-      BUILDER: "${GITEE_PIPELINE_TRIGGER_USER}@${GITEE_PIPELINE_NAME}:${GITEE_PIPELINE_BUILD_NUMBER}"
-    strategy:
-      retry: "0"
-      resource:
-        cpu: "2"
-        memory: "4"
-  - step: image-build-plus@buildkitd
     name: 44667782-dd61-475d-ad34-23ba3ea3daea
     displayName: normal web 镜像构建
     dockerCerts:
     - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    tag: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-web:${GITEE_BRANCH}"
+    tag: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:${GITEE_BRANCH}"
     dockerfile: ./deploys/build/web.Dockerfile
     context: ""
     artifacts: []
@@ -137,6 +144,33 @@ stages:
       resource:
         cpu: "2"
         memory: "4"
+- name: 构建制品
+  displayName: 构建制品
+  strategy: fast
+  trigger: auto
+  steps:
+  - step: execute@docker
+    name: a0085b67-f4c2-4c07-994c-6b2d2262c974
+    displayName: all core 制品提取
+    certificate: b4d9b4c0-be7a-013f-40b9-362eca6107d0
+    image: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:latest
+    command:
+    - "# 移动两份构造制品"
+    - ls -lha /out
+    - mkdir -p /root/workspace/out
+    - cp /out/zki-linux-amd64 /root/workspace/out
+    - cp /out/zki-linux-arm64 /root/workspace/out
+    artifacts:
+    - name: zki_core
+      path:
+      - /root/workspace/out/zki-linux-amd64
+      - /root/workspace/out/zki-linux-arm64
+      type: .tar.gz
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "1"
+        memory: "2"
 triggers:
   trigger: auto
   push:
@@ -153,5 +187,4 @@ ref_variable:
 - REGISTRY_MIRROR
 - APT_MIRROR
 - GOPROXY
-- TARGET_REGISTRY_MIRROR
 - NPM_MIRROR
