@@ -21,9 +21,11 @@
 #   VARIANT=slim deploys/build/docker-image.sh v1.2.3         # slim 变体
 #   PLATFORMS=linux/amd64,linux/arm64 deploys/build/docker-image.sh v1.2.3 --push
 #
-# 镜像变体由 --build-arg IMAGE_VARIANT=normal|slim 控制（默认 normal）：
+# 镜像变体由 --build-arg IMAGE_VARIANT=normal|slim|all 控制（默认 normal）：
 #   normal  基于 debian:bookworm-slim，保留 shell 与系统工具，便于线上排障（约 97MB）
 #   slim    基于 scratch，仅含二进制、动态库闭包、CA 证书、时区数据与最小 etc 配置（约 13MB）
+#   all     基于 debian:bookworm-slim，同时打包 linux/amd64 与 linux/arm64 两份二进制，
+#           供后续流水线节点抽取作为制品上传（镜像不用于运行，tag 自动追加 -all 后缀）
 #
 # 运行（镜像内置 /app/default-config.toml，由 zki create default-config 生成）：
 #   docker run --rm -p 8080:8080 -p 8081:8081 zhongkui:local
@@ -44,10 +46,11 @@ ARG IMAGE_VARIANT=normal
 # ============================================================
 # 步骤 1：交叉编译环境（Go 工具链 + 双向交叉工具链）
 # ============================================================
-# 固定在构建机架构上运行，用 TARGETARCH 指定编译目标；构建机与目标架构不一致时
-# 才安装对应方向的 GNU 交叉工具链和反向架构的 libpcap 开发包：
-#   amd64 构建机 → gcc-aarch64-linux-gnu + libpcap-dev:arm64（交叉出 arm64）
-#   arm64 构建机 → gcc-x86-64-linux-gnu + libpcap-dev:amd64（交叉出 amd64）
+# 固定在构建机架构上运行，原生编译 BUILDARCH；同时预装反向架构的交叉工具链，
+# 保证后续 build 阶段既能原生编译 BUILDARCH，也能交叉编译另一个架构，
+# 满足 normal/slim 单架构目标与 all 变体双架构打包的共同需求：
+#   amd64 构建机 → gcc-aarch64-linux-gnu + libpcap-dev:arm64（交叉 arm64）
+#   arm64 构建机 → gcc-x86-64-linux-gnu + libpcap-dev:amd64（交叉 amd64）
 FROM --platform=$BUILDPLATFORM ${GOLANG_IMAGE} AS builder
 
 ARG APT_MIRROR
@@ -57,9 +60,9 @@ ARG BUILDARCH
 ARG TARGETARCH
 
 RUN set -eu; \
-    case "${TARGETARCH:-$BUILDARCH}" in \
+    case "${BUILDARCH:-amd64}" in \
       amd64 | arm64) ;; \
-      *) echo "ERROR: 仅支持 amd64 与 arm64，当前 TARGETARCH=${TARGETARCH}" >&2; exit 1 ;; \
+      *) echo "ERROR: 仅支持 amd64 与 arm64 构建机，当前 BUILDARCH=${BUILDARCH}" >&2; exit 1 ;; \
     esac; \
     for f in /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources; do \
       if [ -f "$f" ]; then \
@@ -68,14 +71,14 @@ RUN set -eu; \
     done; \
     apt-get update \
     && apt-get install -y --no-install-recommends libpcap-dev ca-certificates \
-    && if [ "${TARGETARCH:-$BUILDARCH}" != "$BUILDARCH" ]; then \
-         dpkg --add-architecture "${TARGETARCH}"; \
+    && if [ "${BUILDARCH:-amd64}" = "amd64" ]; then \
+         dpkg --add-architecture arm64; \
          apt-get update; \
-         if [ "$TARGETARCH" = "arm64" ]; then \
-           apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu libpcap-dev:arm64; \
-         else \
-           apt-get install -y --no-install-recommends gcc-x86-64-linux-gnu libpcap-dev:amd64; \
-         fi; \
+         apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu libpcap-dev:arm64; \
+       else \
+         dpkg --add-architecture amd64; \
+         apt-get update; \
+         apt-get install -y --no-install-recommends gcc-x86-64-linux-gnu libpcap-dev:amd64; \
        fi; \
     rm -rf /var/lib/apt/lists/*
 
@@ -123,6 +126,8 @@ RUN go mod download
 # ============================================================
 # 版本元数据由 make version-env 统一生成 dist/build.env 后 source，
 # 二进制由 make build-image 编译（与 build-release 同参数，复用仓库内已提交的 RAG 快照）。
+# IMAGE_VARIANT=all 时同时编译 linux/amd64 与 linux/arm64，输出到 /out/zki-linux-<arch>。
+# normal/slim 变体只编译单一 TARGETARCH，输出到 /out/zki。
 FROM deps AS build
 
 WORKDIR /src
@@ -132,6 +137,7 @@ ARG COMMIT=unknown
 ARG BUILDER=docker
 ARG BUILDARCH
 ARG TARGETARCH
+ARG IMAGE_VARIANT=normal
 
 COPY . .
 
@@ -139,21 +145,30 @@ COPY . .
 # 重新补齐 go.sum，保证后续 go build（默认 -mod=readonly）不会因缺少校验和而失败。
 RUN go mod download
 
+# 辅助函数：按目标架构配置 CC/CGO_CFLAGS/CGO_LDFLAGS，再调用 make build-image。
+# 原生 BUILDARCH 编译无需交叉工具链；编译另一个架构时由 builder 阶段预装的交叉工具链提供。
 RUN set -eu; \
     make version-env VERSION="$VERSION" COMMIT="$COMMIT" BUILDER="$BUILDER"; \
-    set -a; . ./dist/build.env; set +a; \
-    unset CC CXX CGO_CFLAGS CGO_LDFLAGS 2>/dev/null || true; \
-    case "${BUILDARCH}-${TARGETARCH}" in \
-      amd64-arm64) \
-        export CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ \
-               CGO_CFLAGS="-I/usr/include" CGO_LDFLAGS="-L/usr/lib/aarch64-linux-gnu" ;; \
-      arm64-amd64) \
-        export CC=x86_64-linux-gnu-gcc CXX=x86_64-linux-gnu-g++ \
-               CGO_CFLAGS="-I/usr/include" CGO_LDFLAGS="-L/usr/lib/x86_64-linux-gnu" ;; \
-      *) : ;; \
-    esac; \
-    echo ">>> 构建 linux/${TARGETARCH}（构建架构 ${BUILDARCH}${CC:+，CC=${CC}}）"; \
-    GOOS=linux GOARCH="$TARGETARCH" make build-image OUT=/out/zki
+    build_one() { \
+      local goarch="$1" out="$2"; \
+      local cc="" cgo_cflags="" cgo_ldflags=""; \
+      case "${BUILDARCH}-${goarch}" in \
+        amd64-arm64) \
+          cc=aarch64-linux-gnu-gcc; cgo_cflags="-I/usr/include"; cgo_ldflags="-L/usr/lib/aarch64-linux-gnu" ;; \
+        arm64-amd64) \
+          cc=x86_64-linux-gnu-gcc; cgo_cflags="-I/usr/include"; cgo_ldflags="-L/usr/lib/x86_64-linux-gnu" ;; \
+      esac; \
+      echo ">>> 构建 linux/${goarch}${cc:+（交叉，CC=${cc}）}"; \
+      CC="$cc" CGO_CFLAGS="$cgo_cflags" CGO_LDFLAGS="$cgo_ldflags" \
+        GOOS=linux GOARCH="$goarch" make build-image OUT="$out"; \
+    }; \
+    if [ "${IMAGE_VARIANT}" = "all" ]; then \
+      mkdir -p /out; \
+      build_one amd64 /out/zki-linux-amd64; \
+      build_one arm64 /out/zki-linux-arm64; \
+    else \
+      build_one "${TARGETARCH}" /out/zki; \
+    fi
 
 # ============================================================
 # 步骤 5：把制品注入最终运行环境
@@ -242,6 +257,15 @@ EXPOSE 8080 8081
 
 ENTRYPOINT ["/usr/local/bin/zki"]
 CMD ["run", "web", "--config", "/app/default-config.toml"]
+
+# all 变体：debian 基底，同时打包 linux/amd64 与 linux/arm64 两份 zki 二进制。
+# 镜像不用于运行，仅供后续流水线节点抽取 /out/zki-linux-<arch> 作为制品上传到 Gitee。
+# 两个二进制共享完全一致的版本元数据（同一次 make version-env 生成）。
+FROM runtime AS final-all
+
+COPY --from=build /out/zki-linux-amd64 /out/zki-linux-amd64
+COPY --from=build /out/zki-linux-arm64 /out/zki-linux-arm64
+RUN chmod 0755 /out/zki-linux-amd64 /out/zki-linux-arm64
 
 # 按 IMAGE_VARIANT 选择最终镜像；变体名非法时此处找不到目标阶段，构建直接失败。
 FROM final-${IMAGE_VARIANT} AS final
