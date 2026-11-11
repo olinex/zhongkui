@@ -28,8 +28,8 @@ stages:
     strategy:
       retry: "0"
     dependsOn: 39db0d5e-3026-44df-8783-f9d2f3681ab1
-- name: 构建镜像
-  displayName: 构建镜像
+- name: 构建制品
+  displayName: 构建制品
   strategy: naturally
   trigger: auto
   steps:
@@ -70,6 +70,89 @@ stages:
     strategy:
       retry: "0"
     dependsOn: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+  - step: execute@docker
+    name: a0085b67-f4c2-4c07-994c-6b2d2262c974
+    displayName: all core 制品提取
+    certificate: b4d9b4c0-be7a-013f-40b9-362eca6107d0
+    image: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:latest
+    command:
+    - "# 移动两份构造制品"
+    - ls -lha /out
+    - mkdir -p /root/workspace/out
+    - cp /out/zki-linux-amd64 /root/workspace/out
+    - cp /out/zki-linux-arm64 /root/workspace/out
+    artifacts:
+    - name: zki_core
+      path:
+      - /root/workspace/out/zki-linux-amd64
+      - /root/workspace/out/zki-linux-arm64
+      type: .tar.gz
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "1"
+        memory: "2"
+    dependsOn: 8f9c9226-63b9-4378-b392-e113b9d0c47f
+  - step: image-build-plus@buildkitd
+    name: 44667782-dd61-475d-ad34-23ba3ea3daea
+    displayName: normal web 镜像构建
+    dockerCerts:
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
+    tag: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:${GITEE_BRANCH}"
+    dockerfile: ./deploys/build/web.Dockerfile
+    context: ""
+    artifacts: []
+    isCache: true
+    processorType:
+    - arm64
+    - amd64
+    parameter:
+      NODE_IMAGE: "${REGISTRY_MIRROR}/library/node:22-bookworm-slim"
+      NGINX_IMAGE: "${REGISTRY_MIRROR}/library/nginx:1.27-alpine"
+      NPM_REGISTRY: "${NPM_MIRROR}"
+      VITE_DOCS_URL: /docs/
+      DOCS_BASE: /docs/
+      DOCS_CONSOLE_URL: /console
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "2"
+        memory: "4"
+  - step: image-copy@skopeo
+    name: 7673b09e-4559-47c1-af86-fa042eb328d5
+    displayName: normal web 镜像转推
+    dockerCerts:
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
+    sourceImage: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:${GITEE_BRANCH}"
+    targetImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:latest
+    arch: all
+    strategy:
+      retry: "0"
+    dependsOn: 44667782-dd61-475d-ad34-23ba3ea3daea
+  - step: execute@docker
+    name: f214080c-f65d-4b23-b66e-9e9e45db976f
+    displayName: normal web 制品提取
+    certificate: b4d9b4c0-be7a-013f-40b9-362eca6107d0
+    image: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:latest
+    command:
+    - "# 移动两份构造制品"
+    - ls -lha /etc/nginx/templates/default.conf.template
+    - ls -lha /usr/share/nginx/
+    - mkdir -p /root/workspace/out/html
+    - cp /etc/nginx/templates/default.conf.template /root/workspace/out
+    - cp -R /usr/share/nginx/html/* /root/workspace/out/html
+    artifacts:
+    - name: zki_web
+      path:
+      - /root/workspace/out/default.conf.template
+      - /root/workspace/out/html
+      type: .tar.gz
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "1"
+        memory: "2"
+    dependsOn: 7673b09e-4559-47c1-af86-fa042eb328d5
   - step: image-build-plus@buildkitd
     name: 76fb5131-0471-4244-a872-cec21139136f
     displayName: normal core 镜像构建
@@ -122,91 +205,46 @@ stages:
       resource:
         cpu: "2"
         memory: "4"
-  - step: image-build-plus@buildkitd
-    name: 44667782-dd61-475d-ad34-23ba3ea3daea
-    displayName: normal web 镜像构建
-    dockerCerts:
-    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    tag: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:${GITEE_BRANCH}"
-    dockerfile: ./deploys/build/web.Dockerfile
-    context: ""
-    artifacts: []
-    isCache: true
-    processorType:
-    - arm64
-    - amd64
-    parameter:
-      NODE_IMAGE: "${REGISTRY_MIRROR}/library/node:22-bookworm-slim"
-      NGINX_IMAGE: "${REGISTRY_MIRROR}/library/nginx:1.27-alpine"
-      NPM_REGISTRY: "${NPM_MIRROR}"
-      VITE_DOCS_URL: /docs/
-      DOCS_BASE: /docs/
-      DOCS_CONSOLE_URL: /console
-    strategy:
-      retry: "0"
-      resource:
-        cpu: "2"
-        memory: "4"
-  - step: image-copy@skopeo
-    name: 7673b09e-4559-47c1-af86-fa042eb328d5
-    displayName: normal web 镜像转推
-    dockerCerts:
-    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    sourceImage: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:${GITEE_BRANCH}"
-    targetImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:latest
-    arch: all
-    strategy:
-      retry: "0"
-    dependsOn: 44667782-dd61-475d-ad34-23ba3ea3daea
-- name: 构建制品
-  displayName: 构建制品
+- name: 上传制品
+  displayName: 上传制品
   strategy: fast
   trigger: auto
   steps:
-  - step: execute@docker
-    name: a0085b67-f4c2-4c07-994c-6b2d2262c974
-    displayName: all core 制品提取
-    certificate: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    image: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:latest
-    command:
-    - "# 移动两份构造制品"
-    - ls -lha /out
-    - mkdir -p /root/workspace/out
-    - cp /out/zki-linux-amd64 /root/workspace/out
-    - cp /out/zki-linux-arm64 /root/workspace/out
-    artifacts:
-    - name: zki_core
-      path:
-      - /root/workspace/out/zki-linux-amd64
-      - /root/workspace/out/zki-linux-arm64
-      type: .tar.gz
+  - step: publish@general_artifacts
+    name: 989f7dac-8475-4734-8149-2bc8f7f4ccb6
+    displayName: all core 上传
+    dependArtifact: "${zki_core}"
+    artifactName: "zki_core_${SEMVER_RELEASE}"
     strategy:
       retry: "0"
-      resource:
-        cpu: "1"
-        memory: "2"
-  - step: execute@docker
-    name: f214080c-f65d-4b23-b66e-9e9e45db976f
-    displayName: normal web 制品提取
-    certificate: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    image: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:latest
-    command:
-    - "# 移动两份构造制品"
-    - ls -lha /out
-    - mkdir -p /root/workspace/out
-    - cp /etc/nginx/templates/default.conf.template /root/workspace/out
-    - cp -R /usr/share/nginx/html /root/workspace/out
-    artifacts:
-    - name: zki_web
-      path:
-      - /root/workspace/out/default.conf.template
-      - /root/workspace/out/html
-      type: .tar.gz
+  - step: publish@general_artifacts
+    name: 6a54bac4-7c00-43a2-8237-91ef6fbbf761
+    displayName: normal web 上传
+    dependArtifact: "${zki_web}"
+    artifactName: "zki_web_${SEMVER_RELEASE}"
     strategy:
       retry: "0"
-      resource:
-        cpu: "1"
-        memory: "2"
+- name: 正式发布
+  displayName: 正式发布
+  strategy: fast
+  trigger: auto
+  steps:
+  - step: publish@release_artifacts
+    name: 58af6da2-74fa-452e-af49-f8eb176f4cbc
+    displayName: all core 制品发布
+    dependArtifact: "zki_core_${SEMVER_RELEASE}"
+    version: "${SEMVER_RELEASE}"
+    autoIncrement: false
+    strategy:
+      retry: "0"
+  - step: publish@release_artifacts
+    name: 5d9939c3-4c80-4b60-9b21-fbbc27e5b0bc
+    displayName: normal web 制品发布
+    dependArtifact: "zki_web_${SEMVER_RELEASE}"
+    version: "${SEMVER_RELEASE}"
+    autoIncrement: false
+    strategy:
+      retry: "0"
 triggers:
   trigger: auto
   push:
