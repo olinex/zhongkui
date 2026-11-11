@@ -38,7 +38,7 @@ stages:
     displayName: all core 镜像构建
     dockerCerts:
     - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    tag: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:${GITEE_BRANCH}"
+    tag: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:tmp
     dockerfile: ./deploys/build/core.Dockerfile
     context: ""
     isCache: true
@@ -61,21 +61,32 @@ stages:
         memory: "4"
   - step: image-copy@skopeo
     name: 8f9c9226-63b9-4378-b392-e113b9d0c47f
-    displayName: all core 镜像转推
+    displayName: latest 镜像转推
     dockerCerts:
     - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    sourceImage: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:${GITEE_BRANCH}"
+    sourceImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:tmp
     targetImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:latest
     arch: all
     strategy:
       retry: "0"
     dependsOn: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+  - step: image-copy@skopeo
+    name: b8082eee-a7c4-4db8-838b-7bea1cc9f646
+    displayName: version 镜像转推
+    dockerCerts:
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
+    sourceImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:tmp
+    targetImage: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:${GITEE_BRANCH}"
+    arch: all
+    strategy:
+      retry: "0"
+    dependsOn: 8f9c9226-63b9-4378-b392-e113b9d0c47f
   - step: image-build-plus@buildkitd
     name: 44667782-dd61-475d-ad34-23ba3ea3daea
     displayName: normal web 镜像构建
     dockerCerts:
     - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    tag: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:${GITEE_BRANCH}"
+    tag: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:tmp
     dockerfile: ./deploys/build/web.Dockerfile
     context: ""
     artifacts: []
@@ -97,21 +108,32 @@ stages:
         memory: "4"
   - step: image-copy@skopeo
     name: 7673b09e-4559-47c1-af86-fa042eb328d5
-    displayName: normal web 镜像转推
+    displayName: latest 镜像转推
     dockerCerts:
     - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    sourceImage: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:${GITEE_BRANCH}"
+    sourceImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:tmp
     targetImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:latest
     arch: all
     strategy:
       retry: "0"
     dependsOn: 44667782-dd61-475d-ad34-23ba3ea3daea
+  - step: image-copy@skopeo
+    name: 65a5e7df-df24-4388-aa4e-071ea7dfd4d3
+    displayName: version 镜像转推
+    dockerCerts:
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
+    sourceImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:tmp
+    targetImage: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:${GITEE_BRANCH}"
+    arch: all
+    strategy:
+      retry: "0"
+    dependsOn: 7673b09e-4559-47c1-af86-fa042eb328d5
   - step: image-build-plus@buildkitd
     name: 76fb5131-0471-4244-a872-cec21139136f
     displayName: normal core 镜像构建
     dockerCerts:
     - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    tag: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core:${GITEE_BRANCH}"
+    tag: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core:tmp
     dockerfile: ./deploys/build/core.Dockerfile
     context: ""
     isCache: true
@@ -132,12 +154,34 @@ stages:
       resource:
         cpu: "2"
         memory: "4"
+  - step: image-copy@skopeo
+    name: b024282e-2a98-4a46-ba8b-319295527c94
+    displayName: latest 镜像转推
+    dockerCerts:
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
+    sourceImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core:tmp
+    targetImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core:latest
+    arch: all
+    strategy:
+      retry: "0"
+    dependsOn: 76fb5131-0471-4244-a872-cec21139136f
+  - step: image-copy@skopeo
+    name: 52b9debb-de3b-47fe-9424-7529a9da294c
+    displayName: version 镜像转推
+    dockerCerts:
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
+    sourceImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core:tmp
+    targetImage: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core:${GITEE_BRANCH}"
+    arch: all
+    strategy:
+      retry: "0"
+    dependsOn: b024282e-2a98-4a46-ba8b-319295527c94
   - step: image-build-plus@buildkitd
     name: da30ea79-8f23-4a8e-a7ea-ed1958400a52
     displayName: slim core 镜像构建
     dockerCerts:
     - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    tag: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-slim:${GITEE_BRANCH}"
+    tag: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-slim:tmp
     dockerfile: ./deploys/build/core.Dockerfile
     context: ""
     isCache: true
@@ -158,6 +202,28 @@ stages:
       resource:
         cpu: "2"
         memory: "4"
+  - step: image-copy@skopeo
+    name: 4e20d58e-d97d-4368-9c54-3db0dfda0db1
+    displayName: latest 镜像转推
+    dockerCerts:
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
+    sourceImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-slim:tmp
+    targetImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-slim:latest
+    arch: all
+    strategy:
+      retry: "0"
+    dependsOn: da30ea79-8f23-4a8e-a7ea-ed1958400a52
+  - step: image-copy@skopeo
+    name: f3439588-0405-4e9c-a576-d8801233ec79
+    displayName: latest 镜像转推
+    dockerCerts:
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
+    sourceImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-slim:tmp
+    targetImage: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-slim:${GITEE_BRANCH}"
+    arch: all
+    strategy:
+      retry: "0"
+    dependsOn: 4e20d58e-d97d-4368-9c54-3db0dfda0db1
 - name: 制品上传
   displayName: 制品上传
   strategy: naturally
@@ -167,7 +233,7 @@ stages:
     name: a0085b67-f4c2-4c07-994c-6b2d2262c974
     displayName: all core 制品提取
     certificate: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    image: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:latest
+    image: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:tmp
     command:
     - "# 移动两份构造制品"
     - ls -lha /out
@@ -197,7 +263,7 @@ stages:
     name: f214080c-f65d-4b23-b66e-9e9e45db976f
     displayName: normal web 制品提取
     certificate: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    image: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:latest
+    image: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:tmp
     command:
     - "# 移动两份构造制品"
     - ls -lha /etc/nginx/templates/default.conf.template
