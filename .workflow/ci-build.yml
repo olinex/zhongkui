@@ -62,6 +62,8 @@ stages:
   - step: image-copy@skopeo
     name: 8f9c9226-63b9-4378-b392-e113b9d0c47f
     displayName: all core 镜像转推
+    dockerCerts:
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
     sourceImage: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:${GITEE_BRANCH}"
     targetImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:latest
     arch: all
@@ -148,6 +150,8 @@ stages:
   - step: image-copy@skopeo
     name: 7673b09e-4559-47c1-af86-fa042eb328d5
     displayName: normal web 镜像转推
+    dockerCerts:
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
     sourceImage: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:${GITEE_BRANCH}"
     targetImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:latest
     arch: all
