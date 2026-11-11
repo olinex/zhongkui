@@ -44,8 +44,8 @@ if [ -z "$VERSION" ]; then
 fi
 
 VARIANT="${VARIANT:-normal}"
-if [ "$VARIANT" != "slim" ] && [ "$VARIANT" != "normal" ]; then
-	echo "ERROR: VARIANT 只支持 slim 或 normal，当前值: $VARIANT" >&2
+if [ "$VARIANT" != "slim" ] && [ "$VARIANT" != "normal" ] && [ "$VARIANT" != "all" ]; then
+	echo "ERROR: VARIANT 只支持 normal / slim / all，当前值: $VARIANT" >&2
 	exit 1
 fi
 
@@ -63,12 +63,13 @@ if [ -n "$PLATFORMS" ]; then
 	done
 fi
 
-# 默认 tag：normal 无后缀，slim 追加 -slim；显式指定单平台时再追加架构后缀，
-# 避免与构建机原生架构的镜像 tag 相互覆盖（linux/arm/v7 -> arm-v7）。
+# 默认 tag：normal 无后缀，slim 追加 -slim，all 追加 -all；
+# 显式指定单平台（PLATFORMS）时再追加架构后缀，避免与构建机原生架构的镜像 tag 相互覆盖。
 default_tag="zhongkui:${VERSION}"
-if [ "$VARIANT" = "slim" ]; then
-	default_tag="${default_tag}-slim"
-fi
+case "$VARIANT" in
+  slim) default_tag="${default_tag}-slim" ;;
+  all)  default_tag="${default_tag}-all" ;;
+esac
 if [ -n "$PLATFORMS" ] && [[ "$PLATFORMS" != *,* ]]; then
 	platform_arch="${PLATFORMS#*/}"
 	default_tag="${default_tag}-${platform_arch//\//-}"

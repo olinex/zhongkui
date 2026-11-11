@@ -86,6 +86,33 @@ stages:
         cpu: "2"
         memory: "4"
   - step: image-build-plus@buildkitd
+    name: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    displayName: all core 镜像构建
+    dockerCerts:
+    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
+    tag: "${TARGET_REGISTRY_MIRROR}/open-source/zhongkui-core-all:${GITEE_BRANCH}"
+    dockerfile: ./deploys/build/core.Dockerfile
+    context: ""
+    isCache: true
+    # all 变体内含 amd64 + arm64 两份二进制，两种构建机产出完全一致，
+    # 仅在 amd64 节点构建一次即可，避免重复编译浪费时间。
+    processorType:
+    - amd64
+    parameter:
+      GOLANG_IMAGE: "${REGISTRY_MIRROR}/library/golang:1.27.3-bookworm"
+      RUNTIME_IMAGE: "${REGISTRY_MIRROR}/library/debian:bookworm-slim"
+      APT_MIRROR: "${APT_MIRROR}"
+      GOPROXY: "${GOPROXY}"
+      IMAGE_VARIANT: all
+      VERSION: "${GITEE_BRANCH}"
+      COMMIT: "${GITEE_SHORT_COMMIT}"
+      BUILDER: "${GITEE_PIPELINE_TRIGGER_USER}@${GITEE_PIPELINE_NAME}:${GITEE_PIPELINE_BUILD_NUMBER}"
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "2"
+        memory: "4"
+  - step: image-build-plus@buildkitd
     name: 44667782-dd61-475d-ad34-23ba3ea3daea
     displayName: normal web 镜像构建
     dockerCerts:
