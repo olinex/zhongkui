@@ -7,8 +7,7 @@
 .vscode
 bin
 tmp
-dist/*.tar.gz
-dist/*.sha256
+dist
 node_modules
 web/node_modules
 docs/node_modules
