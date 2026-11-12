@@ -2,7 +2,7 @@
 #
 # core-docker-image.sh - 构建后端镜像（支持按平台架构参数化）
 #
-# 编译器与运行环境在同一条 Dockerfile（deploys/local/core.Dockerfile）内完成：
+# 编译器与运行环境在同一条 Dockerfile（deploys/containers/core.Dockerfile）内完成：
 # 步骤 1 交叉编译环境 → 步骤 2 运行环境 → 步骤 3 Go 包环境 → 步骤 4 编译制品 →
 # 步骤 5 注入运行环境。源码在镜像构建阶段内编译，无需宿主机预编译二进制。
 #
@@ -99,7 +99,7 @@ fi
 scripts/validate-semver.sh "$VERSION" || exit 1
 
 "${build_cmd[@]}" "$@" \
-	-f deploys/local/core.Dockerfile \
+	-f deploys/containers/core.Dockerfile \
 	--build-arg IMAGE_VARIANT="$VARIANT" \
 	--build-arg VERSION="$VERSION" \
 	--build-arg COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)" \

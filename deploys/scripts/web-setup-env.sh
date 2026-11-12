@@ -2,8 +2,8 @@
 #
 # web-setup-env.sh - 前端编译环境准备（pnpm）
 #
-# 被 deploys/local/web.Dockerfile 的 builder 阶段与 Gitee CI 调用；本地也可直接执行。
-# 策略：优先检测运行环境是否已有可用的 pnpm 10.x（Gitee Node 插件会自动预装），
+# 被 deploys/containers/web.Dockerfile 的 builder 阶段调用；本地也可直接执行。
+# 策略：优先检测运行环境是否已有可用的 pnpm 10.x（预装环境下可直接复用），
 # 版本够就跳过安装，避免 npm install -g 浪费时间；否则依次尝试 corepack 与 npm。
 #
 # 用法：
@@ -41,7 +41,7 @@ if command -v corepack >/dev/null 2>&1; then
 	corepack enable
 	corepack prepare "pnpm@${PNPM_VERSION}" --activate
 else
-	# Gitee / 精简镜像没有 corepack：回退到 npm 全局安装
+	# 精简镜像没有 corepack：回退到 npm 全局安装
 	echo ">>> setup-web-env: 未找到 corepack，改用 npm 安装 pnpm@${PNPM_VERSION}"
 	npm install -g "pnpm@${PNPM_VERSION}"
 fi

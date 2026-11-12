@@ -2,7 +2,7 @@
 #
 # web-build.sh - 前端静态产物构建（web/ 控制台 + docs/ 文档站）
 #
-# 统一的依赖安装与生产构建入口，供 deploys/local/web.Dockerfile 的 deps / build 阶段复用：
+# 统一的依赖安装与生产构建入口，供 deploys/containers/web.Dockerfile 的 deps / build 阶段复用：
 #   --deps    只安装依赖（web/ 与 docs/ 各自 pnpm install --frozen-lockfile）
 #   --build   只执行生产构建（web/ 的 pnpm build-only + docs/ 的 pnpm build）
 #   无参数    先装依赖再构建，便于本地一键复现镜像内的编译过程
@@ -41,7 +41,7 @@ cd "$ROOT_DIR"
 export DOCS_LAST_UPDATED="${DOCS_LAST_UPDATED:-false}"
 
 # pnpm 默认不把依赖放到 node_modules（会用虚拟 store 链接），但 pnpm install 仍然需要执行
-# 来建立 node_modules 下的 .pnpm 链接。Gitee CI 的 pnpm store 跨构建持久化时，install 会很快。
+# 来建立 node_modules 下的 .pnpm 链接。pnpm store 跨构建持久化时，install 会很快。
 skip_if_node_modules_ready() {
   local dir="$1"
   # node_modules 与 .pnpm 同时存在视为依赖已就绪，跳过 install

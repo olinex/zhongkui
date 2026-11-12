@@ -13,9 +13,9 @@
 #   步骤 5  装配     把 /out/zki 注入运行环境，产出 normal / slim 两个变体。
 #
 # 目标平台由 BuildKit 的 TARGETARCH 自动注入，按架构选取二进制与交叉工具链，无需手工传参：
-#   docker buildx build --platform linux/amd64 -f deploys/local/core.Dockerfile \
+#   docker buildx build --platform linux/amd64 -f deploys/containers/core.Dockerfile \
 #     --build-arg VERSION=v1.2.3 -t zhongkui:local --load .
-#   docker buildx build --platform linux/amd64,linux/arm64 -f deploys/local/core.Dockerfile \
+#   docker buildx build --platform linux/amd64,linux/arm64 -f deploys/containers/core.Dockerfile \
 #     --build-arg VERSION=v1.2.3 -t registry/zhongkui:v1.2.3 --push .
 #
 #   deploys/scripts/core-docker-image.sh v1.2.3                      # 本机原生架构，normal 变体（默认）

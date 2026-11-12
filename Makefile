@@ -14,12 +14,6 @@ else
 LAN_IP := localhost
 endif
 
-# CI/CD 临时产物根目录：测试报告、逐项检查日志，整体不入库、不进镜像
-REPORT_ROOT ?= .cicd
-REPORT_DIR ?= $(REPORT_ROOT)/reports
-GOLANG_REPORT_DIR ?= $(REPORT_ROOT)/golang-report
-export REPORT_ROOT REPORT_DIR GOLANG_REPORT_DIR
-
 .PHONY: build
 .PHONY: build-check
 .PHONY: build-release
@@ -137,7 +131,7 @@ endif
 
 # 编译参数全局统一：所有二进制产物都使用 -trimpath + 剥离符号，
 # 入口之间只允许版本信息（DEV / RELEASE）与输出路径不同。
-#   OUT      产物路径（镜像构建由 deploys/local/core.Dockerfile 的 build 阶段指定 /out/zki）
+#   OUT      产物路径（镜像构建由 deploys/containers/core.Dockerfile 的 build 阶段指定 /out/zki）
 #   LDFLAGS  链接参数（版本信息注入；-s -w 属于链接参数）
 OUT ?= bin/zki
 LDFLAGS ?= -s -w $(DEV_LDFLAGS)
@@ -243,7 +237,7 @@ license-check:
 	go run cmd/licensecheck/main.go --root .
 
 # ci - 提交与 CI 的统一入口：格式、构建、vet、测试、注释检查、许可证与文档漂移检查
-# 失败即停，适合本地提交前快速自查；生成报告日志的 CI 汇总走 scripts/ci-report.sh
+# 失败即停，适合本地提交前快速自查
 # 用法: make ci
 ci: fmt-check build-check vet test lint license-check docs-check
 	@echo "CI 检查全部通过"
