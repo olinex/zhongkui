@@ -20,9 +20,7 @@ stages:
     - "# 未使用Go Mod的用户需要打开一下注释"
     - "# export GOFLAGS=-mod=vendor"
     - "# gopacket/pcap 依赖 libpcap 头文件，构建镜像内需先安装"
-    - "if [ \"$(id -u)\" = \"0\" ]; then apt-get update && apt-get install -y --no-install-recommends\
-      \ libpcap-dev; else sudo apt-get update && sudo apt-get install -y --no-install-recommends\
-      \ libpcap-dev; fi"
+    - bash deploys/scripts/core-setup-build-env.sh --no-cross
     - make ci-report
     report:
       path: .cicd/golang-report

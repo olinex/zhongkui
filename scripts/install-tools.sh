@@ -46,7 +46,7 @@ cmd_ts() {
 		;;
 	Linux)
 		if ! command -v node >/dev/null 2>&1; then
-			curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt install -y nodejs
+			curl -fsSL https://deb.nodesource.com/setup_26.x | bash - && apt install -y nodejs
 		else
 			echo "node 已安装，跳过"
 		fi

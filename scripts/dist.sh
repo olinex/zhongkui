@@ -31,6 +31,10 @@ make version-env VERSION="$VERSION" || exit 1
 # shellcheck source=/dev/null
 . ./dist/build.env
 
+# build-release 不再自动烘焙 RAG 快照，本地打包前显式烘焙一次（本地有 protoc 等完整工具链）。
+# 若快照已存在且无源码变更，make rag-snapshot 会因 $(RAG_SNAPSHOT_DEPS) 未变化而跳过。
+make rag-snapshot || exit 1
+
 make build-release VERSION="$VERSION" COMMIT="$COMMIT" BUILD_TIME="$BUILD_TIME" BUILDER="$BUILDER"
 
 version_number=${VERSION#v}

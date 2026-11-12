@@ -7,18 +7,20 @@
 # 阶段按目标架构拉取 nginx 基底镜像，再 COPY 同一份制品。若不加该约束，BuildKit 会为每个目标
 # 平台各求值一次编译链，arm64 分支将以 QEMU 模拟重跑 Node 构建（实测多花约 22 分钟）。
 #
-# 五个构建步骤（与 deploys/build/core.Dockerfile 对齐）：
-#   步骤 1  builder   前端编译环境：Node 22 + pnpm 10（corepack 启用，镜像源可覆盖）。
+# 五个构建步骤（与 deploys/local/core.Dockerfile 对齐）：
+#   步骤 1  builder   前端编译环境：Node 26 + pnpm 10（corepack 启用，镜像源可覆盖；
+#                     安装逻辑见 deploys/scripts/web-setup-env.sh）。
 #   步骤 2  runtime   最终运行环境：nginx 基底 + 运行期环境变量。
-#   步骤 3  deps      Node 包环境：只引入 package.json / pnpm-lock.yaml 并 pnpm install，
-#                     依赖层与源码层分离，源码变更不会触发重新安装依赖。
-#   步骤 4  build     制品构建：引入源码，串行编译控制台（web/）与文档站（docs/）静态产物。
+#   步骤 3  deps      Node 包环境：只引入 package.json / pnpm-lock.yaml 并安装依赖
+#                     （deploys/scripts/web-build.sh --deps），源码变更不会触发重新安装。
+#   步骤 4  build     制品构建：引入源码，串行编译控制台（web/）与文档站（docs/）静态产物
+#                     （deploys/scripts/web-build.sh --build）。
 #                     类型检查不在镜像内执行，由 CI 门禁承担（scripts/web.sh type-check）。
 #   步骤 5  装配      把两份静态产物与 nginx 配置注入运行环境。
 #
 # 本地手工构建（需 BuildKit，Docker 23+ 默认启用；构建平台由 $BUILDPLATFORM 自动填充）：
-#   docker build -f deploys/build/web.Dockerfile -t zhongkui-web:local .
-#   docker build -f deploys/build/web.Dockerfile --build-arg VITE_DOCS_URL=/docs/ -t zhongkui-web:local .
+#   docker build -f deploys/local/web.Dockerfile -t zhongkui-web:local .
+#   docker build -f deploys/local/web.Dockerfile --build-arg VITE_DOCS_URL=/docs/ -t zhongkui-web:local .
 #
 # Vite 构建时把 API 基址固定为同源 /api/v1，由 Nginx 反向代理到 ZKI_API_UPSTREAM；
 # 文档站部署在 /docs/ 子路径，回跳控制台地址 /console 由 nginx 302 到 /（见 nginx.conf.template）。
@@ -28,9 +30,11 @@
 #
 
 # 基底镜像与镜像源可通过 --build-arg 覆盖（CI 中指向国内镜像加速地址）。
-ARG NODE_IMAGE=node:22-bookworm-slim
+ARG NODE_IMAGE=node:26-bookworm-slim
 ARG NGINX_IMAGE=nginx:1.27-alpine
 ARG NPM_REGISTRY=https://repo.huaweicloud.com/repository/npm
+# 钉死 pnpm 版本，配合 scripts/web-setup-env.sh 让依赖层稳定命中缓存。
+ARG PNPM_VERSION=10.34.9
 # 控制台与文档站的构建期参数（Vite / VitePress 在编译期固化）。
 ARG VITE_ZHONGKUI_BASE_URL=/api/v1
 ARG VITE_DOCS_URL=/docs/
@@ -47,14 +51,16 @@ FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS builder
 # 公共镜像源与超时配置：默认华为云镜像；registry.npmmirror.com 在部分 CI 节点上频繁超时。
 # 备选：https://mirrors.cloud.tencent.com/npm（腾讯云）、https://registry.npmjs.org（官方）
 ARG NPM_REGISTRY
+ARG PNPM_VERSION
 ENV npm_config_registry=${NPM_REGISTRY} \
     npm_config_fetch_retries=5 \
     npm_config_fetch_timeout=600000 \
     npm_config_fetch_retry_mintimeout=10000 \
     npm_config_fetch_retry_maxtimeout=60000
 
-# 钉死 pnpm 版本：避免每次构建都重新解析 "pnpm@10" 的可用版本，也让该层可稳定命中缓存。
-RUN corepack enable && corepack prepare pnpm@10.34.9 --activate
+# corepack + pnpm 版本固定（安装逻辑见 deploys/scripts/web-setup-env.sh）
+COPY deploys/scripts/web-setup-env.sh /tmp/
+RUN bash /tmp/web-setup-env.sh "${PNPM_VERSION}"
 
 WORKDIR /src
 
@@ -76,9 +82,9 @@ FROM builder AS deps
 
 COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./web/
 COPY docs/package.json docs/pnpm-lock.yaml ./docs/
+COPY deploys/scripts/web-build.sh /tmp/
 
-RUN cd web && pnpm install --frozen-lockfile \
- && cd ../docs && pnpm install --frozen-lockfile
+RUN WEB_ROOT=/src bash /tmp/web-build.sh --deps
 
 # ============================================================
 # 步骤 4：引入源码并编译静态产物
@@ -101,8 +107,8 @@ ENV VITE_ZHONGKUI_BASE_URL=${VITE_ZHONGKUI_BASE_URL} \
 
 COPY . .
 
-RUN echo ">>> 构建控制台（web/）" && cd web && pnpm build-only \
- && echo ">>> 构建文档站（docs/）" && cd ../docs && pnpm build
+# 串行执行两份生产构建（脚本内已固定顺序，避免并发触发 OOM）
+RUN WEB_ROOT=/src bash /tmp/web-build.sh --build
 
 # ============================================================
 # 步骤 5：把制品注入最终运行环境

@@ -17,7 +17,7 @@ scripts/install-tools.sh dev    # 安装 asynq / pkgsite / goconvey
 scripts/install-tools.sh ts     # 安装前端工具链（如需改 web/）
 scripts/install-tools.sh pcap   # 安装 libpcap 开发库（首次编译）
 scripts/dev-deps.sh start       # 启动 PostgreSQL / ClickHouse / Redis / etcd / S3
-scripts/migrate.sh up           # 执行数据库迁移
+go run cmd/zki/main.go migrate up   # 执行数据库迁移
 ```
 
 前端：
@@ -66,7 +66,7 @@ scripts/gitflow.sh commit -t feat -s gitflow -m "新增提交助手" -y
 - `master`、`develop` 上禁止提交，需先切到特性分支。
 - PR 描述仍在 Gitee 页面填写，脚本只负责推送分支并打开对比页；`--no-open` 只打印链接。
 - `--ci` 在推送前执行 `make ci`，`--force` 使用 `--force-with-lease`。
-- 标签仍由 `scripts/release.sh` 创建，`release finish` 在 PR 合入后调用它并只推送 tag，不推送受保护分支。
+- 标签由 `release finish`（PR 合入 `master` 后）统一创建：先校验 CHANGELOG 与 `web/package.json` 对齐、执行 `make ci`，再打 annotated tag；只推送 tag，不推送受保护分支。
 - `release/*` 同样禁止直接推送，推送被拒绝时脚本会提示由有权限的维护者推送或在 Gitee 页面创建分支。
 
 ## 5. 构建与脚本边界
@@ -77,9 +77,9 @@ scripts/gitflow.sh commit -t feat -s gitflow -m "新增提交助手" -y
 |---|---|---|---|
 | **Makefile** | 项目文件构建 | 编译二进制、生成代码、格式化、静态检查、单元测试、构建依赖管理（生成码、RAG 快照） | 安装系统/第三方依赖、启动/停止外部服务、调用 `docker`/`scripts/*.sh`、发布 tag、运行长期进程 |
 | **scripts/** | 操作与编排 | 安装依赖、启动/停止服务、CI/测试报告、打包发布、部署 | 反向被 Makefile 调用 |
-| **deploys/build/** | 镜像与二进制构建 | 前后端 Dockerfile（`core.Dockerfile`/`web.Dockerfile`）、本地镜像构建脚本集中于此；两个 Dockerfile 均在构建阶段内完成编译（交叉编译环境 → 运行环境 → 依赖环境 → 制品 → 装配五个阶段），分别产出 zki 二进制与控制台/文档站静态产物 | 直接调用 `make build` / `make build-release`、重复实现 `dist/build.env` 生成 |
+| **deploys/** | 镜像与二进制构建 | `local/` 与 `gitee/` 各一套前后端 Dockerfile（`core.Dockerfile`/`web.Dockerfile`），共享的入口与本地镜像构建脚本在 `scripts/`；两个 Dockerfile 均在构建阶段内完成编译（交叉编译环境 → 运行环境 → 依赖环境 → 制品 → 装配五个阶段），分别产出 zki 二进制与控制台/文档站静态产物 | 直接调用 `make build` / `make build-release`、重复实现 `dist/build.env` 生成 |
 
-依赖方向单向：`scripts/` → `Makefile`，`deploys/build/` 内脚本 → `Makefile`（`core.Dockerfile` 的构建阶段只调用 `make version-env` 与 `make build-image`）；前后端 Dockerfile 都在镜像构建阶段内编译产物（后端 zki 二进制、前端 `web/dist` 与 `docs/.vitepress/dist`），不依赖宿主机预编译产物。
+依赖方向单向：`scripts/` → `Makefile`，`deploys/local` 与 `deploys/gitee` 的 Dockerfile 及其调用的 `deploys/scripts/` 构建脚本 → `Makefile`（`core.Dockerfile` 的构建阶段只调用 `make version-env` 与 `make build-release`）；前后端 Dockerfile 都在镜像构建阶段内编译产物（后端 zki 二进制、前端 `web/dist` 与 `docs/.vitepress/dist`），不依赖宿主机预编译产物。
 
 ## 6. 版本与发布
 
@@ -126,21 +126,21 @@ v1.2.3-alpha.1 → v1.2.3-alpha.2 → v1.2.3-beta.1 → v1.2.3-rc.1 → v1.2.3
 make build-release VERSION=v1.2.3            # 正式版
 make build-release VERSION=v1.2.3-alpha.1    # 预发布版
 
-# 创建 annotated tag（会校验版本号格式、分支、工作区、CHANGELOG 等）
-scripts/release.sh v1.2.3
-scripts/release.sh v1.2.3-rc.1
+# 创建 annotated tag（PR 合入 master 后执行，会校验版本号、CHANGELOG、web/package.json 并跑 make ci）
+scripts/gitflow.sh release finish v1.2.3
+scripts/gitflow.sh release finish v1.2.3-rc.1
 
 # 打包制品
 scripts/dist.sh v1.2.3
 
 # 构建后端镜像（自动生成版本元数据，镜像内 zki version 显示该版本）
-deploys/build/docker-image.sh v1.2.3                # normal 变体：zhongkui:v1.2.3（默认，debian 基底便于排障）
-VARIANT=slim deploys/build/docker-image.sh v1.2.3   # slim 变体：zhongkui:v1.2.3-slim（scratch 最小镜像）
+deploys/scripts/core-docker-image.sh v1.2.3                # normal 变体：zhongkui:v1.2.3（默认，debian 基底便于排障）
+VARIANT=slim deploys/scripts/core-docker-image.sh v1.2.3   # slim 变体：zhongkui:v1.2.3-slim（scratch 最小镜像）
 
 # 按平台架构构建（PLATFORMS 走 buildx；单平台 tag 自动追加架构后缀，多平台需 --push）
-PLATFORMS=linux/amd64 deploys/build/docker-image.sh v1.2.3                     # zhongkui:v1.2.3-amd64
-PLATFORMS=linux/arm64 deploys/build/docker-image.sh v1.2.3                     # zhongkui:v1.2.3-arm64
-PLATFORMS=linux/amd64,linux/arm64 deploys/build/docker-image.sh v1.2.3 --push   # 多平台 manifest
+PLATFORMS=linux/amd64 deploys/scripts/core-docker-image.sh v1.2.3                     # zhongkui:v1.2.3-amd64
+PLATFORMS=linux/arm64 deploys/scripts/core-docker-image.sh v1.2.3                     # zhongkui:v1.2.3-arm64
+PLATFORMS=linux/amd64,linux/arm64 deploys/scripts/core-docker-image.sh v1.2.3 --push   # 多平台 manifest
 
 # 推送 tag 到 Gitee
 git push origin master --follow-tags

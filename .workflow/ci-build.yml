@@ -28,289 +28,90 @@ stages:
     strategy:
       retry: "0"
     dependsOn: 39db0d5e-3026-44df-8783-f9d2f3681ab1
-- name: 构建镜像
-  displayName: 构建镜像
-  strategy: naturally
-  trigger: auto
-  steps:
-  - step: image-build-plus@buildkitd
-    name: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-    displayName: all core 镜像构建
-    dockerCerts:
-    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    tag: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:tmp
-    dockerfile: ./deploys/build/core.Dockerfile
-    context: ""
-    isCache: true
-    processorType:
-    - amd64
-    - arm64
-    parameter:
-      GOLANG_IMAGE: "${REGISTRY_MIRROR}/library/golang:1.27.3-bookworm"
-      RUNTIME_IMAGE: "${REGISTRY_MIRROR}/library/debian:bookworm-slim"
-      APT_MIRROR: "${APT_MIRROR}"
-      GOPROXY: "${GOPROXY}"
-      IMAGE_VARIANT: all
-      VERSION: "${GITEE_BRANCH}"
-      COMMIT: "${GITEE_SHORT_COMMIT}"
-      BUILDER: "${GITEE_PIPELINE_TRIGGER_USER}@${GITEE_PIPELINE_NAME}:${GITEE_PIPELINE_BUILD_NUMBER}"
-    strategy:
-      retry: "0"
-      resource:
-        cpu: "2"
-        memory: "4"
-  - step: image-copy@skopeo
-    name: 8f9c9226-63b9-4378-b392-e113b9d0c47f
-    displayName: latest 镜像转推
-    dockerCerts:
-    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    sourceImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:tmp
-    targetImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:latest
-    arch: all
-    strategy:
-      retry: "0"
-    dependsOn: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-  - step: image-copy@skopeo
-    name: b8082eee-a7c4-4db8-838b-7bea1cc9f646
-    displayName: version 镜像转推
-    dockerCerts:
-    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    sourceImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:tmp
-    targetImage: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:${GITEE_BRANCH}"
-    arch: all
-    strategy:
-      retry: "0"
-    dependsOn: 8f9c9226-63b9-4378-b392-e113b9d0c47f
-  - step: image-build-plus@buildkitd
-    name: 44667782-dd61-475d-ad34-23ba3ea3daea
-    displayName: normal web 镜像构建
-    dockerCerts:
-    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    tag: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:tmp
-    dockerfile: ./deploys/build/web.Dockerfile
-    context: ""
-    artifacts: []
-    isCache: true
-    processorType:
-    - arm64
-    - amd64
-    parameter:
-      NODE_IMAGE: "${REGISTRY_MIRROR}/library/node:22-bookworm-slim"
-      NGINX_IMAGE: "${REGISTRY_MIRROR}/library/nginx:1.27-alpine"
-      NPM_REGISTRY: "${NPM_MIRROR}"
-      VITE_DOCS_URL: /docs/
-      DOCS_BASE: /docs/
-      DOCS_CONSOLE_URL: /console
-    strategy:
-      retry: "0"
-      resource:
-        cpu: "2"
-        memory: "4"
-  - step: image-copy@skopeo
-    name: 7673b09e-4559-47c1-af86-fa042eb328d5
-    displayName: latest 镜像转推
-    dockerCerts:
-    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    sourceImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:tmp
-    targetImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:latest
-    arch: all
-    strategy:
-      retry: "0"
-    dependsOn: 44667782-dd61-475d-ad34-23ba3ea3daea
-  - step: image-copy@skopeo
-    name: 65a5e7df-df24-4388-aa4e-071ea7dfd4d3
-    displayName: version 镜像转推
-    dockerCerts:
-    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    sourceImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:tmp
-    targetImage: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:${GITEE_BRANCH}"
-    arch: all
-    strategy:
-      retry: "0"
-    dependsOn: 7673b09e-4559-47c1-af86-fa042eb328d5
-  - step: image-build-plus@buildkitd
-    name: 76fb5131-0471-4244-a872-cec21139136f
-    displayName: normal core 镜像构建
-    dockerCerts:
-    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    tag: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core:tmp
-    dockerfile: ./deploys/build/core.Dockerfile
-    context: ""
-    isCache: true
-    processorType:
-    - arm64
-    - amd64
-    parameter:
-      GOLANG_IMAGE: "${REGISTRY_MIRROR}/library/golang:1.27.3-bookworm"
-      RUNTIME_IMAGE: "${REGISTRY_MIRROR}/library/debian:bookworm-slim"
-      APT_MIRROR: "${APT_MIRROR}"
-      GOPROXY: "${GOPROXY}"
-      IMAGE_VARIANT: normal
-      VERSION: "${GITEE_BRANCH}"
-      COMMIT: "${GITEE_SHORT_COMMIT}"
-      BUILDER: "${GITEE_PIPELINE_TRIGGER_USER}@${GITEE_PIPELINE_NAME}:${GITEE_PIPELINE_BUILD_NUMBER}"
-    strategy:
-      retry: "0"
-      resource:
-        cpu: "2"
-        memory: "4"
-  - step: image-copy@skopeo
-    name: b024282e-2a98-4a46-ba8b-319295527c94
-    displayName: latest 镜像转推
-    dockerCerts:
-    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    sourceImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core:tmp
-    targetImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core:latest
-    arch: all
-    strategy:
-      retry: "0"
-    dependsOn: 76fb5131-0471-4244-a872-cec21139136f
-  - step: image-copy@skopeo
-    name: 52b9debb-de3b-47fe-9424-7529a9da294c
-    displayName: version 镜像转推
-    dockerCerts:
-    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    sourceImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core:tmp
-    targetImage: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core:${GITEE_BRANCH}"
-    arch: all
-    strategy:
-      retry: "0"
-    dependsOn: b024282e-2a98-4a46-ba8b-319295527c94
-  - step: image-build-plus@buildkitd
-    name: da30ea79-8f23-4a8e-a7ea-ed1958400a52
-    displayName: slim core 镜像构建
-    dockerCerts:
-    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    tag: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-slim:tmp
-    dockerfile: ./deploys/build/core.Dockerfile
-    context: ""
-    isCache: true
-    processorType:
-    - arm64
-    - amd64
-    parameter:
-      GOLANG_IMAGE: "${REGISTRY_MIRROR}/library/golang:1.27.3-bookworm"
-      RUNTIME_IMAGE: "${REGISTRY_MIRROR}/library/debian:bookworm-slim"
-      APT_MIRROR: "${APT_MIRROR}"
-      GOPROXY: "${GOPROXY}"
-      IMAGE_VARIANT: slim
-      VERSION: "${GITEE_BRANCH}"
-      COMMIT: "${GITEE_SHORT_COMMIT}"
-      BUILDER: "${GITEE_PIPELINE_TRIGGER_USER}@${GITEE_PIPELINE_NAME}:${GITEE_PIPELINE_BUILD_NUMBER}"
-    strategy:
-      retry: "0"
-      resource:
-        cpu: "2"
-        memory: "4"
-  - step: image-copy@skopeo
-    name: 4e20d58e-d97d-4368-9c54-3db0dfda0db1
-    displayName: latest 镜像转推
-    dockerCerts:
-    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    sourceImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-slim:tmp
-    targetImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-slim:latest
-    arch: all
-    strategy:
-      retry: "0"
-    dependsOn: da30ea79-8f23-4a8e-a7ea-ed1958400a52
-  - step: image-copy@skopeo
-    name: f3439588-0405-4e9c-a576-d8801233ec79
-    displayName: latest 镜像转推
-    dockerCerts:
-    - uuid: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    sourceImage: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-slim:tmp
-    targetImage: "zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-slim:${GITEE_BRANCH}"
-    arch: all
-    strategy:
-      retry: "0"
-    dependsOn: 4e20d58e-d97d-4368-9c54-3db0dfda0db1
-- name: 制品上传
-  displayName: 制品上传
-  strategy: naturally
-  trigger: auto
-  steps:
-  - step: execute@docker
-    name: a0085b67-f4c2-4c07-994c-6b2d2262c974
-    displayName: all core 制品提取
-    certificate: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    image: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core-all:tmp
-    command:
-    - "# 移动两份构造制品"
-    - ls -lha /out
-    - mkdir -p /root/workspace/out
-    - cp /out/zki-linux-amd64 /root/workspace/out
-    - cp /out/zki-linux-arm64 /root/workspace/out
-    artifacts:
-    - name: BUILD_ARTIFACT
-      path:
-      - /root/workspace/out/zki-linux-amd64
-      - /root/workspace/out/zki-linux-arm64
-      type: .tar.gz
-    strategy:
-      retry: "0"
-      resource:
-        cpu: "1"
-        memory: "2"
-  - step: publish@general_artifacts
-    name: 6582736f-1a22-476b-8308-490f4711a3b5
-    displayName: all core 上传制品
-    dependArtifact: BUILD_ARTIFACT
-    artifactName: zki_core
-    strategy:
-      retry: "0"
-    dependsOn: a0085b67-f4c2-4c07-994c-6b2d2262c974
-  - step: execute@docker
-    name: f214080c-f65d-4b23-b66e-9e9e45db976f
-    displayName: normal web 制品提取
-    certificate: b4d9b4c0-be7a-013f-40b9-362eca6107d0
-    image: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web:tmp
-    command:
-    - "# 移动两份构造制品"
-    - ls -lha /etc/nginx/templates/default.conf.template
-    - ls -lha /usr/share/nginx/
-    - mkdir -p /root/workspace/out/html
-    - cp /etc/nginx/templates/default.conf.template /root/workspace/out
-    - cp -R /usr/share/nginx/html/* /root/workspace/out/html
-    artifacts:
-    - name: BUILD_ARTIFACT
-      path:
-      - /root/workspace/out/default.conf.template
-      - /root/workspace/out/html
-      type: .tar.gz
-    strategy:
-      retry: "0"
-      resource:
-        cpu: "1"
-        memory: "2"
-  - step: publish@general_artifacts
-    name: 28c869b7-0b84-4b10-98b0-6898afe69cf3
-    displayName: normal web 上传制品
-    dependArtifact: BUILD_ARTIFACT
-    artifactName: zki_web
-    strategy:
-      retry: "0"
-    dependsOn: f214080c-f65d-4b23-b66e-9e9e45db976f
-- name: 正式发布
-  displayName: 正式发布
+- name: 构建制品
+  displayName: 构建制品
   strategy: fast
   trigger: auto
   steps:
-  - step: publish@release_artifacts
-    name: 58af6da2-74fa-452e-af49-f8eb176f4cbc
-    displayName: all core 制品发布
-    dependArtifact: zki_core
-    version: "${SEMVER_RELEASE}"
-    autoIncrement: false
+  - step: build@golang
+    name: e43d16bd-6301-4f97-9882-7e2aeeb8c27a
+    displayName: core arm64 amd64 构建
+    golangVersion: "1.27"
+    commands:
+    - "# 1. 安装交叉编译工具链"
+    - bash deploys/scripts/core-setup-build-env.sh --host-arch "$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"
+    - ""
+    - "# 2. 下载依赖（首次跑 / go.mod 变更时才真正下载；命中缓存时秒过）"
+    - go mod download
+    - ""
+    - "# 3. 编译 amd64"
+    - bash deploys/scripts/core-build-multiarch.sh \
+    - '    --skip-apt \'
+    - '    --arch amd64 \'
+    - '    --out dist/bin/zki-core-linux-amd64 \'
+    - "    \"${GITEE_BRANCH}\""
+    - ""
+    - "# 4. 编译 arm64"
+    - bash deploys/scripts/core-build-multiarch.sh \
+    - '    --skip-apt \'
+    - '    --arch arm64 \'
+    - '    --out dist/bin/zki-core-linux-arm64 \'
+    - "    \"${GITEE_BRANCH}\""
+    - ""
+    - '   ls -lh dist/bin/'
+    artifacts:
+    - name: zki-core-linux-amd64
+      path:
+      - dist/bin/zki-core-linux-amd64
+      type: .tar.gz
+    - name: zki-core-linux-arm64
+      path:
+      - dist/bin/zki-core-linux-arm64
+      type: .tar.gz
+    caches:
+    - /go/pkg/mod
+    - /root/.cache/go-build
     strategy:
       retry: "0"
-  - step: publish@release_artifacts
-    name: 5d9939c3-4c80-4b60-9b21-fbbc27e5b0bc
-    displayName: normal web 制品发布
-    dependArtifact: zki_web
-    version: "${SEMVER_RELEASE}"
-    autoIncrement: false
+      resource:
+        cpu: "2"
+        memory: "4"
+  - step: build@nodejs
+    name: a9f154ae-3862-4a1a-bd2d-48dbd8eff4c5
+    displayName: web 构建
+    nodeVersion: 26.12.1
+    commands:
+    - corepack enable
+    - corepack prepare pnpm@10.34.9 --activate
+    - pnpm config set store-dir /pnpm-store
+    - "export npm_config_registry=\"${NPM_MIRROR}\""
+    - export DOCS_LAST_UPDATED=false
+    - export VITE_ZHONGKUI_BASE_URL=/api/v1
+    - export VITE_DOCS_URL=/docs/
+    - export DOCS_BASE=/docs/
+    - export DOCS_CONSOLE_URL=/console
+    - bash deploys/scripts/web-build.sh --deps
+    - bash deploys/scripts/web-build.sh --build
+    - test -f web/dist/index.html
+    - test -f docs/.vitepress/dist/index.html
+    - mkdir -p dist/html/docs
+    - mv web/nginx.conf.template dist/
+    - mv -f web/dist dist/html
+    - mv -f docs/.vitepress/dist dist/html/docs
+    - du -sh dist
+    artifacts:
+    - name: zki-web-dist
+      path:
+      - ./dist
+      type: .tar.gz
+    caches:
+    - "~/.npm"
+    - /pnpm-store
     strategy:
       retry: "0"
+      resource:
+        cpu: "2"
+        memory: "4"
 triggers:
   trigger: auto
   push:
