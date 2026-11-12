@@ -98,31 +98,61 @@ if [ -n "$MIRROR" ]; then
 fi
 
 # ----------------------------------------------------------
-# 2. 原生编译依赖（所有场景都需要）
+# 2. 原生编译依赖 + 交叉编译器
+#    交叉编译器（gcc-aarch64-linux-gnu / gcc-x86_64-linux-gnu）本身是宿主架构的包，
+#    原生 apt 源即可安装，不依赖反向架构源。
+#    --no-cross 场景（CI 单测）只装原生 libpcap-dev。
 # ----------------------------------------------------------
 $SUDO apt-get update
-$SUDO apt-get install -y --no-install-recommends libpcap-dev ca-certificates
+
+NATIVE_PKGS="libpcap-dev ca-certificates"
+if [ "$INSTALL_CROSS" -eq 1 ]; then
+  case "$HOST_ARCH" in
+    amd64) NATIVE_PKGS="$NATIVE_PKGS gcc-aarch64-linux-gnu" ;;
+    arm64) NATIVE_PKGS="$NATIVE_PKGS gcc-x86_64-linux-gnu" ;;
+  esac
+fi
+
+$SUDO apt-get install -y --no-install-recommends $NATIVE_PKGS
 
 # ----------------------------------------------------------
-# 3. 反向架构的交叉编译工具链
-#    amd64 宿主 → 加 arm64 架构 → 装 gcc-aarch64 + libpcap-dev:arm64
-#    arm64 宿主 → 加 amd64 架构 → 装 gcc-x86-64   + libpcap-dev:amd64
+# 3. 反向架构的 libpcap（交叉编译时链接用）
+#    amd64 宿主 → 加 arm64 架构 → 装 libpcap-dev:arm64
+#    arm64 宿主 → 加 amd64 架构 → 装 libpcap-dev:amd64
+#
+#    注意：部分 apt 镜像源不同步所有 component 的反向架构索引，
+#    apt-get update 可能因 restricted/multiverse 等次要组件 404 而返回非零。
+#    但 libpcap 在 main 组件里，只要 main 的反向架构索引能拉到就能安装。
+#    因此这里对 update 做容错（|| true），让 install 有机会执行。
 # ----------------------------------------------------------
 if [ "$INSTALL_CROSS" -eq 1 ]; then
   case "$HOST_ARCH" in
     amd64)
       $SUDO dpkg --add-architecture arm64
-      $SUDO apt-get update
-      $SUDO apt-get install -y --no-install-recommends \
-        gcc-aarch64-linux-gnu libpcap-dev:arm64
+      $SUDO apt-get update || true
+      $SUDO apt-get install -y --no-install-recommends libpcap-dev:arm64
       ;;
     arm64)
       $SUDO dpkg --add-architecture amd64
-      $SUDO apt-get update
-      $SUDO apt-get install -y --no-install-recommends \
-        gcc-x86_64-linux-gnu libpcap-dev:amd64
+      $SUDO apt-get update || true
+      $SUDO apt-get install -y --no-install-recommends libpcap-dev:amd64
       ;;
   esac
+fi
+
+# ----------------------------------------------------------
+# 3.1 验证交叉工具链就绪
+# ----------------------------------------------------------
+if [ "$INSTALL_CROSS" -eq 1 ]; then
+  case "$HOST_ARCH" in
+    amd64) CROSS_CC="aarch64-linux-gnu-gcc" ;;
+    arm64) CROSS_CC="x86_64-linux-gnu-gcc" ;;
+  esac
+  if ! command -v "$CROSS_CC" >/dev/null 2>&1; then
+    echo "ERROR: 交叉编译器 $CROSS_CC 未安装成功" >&2
+    exit 1
+  fi
+  echo ">>> setup-build-env: 交叉编译器 $CROSS_CC 就绪"
 fi
 
 # ----------------------------------------------------------
