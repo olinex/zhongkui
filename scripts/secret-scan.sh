@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# secret-scan.sh - 本地密钥扫描（Betterleaks），用与 CI 门禁相同的工具在提交前自检。
+# secret-scan.sh - 本地密钥扫描（Betterleaks），在提交前自检。
 #
 # 为什么不在仓库目录直接扫：
 #   Betterleaks 默认不读 .gitignore，直接扫工作区会把 node_modules、dist、
@@ -9,14 +9,14 @@
 #
 # 为什么基线要提交：
 #   仓库里已有大量测试夹具（pcapng 样本、测试用密码、JWT 等）会被扫描器命中。
-#   基线文件 .betterleaks-baseline.json 纳入版本控制，本地和 Gitee CI 共用同一份，
-#   只对「基线之外的新增发现」失败。CI 侧通过 sc@betterleaks 的 baselinePath 引用。
+#   基线文件 .betterleaks-baseline.json 纳入版本控制，所有协作者本地共用同一份，
+#   只对「基线之外的新增发现」失败。
 #
 # 用法：
 #   scripts/secret-scan.sh             # 默认：未提交的改动（暂存 + 未暂存 + 新文件）
 #   scripts/secret-scan.sh --staged    # 仅暂存区（适合接到 pre-commit）
 #   scripts/secret-scan.sh --all       # 全部受版本控制的文件
-#   scripts/secret-scan.sh --baseline  # 重建基线文件（提交它才会在 CI 生效）
+#   scripts/secret-scan.sh --baseline  # 重建基线文件（提交它才对所有协作者生效）
 #
 # 退出码：0 无新增发现；1 有新增发现；2 参数或环境错误。
 set -uo pipefail
@@ -113,7 +113,7 @@ if [ "$WRITE_BASELINE" -eq 1 ]; then
 		exit 2
 	fi
 	echo "基线已更新：.betterleaks-baseline.json（$(jq 'length' "$BASELINE") 条既有发现）"
-	echo "记得把该文件一并提交，Gitee CI 才会使用新基线。"
+	echo "记得把该文件一并提交，其他协作者本地扫描才会使用新基线。"
 	exit 0
 fi
 

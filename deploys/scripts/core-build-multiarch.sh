@@ -3,11 +3,11 @@
 # core-build-multiarch.sh - zki 二进制交叉编译（amd64 + arm64）
 #
 # 统一的交叉编译入口，供以下场景复用：
-#   1. Gitee CI 前置编译步骤（--skip-apt 不设）：apt 装依赖 + 编译两架构 → dist/bin/
-#   2. deploys/local/core.Dockerfile build 阶段（--skip-apt --arch --out）：
+#   1. deploys/containers/core.Dockerfile build 阶段（--skip-apt --arch --out）：
 #      apt 由 builder 阶段完成，这里只编排单架构编译
+#   2. 宿主机手动编译（--skip-apt 不设）：apt 装依赖 + 编译两架构 → dist/bin/
 #
-# 交叉编译逻辑与原 deploys/local/core.Dockerfile 中 build_one 函数完全一致：
+# 交叉编译逻辑与原 deploys/containers/core.Dockerfile 中 build_one 函数完全一致：
 #   宿主 amd64 → 原生编译 amd64，用 aarch64-linux-gnu-gcc 交叉编译 arm64
 #   宿主 arm64 → 原生编译 arm64，用 x86_64-linux-gnu-gcc 交叉编译 amd64
 #
@@ -17,7 +17,7 @@
 #                      快照由外层脚本自行保证存在）
 #
 # 用法：
-#   # CI 场景：同时编译两架构，产物落到 dist/bin/zki-core-linux-{arch}
+#   # 宿主机场景：同时编译两架构，产物落到 dist/bin/zki-core-linux-{arch}
 #   deploys/scripts/core-build-multiarch.sh v1.2.3
 #   VERSION=v1.2.3 deploys/scripts/core-build-multiarch.sh
 #
@@ -64,10 +64,9 @@ fi
 ROOT_DIR=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$ROOT_DIR"
 
-# Go 缓存固定到 /go 下，方便 Gitee CI 的 caches 字段持久化：
-#   caches:
-#     - /go/pkg/mod      # GOMODCACHE
-#     - /go/go-build     # GOCACHE（amd64/arm64 共享同一目录，按 GOOS/GOARCH 分子目录）
+# Go 缓存固定到 /go 下，便于容器构建时按目录持久化：
+#   /go/pkg/mod    GOMODCACHE
+#   /go/go-build   GOCACHE（amd64/arm64 共享同一目录，按 GOOS/GOARCH 分子目录）
 export GOMODCACHE="${GOMODCACHE:-/go/pkg/mod}"
 export GOCACHE="${GOCACHE:-/go/go-build}"
 export GOPROXY="${GOPROXY:-https://goproxy.cn,direct}"

@@ -77,9 +77,9 @@ scripts/gitflow.sh commit -t feat -s gitflow -m "新增提交助手" -y
 |---|---|---|---|
 | **Makefile** | 项目文件构建 | 编译二进制、生成代码、格式化、静态检查、单元测试、构建依赖管理（生成码、RAG 快照） | 安装系统/第三方依赖、启动/停止外部服务、调用 `docker`/`scripts/*.sh`、发布 tag、运行长期进程 |
 | **scripts/** | 操作与编排 | 安装依赖、启动/停止服务、CI/测试报告、打包发布、部署 | 反向被 Makefile 调用 |
-| **deploys/** | 镜像与二进制构建 | `local/` 与 `gitee/` 各一套前后端 Dockerfile（`core.Dockerfile`/`web.Dockerfile`），共享的入口与本地镜像构建脚本在 `scripts/`；两个 Dockerfile 均在构建阶段内完成编译（交叉编译环境 → 运行环境 → 依赖环境 → 制品 → 装配五个阶段），分别产出 zki 二进制与控制台/文档站静态产物 | 直接调用 `make build` / `make build-release`、重复实现 `dist/build.env` 生成 |
+| **deploys/** | 镜像与二进制构建 | `containers/` 下的前后端 Dockerfile（`core.Dockerfile`/`web.Dockerfile`），Dockerfile 共用的构建与入口脚本在 `deploys/scripts/`；两个 Dockerfile 均在构建阶段内完成编译（交叉编译环境 → 运行环境 → 依赖环境 → 制品 → 装配五个阶段），分别产出 zki 二进制与控制台/文档站静态产物 | 直接调用 `make build` / `make build-release`、重复实现 `dist/build.env` 生成 |
 
-依赖方向单向：`scripts/` → `Makefile`，`deploys/local` 与 `deploys/gitee` 的 Dockerfile 及其调用的 `deploys/scripts/` 构建脚本 → `Makefile`（`core.Dockerfile` 的构建阶段只调用 `make version-env` 与 `make build-release`）；前后端 Dockerfile 都在镜像构建阶段内编译产物（后端 zki 二进制、前端 `web/dist` 与 `docs/.vitepress/dist`），不依赖宿主机预编译产物。
+依赖方向单向：`scripts/` → `Makefile`，`deploys/containers` 的 Dockerfile 及其调用的 `deploys/scripts/` 构建脚本 → `Makefile`（`core.Dockerfile` 的构建阶段只调用 `make version-env` 与 `make build-release`）；前后端 Dockerfile 都在镜像构建阶段内编译产物（后端 zki 二进制、前端 `web/dist` 与 `docs/.vitepress/dist`），不依赖宿主机预编译产物。
 
 ## 6. 版本与发布
 
@@ -146,7 +146,7 @@ PLATFORMS=linux/amd64,linux/arm64 deploys/scripts/core-docker-image.sh v1.2.3 --
 git push origin master --follow-tags
 ```
 
-推送 tag 后在 Gitee 创建 Release，并上传 `dist/` 下的制品与校验和。GitHub 为只读镜像，不发布 Release；Gitee Go 的发布流水线在 Gitee 控制台配置，命令与上面一致（见 `.gitee/README.md`）。
+推送 tag 后在 Gitee 创建 Release，并上传 `dist/` 下的制品与校验和。GitHub 为只读镜像，不发布 Release。
 
 ## 7. 测试与检查
 
