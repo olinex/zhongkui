@@ -3,10 +3,9 @@
 # core-setup-build-env.sh - zki 交叉编译环境安装（libpcap-dev + 双向交叉工具链）
 #
 # 覆盖所有需要"在宿主机或容器内装 Go 编译依赖"的场景：
-#   1. deploys/local/core.Dockerfile builder 阶段（装 apt mirror + 原生 libpcap-dev + 交叉工具链）
-#   2. deploys/scripts/core-build-multiarch.sh --skip-apt=0 内部调用（Gitee CI 前置编译步骤）
-#   3. .workflow/ci-test.yml ut@golang（--no-cross，只装原生 libpcap-dev 用于单元测试）
-#   4. .github/workflows/ci.yml（同场景 3）
+#   1. deploys/containers/core.Dockerfile builder 阶段（装 apt mirror + 原生 libpcap-dev + 交叉工具链）
+#   2. deploys/scripts/core-build-multiarch.sh --skip-apt=0 内部调用（不换 mirror，装交叉工具链）
+#   3. .github/workflows/ci.yml（--no-cross，只装原生 libpcap-dev 用于单元测试）
 #
 # 为什么独立成脚本：
 #   apt 安装 + sed mirror + 方向判断 在多处重复，任何一处改动（比如新增依赖包、换镜像源、
@@ -19,7 +18,7 @@
 #     --host-arch "${BUILDARCH}" \
 #     --mirror "${APT_MIRROR}"
 #
-#   # Gitee CI core-build-multiarch.sh 内部调用：不换 mirror，装交叉工具链
+#   # core-build-multiarch.sh 内部调用：不换 mirror，装交叉工具链
 #   bash deploys/scripts/core-setup-build-env.sh
 #
 #   # CI 单测：只装原生 libpcap-dev，不需要交叉工具链
