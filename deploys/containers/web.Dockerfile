@@ -7,7 +7,7 @@
 # 阶段按目标架构拉取 nginx 基底镜像，再 COPY 同一份制品。若不加该约束，BuildKit 会为每个目标
 # 平台各求值一次编译链，arm64 分支将以 QEMU 模拟重跑 Node 构建（实测多花约 22 分钟）。
 #
-# 五个构建步骤（与 deploys/local/core.Dockerfile 对齐）：
+# 五个构建步骤（与 deploys/containers/core.Dockerfile 对齐）：
 #   步骤 1  builder   前端编译环境：Node 26 + pnpm 10（corepack 启用，镜像源可覆盖；
 #                     安装逻辑见 deploys/scripts/web-setup-env.sh）。
 #   步骤 2  runtime   最终运行环境：nginx 基底 + 运行期环境变量。
@@ -19,8 +19,8 @@
 #   步骤 5  装配      把两份静态产物与 nginx 配置注入运行环境。
 #
 # 本地手工构建（需 BuildKit，Docker 23+ 默认启用；构建平台由 $BUILDPLATFORM 自动填充）：
-#   docker build -f deploys/local/web.Dockerfile -t zhongkui-web:local .
-#   docker build -f deploys/local/web.Dockerfile --build-arg VITE_DOCS_URL=/docs/ -t zhongkui-web:local .
+#   docker build -f deploys/containers/web.Dockerfile -t zhongkui-web:local .
+#   docker build -f deploys/containers/web.Dockerfile --build-arg VITE_DOCS_URL=/docs/ -t zhongkui-web:local .
 #
 # Vite 构建时把 API 基址固定为同源 /api/v1，由 Nginx 反向代理到 ZKI_API_UPSTREAM；
 # 文档站部署在 /docs/ 子路径，回跳控制台地址 /console 由 nginx 302 到 /（见 nginx.conf.template）。

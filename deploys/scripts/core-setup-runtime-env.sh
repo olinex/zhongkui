@@ -3,11 +3,10 @@
 # core-setup-runtime-env.sh - zki 运行时环境安装（libpcap0.8 + gosu + setcap + 非 root 用户）
 #
 # 覆盖所有"构建运行时基底"的场景：
-#   1. deploys/local/core.Dockerfile runtime 阶段（normal/slim 变体共用）
-#   2. deploys/gitee/core.Dockerfile runtime 阶段（gitee 构建场景，与 local 完全一致）
+#   deploys/containers/core.Dockerfile runtime 阶段（normal/slim 变体共用）
 #
-# 两个 Dockerfile 里这段 apt 安装 + 用户创建原本一字不差地重复出现，
-# 任何一处改动都要手动同步另一处，容易遗漏。脚本统一后各自只是一行调用。
+# Dockerfile 里这段 apt 安装 + 用户创建原本在多处重复出现，
+# 任何一处改动都要手动同步，容易遗漏。脚本统一后只是一行调用。
 #
 # 职责：
 #   - sed 替换 apt mirror（可选）

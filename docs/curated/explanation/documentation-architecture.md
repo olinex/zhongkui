@@ -74,7 +74,7 @@
 | 决策 | 结论 | 落地约束 |
 | --- | --- | --- |
 | 许可证 | Apache-2.0 | 根目录 `LICENSE`；README 标注；第三方依赖与 `third_party/` 补丁副本做许可证合规清单 |
-| 托管与 CI | Gitee 为主仓，GitHub 为只读镜像 | 内容不依赖平台；`make ci` 是唯一检查入口；两侧工作流只做薄封装；镜像同步由定时任务完成 |
+| 托管与 CI | Gitee 为主仓，GitHub 为只读镜像 | 内容不依赖平台；`make ci` 是唯一检查入口；GitHub 工作流只做薄封装；镜像同步由定时任务完成 |
 | `api_invoke` 执行侧 | 前端持用户凭据执行 | 后端不代理请求，只做白名单校验、参数校验、审核分级与审计；安全边界仍是接口自身的鉴权中间件 |
 | 文档站点 | VitePress | `docs/.vitepress/`；侧边栏由 `nav.json` 生成；本地搜索；编辑链接 |
 | 文档形态 | Markdown | 源文件与生成物均为 `.md`；站点只渲染；不产出 HTML/PDF 文档交付物 |
@@ -350,12 +350,12 @@ type Entry struct {
 | `CODE_OF_CONDUCT.md` | Contributor Covenant 或等效 |
 | `CHANGELOG.md` | Keep a Changelog + SemVer；由 Conventional Commits 生成 |
 | `SUPPORT.md` | 提问渠道、Issue 分类、支持边界 |
-| `.gitee/` 与 `.github/` | Issue/PR 模板、CODEOWNERS、CI 薄封装 |
+| `.gitee/` 与 `.github/` | Issue/PR 模板、CODEOWNERS；`.github/` 另有 CI 薄封装 |
 | `docs/.vitepress/` | VitePress：侧边栏由 `nav.json` 生成、本地搜索、编辑链接、版本快照 |
 
 **许可证合规**：Apache-2.0 不覆盖第三方代码。`THIRD_PARTY_LICENSES.md` 按 Go 运行时依赖与 Web 生产依赖逐组件登记版本、许可证与全文；`make license-check` 在 CI 中拒绝 GPL/AGPL/LGPL/SSPL/非商业与未知许可证，例外必须以「组件@版本 → 已核对 SPDX」显式登记。依赖变更后必须重新核对，新增许可证类型需补充对应文本。
 
-**双平台策略**：Gitee 为主仓，GitHub 为只读镜像（关闭 Issue/PR，导航到 Gitee）。仓库内只保留 `make ci`，工作流文件仅转调它，避免两套逻辑漂移。
+**双平台策略**：Gitee 为主仓，GitHub 为只读镜像（关闭 Issue/PR，导航到 Gitee）。仓库内只保留 `make ci`，GitHub 工作流仅转调它，避免两套逻辑漂移。
 
 **语言与版本**：中文为唯一文档语言，不维护英文版本。SemVer；文档随 minor 版本打快照。
 
@@ -371,7 +371,7 @@ type Entry struct {
 6. **教程/指南迁移**：6 篇由包注释改为策展页（AI 起草 + 审校）；对应包注释改写为包职责/边界/不变量；新增 `troubleshooting.md`。
 7. **AI 起草基建**：落地 `docs/templates/` 七类模板（含起草须知）、元信息头守卫、`AGENTS.md` 增补「策展文档起草与审校」规则。
 8. **社区门面**：`LICENSE`（Apache-2.0）、`NOTICE`、`CONTRIBUTING`、`SECURITY`、`CODE_OF_CONDUCT`、`SUPPORT`、`CHANGELOG`、Issue/PR 模板、CODEOWNERS。
-9. **统一 CI**：`make ci` 串联 gofmt、`go vet`、`go build`、`go test`、`make lint`、`docs-check`；Gitee 与 GitHub 工作流只做薄封装。
+9. **统一 CI**：`make ci` 串联 gofmt、`go vet`、`go build`、`go test`、`make lint`、`docs-check`；GitHub 工作流只做薄封装。
 
 完成标志：`docs-check` 通过、`docs/curated` 零写入、无孤儿页、新访客按 README 可跑通。
 
@@ -381,7 +381,7 @@ type Entry struct {
 2. 数据表参考投影：抽取 `internal/models/**`，生成 `docs/generated/reference/schema/`，字段表含列/类型/可空/默认/含义/枚举。
 3. 枚举、配置、CLI 三类参考生成并纳入 `--check`。
 4. `docs/.vitepress/` 搭建 VitePress：侧边栏由 `nav.json` 生成、本地搜索、编辑链接、参考区折叠；只渲染中文文档。
-5. 页面模板、链接与锚点守卫、策展页元信息与「禁止复制事实」检查接入 `docs-check`；CI 构建站点并部署到 Gitee Pages。
+5. 页面模板、链接与锚点守卫、策展页元信息与「禁止复制事实」检查接入 `docs-check`；CI 构建站点，部署到 Gitee/GitHub 项目页（子路径需指定 base）。
 
 完成标志：任意事实 2 次点击可达、0 死链、站点可构建、生成器不触碰策展目录。
 
