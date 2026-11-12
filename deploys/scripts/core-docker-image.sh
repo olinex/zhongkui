@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# docker-image.sh - 构建后端镜像（支持按平台架构参数化）
+# core-docker-image.sh - 构建后端镜像（支持按平台架构参数化）
 #
-# 编译器与运行环境在同一条 Dockerfile（deploys/build/core.Dockerfile）内完成：
+# 编译器与运行环境在同一条 Dockerfile（deploys/local/core.Dockerfile）内完成：
 # 步骤 1 交叉编译环境 → 步骤 2 运行环境 → 步骤 3 Go 包环境 → 步骤 4 编译制品 →
 # 步骤 5 注入运行环境。源码在镜像构建阶段内编译，无需宿主机预编译二进制。
 #
@@ -18,13 +18,13 @@
 # 无论哪种平台组合，交叉编译都在构建环境阶段完成，不经 QEMU 模拟执行。
 #
 # 用法：
-#   deploys/build/docker-image.sh v1.2.3                                # 本机架构，zhongkui:v1.2.3
-#   VARIANT=slim deploys/build/docker-image.sh v1.2.3                     # zhongkui:v1.2.3-slim
-#   PLATFORMS=linux/arm64 deploys/build/docker-image.sh v1.2.3            # zhongkui:v1.2.3-arm64
-#   PLATFORMS=linux/amd64 deploys/build/docker-image.sh v1.2.3            # zhongkui:v1.2.3-amd64
-#   PLATFORMS=linux/amd64,linux/arm64 deploys/build/docker-image.sh v1.2.3 --push
-#   IMAGE=zhongkui:latest deploys/build/docker-image.sh v1.2.3
-#   deploys/build/docker-image.sh v1.2.3 --no-cache --progress=plain
+#   deploys/scripts/core-docker-image.sh v1.2.3                                # 本机架构，zhongkui:v1.2.3
+#   VARIANT=slim deploys/scripts/core-docker-image.sh v1.2.3                     # zhongkui:v1.2.3-slim
+#   PLATFORMS=linux/arm64 deploys/scripts/core-docker-image.sh v1.2.3            # zhongkui:v1.2.3-arm64
+#   PLATFORMS=linux/amd64 deploys/scripts/core-docker-image.sh v1.2.3            # zhongkui:v1.2.3-amd64
+#   PLATFORMS=linux/amd64,linux/arm64 deploys/scripts/core-docker-image.sh v1.2.3 --push
+#   IMAGE=zhongkui:latest deploys/scripts/core-docker-image.sh v1.2.3
+#   deploys/scripts/core-docker-image.sh v1.2.3 --no-cache --progress=plain
 #
 # 参数：第一个参数为版本号（也可用环境变量 VERSION），其余参数原样传给 docker build(x)。
 # 退出码：0 成功；1 失败。
@@ -39,13 +39,13 @@ if [ $# -gt 0 ]; then
 fi
 
 if [ -z "$VERSION" ]; then
-	echo "ERROR: 请设置版本号，例如: deploys/build/docker-image.sh v1.2.3" >&2
+	echo "ERROR: 请设置版本号，例如: deploys/scripts/core-docker-image.sh v1.2.3" >&2
 	exit 1
 fi
 
 VARIANT="${VARIANT:-normal}"
-if [ "$VARIANT" != "slim" ] && [ "$VARIANT" != "normal" ] && [ "$VARIANT" != "all" ]; then
-	echo "ERROR: VARIANT 只支持 normal / slim / all，当前值: $VARIANT" >&2
+if [ "$VARIANT" != "slim" ] && [ "$VARIANT" != "normal" ]; then
+	echo "ERROR: VARIANT 只支持 normal / slim，当前值: $VARIANT" >&2
 	exit 1
 fi
 
@@ -63,12 +63,11 @@ if [ -n "$PLATFORMS" ]; then
 	done
 fi
 
-# 默认 tag：normal 无后缀，slim 追加 -slim，all 追加 -all；
+# 默认 tag：normal 无后缀，slim 追加 -slim；
 # 显式指定单平台（PLATFORMS）时再追加架构后缀，避免与构建机原生架构的镜像 tag 相互覆盖。
 default_tag="zhongkui:${VERSION}"
 case "$VARIANT" in
   slim) default_tag="${default_tag}-slim" ;;
-  all)  default_tag="${default_tag}-all" ;;
 esac
 if [ -n "$PLATFORMS" ] && [[ "$PLATFORMS" != *,* ]]; then
 	platform_arch="${PLATFORMS#*/}"
@@ -100,7 +99,7 @@ fi
 scripts/validate-semver.sh "$VERSION" || exit 1
 
 "${build_cmd[@]}" "$@" \
-	-f deploys/build/core.Dockerfile \
+	-f deploys/local/core.Dockerfile \
 	--build-arg IMAGE_VARIANT="$VARIANT" \
 	--build-arg VERSION="$VERSION" \
 	--build-arg COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)" \

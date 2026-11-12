@@ -7,7 +7,11 @@
 .vscode
 bin
 tmp
-dist
+# dist/ 下的构建产物（远程构建需要 dist/bin/ 中的预制二进制，保留该子目录；
+# dist/build.env 与打包产物不进上下文，避免本地构建 COPY 层缓存失效）
+dist/build.env
+dist/*.tar.gz
+dist/*.sha256
 node_modules
 web/node_modules
 docs/node_modules

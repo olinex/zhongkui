@@ -22,7 +22,6 @@ export REPORT_ROOT REPORT_DIR GOLANG_REPORT_DIR
 
 .PHONY: build
 .PHONY: build-check
-.PHONY: build-image
 .PHONY: build-release
 .PHONY: ci
 .PHONY: clean
@@ -44,7 +43,7 @@ export REPORT_ROOT REPORT_DIR GOLANG_REPORT_DIR
 # 版本号规则:
 #   - 正式版本: vX.Y.Z（示例: v1.2.3）
 #   - 预发布版本: vX.Y.Z-{alpha|beta|rc}.n（示例: v1.2.3-alpha.1, v1.2.3-rc.2）
-#   - 版本号唯一来源是 annotated tag，由 scripts/release.sh 创建
+#   - 版本号唯一来源是 annotated tag，由 scripts/gitflow.sh release finish 创建
 #   - 开发构建不注入 SemVer，版本显示回落为 commit hash，如 "c2d4d21"
 #   - Release 构建必须显式指定 VERSION，如 make build-release VERSION=v1.2.3-rc.1
 #
@@ -138,7 +137,7 @@ endif
 
 # 编译参数全局统一：所有二进制产物都使用 -trimpath + 剥离符号，
 # 入口之间只允许版本信息（DEV / RELEASE）与输出路径不同。
-#   OUT      产物路径（镜像构建由 deploys/build/core.Dockerfile 的 build 阶段指定 /out/zki）
+#   OUT      产物路径（镜像构建由 deploys/local/core.Dockerfile 的 build 阶段指定 /out/zki）
 #   LDFLAGS  链接参数（版本信息注入；-s -w 属于链接参数）
 OUT ?= bin/zki
 LDFLAGS ?= -s -w $(DEV_LDFLAGS)
@@ -154,25 +153,25 @@ build: $(BUILD_DEPS)
 	@$(GO_BUILD)
 
 # build-release - 编译 release 版本 (需手动指定语义化版本号，正式版和预发布版均支持)
-# 镜像构建由 deploys/build/core.Dockerfile 的 build 阶段完成：编译参数与本目标一致，
-# 区别是复用仓库内已提交的 RAG 快照、不在构建环境内按需重烘焙
+# 与 make build 的区别：
+#   - RELEASE_LDFLAGS 注入 SemVer（DEV_LDFLAGS 只注入 commit）
+#   - 不触发 $(BUILD_DEPS) 的 RAG 快照烘焙
+#
+#   快照烘焙由外层（调用方）自行决定：
+#     本地 release 打包: scripts/dist.sh → 调用前确保快照已烘焙（make rag-snapshot 或 git 提交）
+#     Dockerfile / CI : 快照应已由仓库提交；CI docs-check 在合入前把关一致性
+#   快照不存在时 go build 会因 embed 报错，外层脚本会给出友好提示。
+#
 # 用法: make build-release VERSION=v1.2.3  或  make build-release VERSION=v1.2.3-alpha.1
+#       make build-release VERSION=v1.2.3 OUT=/custom/path/zki
 build-release: OUT := bin/zki
 build-release: LDFLAGS := -s -w $(RELEASE_LDFLAGS)
-build-release: $(BUILD_DEPS)
+build-release:
 	@if [ "$(VERSION)" != "unknown" ]; then scripts/validate-semver.sh "$(VERSION)"; fi
 	@$(GO_BUILD)
 
-# build-image - 镜像构建专用编译目标：只编译二进制，复用仓库内已提交的 RAG 快照
-# 与 build-release 的唯一区别是跳过 $(BUILD_DEPS) 的按需重烘焙：镜像构建环境没有增量编译优势，
-# 重新烘焙快照只会拖慢镜像构建，而快照内容与 CPU 架构无关。
-# 快照与应用代码的一致性由 CI 的 docs-check（make ci-report）在合入前把关。
-# 用法: make build-image（由 deploys/build/core.Dockerfile 的 build 阶段调用，OUT 为 /out/zki）
-build-image: LDFLAGS := -s -w $(RELEASE_LDFLAGS)
-build-image:
-	@test -f $(RAG_SNAPSHOT) || { echo "ERROR: 缺少已提交的 RAG 快照 $(RAG_SNAPSHOT)" >&2; exit 1; }
-	@if [ "$(VERSION)" != "unknown" ]; then scripts/validate-semver.sh "$(VERSION)"; fi
-	@$(GO_BUILD)
+# build-image 已删除：原来的职责（跳过 BUILD_DEPS，不烘焙快照）现在由 build-release
+# 统一承担——build-release 不再依赖 $(BUILD_DEPS)，外层脚本自行保证快照就绪。
 
 # version-env - 只生成 dist/build.env（VERSION/COMMIT/BUILD_TIME/BUILDER），不编译任何产物
 # scripts/dist.sh 与 Dockerfile 构建阶段都直接调用本目标，避免各自重复实现版本元数据生成

@@ -4,7 +4,7 @@
 #
 # 在分支保护（master / develop / release/* 仅允许 PR）前提下，把常见的
 # 分支创建、远程同步、推送与 Gitee 对比页跳转组合成一条命令。
-# 脚本不替代 scripts/release.sh / make ci，只负责需要人工决策以外的重复动作。
+# 发布前检查（CHANGELOG / web/package.json 对齐 + make ci）与打标签由 finalize_release 统一负责。
 #
 # 用法: scripts/gitflow.sh help
 
@@ -34,6 +34,31 @@ fi
 info() { printf '%s==>%s %s\n' "$C_INFO" "$C_RESET" "$*"; }
 warn() { printf '%s警告:%s %s\n' "$C_WARN" "$C_RESET" "$*" >&2; }
 die() { printf '%s错误:%s %s\n' "$C_ERR" "$C_RESET" "$*" >&2; exit 1; }
+
+# ensure_utf8_locale 交互输入前置检查：
+# readline 依据 locale 识别多字节字符边界，非 UTF-8 时中文按字节退格，会出现删不干净。
+ensure_utf8_locale() {
+	local locale_value="${LC_ALL:-${LC_CTYPE:-${LANG:-}}}"
+	case "$locale_value" in
+		*[Uu][Tt][Ff]-8* | *[Uu][Tt][Ff]8*) return 0 ;;
+	esac
+	warn "locale 不是 UTF-8（当前: ${locale_value:-未设置}），中文退格可能异常"
+	printf '  建议先执行: export LANG=zh_CN.UTF-8\n'
+}
+
+# prompt_read <变量名> <提示语>
+# 交互输入统一入口，修正两个终端行编辑问题：
+#   1. read -e 启用 readline，退格按 Unicode 字符而非字节处理，中文一次删净；
+#   2. 提示语交给 -p 由 readline 统一管理，重绘时光标不会越过提示语起点，
+#      左侧说明文字不会被退格吞掉（原来的 printf + read -r 组合会把两者割裂）。
+prompt_read() {
+	local __var="$1" __prompt="$2"
+	if [ -t 0 ]; then
+		read -e -r -p "$__prompt" "$__var"
+	else
+		read -r "$__var"
+	fi
+}
 
 usage() {
 	cat <<'EOF'
@@ -135,7 +160,7 @@ validate_name() {
 		die "分支名 '$1' 不符合 Git 引用格式"
 }
 
-# validate_semver 只做入参的粗校验，完整版本规则与发布前检查由 scripts/release.sh 负责
+# validate_semver 只做入参的粗校验，完整版本规则与发布前检查由 create_release_tag 负责
 validate_semver() {
 	printf '%s' "$1" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$' ||
 		die "版本号 '$1' 不是合法 SemVer，示例: v1.2.3 或 v1.2.3-rc.1"
@@ -208,9 +233,12 @@ url_encode() {
 	printf '%s' "$1" | sed 's|/|%2F|g'
 }
 
-# pr_url 根据 origin 地址推导 Gitee 对比页，支持 SSH 与 HTTPS 两种远程写法
+# pr_url 根据 origin 地址推导 Gitee Pull Request 创建页，支持 SSH 与 HTTPS 两种远程写法。
+# Gitee 的创建页形如 /{owner}/{repo}/pull/new/{owner}:{source}...{owner}:{target}，
+# `...` 左侧为源分支（head），右侧为目标分支（base）；两侧分支都必须带 owner 前缀
+# （同仓库 PR 同样如此），否则只会落到仓库首页。
 pr_url() {
-	local base="$1" head="$2" remote_url url rest host path
+	local base="$1" head="$2" remote_url url rest host path owner
 	remote_url=$(git remote get-url "$REMOTE" 2>/dev/null || true)
 	[ -n "$remote_url" ] || {
 		warn "未找到远程 $REMOTE"
@@ -235,7 +263,10 @@ pr_url() {
 			;;
 	esac
 	host=${host%%:*}
-	printf 'https://%s/%s/compare/%s...%s\n' "$host" "$path" "$(url_encode "$base")" "$(url_encode "$head")"
+	owner=${path%/*}
+	[ "$owner" != "$path" ] || owner="$path"
+	printf 'https://%s/%s/pull/new/%s:%s...%s:%s\n' \
+		"$host" "$path" "$owner" "$(url_encode "$head")" "$owner" "$(url_encode "$base")"
 }
 
 open_url() {
@@ -277,8 +308,7 @@ choose_commit_type() {
 	printf '   9) ci       CI 配置\n'
 	printf '  10) chore    杂项\n'
 	printf '  11) revert   回滚\n'
-	printf '类型编号或名称: '
-	read -r answer
+	prompt_read answer '类型编号或名称: '
 	case "$answer" in
 		1) CHOSEN_TYPE=feat ;;
 		2) CHOSEN_TYPE=fix ;;
@@ -414,29 +444,25 @@ commit_cmd() {
 		interactive=1
 	fi
 	if [ "$interactive" -eq 1 ]; then
+		ensure_utf8_locale
 		if [ -z "$type" ]; then
 			choose_commit_type
 			type="$CHOSEN_TYPE"
 		fi
 		if [ -z "$scope" ]; then
-			printf '作用域（可留空）: '
-			read -r scope
+			prompt_read scope '作用域（可留空）: '
 		fi
 		if [ -z "$subject" ]; then
-			printf '提交主题（祈使句，结尾不加句号）: '
-			read -r subject
+			prompt_read subject '提交主题（祈使句，结尾不加句号）: '
 		fi
 		if [ -z "$body" ]; then
-			printf '正文（可留空）: '
-			read -r body
+			prompt_read body '正文（可留空）: '
 		fi
 		if [ -z "$breaking" ]; then
-			printf '破坏性变更说明（可留空）: '
-			read -r breaking
+			prompt_read breaking '破坏性变更说明（可留空）: '
 		fi
 		if [ -z "$issues" ]; then
-			printf '关联 Issue（可留空，如 12,#34）: '
-			read -r issues
+			prompt_read issues '关联 Issue（可留空，如 12,#34）: '
 		fi
 	fi
 
@@ -478,8 +504,7 @@ $footer"
 		if [ ! -t 0 ]; then
 			die "非交互环境请加 -y 确认提交"
 		fi
-		printf '确认提交？[y/N] '
-		read -r answer
+		prompt_read answer '确认提交？[y/N] '
 		case "$answer" in
 			y | Y | yes | YES) ;;
 			*) die "已取消提交" ;;
@@ -506,6 +531,41 @@ feature_start() {
 	printf '  完成开发后执行: scripts/gitflow.sh feature finish\n'
 }
 
+# cleanup_feature_branch 推送完成后询问是否清理本地分支：
+# 远程分支必须保留（PR 尚未合并），只删除本地 feature 分支与远程跟踪引用
+# refs/remotes/<remote>/<branch>；删除当前分支前先切回 develop。
+cleanup_feature_branch() {
+	local branch="$1" answer
+	if [ ! -t 0 ]; then
+		printf '  如需清理本地分支执行: git checkout %s && git branch -D %s && git branch -dr %s/%s\n' \
+			"$DEVELOP" "$branch" "$REMOTE" "$branch"
+		return 0
+	fi
+	prompt_read answer "是否删除本地分支 ${branch} 与远程跟踪引用 ${REMOTE}/${branch}？[y/N] "
+	case "$answer" in
+		y | Y | yes | YES) ;;
+		*)
+			info "已保留本地分支 ${branch}"
+			return 0
+			;;
+	esac
+	if branch_exists_local "$DEVELOP"; then
+		git checkout "$DEVELOP"
+	elif branch_exists_remote "$DEVELOP"; then
+		git checkout -b "$DEVELOP" --track "$REMOTE/$DEVELOP"
+	else
+		die "本地与远程都不存在 ${DEVELOP}，请手动切换分支后再删除 ${branch}"
+	fi
+	git branch -D "$branch"
+	info "已删除本地分支 $branch"
+	if branch_exists_remote "$branch"; then
+		git branch -dr "$REMOTE/$branch" >/dev/null 2>&1 || true
+		info "已删除远程跟踪引用 $REMOTE/$branch"
+	fi
+	printf '  远程分支 %s/%s 保留供 PR 使用；合并后可执行 scripts/gitflow.sh clean -r 清理\n' \
+		"$REMOTE" "$branch"
+}
+
 feature_finish() {
 	local branch base="$DEVELOP" ahead
 	branch=$(require_topic_branch feature)
@@ -515,6 +575,7 @@ feature_finish() {
 	[ "$ahead" -gt 0 ] || warn "当前分支相对 $REMOTE/$base 没有新提交，PR 可能为空"
 	push_branch "$branch"
 	print_pr "$base" "$branch"
+	cleanup_feature_branch "$branch"
 	printf '  合并前确认 make ci 通过、PR 模板检查项已勾选\n'
 }
 
@@ -638,6 +699,24 @@ print_backmerge_pr() {
 	print_pr "$DEVELOP" "$MASTER"
 }
 
+# create_release_tag 在 master 上完成发布前检查并创建 annotated tag：
+# 校验完整 SemVer、CHANGELOG 版本段与 web/package.json 对齐，执行 make ci 后打标签。
+create_release_tag() {
+	local version="$1" number="${1#v}"
+	[ "$(current_branch)" = "$MASTER" ] ||
+		die "创建发布标签必须在 ${MASTER} 分支上进行"
+	require_clean
+	scripts/validate-semver.sh "$version" || die "版本号 $version 不合规"
+	grep -Fq "## [$number] - " CHANGELOG.md ||
+		die "CHANGELOG.md 缺少 '## [$number] - YYYY-MM-DD' 版本段"
+	grep -Fq "\"version\": \"$number\"" web/package.json ||
+		die "web/package.json 的 version 未对齐 $number"
+	info "执行 make ci"
+	make ci
+	git tag -a "$version" -m "zhongkui $version"
+	info "已创建标签 $version；推送: git push $REMOTE $version"
+}
+
 # finalize_release 在 release/hotfix 已合入 master 后创建标签，并打开 master → develop 回合并 PR
 finalize_release() {
 	local version="$1" tag_ref="refs/tags/$1"
@@ -649,8 +728,8 @@ finalize_release() {
 	if tag_exists "$version"; then
 		info "标签 $version 已存在，跳过创建"
 	else
-		info "执行 scripts/release.sh ${version}（含发布前检查）"
-		scripts/release.sh "$version"
+		info "执行发布前检查并创建标签 ${version}"
+		create_release_tag "$version"
 	fi
 	if git ls-remote --exit-code --tags "$REMOTE" "$tag_ref" >/dev/null 2>&1; then
 		info "标签 $version 已存在于远程"
