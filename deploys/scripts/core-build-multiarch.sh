@@ -6,6 +6,8 @@
 #   1. deploys/containers/core.Dockerfile build 阶段（--skip-apt --arch --out）：
 #      apt 由 builder 阶段完成，这里只编排单架构编译
 #   2. 宿主机手动编译（--skip-apt 不设）：apt 装依赖 + 编译两架构 → dist/bin/
+#      也可用 --arch / --target-arch 只编译单架构，apt 按目标架构按需装交叉工具链
+#      （目标与宿主相同不装，不同只装该方向，见 core-setup-build-env.sh --target-arch）
 #
 # 交叉编译逻辑与原 deploys/containers/core.Dockerfile 中 build_one 函数完全一致：
 #   宿主 amd64 → 原生编译 amd64，用 aarch64-linux-gnu-gcc 交叉编译 arm64
@@ -24,6 +26,9 @@
 #   # Dockerfile 场景：跳过 apt，只编译单一 TARGETARCH 到指定路径
 #   deploys/scripts/core-build-multiarch.sh --skip-apt --arch amd64 --out /out/zki v1.2.3
 #
+#   # 宿主机单架构编译：apt 按目标架构按需装交叉工具链（原生目标不装）
+#   deploys/scripts/core-build-multiarch.sh --target-arch arm64 --out dist/bin/zki-core-linux-arm64 v1.2.3
+#
 #   # 版本元数据支持外部覆盖（Dockerfile 通过 --build-arg 注入）
 #   COMMIT=abc123 BUILDER=ci@runner deploys/scripts/core-build-multiarch.sh v1.2.3
 #
@@ -37,13 +42,15 @@ SKIP_APT=0
 ARCH=""
 OUT=""
 
+# --arch 与 --target-arch 等价：后者与 core-setup-build-env.sh 的参数命名保持一致
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --skip-apt) SKIP_APT=1; shift ;;
-    --arch)     ARCH="$2"; shift 2 ;;
-    --out)      OUT="$2"; shift 2 ;;
-    --*)        echo "ERROR: 未知选项 $1" >&2; exit 1 ;;
-    *)          break ;;
+    --skip-apt)    SKIP_APT=1; shift ;;
+    --arch)        ARCH="$2"; shift 2 ;;
+    --target-arch) ARCH="$2"; shift 2 ;;
+    --out)         OUT="$2"; shift 2 ;;
+    --*)           echo "ERROR: 未知选项 $1" >&2; exit 1 ;;
+    *)             break ;;
   esac
 done
 
@@ -53,9 +60,15 @@ if [ -z "$VERSION" ]; then
   exit 1
 fi
 
-if [ -n "$ARCH" ] && [ -z "$OUT" ]; then
-  echo "ERROR: --arch 指定时必须同时用 --out 指定输出路径" >&2
-  exit 1
+if [ -n "$ARCH" ]; then
+  case "$ARCH" in
+    amd64 | arm64) ;;
+    *) echo "ERROR: --arch/--target-arch 仅支持 amd64 / arm64，当前: ${ARCH}" >&2; exit 1 ;;
+  esac
+  if [ -z "$OUT" ]; then
+    echo "ERROR: --arch/--target-arch 指定时必须同时用 --out 指定输出路径" >&2
+    exit 1
+  fi
 fi
 
 # ----------------------------------------------------------
@@ -84,14 +97,21 @@ make version-env \
 . ./dist/build.env
 
 # ----------------------------------------------------------
-# 2. 安装系统依赖（仅 CI 场景执行；Dockerfile builder 阶段已装）
-#    委托给 core-setup-build-env.sh，参数 --host-arch 自动探测。
+# 2. 安装系统依赖（仅宿主机场景执行；Dockerfile builder 阶段已装）
+#    委托给 core-setup-build-env.sh；指定 --arch/--target-arch 时透传，
+#    按目标架构按需安装交叉工具链。
 # ----------------------------------------------------------
 HOST_ARCH=$(go env GOARCH)
-echo ">>> 宿主架构: ${HOST_ARCH}"
+echo ">>> 宿主架构: ${HOST_ARCH}, 目标架构: ${ARCH:-<两架构全编>}"
 
 if [ "$SKIP_APT" -eq 0 ]; then
-  bash deploys/scripts/core-setup-build-env.sh --host-arch "$HOST_ARCH"
+  # 指定 --arch/--target-arch 时透传：目标与宿主相同不装交叉工具链，
+  # 不同只装该方向；未指定（双架构全编）时保持旧行为装反向交叉工具链。
+  if [ -n "$ARCH" ]; then
+    bash deploys/scripts/core-setup-build-env.sh --host-arch "$HOST_ARCH" --target-arch "$ARCH"
+  else
+    bash deploys/scripts/core-setup-build-env.sh --host-arch "$HOST_ARCH"
+  fi
 else
   echo ">>> 跳过 apt 安装（由 Dockerfile builder 阶段完成）"
 fi

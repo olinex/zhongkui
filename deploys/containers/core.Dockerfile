@@ -3,8 +3,8 @@
 # 构建上下文为仓库根目录，源码在镜像构建阶段内编译，不再依赖宿主机的 dist/bin 预编译产物。
 #
 # 五个构建步骤：
-#   步骤 1  builder  交叉编译环境：Go 工具链 + amd64 ↔ arm64 双向交叉工具链。
-#                    固定在 BUILDPLATFORM 上运行，始终原生编译，不经 QEMU。
+#   步骤 1  builder  编译环境：Go 工具链 + 按需交叉工具链（仅目标架构与构建机
+#                    不同时安装对应方向）。固定在 BUILDPLATFORM 上运行，不经 QEMU。
 #   步骤 2  runtime  最终运行环境：debian 基底、运行期依赖（libpcap0.8 / CA / 时区）与非 root 运行用户。
 #   步骤 3  deps     Go 包环境：只引入 go.mod / go.sum 并 go mod download，
 #                    依赖层与源码层分离，源码变更不会触发重新下载。
@@ -43,13 +43,16 @@ ARG GOPROXY=https://goproxy.cn,https://mirrors.aliyun.com/goproxy/,direct
 ARG IMAGE_VARIANT=normal
 
 # ============================================================
-# 步骤 1：交叉编译环境（Go 工具链 + 双向交叉工具链）
+# 步骤 1：编译环境（Go 工具链 + 按需交叉工具链）
 # ============================================================
-# 固定在构建机架构上运行，原生编译 BUILDARCH；同时预装反向架构的交叉工具链，
-# 保证后续 build 阶段在多平台构建时（--platform linux/amd64,linux/arm64）
-# 能交叉编译另一个架构：
-#   amd64 构建机 → gcc-aarch64-linux-gnu + libpcap-dev:arm64（交叉 arm64）
-#   arm64 构建机 → gcc-x86-64-linux-gnu + libpcap-dev:amd64（交叉 amd64）
+# 固定在构建机架构上运行。每次镜像构建只产出 TARGETARCH 一种架构的二进制，
+# 交叉工具链按需安装，不再预装双向工具链：
+#   TARGETARCH == BUILDARCH（本机原生构建，最常见）→ 不装任何交叉工具链
+#   TARGETARCH != BUILDARCH（buildx 指定其他平台）  → 只装该方向的交叉工具链：
+#     amd64 构建机 → arm64 目标：gcc-aarch64-linux-gnu + libpcap-dev:arm64
+#     arm64 构建机 → amd64 目标：gcc-x86-64-linux-gnu + libpcap-dev:amd64
+# 多平台构建（--platform linux/amd64,linux/arm64）时 builder 按 TARGETARCH
+# 各装配一份并分别缓存，不经 QEMU。
 FROM --platform=$BUILDPLATFORM ${GOLANG_IMAGE} AS builder
 
 ARG APT_MIRROR
@@ -62,8 +65,9 @@ COPY deploys/scripts/core-setup-build-env.sh /tmp/
 
 RUN bash /tmp/core-setup-build-env.sh \
       --host-arch "${BUILDARCH}" \
+      --target-arch "${TARGETARCH}" \
       --mirror "${APT_MIRROR}"
-# 注意：本阶段只装交叉工具链（apt），不设置任何 Go 相关 ENV。
+# 注意：本阶段只做 apt 环境准备（libpcap-dev / 按需交叉工具链），不设置任何 Go 相关 ENV。
 # Go 代理/校验（影响 go mod download 结果）放在 deps 阶段，
 # 编译参数（CGO/GOMEMLIMIT/GOFLAGS）放在 build 阶段——
 # 这样改动某类参数只会失效对应阶段的缓存，不会连带 builder 的交叉工具链层一起失效。
