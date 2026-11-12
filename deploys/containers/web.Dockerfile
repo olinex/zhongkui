@@ -52,15 +52,15 @@ FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS builder
 # 备选：https://mirrors.cloud.tencent.com/npm（腾讯云）、https://registry.npmjs.org（官方）
 ARG NPM_REGISTRY
 ARG PNPM_VERSION
-ENV npm_config_registry=${NPM_REGISTRY} \
-    npm_config_fetch_retries=5 \
-    npm_config_fetch_timeout=600000 \
-    npm_config_fetch_retry_mintimeout=10000 \
-    npm_config_fetch_retry_maxtimeout=60000
+# 只保留 corepack 装 pnpm 必须的 registry；pnpm install 的重试/超时配置下移到 deps 阶段。
+ENV npm_config_registry=${NPM_REGISTRY}
 
 # corepack + pnpm 版本固定（安装逻辑见 deploys/scripts/web-setup-env.sh）
 COPY deploys/scripts/web-setup-env.sh /tmp/
 RUN bash /tmp/web-setup-env.sh "${PNPM_VERSION}"
+# 注意：本阶段只装 pnpm，不设置 pnpm install 专用的 npm_config_fetch_* 重试参数——
+# 那些参数只在 deps 阶段真正执行 pnpm install 时才需要，
+# 提前放在 builder 会导致 CI 改超时配置时连带让本层缓存也失效。
 
 WORKDIR /src
 
@@ -80,6 +80,13 @@ EXPOSE 80
 # 控制台与文档站是两个独立的 pnpm 项目，各自只引入清单与锁文件后安装依赖。
 FROM builder AS deps
 
+# pnpm install 的重试/超时配置只在本阶段真正执行 install 时才需要，
+# 放在 builder 顶部会让 CI 改超时配置时连带使 corepack 装 pnpm 的层也失效。
+ENV npm_config_fetch_retries=5 \
+    npm_config_fetch_timeout=600000 \
+    npm_config_fetch_retry_mintimeout=10000 \
+    npm_config_fetch_retry_maxtimeout=60000
+
 COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./web/
 COPY docs/package.json docs/pnpm-lock.yaml ./docs/
 COPY deploys/scripts/web-build.sh /tmp/
@@ -98,17 +105,25 @@ ARG VITE_ZHONGKUI_BASE_URL
 ARG VITE_DOCS_URL
 ARG DOCS_BASE
 ARG DOCS_CONSOLE_URL
-
-ENV VITE_ZHONGKUI_BASE_URL=${VITE_ZHONGKUI_BASE_URL} \
-    VITE_DOCS_URL=${VITE_DOCS_URL} \
-    DOCS_BASE=${DOCS_BASE} \
-    DOCS_CONSOLE_URL=${DOCS_CONSOLE_URL} \
-    DOCS_LAST_UPDATED=false
+# Node 编译堆上限（可选）：CI 小内存机器上压低 Vite/VitePress 堆峰值，
+# 默认 web-build.sh 已内置 --max-old-space-size=3072，这里允许外部覆盖。
+ARG NODE_OPTIONS
 
 COPY . .
 
-# 串行执行两份生产构建（脚本内已固定顺序，避免并发触发 OOM）
-RUN WEB_ROOT=/src bash /tmp/web-build.sh --build
+# 构建期 ENV 放在 COPY . . 之后、build 之前，
+# 这样 VITE_* / NODE_OPTIONS 变更只失效本层及之后的 build，
+# 不影响上方 COPY . . 与 deps 阶段的 pnpm install 缓存。
+ENV VITE_ZHONGKUI_BASE_URL=${VITE_ZHONGKUI_BASE_URL} \
+    VITE_DOCS_URL=${VITE_DOCS_URL} \
+    DOCS_BASE=${DOCS_BASE} \
+    DOCS_CONSOLE_URL=${DOCS_CONSOLE_URL}
+
+# DOCS_LAST_UPDATED=false 是静态默认值（构建上下文不含 .git），
+# 直接内联到 RUN 中，不产生独立 ENV 层。
+# NODE_OPTIONS 通过 build-arg 传入，未传时 web-build.sh 用默认值。
+RUN WEB_ROOT=/src NODE_OPTIONS="${NODE_OPTIONS:-}" DOCS_LAST_UPDATED=false \
+    bash /tmp/web-build.sh --build
 
 # ============================================================
 # 步骤 5：把制品注入最终运行环境
