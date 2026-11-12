@@ -53,7 +53,6 @@ ARG IMAGE_VARIANT=normal
 FROM --platform=$BUILDPLATFORM ${GOLANG_IMAGE} AS builder
 
 ARG APT_MIRROR
-ARG GOPROXY
 # BUILDARCH / TARGETARCH 由 BuildKit 自动注入（构建机架构 / 目标架构）。
 ARG BUILDARCH
 ARG TARGETARCH
@@ -64,10 +63,10 @@ COPY deploys/scripts/core-setup-build-env.sh /tmp/
 RUN bash /tmp/core-setup-build-env.sh \
       --host-arch "${BUILDARCH}" \
       --mirror "${APT_MIRROR}"
-
-ENV GOPROXY=${GOPROXY} \
-    GOSUMDB=sum.golang.google.cn \
-    CGO_ENABLED=1
+# 注意：本阶段只装交叉工具链（apt），不设置任何 Go 相关 ENV。
+# Go 代理/校验（影响 go mod download 结果）放在 deps 阶段，
+# 编译参数（CGO/GOMEMLIMIT/GOFLAGS）放在 build 阶段——
+# 这样改动某类参数只会失效对应阶段的缓存，不会连带 builder 的交叉工具链层一起失效。
 
 # ============================================================
 # 步骤 2：最终运行环境（目标架构）
@@ -91,6 +90,12 @@ RUN bash /tmp/core-setup-runtime-env.sh --mirror "${APT_MIRROR}"
 # 只引入 go.mod / go.sum：依赖不变时该层直接命中缓存，源码变更不会触发重新下载。
 FROM builder AS deps
 
+ARG GOPROXY
+# go mod download 需要代理与校验服务；放在这里而非 builder 顶部，
+# 是为了让 CI 切换 GOPROXY 时只失效本阶段及之后的缓存，不牵连 builder 的 apt 交叉工具链层。
+ENV GOPROXY=${GOPROXY} \
+    GOSUMDB=sum.golang.google.cn
+
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -112,12 +117,24 @@ ARG COMMIT=unknown
 ARG BUILDER=docker
 ARG BUILDARCH
 ARG TARGETARCH
+# 仅 go build 需要的编译参数。ARG 不产生层，放这里声明；
+# 对应的 ENV 下移到 go build 执行前（见下方），
+# 使 GOFLAGS/GOMEMLIMIT 变更只失效 go build，不影响 COPY . . 与 go mod download 缓存。
+ARG GOMEMLIMIT=off
+ARG GOFLAGS
 
 COPY . .
 
 # COPY 会用仓库里的 go.sum 覆盖步骤 3 生成的校验和文件，这里基于已下载的模块缓存
 # 重新补齐 go.sum，保证后续 go build（默认 -mod=readonly）不会因缺少校验和而失败。
 RUN go mod download
+
+# 仅 go build 阶段需要的编译参数 ENV 放在此处，紧邻 go build：
+# 变更 CGO_ENABLED / GOMEMLIMIT / GOFLAGS 只失效本层及其后的 go build，
+# 不影响上方 COPY . . 与 go mod download 的缓存。
+ENV CGO_ENABLED=1 \
+    GOMEMLIMIT=${GOMEMLIMIT} \
+    GOFLAGS=${GOFLAGS}
 
 # 复用仓库脚本 deploys/scripts/core-build-multiarch.sh：版本生成 + 按架构编排 CC/CGO 交叉编译参数。
 # --skip-apt 跳过 apt 安装（builder 阶段已预装交叉工具链），
