@@ -38,6 +38,7 @@ stages:
     displayName: core arm64 amd64 构建
     golangVersion: "1.27"
     commands:
+    - "set -euo pipefail"
     - "# 1. 安装交叉编译工具链"
     - bash deploys/scripts/core-setup-build-env.sh --host-arch "$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"
     - ""
@@ -81,10 +82,8 @@ stages:
     displayName: web 构建
     nodeVersion: 26.12.1
     commands:
-    - corepack enable
-    - corepack prepare pnpm@10.34.9 --activate
-    - pnpm config set store-dir /pnpm-store
     - "export npm_config_registry=\"${NPM_MIRROR}\""
+    - bash deploys/scripts/web-setup-env.sh 10.34.9
     - export DOCS_LAST_UPDATED=false
     - export VITE_ZHONGKUI_BASE_URL=/api/v1
     - export VITE_DOCS_URL=/docs/
@@ -105,8 +104,7 @@ stages:
       - ./dist
       type: .tar.gz
     caches:
-    - "~/.npm"
-    - /pnpm-store
+    - ~/.local/share/pnpm
     strategy:
       retry: "0"
       resource:
