@@ -43,6 +43,36 @@ ARG GOPROXY=https://goproxy.cn,https://mirrors.aliyun.com/goproxy/,direct
 ARG IMAGE_VARIANT=normal
 
 # ============================================================
+# 长耗时命令的构建缓存目录（BuildKit cache mount，--build-arg 可外部定制）
+# ============================================================
+# apt-get（索引 + .deb）、go mod download、go build 三类长耗时命令的缓存目录以
+# RUN --mount=type=cache 挂载：内容只存放在 BuildKit 的缓存存储中，不进入镜像层，
+# 依赖/源码变更重建时命中缓存，跳过重复下载与全量编译（编译缓存命中后 go build 分钟级 → 秒级）。
+# 生效方式：
+#   Go   → 路径同时写入 deps 阶段的 GOCACHE / GOMODCACHE，保证 go 命令真正读写挂载目录；
+#   apt  → 路径经 APT_CONFIG 重定向：Debian 基底镜像 docker-clean 的清理钩子只 rm 标准路径
+#          /var/cache/apt/archives（实测确认），清不到重定向后的缓存；
+#          同时给 setup 脚本传 --keep-lists，跳过对 lists 的手动清理（缓存不进镜像层，无需清理）；
+#   pnpm → 见 web.Dockerfile 的 PNPM_STORE_DIR（两者机制一致）。
+# 注意：
+#   - 缓存 ID 默认取挂载路径，修改路径 = 更换缓存分区，新路径首次构建为冷缓存，
+#     旧缓存仍留在 BuildKit 存储中（docker builder prune 可清理）；
+#   - --no-cache 会连 cache mount 一起忽略（完全冷构建）。
+# 定制示例（构建机把缓存集中到独立数据盘；core-docker-image.sh 会透传其余参数，
+# 也可直接追加 --build-arg）：
+#   docker buildx build -f deploys/containers/core.Dockerfile \
+#     --build-arg GO_BUILD_CACHE_DIR=/mnt/cache/go-build \
+#     --build-arg GO_MODULE_CACHE_DIR=/mnt/cache/go-mod \
+#     --build-arg APT_LISTS_CACHE_DIR=/mnt/cache/apt-lists \
+#     --build-arg APT_ARCHIVE_CACHE_DIR=/mnt/cache/apt-archives \
+#     --build-arg VERSION=v1.2.3 -t zhongkui:local --load .
+# 默认值与 core-build-multiarch.sh 的约定一致（Go 缓存固定到 /go 下）。
+ARG GO_BUILD_CACHE_DIR=/go/go-build
+ARG GO_MODULE_CACHE_DIR=/go/pkg/mod
+ARG APT_LISTS_CACHE_DIR=/var/lib/apt/lists
+ARG APT_ARCHIVE_CACHE_DIR=/var/cache/apt/archives
+
+# ============================================================
 # 步骤 1：编译环境（Go 工具链 + 按需交叉工具链）
 # ============================================================
 # 固定在构建机架构上运行。每次镜像构建只产出 TARGETARCH 一种架构的二进制，
@@ -59,14 +89,27 @@ ARG APT_MIRROR
 # BUILDARCH / TARGETARCH 由 BuildKit 自动注入（构建机架构 / 目标架构）。
 ARG BUILDARCH
 ARG TARGETARCH
+# apt 缓存目录（全局 ARG 的本阶段重声明，路径说明见顶部）
+ARG APT_LISTS_CACHE_DIR
+ARG APT_ARCHIVE_CACHE_DIR
 
 # 把脚本提前 COPY 进来，才能在本层调用；脚本体积 < 4KB，不影响层缓存大小。
 COPY deploys/scripts/core-setup-build-env.sh /tmp/
 
-RUN bash /tmp/core-setup-build-env.sh \
+# apt 索引与 .deb 下载目录挂载为 cache mount（sharing=locked：多平台构建会并行执行本层，
+# 加锁避免并发写坏缓存）。APT_CONFIG 把 apt 的 lists / archives 目录重定向到挂载点
+# （--build-arg 可定制路径），docker-clean 的清理钩子清不到重定向后的缓存；
+# --keep-lists 跳过脚本末尾对 lists 的 rm（缓存不进镜像层，无需清理）。
+RUN --mount=type=cache,target=${APT_LISTS_CACHE_DIR},sharing=locked \
+    --mount=type=cache,target=${APT_ARCHIVE_CACHE_DIR},sharing=locked \
+    printf 'Dir::State::lists "%s";\nDir::Cache::archives "%s";\n' \
+      "${APT_LISTS_CACHE_DIR}" "${APT_ARCHIVE_CACHE_DIR}" > /tmp/apt-cache.conf \
+    && APT_CONFIG=/tmp/apt-cache.conf bash /tmp/core-setup-build-env.sh \
       --host-arch "${BUILDARCH}" \
       --target-arch "${TARGETARCH}" \
-      --mirror "${APT_MIRROR}"
+      --mirror "${APT_MIRROR}" \
+      --keep-lists \
+    && rm -f /tmp/apt-cache.conf
 # 注意：本阶段只做 apt 环境准备（libpcap-dev / 按需交叉工具链），不设置任何 Go 相关 ENV。
 # Go 代理/校验（影响 go mod download 结果）放在 deps 阶段，
 # 编译参数（CGO/GOMEMLIMIT/GOFLAGS）放在 build 阶段——
@@ -80,13 +123,24 @@ RUN bash /tmp/core-setup-build-env.sh \
 FROM ${RUNTIME_IMAGE} AS runtime
 
 ARG APT_MIRROR
+# apt 缓存目录（全局 ARG 的本阶段重声明，路径说明见顶部）
+ARG APT_LISTS_CACHE_DIR
+ARG APT_ARCHIVE_CACHE_DIR
 
 COPY deploys/scripts/core-setup-runtime-env.sh /tmp/
 
 # gosu 用于 normal 变体降权（比 sudo 轻量）；libcap2-bin 提供 setcap，
 # 给 zki 二进制授予抓包所需的 CAP_NET_RAW/CAP_NET_ADMIN，让非 root 用户也能抓包。
 # 实际安装 + 用户创建委托给 core-setup-runtime-env.sh。
-RUN bash /tmp/core-setup-runtime-env.sh --mirror "${APT_MIRROR}"
+# apt 缓存目录处理与 builder 阶段一致：cache mount + APT_CONFIG 重定向 + --keep-lists。
+RUN --mount=type=cache,target=${APT_LISTS_CACHE_DIR},sharing=locked \
+    --mount=type=cache,target=${APT_ARCHIVE_CACHE_DIR},sharing=locked \
+    printf 'Dir::State::lists "%s";\nDir::Cache::archives "%s";\n' \
+      "${APT_LISTS_CACHE_DIR}" "${APT_ARCHIVE_CACHE_DIR}" > /tmp/apt-cache.conf \
+    && APT_CONFIG=/tmp/apt-cache.conf bash /tmp/core-setup-runtime-env.sh \
+      --mirror "${APT_MIRROR}" \
+      --keep-lists \
+    && rm -f /tmp/apt-cache.conf
 
 # ============================================================
 # 步骤 3：Go 包环境（依赖层独立缓存）
@@ -95,14 +149,24 @@ RUN bash /tmp/core-setup-runtime-env.sh --mirror "${APT_MIRROR}"
 FROM builder AS deps
 
 ARG GOPROXY
+# Go 缓存目录（全局 ARG 的本阶段重声明，路径说明见顶部）。
+ARG GO_BUILD_CACHE_DIR
+ARG GO_MODULE_CACHE_DIR
 # go mod download 需要代理与校验服务；放在这里而非 builder 顶部，
 # 是为了让 CI 切换 GOPROXY 时只失效本阶段及之后的缓存，不牵连 builder 的 apt 交叉工具链层。
+# GOCACHE / GOMODCACHE 钉到 cache mount 的挂载路径（--build-arg 可定制）：
+# 依赖与编译缓存只写入 BuildKit 缓存存储，不再进入镜像层；
+# 后续 build 阶段重新挂载同一目录即可读取（ENV 随 FROM deps 继承）。
 ENV GOPROXY=${GOPROXY} \
-    GOSUMDB=sum.golang.google.cn
+    GOSUMDB=sum.golang.google.cn \
+    GOCACHE=${GO_BUILD_CACHE_DIR} \
+    GOMODCACHE=${GO_MODULE_CACHE_DIR}
 
 WORKDIR /src
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=${GOCACHE},sharing=shared \
+    --mount=type=cache,target=${GOMODCACHE},sharing=shared \
+    go mod download
 
 # ============================================================
 # 步骤 4：引入源码并构建制品
@@ -131,7 +195,10 @@ COPY . .
 
 # COPY 会用仓库里的 go.sum 覆盖步骤 3 生成的校验和文件，这里基于已下载的模块缓存
 # 重新补齐 go.sum，保证后续 go build（默认 -mod=readonly）不会因缺少校验和而失败。
-RUN go mod download
+# 模块缓存已移入 cache mount（deps 层不再留存文件），本层须重新挂载同一目录才能命中。
+RUN --mount=type=cache,target=${GOCACHE},sharing=shared \
+    --mount=type=cache,target=${GOMODCACHE},sharing=shared \
+    go mod download
 
 # 仅 go build 阶段需要的编译参数 ENV 放在此处，紧邻 go build：
 # 变更 CGO_ENABLED / GOMEMLIMIT / GOFLAGS 只失效本层及其后的 go build，
@@ -143,7 +210,12 @@ ENV CGO_ENABLED=1 \
 # 复用仓库脚本 deploys/scripts/core-build-multiarch.sh：版本生成 + 按架构编排 CC/CGO 交叉编译参数。
 # --skip-apt 跳过 apt 安装（builder 阶段已预装交叉工具链），
 # --arch / --out 指定 TARGETARCH 到 /out/zki。
-RUN COMMIT="${COMMIT}" BUILDER="${BUILDER}" \
+# 挂载与 deps 阶段相同的 GOCACHE / GOMODCACHE 缓存（ENV 已随 FROM deps 继承）：
+# 源码变更重建时命中编译缓存，go build 由分钟级降到秒级；
+# 脚本内 export GOMODCACHE="${GOMODCACHE:-...}" 会沿用本阶段 ENV，路径定制对编译同样生效。
+RUN --mount=type=cache,target=${GOCACHE},sharing=shared \
+    --mount=type=cache,target=${GOMODCACHE},sharing=shared \
+    COMMIT="${COMMIT}" BUILDER="${BUILDER}" \
     bash deploys/scripts/core-build-multiarch.sh \
       --skip-apt \
       --arch "${TARGETARCH}" \
