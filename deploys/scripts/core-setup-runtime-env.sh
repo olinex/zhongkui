@@ -3,7 +3,7 @@
 # core-setup-runtime-env.sh - zki 运行时环境安装（libpcap0.8 + gosu + setcap + 非 root 用户）
 #
 # 覆盖所有"构建运行时基底"的场景：
-#   deploys/containers/core.Dockerfile runtime 阶段（normal/slim 变体共用）
+#   deploys/containers/normal.Dockerfile runtime 阶段
 #
 # Dockerfile 里这段 apt 安装 + 用户创建原本在多处重复出现，
 # 任何一处改动都要手动同步，容易遗漏。脚本统一后只是一行调用。

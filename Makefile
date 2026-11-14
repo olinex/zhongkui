@@ -131,7 +131,7 @@ endif
 
 # 编译参数全局统一：所有二进制产物都使用 -trimpath + 剥离符号，
 # 入口之间只允许版本信息（DEV / RELEASE）与输出路径不同。
-#   OUT      产物路径（镜像构建由 deploys/containers/core.Dockerfile 的 build 阶段指定 /out/zki）
+#   OUT      产物路径（镜像构建由 deploys/containers/normal.Dockerfile 的 build 阶段指定 /out/zki）
 #   LDFLAGS  链接参数（版本信息注入；-s -w 属于链接参数）
 OUT ?= bin/zki
 LDFLAGS ?= -s -w $(DEV_LDFLAGS)
