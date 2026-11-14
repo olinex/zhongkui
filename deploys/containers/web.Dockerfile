@@ -7,7 +7,7 @@
 # 阶段按目标架构拉取 nginx 基底镜像，再 COPY 同一份制品。若不加该约束，BuildKit 会为每个目标
 # 平台各求值一次编译链，arm64 分支将以 QEMU 模拟重跑 Node 构建（实测多花约 22 分钟）。
 #
-# 五个构建步骤（与 deploys/containers/core.Dockerfile 对齐）：
+# 五个构建步骤（与 deploys/containers/normal.Dockerfile 的五步模式对齐）：
 #   步骤 1  builder   前端编译环境：Node 26 + pnpm 10（corepack 启用，镜像源可覆盖；
 #                     安装逻辑见 deploys/scripts/web-setup-env.sh）。
 #   步骤 2  runtime   最终运行环境：nginx 基底 + 运行期环境变量。
@@ -40,22 +40,6 @@ ARG VITE_ZHONGKUI_BASE_URL=/api/v1
 ARG VITE_DOCS_URL=/docs/
 ARG DOCS_BASE=/docs/
 ARG DOCS_CONSOLE_URL=/console
-
-# ============================================================
-# 长耗时命令的构建缓存目录（BuildKit cache mount，--build-arg 可外部定制）
-# ============================================================
-# pnpm install 的依赖 store 是前端镜像构建的最大耗时来源。deps 阶段把它挂载为
-# cache mount：store 内容只存放在 BuildKit 的缓存存储中、不进入镜像层，
-# 锁文件不变时 install 只需重建 node_modules 链接，耗时从分钟级降到秒级。
-# 生效方式：路径同时写入 deps 阶段的 ENV npm_config_store_dir（实测 pnpm 10 会读取该变量），
-# 保证 pnpm 真正读写挂载目录；默认值即 pnpm 10 在 root 用户下的默认 store 路径。
-# 注意：缓存 ID 默认取挂载路径，修改路径 = 更换缓存分区，新路径首次构建为冷缓存，
-# 旧缓存仍留在 BuildKit 存储中（docker builder prune 可清理）；--no-cache 会连
-# cache mount 一起忽略（完全冷构建）。
-# 定制示例：
-#   docker build -f deploys/containers/web.Dockerfile \
-#     --build-arg PNPM_STORE_DIR=/mnt/cache/pnpm-store -t zhongkui-web:local .
-ARG PNPM_STORE_DIR=/root/.local/share/pnpm/store
 
 # ============================================================
 # 步骤 1：前端编译环境（Node + pnpm）
@@ -96,27 +80,18 @@ EXPOSE 80
 # 控制台与文档站是两个独立的 pnpm 项目，各自只引入清单与锁文件后安装依赖。
 FROM builder AS deps
 
-ARG PNPM_STORE_DIR
 # pnpm install 的重试/超时配置只在本阶段真正执行 install 时才需要，
 # 放在 builder 顶部会让 CI 改超时配置时连带使 corepack 装 pnpm 的层也失效。
-# npm_config_store_dir 把 pnpm store 钉到 cache mount 的挂载路径
-# （--build-arg PNPM_STORE_DIR 可定制）；ENV 随 FROM deps 传入 build 阶段，
-# 对 vite 构建无影响（store 只在 install 时使用）。
 ENV npm_config_fetch_retries=5 \
     npm_config_fetch_timeout=600000 \
     npm_config_fetch_retry_mintimeout=10000 \
-    npm_config_fetch_retry_maxtimeout=60000 \
-    npm_config_store_dir=${PNPM_STORE_DIR}
+    npm_config_fetch_retry_maxtimeout=60000
 
 COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./web/
 COPY docs/package.json docs/pnpm-lock.yaml ./docs/
 COPY deploys/scripts/web-build.sh /tmp/
 
-# pnpm store 挂载为 cache mount：sharing=shared 允许多平台构建并行读写
-# （store 为内容寻址，并发安全）；web/ 与 docs/ 两个项目共用同一 store。
-# node_modules 与 store 的硬链接在同文件系统内创建，挂载卸载后依然有效。
-RUN --mount=type=cache,target=${PNPM_STORE_DIR},sharing=shared \
-    WEB_ROOT=/src bash /tmp/web-build.sh --deps
+RUN WEB_ROOT=/src bash /tmp/web-build.sh --deps
 
 # ============================================================
 # 步骤 4：引入源码并编译静态产物

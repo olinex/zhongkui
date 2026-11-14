@@ -2,27 +2,41 @@
 #
 # core-docker-image.sh - 构建后端镜像（支持按平台架构参数化）
 #
-# 编译器与运行环境在同一条 Dockerfile（deploys/containers/core.Dockerfile）内完成：
-# 步骤 1 交叉编译环境 → 步骤 2 运行环境 → 步骤 3 Go 包环境 → 步骤 4 编译制品 →
-# 步骤 5 注入运行环境。源码在镜像构建阶段内编译，无需宿主机预编译二进制。
+# normal 变体（deploys/containers/normal.Dockerfile）：完整编译流程，
+#   builder → runtime → deps → build → app → final-normal
+# slim 变体（deploys/containers/slim.Dockerfile）：免编译，从已构建的 normal 镜像
+#   直接 COPY zki 二进制与 default-config.toml，跑 ldd 组装动态库闭包后注入 scratch。
 #
 # 镜像变体由环境变量 VARIANT 控制（normal 或 slim，默认 normal）：
-#   normal  基于 debian:bookworm-slim 的完整镜像，保留 shell 便于排障
-#   slim    基于 scratch 的最小镜像，tag 自动追加 -slim 后缀
-# 两种变体分两次执行本脚本分别构建；IMAGE 环境变量可完全覆盖默认 tag。
+#   normal  基于 debian:bookworm-slim 的完整镜像，保留 shell 便于排障（约 97MB）
+#   slim    基于 scratch 的最小镜像，tag 自动追加 -slim 后缀（约 13MB），
+#           依赖 normal 变体已先构建并可通过 NORMAL_IMAGE 访问
+# IMAGE 环境变量可完全覆盖默认 tag。
+#
+# slim 变体前置条件：
+#   - VARIANT=slim 时脚本自动从默认 normal tag（同版本号）取 zki
+#   - 如需自定义 normal 镜像地址，设置 NORMAL_IMAGE 环境变量
+#   - 多平台构建时 NORMAL_IMAGE 必须为已推送的多架构 manifest list
 #
 # 目标平台由环境变量 PLATFORMS 控制（docker buildx 的 --platform 语法，逗号分隔）：
 #   未设置  跟随构建机原生架构，走 docker build
 #   单平台  走 docker buildx，默认追加 --load 载入本地，tag 自动追加架构后缀
 #   多平台  走 docker buildx 生成 manifest list，需自行追加 --push 或 --output
-# 无论哪种平台组合，交叉编译都在构建环境阶段完成，不经 QEMU 模拟执行。
+# 无论哪种平台组合，交叉编译都在 normal 变体的 builder 阶段完成，不经 QEMU 模拟执行。
 #
 # 用法：
+#   # normal 变体（完整编译）
 #   deploys/scripts/core-docker-image.sh v1.2.3                                # 本机架构，zhongkui:v1.2.3
-#   VARIANT=slim deploys/scripts/core-docker-image.sh v1.2.3                     # zhongkui:v1.2.3-slim
-#   PLATFORMS=linux/arm64 deploys/scripts/core-docker-image.sh v1.2.3            # zhongkui:v1.2.3-arm64
-#   PLATFORMS=linux/amd64 deploys/scripts/core-docker-image.sh v1.2.3            # zhongkui:v1.2.3-amd64
+#   PLATFORMS=linux/amd64 deploys/scripts/core-docker-image.sh v1.2.3           # zhongkui:v1.2.3-amd64
 #   PLATFORMS=linux/amd64,linux/arm64 deploys/scripts/core-docker-image.sh v1.2.3 --push
+#
+#   # slim 变体（从 normal 取 zki，免编译）
+#   VARIANT=slim deploys/scripts/core-docker-image.sh v1.2.3                    # 默认取 zhongkui:v1.2.3
+#   NORMAL_IMAGE=registry.example.com/zk:v1.2.3 \
+#     VARIANT=slim deploys/scripts/core-docker-image.sh v1.2.3                  # 指定 normal 镜像地址
+#   PLATFORMS=linux/amd64,linux/arm64 \
+#     VARIANT=slim deploys/scripts/core-docker-image.sh v1.2.3 --push
+#
 #   IMAGE=zhongkui:latest deploys/scripts/core-docker-image.sh v1.2.3
 #   deploys/scripts/core-docker-image.sh v1.2.3 --no-cache --progress=plain
 #
@@ -98,12 +112,36 @@ fi
 
 scripts/validate-semver.sh "$VERSION" || exit 1
 
+# 根据 VARIANT 选择 Dockerfile 与 build-arg
+case "$VARIANT" in
+  slim)
+    DOCKERFILE="deploys/containers/slim.Dockerfile"
+    # NORMAL_IMAGE 默认取同版本号的 local normal tag；
+    # 单 PLATFORM 场景下自动追加架构后缀（与 normal 变体 tag 规则对齐）
+    default_normal_tag="zhongkui:${VERSION}"
+    if [ -n "$PLATFORMS" ] && [[ "$PLATFORMS" != *,* ]]; then
+      platform_arch="${PLATFORMS#*/}"
+      default_normal_tag="${default_normal_tag}-${platform_arch//\//-}"
+    fi
+    NORMAL_IMAGE="${NORMAL_IMAGE:-$default_normal_tag}"
+    echo ">>> slim 变体：从 normal 镜像提取 zki -> ${NORMAL_IMAGE}"
+    build_args=(
+      --build-arg NORMAL_IMAGE="${NORMAL_IMAGE}"
+    )
+    ;;
+  normal)
+    DOCKERFILE="deploys/containers/normal.Dockerfile"
+    build_args=(
+      --build-arg VERSION="$VERSION"
+      --build-arg COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+      --build-arg BUILDER="$(whoami)"
+    )
+    ;;
+esac
+
 "${build_cmd[@]}" "$@" \
-	-f deploys/containers/core.Dockerfile \
-	--build-arg IMAGE_VARIANT="$VARIANT" \
-	--build-arg VERSION="$VERSION" \
-	--build-arg COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)" \
-	--build-arg BUILDER="$(whoami)" \
+	-f "${DOCKERFILE}" \
+	"${build_args[@]}" \
 	-t "$IMAGE" . || exit 1
 
-echo "镜像已构建: ${IMAGE}（平台: ${PLATFORMS:-构建机原生架构}）"
+echo "镜像已构建: ${IMAGE}（变体: ${VARIANT}，平台: ${PLATFORMS:-构建机原生架构}）"

@@ -3,13 +3,13 @@
 # core-build-multiarch.sh - zki 二进制交叉编译（amd64 + arm64）
 #
 # 统一的交叉编译入口，供以下场景复用：
-#   1. deploys/containers/core.Dockerfile build 阶段（--skip-apt --arch --out）：
+#   1. deploys/containers/normal.Dockerfile build 阶段（--skip-apt --arch --out）：
 #      apt 由 builder 阶段完成，这里只编排单架构编译
 #   2. 宿主机手动编译（--skip-apt 不设）：apt 装依赖 + 编译两架构 → dist/bin/
 #      也可用 --arch / --target-arch 只编译单架构，apt 按目标架构按需装交叉工具链
 #      （目标与宿主相同不装，不同只装该方向，见 core-setup-build-env.sh --target-arch）
 #
-# 交叉编译逻辑与原 deploys/containers/core.Dockerfile 中 build_one 函数完全一致：
+# 交叉编译逻辑与 deploys/containers/normal.Dockerfile 中 build 阶段一致：
 #   宿主 amd64 → 原生编译 amd64，用 aarch64-linux-gnu-gcc 交叉编译 arm64
 #   宿主 arm64 → 原生编译 arm64，用 x86_64-linux-gnu-gcc 交叉编译 amd64
 #
