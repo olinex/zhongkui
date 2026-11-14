@@ -6,7 +6,7 @@
 # 部分运行时（QEMU/OrbStack）setcap 写入成功但 exec 时返回 EPERM，
 # 因此用目标运行用户实际执行一次 --help 探测；失败则清除扩展属性，避免容器无法启动。
 #
-# 被 deploys/containers/core.Dockerfile 的 app 阶段使用（二进制来自 --from=build）。
+# 被 deploys/containers/normal.Dockerfile 的 app 阶段使用（二进制来自 --from=build）。
 #
 # 用法：
 #   bash core-cap-setup.sh [二进制路径] [运行用户]
