@@ -10,7 +10,7 @@
 #   5) 镜像内置默认配置
 #   6) busybox 与 wget/sh 符号链接（scratch 无 shell，HEALTHCHECK 依赖它）
 #
-# 被 deploys/containers/core.Dockerfile 的 slim-prep 阶段使用。
+# 被 deploys/containers/slim.Dockerfile 的 slim-prep 阶段使用。
 #
 # 用法：
 #   bash core-slim-assemble.sh <rootfs 目录> <busybox 二进制路径>

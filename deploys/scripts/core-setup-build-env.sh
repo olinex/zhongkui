@@ -3,7 +3,7 @@
 # core-setup-build-env.sh - zki 编译环境安装（libpcap-dev + 按需交叉工具链）
 #
 # 覆盖所有需要"在宿主机或容器内装 Go 编译依赖"的场景：
-#   1. deploys/containers/core.Dockerfile builder 阶段（装 apt mirror + 原生 libpcap-dev，
+#   1. deploys/containers/normal.Dockerfile builder 阶段（装 apt mirror + 原生 libpcap-dev，
 #      仅目标架构与宿主不同时装对应方向的交叉工具链）
 #   2. deploys/scripts/core-build-multiarch.sh --skip-apt=0 内部调用（不换 mirror，装交叉工具链）
 #   3. CI 单元测试（--no-cross，只装原生 libpcap-dev）
