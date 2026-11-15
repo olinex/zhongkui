@@ -11,12 +11,12 @@
 #     setcap -r 并 fallback 到 root 运行。
 #
 # 阶段：
-#   builder       编译环境：Go + libpcap-dev + 按需交叉工具链 + qemu-user-static
+#   builder       编译环境：Go + apt libpcap0.8-dev（自带 libpcap.a）+ 按需交叉工具链 + qemu-user-static
 #   runtime-cross 原生层准备目标架构的运行期 rootfs（库、账户、CA、时区）
 #   deps          只拉 go.mod/go.sum，依赖层独立缓存
 #   build         交叉编译 /out/zki，并生成默认配置（如需跨架构则用 qemu 执行）
 #   runtime       目标架构基底 + 预准备的 rootfs
-#   app           注入 zki、默认配置、entrypoint，授予抓包 capability
+#   app           注入 zki（capability 已在 build 阶段授予）、默认配置、entrypoint
 #
 # slim 变体见 deploys/containers/slim.Dockerfile（从本镜像提取 zki，免编译）。
 #
@@ -29,6 +29,7 @@ ARG GOLANG_IMAGE=golang:1.27.3-bookworm
 ARG RUNTIME_IMAGE=debian:bookworm-slim
 ARG APT_MIRROR=mirrors.aliyun.com
 ARG GOPROXY=https://goproxy.cn,https://mirrors.aliyun.com/goproxy/,direct
+ARG UPX_VERSION=4.2.4
 
 # ============================================================
 # builder：编译环境（原生执行）
@@ -40,6 +41,7 @@ FROM --platform=$BUILDPLATFORM ${GOLANG_IMAGE} AS builder
 ARG APT_MIRROR
 ARG BUILDARCH
 ARG TARGETARCH
+ARG UPX_VERSION
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -50,7 +52,7 @@ RUN set -eux; \
       fi; \
     done; \
     apt-get update; \
-    apt-get install -y --no-install-recommends libpcap-dev ca-certificates; \
+    apt-get install -y --no-install-recommends ca-certificates libpcap0.8-dev libdbus-1-dev libsystemd-dev libcap2-bin; \
     if [ "${TARGETARCH}" != "${BUILDARCH}" ]; then \
       case "${TARGETARCH}" in \
         arm64) apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu ;; \
@@ -60,17 +62,34 @@ RUN set -eux; \
       apt-get install -y --no-install-recommends qemu-user-static; \
       dpkg --add-architecture "${TARGETARCH}"; \
       apt-get update || true; \
-      apt-get install -y --no-install-recommends "libpcap-dev:${TARGETARCH}"; \
+      apt-get install -y --no-install-recommends \
+        "libpcap0.8-dev:${TARGETARCH}" \
+        "libdbus-1-dev:${TARGETARCH}" \
+        "libsystemd-dev:${TARGETARCH}"; \
     fi; \
     rm -rf /var/lib/apt/lists/*
+
+# UPX 二进制（预编译，放在 build context 里避免网络依赖）。
+# upx 运行在 BUILDPLATFORM 上，按 BUILDARCH 选择版本。
+COPY deploys/dependences/upx.linux-amd64.v${UPX_VERSION} /tmp/upx-amd64
+COPY deploys/dependences/upx.linux-arm64.v${UPX_VERSION} /tmp/upx-arm64
+RUN set -eux; \
+    case "${BUILDARCH}" in \
+      amd64)  cp /tmp/upx-amd64 /usr/local/bin/upx ;; \
+      arm64)  cp /tmp/upx-arm64 /usr/local/bin/upx ;; \
+      *) echo "不支持的 BUILDARCH=${BUILDARCH}" >&2; exit 1 ;; \
+    esac; \
+    chmod +x /usr/local/bin/upx; \
+    upx --version
 
 # ============================================================
 # runtime-cross：原生层准备目标架构的运行期 rootfs
 # ============================================================
 # 输出 /runtime-root/，后续目标架构 runtime 层直接 COPY 到 /，零 RUN。
 #   - CA 证书 / 时区数据与架构无关：原生安装让 postinst 生成证书包后直接搬文件
-#   - 架构相关包（libpcap0.8 / gosu / libcap2-bin / wget）：按目标架构下载
+#   - 架构相关包（gosu / libcap2-bin / wget）：按目标架构下载
 #     整条依赖闭包再解包，避免在 QEMU 中执行 dpkg
+#   - libpcap 已在 builder 阶段静态链接进 zki，运行时无需 libpcap0.8
 FROM --platform=$BUILDPLATFORM ${RUNTIME_IMAGE} AS runtime-cross
 
 ARG APT_MIRROR
@@ -93,7 +112,6 @@ RUN set -eux; \
     dpkg --add-architecture "${TARGETARCH}"; \
     apt-get update; \
     apt-get install -d -y --no-install-recommends \
-      "libpcap0.8:${TARGETARCH}" \
       "gosu:${TARGETARCH}" \
       "libcap2-bin:${TARGETARCH}" \
       "wget:${TARGETARCH}"; \
@@ -155,10 +173,15 @@ RUN go mod download
 
 ENV CGO_ENABLED=1 \
     GOMEMLIMIT=${GOMEMLIMIT} \
-    GOFLAGS=${GOFLAGS}
+    GOFLAGS="-tags=netgo ${GOFLAGS}"
 
 # 版本元数据 + 单架构交叉编译：
-#   交叉时按方向选择 CC 与目标库路径（交叉工具链与 libpcap-dev:<arch> 已在 builder 就绪）
+#   libpcap0.8-dev / libdbus-1-dev 由 apt 安装，自带 .a，通过 -l:xxx.a 强制静态链接；
+#   libsystemd-dev 只有 .so（Debian 不提供 .a），-lsystemd 保持动态链接，
+#   因此最终 ELF 是动态链接的（NEEDED libsystemd.so.0 / libc.so.6），
+#   运行时需 libsystemd 及其传递依赖；slim 变体通过 zki.deps 收集这些库。
+#   交叉时按方向选择 CC（交叉工具链 + libpcap0.8-dev:${TARGETARCH} 等已在 builder 就绪）。
+#   -tags=netgo 让 Go 网络栈用纯 Go 实现，避免依赖 glibc NSS 模块。
 #   快照由仓库提交，构建环境无 protoc，不再烘焙
 RUN set -eux; \
     make version-env VERSION="${VERSION}" COMMIT="${COMMIT}" BUILDER="${BUILDER}"; \
@@ -167,27 +190,67 @@ RUN set -eux; \
       echo "缺少 RAG 知识快照 internal/docs/ragdata/snapshot.json，请先 make rag-snapshot 后提交" >&2; \
       exit 1; \
     }; \
-    cc=""; cgo_ldflags=""; \
+    cc=""; \
     if [ "${BUILDARCH}" != "${TARGETARCH}" ]; then \
       case "${TARGETARCH}" in \
-        arm64) cc=aarch64-linux-gnu-gcc; cgo_ldflags="-L/usr/lib/aarch64-linux-gnu" ;; \
-        amd64) cc=x86_64-linux-gnu-gcc; cgo_ldflags="-L/usr/lib/x86_64-linux-gnu" ;; \
+        arm64) cc=aarch64-linux-gnu-gcc ;; \
+        amd64) cc=x86_64-linux-gnu-gcc ;; \
       esac; \
     fi; \
-    CC="${cc}" CGO_CFLAGS="-I/usr/include" CGO_LDFLAGS="${cgo_ldflags}" \
+    CC="${cc}" CGO_CFLAGS="-I/usr/include" \
+      CGO_LDFLAGS="-l:libpcap.a -l:libdbus-1.a -lsystemd" \
       GOOS=linux GOARCH="${TARGETARCH}" \
       make build-release OUT=/out/zki VERSION="${VERSION}" COMMIT="${COMMIT}" \
         BUILD_TIME="${BUILD_TIME}" BUILDER="${BUILDER}"
 
 # 生成镜像内置的默认配置：原生架构直接执行，跨架构用 qemu-user-static 执行，
 # 避免在目标架构层跑 Go 二进制（QEMU 下极慢）。
+# 注意：qemu-user-static 的二进制名与 TARGETARCH 不一致：
+#   arm64 -> qemu-aarch64-static
+#   amd64 -> qemu-x86_64-static
 RUN set -eux; \
     if [ "${BUILDARCH}" = "${TARGETARCH}" ]; then \
       /out/zki create default-config -o /out/default-config.toml; \
     else \
-      "qemu-${TARGETARCH}-static" /out/zki create default-config -o /out/default-config.toml; \
+      case "${TARGETARCH}" in \
+        arm64) qemu_bin=qemu-aarch64-static ;; \
+        amd64) qemu_bin=qemu-x86_64-static ;; \
+        *) echo "不支持的 TARGETARCH=${TARGETARCH}" >&2; exit 1 ;; \
+      esac; \
+      "${qemu_bin}" /out/zki create default-config -o /out/default-config.toml; \
     fi; \
     test -s /out/default-config.toml
+
+# UPX 压缩 zki：体积减少约 77%，与 file capability 兼容。
+# 在生成默认配置之后压缩，避免 QEMU 下 UPX 解压的额外开销和兼容性风险。
+# 压缩前导出动态依赖列表：UPX 压缩后 ldd/readelf 均无法识别，slim 组装 rootfs 时需用此列表。
+# 跨架构时宿主机的 ldd 无法解析目标架构 ELF（会误报 "not a dynamic executable"，
+# 导致 zki.deps 为空、slim 镜像缺库运行时崩溃），改为读取 ELF 的程序解释器（动态链接器），
+# 原生架构直接执行 <ld> --list，跨架构用 qemu-<arch>-static 执行 <ld> --list，
+# 输出与 ldd 同格式，slim 的 awk 解析无需改动。
+# 用 LZMA 默认压缩级别（不用 --best）：压缩耗时 112s -> 81s，体积 30.8MB -> 31.6MB。
+RUN set -eux; \
+    interp=$(readelf -l /out/zki | grep -i interpreter | sed "s/.*interpreter: //; s/\]//"); \
+    if [ "${BUILDARCH}" = "${TARGETARCH}" ]; then \
+      "$interp" --list /out/zki > /out/zki.deps; \
+    else \
+      case "${TARGETARCH}" in \
+        arm64) qemu_bin=qemu-aarch64-static ;; \
+        amd64) qemu_bin=qemu-x86_64-static ;; \
+        *) echo "不支持的 TARGETARCH=${TARGETARCH}" >&2; exit 1 ;; \
+      esac; \
+      "${qemu_bin}" "$interp" --list /out/zki > /out/zki.deps; \
+    fi; \
+    test -s /out/zki.deps; \
+    upx --lzma /out/zki
+
+# 在 build 阶段授予抓包 capability，由 app 阶段的 COPY 一并带过去。
+# 不在 app 阶段 setcap/chmod 该文件：对已存在的 26MB 文件改元数据会触发
+# overlayfs copy-up，在新层里复制整份文件，镜像平白多出 26MB。
+# setcap 只写 xattr，不关心文件架构，因此可在原生构建层对目标架构二进制操作。
+RUN set -eux; \
+    setcap cap_net_raw,cap_net_admin=eip /out/zki; \
+    getcap /out/zki
 
 # ============================================================
 # runtime：目标架构运行基底 + 预准备的 rootfs（零 RUN）
@@ -203,6 +266,8 @@ FROM runtime AS app
 
 COPY --from=build /out/zki /usr/local/bin/zki
 COPY --from=build /out/default-config.toml /app/default-config.toml
+# zki.deps 是 UPX 压缩前的 ldd 输出，供 slim 变体收集动态依赖
+COPY --from=build /out/zki.deps /out/zki.deps
 
 # entrypoint wrapper：
 #   1. 运行时 capability 兼容性检测：
@@ -249,12 +314,11 @@ fi
 exec /bin/sh -c "$(printf '%s\n' "$@")"
 ENTRYPOINT
 
-# 确定性授予抓包 capability（构建结果与运行时环境无关）。
-# 部分运行时（OrbStack/QEMU）setcap 写入成功但 exec 返回 EPERM，
-# 该兼容性由 entrypoint 在运行时处理，不在构建时探测。
+# capability 已在 build 阶段授予，经 COPY --from=build 随扩展属性一并带过来。
+# 这里只给 entrypoint 补可执行位（1KB 小文件，copy-up 可忽略）；
+# 不再对 zki 做 chmod / setcap——那会把整份 26MB 文件复制进新层。
 RUN set -eux; \
-    chmod 0755 /usr/local/bin/zki /entrypoint.sh; \
-    setcap cap_net_raw,cap_net_admin=eip /usr/local/bin/zki 2>/dev/null || true; \
+    chmod 0755 /entrypoint.sh; \
     getcap /usr/local/bin/zki 2>/dev/null || echo "capability not visible (ok on some filesystems)"
 
 WORKDIR /app
