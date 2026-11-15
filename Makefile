@@ -97,7 +97,7 @@ internal/manager/views/search.go internal/manager/views/enum_bindings.go: cmd/te
 # 用法: make p0f-update
 # 自定义上游源: make p0f-update P0F_UPSTREAM_URL=<新地址>
 p0f-update:
-	@scripts/p0f-update.sh "$(P0F_UPSTREAM_URL)"
+	@scripts/dependences-update.sh p0f "$(P0F_UPSTREAM_URL)"
 
 # RAG 知识快照（编译期嵌入二进制）：
 # 发布二进制不含源码树与 Go 工具链，zki sync docs / sync schema 在运行期回退到该快照；
