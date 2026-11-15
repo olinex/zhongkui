@@ -1,98 +1,130 @@
 #
-# zhongkui normal 变体镜像（多架构：amd64 / arm64），单个 Dockerfile 完成交叉编译与镜像装配。
-# 构建上下文为仓库根目录，源码在镜像构建阶段内编译，不再依赖宿主机的 dist/bin 预编译产物。
+# zhongkui normal 变体镜像（多架构：amd64 / arm64）。
 #
-# 五个构建步骤：
-#   步骤 1  builder  编译环境：Go 工具链 + 按需交叉工具链（仅目标架构与构建机
-#                    不同时安装对应方向）。固定在 BUILDPLATFORM 上运行，不经 QEMU。
-#   步骤 2  runtime  最终运行环境：debian 基底、运行期依赖（libpcap0.8 / CA / 时区）与非 root 运行用户。
-#   步骤 3  deps     Go 包环境：只引入 go.mod / go.sum 并 go mod download，
-#                    依赖层与源码层分离，源码变更不会触发重新下载。
-#   步骤 4  build    制品构建：引入源码，调 deploys/scripts/core-build-multiarch.sh 完成版本元数据生成
-#                    + 按 TARGETARCH 编排交叉编译，输出 /out/zki。
-#   步骤 5  装配     把 /out/zki 注入运行环境，生成 normal 变体。
+# 构建策略（确定性）：
+#   - 所有 RUN 都在 BUILDPLATFORM 上原生执行，目标架构层只做 FROM + COPY，
+#     彻底避开 QEMU（apt-get / Go 二进制在 QEMU 下会慢几十倍甚至卡死）。
+#   - 目标架构的运行期依赖通过 `apt-get install -d` 下载整条依赖闭包后
+#     用 `dpkg-deb -x` 解包成 rootfs，再整体 COPY 进目标架构镜像。
+#   - setcap 在构建时确定性授予，不探测运行时兼容性（避免构建结果依赖
+#     构建环境）；兼容性由 entrypoint 在容器启动时处理，不兼容则
+#     setcap -r 并 fallback 到 root 运行。
 #
-# slim 变体见 deploys/containers/slim.Dockerfile（从本镜像提取 zki 二进制，免编译）。
+# 阶段：
+#   builder       编译环境：Go + libpcap-dev + 按需交叉工具链 + qemu-user-static
+#   runtime-cross 原生层准备目标架构的运行期 rootfs（库、账户、CA、时区）
+#   deps          只拉 go.mod/go.sum，依赖层独立缓存
+#   build         交叉编译 /out/zki，并生成默认配置（如需跨架构则用 qemu 执行）
+#   runtime       目标架构基底 + 预准备的 rootfs
+#   app           注入 zki、默认配置、entrypoint，授予抓包 capability
 #
-# 目标平台由 BuildKit 的 TARGETARCH 自动注入，按架构选取二进制与交叉工具链，无需手工传参：
-#   docker buildx build --platform linux/amd64 -f deploys/containers/normal.Dockerfile \
-#     --build-arg VERSION=v1.2.3 -t zhongkui:v1.2.3 --load .
-#   docker buildx build --platform linux/amd64,linux/arm64 -f deploys/containers/normal.Dockerfile \
-#     --build-arg VERSION=v1.2.3 -t registry/zhongkui:v1.2.3 --push .
+# slim 变体见 deploys/containers/slim.Dockerfile（从本镜像提取 zki，免编译）。
 #
-#   deploys/scripts/core-docker-image.sh v1.2.3
-#   PLATFORMS=linux/amd64,linux/arm64 deploys/scripts/core-docker-image.sh v1.2.3 --push
-#
-# 运行（镜像内置 /app/default-config.toml，由 zki create default-config 生成）：
-#   docker run --rm -p 8080:8080 -p 8081:8081 zhongkui:v1.2.3
-# 生产环境建议挂载自有配置覆盖默认项：
-#   docker run --rm -p 8080:8080 -p 8081:8081 \
-#     -v "$PWD/config.toml:/app/config.toml:ro" \
-#     -v "$PWD/certs:/app/certs:ro" zhongkui:v1.2.3 \
-#     run web --config /app/config.toml
+#   docker buildx build --platform linux/amd64,linux/arm64 \
+#     -f deploys/containers/normal.Dockerfile --build-arg VERSION=v1.2.3 \
+#     -t registry/zhongkui:v1.2.3 --push .
+#   scripts/image.sh normal v1.2.3
 
-# 基础镜像与软件源可通过 --build-arg 覆盖（CI 中指向国内/内网地址）。
 ARG GOLANG_IMAGE=golang:1.27.3-bookworm
 ARG RUNTIME_IMAGE=debian:bookworm-slim
 ARG APT_MIRROR=mirrors.aliyun.com
 ARG GOPROXY=https://goproxy.cn,https://mirrors.aliyun.com/goproxy/,direct
 
 # ============================================================
-# 步骤 1：编译环境（Go 工具链 + 按需交叉工具链）
+# builder：编译环境（原生执行）
 # ============================================================
-# 固定在构建机架构上运行。每次镜像构建只产出 TARGETARCH 一种架构的二进制，
-# 交叉工具链按需安装，不再预装双向工具链：
-#   TARGETARCH == BUILDARCH（本机原生构建，最常见）→ 不装任何交叉工具链
-#   TARGETARCH != BUILDARCH（buildx 指定其他平台）  → 只装该方向的交叉工具链：
-#     amd64 构建机 → arm64 目标：gcc-aarch64-linux-gnu + libpcap-dev:arm64
-#     arm64 构建机 → amd64 目标：gcc-x86-64-linux-gnu + libpcap-dev:amd64
-# 多平台构建（--platform linux/amd64,linux/arm64）时 builder 按 TARGETARCH
-# 各装配一份并分别缓存，不经 QEMU。
+# 交叉工具链只在 TARGETARCH != BUILDARCH 时安装该方向的一套；
+# qemu-user-static 供 build 阶段原生执行目标架构的 zki（生成默认配置）。
 FROM --platform=$BUILDPLATFORM ${GOLANG_IMAGE} AS builder
 
 ARG APT_MIRROR
-# BUILDARCH / TARGETARCH 由 BuildKit 自动注入（构建机架构 / 目标架构）。
 ARG BUILDARCH
 ARG TARGETARCH
 
-# 把脚本提前 COPY 进来，才能在本层调用；脚本体积 < 4KB，不影响层缓存大小。
-COPY deploys/scripts/core-setup-build-env.sh /tmp/
+ENV DEBIAN_FRONTEND=noninteractive
 
-# 直接运行环境安装脚本（apt 使用默认路径，正常清理 lists 让镜像层更小）。
-RUN bash /tmp/core-setup-build-env.sh \
-      --host-arch "${BUILDARCH}" \
-      --target-arch "${TARGETARCH}" \
-      --mirror "${APT_MIRROR}"
-# 注意：本阶段只做 apt 环境准备（libpcap-dev / 按需交叉工具链），不设置任何 Go 相关 ENV。
-# Go 代理/校验（影响 go mod download 结果）放在 deps 阶段，
-# 编译参数（CGO/GOMEMLIMIT/GOFLAGS）放在 build 阶段——
-# 这样改动某类参数只会失效对应阶段的缓存，不会连带 builder 的交叉工具链层一起失效。
+RUN set -eux; \
+    for f in /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources; do \
+      if [ -f "$f" ]; then \
+        sed -i "s|deb.debian.org|${APT_MIRROR}|g; s|security.debian.org|${APT_MIRROR}|g" "$f"; \
+      fi; \
+    done; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends libpcap-dev ca-certificates; \
+    if [ "${TARGETARCH}" != "${BUILDARCH}" ]; then \
+      case "${TARGETARCH}" in \
+        arm64) apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu ;; \
+        amd64) apt-get install -y --no-install-recommends gcc-x86-64-linux-gnu ;; \
+        *) echo "不支持的 TARGETARCH=${TARGETARCH}" >&2; exit 1 ;; \
+      esac; \
+      apt-get install -y --no-install-recommends qemu-user-static; \
+      dpkg --add-architecture "${TARGETARCH}"; \
+      apt-get update || true; \
+      apt-get install -y --no-install-recommends "libpcap-dev:${TARGETARCH}"; \
+    fi; \
+    rm -rf /var/lib/apt/lists/*
 
 # ============================================================
-# 步骤 2：最终运行环境（目标架构）
+# runtime-cross：原生层准备目标架构的运行期 rootfs
 # ============================================================
-# 安装运行时依赖并创建非 root 运行用户；final-normal 变体直接继承本基底。
-FROM ${RUNTIME_IMAGE} AS runtime
+# 输出 /runtime-root/，后续目标架构 runtime 层直接 COPY 到 /，零 RUN。
+#   - CA 证书 / 时区数据与架构无关：原生安装让 postinst 生成证书包后直接搬文件
+#   - 架构相关包（libpcap0.8 / gosu / libcap2-bin / wget）：按目标架构下载
+#     整条依赖闭包再解包，避免在 QEMU 中执行 dpkg
+FROM --platform=$BUILDPLATFORM ${RUNTIME_IMAGE} AS runtime-cross
 
 ARG APT_MIRROR
+ARG TARGETARCH
 
-COPY deploys/scripts/core-setup-runtime-env.sh /tmp/
+ENV DEBIAN_FRONTEND=noninteractive
 
-# gosu 用于 normal 变体降权（比 sudo 轻量）；libcap2-bin 提供 setcap，
-# 给 zki 二进制授予抓包所需的 CAP_NET_RAW/CAP_NET_ADMIN，让非 root 用户也能抓包。
-# 实际安装 + 用户创建委托给 core-setup-runtime-env.sh。
-RUN bash /tmp/core-setup-runtime-env.sh \
-      --mirror "${APT_MIRROR}"
+RUN set -eux; \
+    for f in /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources; do \
+      if [ -f "$f" ]; then \
+        sed -i "s|deb.debian.org|${APT_MIRROR}|g; s|security.debian.org|${APT_MIRROR}|g" "$f"; \
+      fi; \
+    done; \
+    mkdir -p /runtime-root/etc/ssl/certs /runtime-root/usr/share /runtime-root/app; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ca-certificates tzdata; \
+    cp -a /etc/ssl/certs/ca-certificates.crt /runtime-root/etc/ssl/certs/; \
+    cp -a /usr/share/zoneinfo /runtime-root/usr/share/; \
+    rm -f /var/cache/apt/archives/*.deb; \
+    dpkg --add-architecture "${TARGETARCH}"; \
+    apt-get update; \
+    apt-get install -d -y --no-install-recommends \
+      "libpcap0.8:${TARGETARCH}" \
+      "gosu:${TARGETARCH}" \
+      "libcap2-bin:${TARGETARCH}" \
+      "wget:${TARGETARCH}"; \
+    for d in /var/cache/apt/archives/*.deb; do \
+      rm -rf /tmp/x; mkdir -p /tmp/x; \
+      dpkg-deb -x "$d" /tmp/x; \
+      for sub in bin sbin lib lib64; do \
+        if [ -d "/tmp/x/$sub" ]; then \
+          mkdir -p "/runtime-root/usr/$sub"; \
+          cp -a "/tmp/x/$sub/." "/runtime-root/usr/$sub/"; \
+        fi; \
+      done; \
+      for sub in usr etc var; do \
+        if [ -d "/tmp/x/$sub" ]; then \
+          mkdir -p "/runtime-root/$sub"; \
+          cp -a "/tmp/x/$sub/." "/runtime-root/$sub/"; \
+        fi; \
+      done; \
+    done; \
+    rm -rf /tmp/x /var/lib/apt/lists/* /var/cache/apt/archives/*.deb; \
+    cp /etc/passwd /etc/group /etc/nsswitch.conf /runtime-root/etc/; \
+    echo 'app:x:1000:1000:app:/app:/usr/sbin/nologin' >> /runtime-root/etc/passwd; \
+    echo 'app:x:1000:' >> /runtime-root/etc/group; \
+    chown 1000:1000 /runtime-root/app
 
 # ============================================================
-# 步骤 3：Go 包环境（依赖层独立缓存）
+# deps：Go 依赖层（原生执行）
 # ============================================================
-# 只引入 go.mod / go.sum：依赖不变时该层直接命中缓存，源码变更不会触发重新下载。
 FROM builder AS deps
 
 ARG GOPROXY
-# go mod download 需要代理与校验服务；放在这里而非 builder 顶部，
-# 是为了让 CI 切换 GOPROXY 时只失效本阶段及之后的缓存，不牵连 builder 的 apt 交叉工具链层。
 ENV GOPROXY=${GOPROXY} \
     GOSUMDB=sum.golang.google.cn
 
@@ -101,13 +133,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # ============================================================
-# 步骤 4：引入源码并构建制品
+# build：交叉编译 + 生成默认配置（原生执行）
 # ============================================================
-# 调 deploys/scripts/core-build-multiarch.sh 完成版本生成 + 单架构编译：
-#   make version-env → dist/build.env（COMMIT / BUILDER 由 --build-arg 注入）
-#   make build-release → 快照由仓库已提交版本提供（构建环境无 protoc，不烘焙），
-#                       按 TARGETARCH 配 CC/CGO 交叉编译
-# 只编译单一 TARGETARCH，输出到 /out/zki。
 FROM deps AS build
 
 WORKDIR /src
@@ -117,78 +144,127 @@ ARG COMMIT=unknown
 ARG BUILDER=docker
 ARG BUILDARCH
 ARG TARGETARCH
-# 仅 go build 需要的编译参数。ARG 不产生层，放这里声明；
-# 对应的 ENV 下移到 go build 执行前（见下方），
-# 使 GOFLAGS/GOMEMLIMIT 变更只失效 go build，不影响 COPY . . 与 go mod download 缓存。
 ARG GOMEMLIMIT=off
 ARG GOFLAGS
 
 COPY . .
 
-# COPY 会用仓库里的 go.sum 覆盖步骤 3 生成的校验和文件，这里基于已下载的模块缓存
-# 重新补齐 go.sum，保证后续 go build（默认 -mod=readonly）不会因缺少校验和而失败。
-# 模块缓存随 FROM deps 继承，直接在镜像层中读写。
+# COPY 会用仓库里的 go.sum 覆盖 deps 层生成的校验和文件，这里基于已下载的
+# 模块缓存重新补齐，保证 go build（默认 -mod=readonly）不因缺校验和失败。
 RUN go mod download
 
-# 仅 go build 阶段需要的编译参数 ENV 放在此处，紧邻 go build：
-# 变更 CGO_ENABLED / GOMEMLIMIT / GOFLAGS 只失效本层及其后的 go build，
-# 不影响上方 COPY . . 与 go mod download 的缓存。
 ENV CGO_ENABLED=1 \
     GOMEMLIMIT=${GOMEMLIMIT} \
     GOFLAGS=${GOFLAGS}
 
-# 复用仓库脚本 deploys/scripts/core-build-multiarch.sh：版本生成 + 按架构编排 CC/CGO 交叉编译参数。
-# --skip-apt 跳过 apt 安装（builder 阶段已预装交叉工具链），
-# --arch / --out 指定 TARGETARCH 到 /out/zki。
-RUN COMMIT="${COMMIT}" BUILDER="${BUILDER}" \
-    bash deploys/scripts/core-build-multiarch.sh \
-      --skip-apt \
-      --arch "${TARGETARCH}" \
-      --out /out/zki \
-      "${VERSION}"
+# 版本元数据 + 单架构交叉编译：
+#   交叉时按方向选择 CC 与目标库路径（交叉工具链与 libpcap-dev:<arch> 已在 builder 就绪）
+#   快照由仓库提交，构建环境无 protoc，不再烘焙
+RUN set -eux; \
+    make version-env VERSION="${VERSION}" COMMIT="${COMMIT}" BUILDER="${BUILDER}"; \
+    . ./dist/build.env; \
+    test -f internal/docs/ragdata/snapshot.json || { \
+      echo "缺少 RAG 知识快照 internal/docs/ragdata/snapshot.json，请先 make rag-snapshot 后提交" >&2; \
+      exit 1; \
+    }; \
+    cc=""; cgo_ldflags=""; \
+    if [ "${BUILDARCH}" != "${TARGETARCH}" ]; then \
+      case "${TARGETARCH}" in \
+        arm64) cc=aarch64-linux-gnu-gcc; cgo_ldflags="-L/usr/lib/aarch64-linux-gnu" ;; \
+        amd64) cc=x86_64-linux-gnu-gcc; cgo_ldflags="-L/usr/lib/x86_64-linux-gnu" ;; \
+      esac; \
+    fi; \
+    CC="${cc}" CGO_CFLAGS="-I/usr/include" CGO_LDFLAGS="${cgo_ldflags}" \
+      GOOS=linux GOARCH="${TARGETARCH}" \
+      make build-release OUT=/out/zki VERSION="${VERSION}" COMMIT="${COMMIT}" \
+        BUILD_TIME="${BUILD_TIME}" BUILDER="${BUILDER}"
+
+# 生成镜像内置的默认配置：原生架构直接执行，跨架构用 qemu-user-static 执行，
+# 避免在目标架构层跑 Go 二进制（QEMU 下极慢）。
+RUN set -eux; \
+    if [ "${BUILDARCH}" = "${TARGETARCH}" ]; then \
+      /out/zki create default-config -o /out/default-config.toml; \
+    else \
+      "qemu-${TARGETARCH}-static" /out/zki create default-config -o /out/default-config.toml; \
+    fi; \
+    test -s /out/default-config.toml
 
 # ============================================================
-# 步骤 5：把制品注入最终运行环境
+# runtime：目标架构运行基底 + 预准备的 rootfs（零 RUN）
 # ============================================================
-# 先装配通用应用层（二进制 + 抓包 capability + 内置默认配置），
-# 再由 normal 变体作为最终镜像。
+FROM ${RUNTIME_IMAGE} AS runtime
+
+COPY --from=runtime-cross /runtime-root/ /
+
+# ============================================================
+# app：注入制品与 entrypoint，授予抓包 capability
+# ============================================================
 FROM runtime AS app
 
 COPY --from=build /out/zki /usr/local/bin/zki
-RUN chmod 0755 /usr/local/bin/zki
+COPY --from=build /out/default-config.toml /app/default-config.toml
 
-COPY deploys/scripts/core-cap-setup.sh /tmp/
+# entrypoint wrapper：
+#   1. 运行时 capability 兼容性检测：
+#      构建时已 setcap，但部分运行时（OrbStack/QEMU）exec 会返回 EPERM；
+#      这里在启动时探测一次，不兼容则 setcap -r 并 fallback 到 root 运行。
+#   2. 默认模式（CMD 传入 zki 子命令）→ 直接 exec zki
+#   3. 外部工具（如 execute@docker）→ /bin/sh -c 执行命令数组
+#   4. $1 非已知子命令时按 shell 命令处理
+COPY <<'ENTRYPOINT' /entrypoint.sh
+#!/bin/sh
+set -eu
 
-# 给 zki 授予抓包所需的 CAP_NET_RAW/CAP_NET_ADMIN，让非 root 用户也能抓包。
-# 部分运行时（QEMU/OrbStack）setcap 写入成功但 exec 时 EPERM，
-# 脚本用 gosu app 做兼容性探测，失败则主动清除 capability 扩展属性。
-RUN bash /tmp/core-cap-setup.sh /usr/local/bin/zki app
+# 运行时 capability 兼容性检测：
+# setcap 写入是确定性的（构建时完成），但部分运行时内核不支持 file capability，
+# 非 root exec 会返回 EPERM。此时清除 capability 并 fallback 到 root 运行
+# （牺牲最小权限换取服务可用性）。
+CAP_INCOMPAT=0
+if [ -x /usr/sbin/gosu ]; then
+  if ! gosu app /usr/local/bin/zki --help >/dev/null 2>&1; then
+    setcap -r /usr/local/bin/zki 2>/dev/null || true
+    CAP_INCOMPAT=1
+  fi
+fi
 
-# 生成镜像内置的默认配置：该命令依据代码中的配置结构体序列化 TOML，无需外部 config.toml，
-# 产物 /app/default-config.toml 供默认 CMD 使用；生产环境可挂载自有配置覆盖。
-RUN /usr/local/bin/zki create default-config -o /app/default-config.toml \
-    && test -s /app/default-config.toml
+is_zki() {
+  case "$1" in
+    ""|-*) return 0 ;;   # 空 or flag → 直接认为是 zki
+    *)     /usr/local/bin/zki "$1" --help >/dev/null 2>&1 ;;
+  esac
+}
 
-# normal 变体：保留 debian 基底的 shell 与系统工具，便于线上排障。
-# 注入 entrypoint wrapper（仓库 deploys/scripts/core-docker-entrypoint.sh）：
-#   1. 默认模式（CMD 传入 zki 子命令）：wrapper 直接 exec zki
-#   2. 外部工具（如 execute@docker）：传入 shell 命令数组，wrapper 用 /bin/sh -c 执行
-#      这解决了 ENTRYPOINT 是二进制时 execute@docker 无法正确执行 shell 命令的问题。
-FROM app AS final-normal
+if [ "$CAP_INCOMPAT" -eq 0 ] && [ -x /usr/sbin/gosu ]; then
+  # capability 生效：用 app 用户运行（非 root 抓包可用）
+  if is_zki "${1:-}"; then
+    exec gosu app /usr/local/bin/zki "$@"
+  fi
+  exec gosu app /bin/sh -c "$(printf '%s\n' "$@")"
+fi
 
-COPY deploys/scripts/core-docker-entrypoint.sh /entrypoint.sh
-RUN chmod 0755 /entrypoint.sh
+# capability 不兼容或无 gosu：用 root 运行
+if is_zki "${1:-}"; then
+  exec /usr/local/bin/zki "$@"
+fi
+exec /bin/sh -c "$(printf '%s\n' "$@")"
+ENTRYPOINT
+
+# 确定性授予抓包 capability（构建结果与运行时环境无关）。
+# 部分运行时（OrbStack/QEMU）setcap 写入成功但 exec 返回 EPERM，
+# 该兼容性由 entrypoint 在运行时处理，不在构建时探测。
+RUN set -eux; \
+    chmod 0755 /usr/local/bin/zki /entrypoint.sh; \
+    setcap cap_net_raw,cap_net_admin=eip /usr/local/bin/zki 2>/dev/null || true; \
+    getcap /usr/local/bin/zki 2>/dev/null || echo "capability not visible (ok on some filesystems)"
 
 WORKDIR /app
 EXPOSE 8080 8081 19090
 
-# 项目内置健康探针服务（端口 19090）暴露 k8s 语义端点：
-#   /healthz  live 探测：进程存活且未进入关机
-#   /readyz   ready 探测：依赖（etcd 等）均就绪
-#   /startupz startup 探测：启动完成
-# 这里用 /healthz 做 liveness probe，进程崩/探针崩都会让 wget 失败。
+# 内置健康探针服务（19090）：/healthz 存活、/readyz 依赖就绪、/startupz 启动完成
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD wget -qO- http://localhost:19090/healthz >/dev/null || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["run", "web", "--config", "/app/default-config.toml"]
+
+FROM app AS final-normal
