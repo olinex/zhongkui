@@ -7,18 +7,17 @@
 # 阶段按目标架构拉取 nginx 基底镜像，再 COPY 同一份制品。若不加该约束，BuildKit 会为每个目标
 # 平台各求值一次编译链，arm64 分支将以 QEMU 模拟重跑 Node 构建（实测多花约 22 分钟）。
 #
-# 五个构建步骤（与 deploys/containers/normal.Dockerfile 的五步模式对齐）：
-#   步骤 1  builder   前端编译环境：Node 26 + pnpm 10（corepack 启用，镜像源可覆盖；
-#                     安装逻辑见 deploys/scripts/web-setup-env.sh）。
+# 五个构建步骤：
+#   步骤 1  builder   前端编译环境：Node 26 + pnpm 10（corepack 启用，镜像源可覆盖）。
 #   步骤 2  runtime   最终运行环境：nginx 基底 + 运行期环境变量。
-#   步骤 3  deps      Node 包环境：只引入 package.json / pnpm-lock.yaml 并安装依赖
-#                     （deploys/scripts/web-build.sh --deps），源码变更不会触发重新安装。
-#   步骤 4  build     制品构建：引入源码，串行编译控制台（web/）与文档站（docs/）静态产物
-#                     （deploys/scripts/web-build.sh --build）。
+#   步骤 3  deps      Node 包环境：只引入 package.json / pnpm-lock.yaml 并安装依赖，
+#                     源码变更不会触发重新安装。
+#   步骤 4  build     制品构建：引入源码，串行编译控制台（web/）与文档站（docs/）静态产物。
 #                     类型检查不在镜像内执行，由 CI 门禁承担（scripts/web.sh type-check）。
 #   步骤 5  装配      把两份静态产物与 nginx 配置注入运行环境。
 #
 # 本地手工构建（需 BuildKit，Docker 23+ 默认启用；构建平台由 $BUILDPLATFORM 自动填充）：
+#   scripts/image.sh web v1.2.3
 #   docker build -f deploys/containers/web.Dockerfile -t zhongkui-web:local .
 #   docker build -f deploys/containers/web.Dockerfile --build-arg VITE_DOCS_URL=/docs/ -t zhongkui-web:local .
 #
@@ -33,7 +32,7 @@
 ARG NODE_IMAGE=node:26-bookworm-slim
 ARG NGINX_IMAGE=nginx:1.27-alpine
 ARG NPM_REGISTRY=https://repo.huaweicloud.com/repository/npm
-# 钉死 pnpm 版本，配合 scripts/web-setup-env.sh 让依赖层稳定命中缓存。
+# 钉死 pnpm 版本，让依赖层稳定命中缓存。
 ARG PNPM_VERSION=10.34.9
 # 控制台与文档站的构建期参数（Vite / VitePress 在编译期固化）。
 ARG VITE_ZHONGKUI_BASE_URL=/api/v1
@@ -55,9 +54,18 @@ ARG PNPM_VERSION
 # 只保留 corepack 装 pnpm 必须的 registry；pnpm install 的重试/超时配置下移到 deps 阶段。
 ENV npm_config_registry=${NPM_REGISTRY}
 
-# corepack + pnpm 版本固定（安装逻辑见 deploys/scripts/web-setup-env.sh）
-COPY deploys/scripts/web-setup-env.sh /tmp/
-RUN bash /tmp/web-setup-env.sh "${PNPM_VERSION}"
+# corepack + pnpm 版本固定：已有满足主版本要求的 pnpm 时直接复用，
+# 否则用 corepack 安装，无 corepack 的精简镜像回退到 npm。
+RUN set -eux; \
+    if command -v pnpm >/dev/null 2>&1 && [ "$(pnpm --version | cut -d. -f1)" -ge "${PNPM_VERSION%%.*}" ]; then \
+      echo "复用已有 pnpm $(pnpm --version)"; \
+    elif command -v corepack >/dev/null 2>&1; then \
+      corepack enable; \
+      corepack prepare "pnpm@${PNPM_VERSION}" --activate; \
+    else \
+      npm install -g "pnpm@${PNPM_VERSION}"; \
+    fi; \
+    pnpm --version
 # 注意：本阶段只装 pnpm，不设置 pnpm install 专用的 npm_config_fetch_* 重试参数——
 # 那些参数只在 deps 阶段真正执行 pnpm install 时才需要，
 # 提前放在 builder 会导致 CI 改超时配置时连带让本层缓存也失效。
@@ -89,9 +97,11 @@ ENV npm_config_fetch_retries=5 \
 
 COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./web/
 COPY docs/package.json docs/pnpm-lock.yaml ./docs/
-COPY deploys/scripts/web-build.sh /tmp/
 
-RUN WEB_ROOT=/src bash /tmp/web-build.sh --deps
+# 控制台与文档站是两个独立 pnpm 项目，锁文件已 COPY 进来，直接按锁文件安装
+RUN set -eux; \
+    cd /src/web && pnpm install --frozen-lockfile; \
+    cd /src/docs && pnpm install --frozen-lockfile
 
 # ============================================================
 # 步骤 4：引入源码并编译静态产物
@@ -106,7 +116,7 @@ ARG VITE_DOCS_URL
 ARG DOCS_BASE
 ARG DOCS_CONSOLE_URL
 # Node 编译堆上限（可选）：CI 小内存机器上压低 Vite/VitePress 堆峰值，
-# 默认 web-build.sh 已内置 --max-old-space-size=3072，这里允许外部覆盖。
+# 未传时默认 --max-old-space-size=3072，这里允许外部覆盖。
 ARG NODE_OPTIONS
 
 COPY . .
@@ -119,11 +129,14 @@ ENV VITE_ZHONGKUI_BASE_URL=${VITE_ZHONGKUI_BASE_URL} \
     DOCS_BASE=${DOCS_BASE} \
     DOCS_CONSOLE_URL=${DOCS_CONSOLE_URL}
 
-# DOCS_LAST_UPDATED=false 是静态默认值（构建上下文不含 .git），
-# 直接内联到 RUN 中，不产生独立 ENV 层。
-# NODE_OPTIONS 通过 build-arg 传入，未传时 web-build.sh 用默认值。
-RUN WEB_ROOT=/src NODE_OPTIONS="${NODE_OPTIONS:-}" DOCS_LAST_UPDATED=false \
-    bash /tmp/web-build.sh --build
+# 串行构建：内存受限环境下两个 Node 构建并发会触发 OOM。
+# DOCS_LAST_UPDATED=false 是静态默认值（构建上下文不含 .git）。
+# NODE_OPTIONS 未传时给 Vite/VitePress 一个保守的堆上限。
+RUN set -eux; \
+    export DOCS_LAST_UPDATED=false; \
+    export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=3072}"; \
+    cd /src/web && pnpm build-only; \
+    cd /src/docs && pnpm build
 
 # ============================================================
 # 步骤 5：把制品注入最终运行环境

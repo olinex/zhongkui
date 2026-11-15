@@ -1,116 +1,114 @@
 #
-# zhongkui slim 变体镜像（多架构：amd64 / arm64），免编译，从 normal 变体提取 zki 二进制。
+# zhongkui slim 变体镜像（多架构：amd64 / arm64），免编译。
 #
-# 构建流程：
-#   步骤 1  normal      中转源阶段：FROM ${NORMAL_IMAGE} AS normal（COPY --from 不支持 ARG 展开，
-#                       必须先经 FROM 生成命名阶段再 COPY --from=normal）
-#   步骤 2  slim-tools  busybox-static（scratch 镜像 HEALTHCHECK 用，约 800KB）
-#   步骤 3  slim-prep   Debian 运行时依赖层：装 libpcap0.8 / CA / 时区，
-#                       从 normal 阶段 COPY zki（含 setcap 扩展属性）与 default-config.toml，
-#                       跑 core-slim-assemble.sh 组装最小 rootfs
-#   步骤 4  final-slim  scratch 基底，注入 rootfs，产出 slim 变体
+# 从已构建的 normal 变体提取 zki 二进制与默认配置，
+# 在 slim-prep（BUILDPLATFORM 原生层）重新授予抓包 capability，
+# 解析动态库闭包，组装成 scratch 镜像所需的最小 rootfs。
 #
-# 前提：normal 变体已先构建并可通过 NORMAL_IMAGE 参数访问（本地 tag 或远程 registry）。
-# 构建时 BuildKit 会根据 --platform 自动从 NORMAL_IMAGE 的 manifest list 中选取对应架构的 zki。
+# 注意：不直接沿用 normal 镜像中 zki 的 capability 状态。
+# normal 的 app 阶段会在构建时探测 file capability 兼容性，
+# 若构建环境不支持（如 QEMU / OrbStack）会清除 setcap。
+# 该探测针对的是构建环境而非运行环境，结论对 slim 无意义，
+# 因此 slim 在 slim-prep 原生层确定性地重新 setcap，运行时是否生效由内核决定。
 #
-# 用法示例：
-#   # 1. 先构建 normal 变体
-#   docker buildx build --platform linux/amd64 -f deploys/containers/normal.Dockerfile \
-#     --build-arg VERSION=v1.2.3 -t zhongkui:v1.2.3 --load .
+# 阶段：
+#   normal      中转源阶段（FROM ${NORMAL_IMAGE}）：COPY --from 不支持 ARG 展开，
+#               先由 FROM 生成命名阶段，后续用 COPY --from=normal 引用
+#   slim-tools  busybox-static，供 scratch 的 HEALTHCHECK 与紧急 shell 使用
+#   slim-prep   安装 libpcap0.8 / CA / 时区 / libcap2-bin，收集动态库闭包与 NSS 模块，
+#               重新授予 zki 抓包 capability，产出 /rootfs
+#   final-slim  scratch + /rootfs
 #
-#   # 2. 再基于 normal 变体构建 slim（无需 --load / --push normal 到远程，本地 tag 即可）
-#   docker buildx build --platform linux/amd64 -f deploys/containers/slim.Dockerfile \
+# 前提：normal 变体已构建并可通过 NORMAL_IMAGE 访问（本地 tag 或 registry）。
+# 多平台构建时 NORMAL_IMAGE 须为已推送的多架构 manifest list。
+#
+#   scripts/image.sh slim v1.2.3
+#   docker buildx build -f deploys/containers/slim.Dockerfile \
 #     --build-arg NORMAL_IMAGE=zhongkui:v1.2.3 -t zhongkui:v1.2.3-slim --load .
-#
-#   # 多平台构建（NORMAL_IMAGE 需为多架构 manifest list，已 --push）
-#   docker buildx build --platform linux/amd64,linux/arm64 -f deploys/containers/slim.Dockerfile \
-#     --build-arg NORMAL_IMAGE=registry.example.com/zhongkui:v1.2.3 \
-#     -t registry.example.com/zhongkui:v1.2.3-slim --push .
-#
-#   # 使用仓库脚本（NORMAL_IMAGE 可省略，默认取同版本号的 local normal tag）
-#   VARIANT=slim deploys/scripts/core-docker-image.sh v1.2.3
-#
-# 镜像特点（约 13MB）：
-#   - 基于 scratch，不含 shell / 包管理器，攻击面最小
-#   - 非 root 用户（uid=1000:gid=1000）运行
-#   - zki 通过 setcap 已授予抓包 capability，无需 root
-#   - HEALTHCHECK 由 busybox-static 提供 wget 实现（normal 镜像的 zki 已自带默认配置）
-#
-# 运行（与 normal 变体完全一致）：
-#   docker run --rm -p 8080:8080 -p 8081:8081 zhongkui:v1.2.3-slim
-#   docker run --rm -p 8080:8080 -p 8081:8081 \
-#     -v "$PWD/config.toml:/app/config.toml:ro" \
-#     zhongkui:v1.2.3-slim run web --config /app/config.toml
 
-# ============================================================
-# 参数声明（顶部，BUILDARCH / TARGETARCH 在 FROM 前不可用，
-# 但 slim-prep FROM debian 后会由 BuildKit 自动注入，
-# COPY --from=${NORMAL_IMAGE} 会根据 buildx --platform 自动选取对应架构的 zki）
-# ============================================================
-# normal 变体的镜像地址（必需）：本地 tag 或远程 registry。
-# 多平台构建时须为包含多架构 manifest 的镜像（已 --push 或 --output 到 registry）。
 ARG NORMAL_IMAGE
-# slim-prep 阶段的 Debian 基底（用于执行 ldd 收集动态库闭包）
 ARG RUNTIME_IMAGE=debian:bookworm-slim
-# apt mirror（CI 环境覆盖）
 ARG APT_MIRROR=mirrors.aliyun.com
 
 # ============================================================
-# 步骤 1：normal 源阶段（FROM 支持 ARG 展开，COPY --from 不支持，故中转）
+# normal：中转源阶段
 # ============================================================
-# COPY --from 不接受 ${ARG} 变量展开，会把字面量当作镜像名报 invalid reference format。
-# 解决：先用 FROM ${NORMAL_IMAGE} AS normal 生成一个命名阶段，后续 COPY --from=normal
-# 引用阶段名即可，FROM 指令是支持 ARG 变量展开的。
 FROM ${NORMAL_IMAGE} AS normal
 
 # ============================================================
-# 步骤 2：slim-tools — busybox-static
+# slim-tools：busybox-static
 # ============================================================
-# scratch 基底没有 wget / sh，HEALTHCHECK 需要一个可执行工具。
-# busybox-static 单文件二进制（约 800KB），同时提供 wget（健康探针）与 sh（紧急 shell）。
 FROM alpine:3.20 AS slim-tools
 RUN apk add --no-cache busybox-static
 
 # ============================================================
-# 步骤 3：slim-prep — 组装最小 rootfs
+# slim-prep：组装最小 rootfs
 # ============================================================
-# 本阶段职责：
-#   - 安装 libpcap0.8 / ca-certificates / tzdata：供 core-slim-assemble.sh 内
-#     ldd 收集动态库闭包、复制 CA 证书、复制时区数据使用
-#   - 从 normal 阶段 COPY zki 二进制：保留 setcap 写入的 security.capability 扩展属性
-#   - 从 normal 阶段 COPY default-config.toml：默认 CMD 依赖
-#   - 跑 core-slim-assemble.sh 产出 /rootfs/ 目录
-#
-# 本阶段不含编译环境，无 Go 工具链、无交叉工具链、无源码。
 FROM ${RUNTIME_IMAGE} AS slim-prep
 
 ARG APT_MIRROR
 
-# apt 缓存目录（仅一次 apt install，缓存收益不显著，不挂 cache mount 保持简洁）
-RUN apt-get update \
-    && sed -i \
-        "s|deb.debian.org|${APT_MIRROR}|g; s|security.debian.org|${APT_MIRROR}|g" \
-        /etc/apt/sources.list 2>/dev/null || true \
-    && apt-get install -y --no-install-recommends \
-        libpcap0.8 ca-certificates tzdata \
-    && rm -rf /var/lib/apt/lists/*
+ENV DEBIAN_FRONTEND=noninteractive
 
-# 从 normal 阶段提取制品（COPY --from 根据 buildx --platform 自动选对应架构）
-# cp -a 会保留 setcap 扩展属性，无需重新 setcap
+# 安装 assemble 阶段需要的运行期库与数据（ldd 解析闭包、复制 CA 与时区）。
+# libcap2-bin 用于在 slim-prep 原生层重新授予 zki 抓包 capability，
+# 不依赖 normal 镜像构建时的探测结果（构建环境与运行环境可能不同）。
+RUN set -eux; \
+    for f in /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources; do \
+      if [ -f "$f" ]; then \
+        sed -i "s|deb.debian.org|${APT_MIRROR}|g; s|security.debian.org|${APT_MIRROR}|g" "$f"; \
+      fi; \
+    done; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends libpcap0.8 ca-certificates tzdata libcap2-bin; \
+    rm -rf /var/lib/apt/lists/*
+
+# 从 normal 提取制品（COPY 会保留 security.capability 扩展属性，
+# 但 slim-prep 会重新 setcap，不依赖 normal 的 capability 状态）
 COPY --from=normal /usr/local/bin/zki /usr/local/bin/zki
 COPY --from=normal /app/default-config.toml /app/default-config.toml
 
-# busybox（由 slim-tools 阶段提供，先 COPY 进来再由脚本统一写入 rootfs）
-COPY --from=slim-tools /bin/busybox /tmp/busybox
-COPY deploys/scripts/core-slim-assemble.sh /tmp/
+# busybox-static（scratch 无 shell，HEALTHCHECK 依赖它）。
+# 注意：Alpine 的 busybox-static 包产出的是 /bin/busybox.static，
+# 不能复制 /bin/busybox（那是动态链接 musl 的版本，scratch 无 musl 加载器）。
+COPY --from=slim-tools /bin/busybox.static /tmp/busybox
 
-# 组装 rootfs：二进制、动态库闭包、NSS 模块、CA/时区、默认配置、busybox
-RUN bash /tmp/core-slim-assemble.sh /rootfs /tmp/busybox
+# 组装 rootfs：二进制、动态库闭包、NSS 模块、CA/时区、最小 etc、默认配置、busybox
+RUN set -eux; \
+    mkdir -p /rootfs/tmp /rootfs/app /rootfs/etc/ssl/certs /rootfs/usr/local/bin \
+             /rootfs/usr/share /rootfs/bin; \
+    cp -a /usr/local/bin/zki /rootfs/usr/local/bin/zki; \
+    # 重新授予抓包 capability：normal 构建时的探测可能因构建环境不兼容而清除，
+    # 这里在 slim-prep 原生层确定性地 setcap，运行时是否生效由内核决定。
+    setcap cap_net_raw,cap_net_admin=eip /rootfs/usr/local/bin/zki; \
+    ldd /usr/local/bin/zki \
+      | awk '{ if ($2 == "=>") print $3; else if ($1 ~ /^\//) print $1 }' \
+      | grep '^/' | sort -u \
+      | while read -r lib; do \
+          mkdir -p "/rootfs$(dirname "$lib")"; \
+          cp -L "$lib" "/rootfs$lib"; \
+        done; \
+    for m in libnss_files.so.2 libnss_dns.so.2 libnss_compat.so.2; do \
+      p=$(ls /usr/lib/*-linux-gnu/"$m" 2>/dev/null | head -n 1 || true); \
+      if [ -n "$p" ]; then \
+        mkdir -p "/rootfs$(dirname "$p")"; \
+        cp -L "$p" "/rootfs$p"; \
+      fi; \
+    done; \
+    cp -a /etc/ssl/certs/ca-certificates.crt /rootfs/etc/ssl/certs/; \
+    cp -a /usr/share/zoneinfo /rootfs/usr/share/; \
+    for f in nsswitch.conf passwd group services protocols; do \
+      if [ -f "/etc/$f" ]; then cp -a "/etc/$f" "/rootfs/etc/"; fi; \
+    done; \
+    cp -a /app/default-config.toml /rootfs/app/default-config.toml; \
+    cp -a /tmp/busybox /rootfs/usr/local/bin/busybox; \
+    ln -sf /usr/local/bin/busybox /rootfs/bin/wget; \
+    ln -sf /usr/local/bin/busybox /rootfs/bin/sh; \
+    chmod 1777 /rootfs/tmp
 
 # ============================================================
-# 步骤 4：final-slim — scratch + rootfs
+# final-slim：scratch + rootfs
 # ============================================================
-# 直接注入 slim-prep 产出的最小 rootfs，无 apt、无 shell、无构建层残留。
 FROM scratch AS final-slim
 
 COPY --from=slim-prep /rootfs/ /
@@ -119,8 +117,7 @@ USER 1000:1000
 WORKDIR /app
 EXPOSE 8080 8081 19090
 
-# 用 busybox wget 探测 normal 镜像内置的健康探针服务端口 19090/healthz
-# /bin/wget 在 slim-prep 阶段已创建为 busybox 的 symlink
+# busybox wget 探测健康探针服务（/bin/wget 由 slim-prep 创建为 busybox 符号链接）
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD /bin/wget -qO- http://localhost:19090/healthz >/dev/null || exit 1
 

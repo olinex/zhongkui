@@ -77,9 +77,9 @@ scripts/gitflow.sh commit -t feat -s gitflow -m "新增提交助手" -y
 |---|---|---|---|
 | **Makefile** | 项目文件构建 | 编译二进制、生成代码、格式化、静态检查、单元测试、构建依赖管理（生成码、RAG 快照） | 安装系统/第三方依赖、启动/停止外部服务、调用 `docker`/`scripts/*.sh`、发布 tag、运行长期进程 |
 | **scripts/** | 操作与编排 | 安装依赖、启动/停止服务、CI/测试报告、打包发布、部署 | 反向被 Makefile 调用 |
-| **deploys/** | 镜像与二进制构建 | `containers/` 下的前后端 Dockerfile（`core.Dockerfile`/`web.Dockerfile`），Dockerfile 共用的构建与入口脚本在 `deploys/scripts/`；两个 Dockerfile 均在构建阶段内完成编译（交叉编译环境 → 运行环境 → 依赖环境 → 制品 → 装配五个阶段），分别产出 zki 二进制与控制台/文档站静态产物 | 直接调用 `make build` / `make build-release`、重复实现 `dist/build.env` 生成 |
+| **deploys/** | 镜像与二进制构建 | `containers/` 下的前后端 Dockerfile（后端 `normal.Dockerfile`/`slim.Dockerfile`、前端 `web.Dockerfile`），镜像构建由 `scripts/image.sh` 统一驱动；后端在 `normal.Dockerfile` 构建阶段内完成编译（交叉编译环境 → 运行期依赖 → 依赖环境 → 制品 → 装配），`slim.Dockerfile` 从 normal 镜像提取 zki 免编译，前端产出控制台/文档站静态产物 | 直接调用 `make build` / `make build-release`、重复实现 `dist/build.env` 生成 |
 
-依赖方向单向：`scripts/` → `Makefile`，`deploys/containers` 的 Dockerfile 及其调用的 `deploys/scripts/` 构建脚本 → `Makefile`（`core.Dockerfile` 的构建阶段只调用 `make version-env` 与 `make build-release`）；前后端 Dockerfile 都在镜像构建阶段内编译产物（后端 zki 二进制、前端 `web/dist` 与 `docs/.vitepress/dist`），不依赖宿主机预编译产物。
+依赖方向单向：`scripts/` → `Makefile`，`deploys/containers` 的 Dockerfile → `Makefile`（`normal.Dockerfile` 的构建阶段只调用 `make version-env` 与 `make build-release`，`slim.Dockerfile` 从已构建的 normal 镜像提取制品）；后端在 normal 镜像构建阶段内编译 zki，前端 Dockerfile 在构建阶段内编译 `web/dist` 与 `docs/.vitepress/dist`，不依赖宿主机预编译产物。
 
 ## 6. 版本与发布
 
@@ -133,14 +133,15 @@ scripts/gitflow.sh release finish v1.2.3-rc.1
 # 打包制品
 scripts/dist.sh v1.2.3
 
-# 构建后端镜像（自动生成版本元数据，镜像内 zki version 显示该版本）
-deploys/scripts/core-docker-image.sh v1.2.3                # normal 变体：zhongkui:v1.2.3（默认，debian 基底便于排障）
-VARIANT=slim deploys/scripts/core-docker-image.sh v1.2.3   # slim 变体：zhongkui:v1.2.3-slim（scratch 最小镜像）
+# 构建镜像（scripts/image.sh：normal core / slim core / web 三种目标）
+scripts/image.sh normal v1.2.3    # 后端完整镜像：zhongkui:v1.2.3（debian 基底，便于排障）
+scripts/image.sh slim v1.2.3      # 后端最小镜像：zhongkui:v1.2.3-slim（从 normal 镜像提取 zki）
+scripts/image.sh web v1.2.3       # 前端镜像：zhongkui-web:v1.2.3（nginx 基底）
 
 # 按平台架构构建（PLATFORMS 走 buildx；单平台 tag 自动追加架构后缀，多平台需 --push）
-PLATFORMS=linux/amd64 deploys/scripts/core-docker-image.sh v1.2.3                     # zhongkui:v1.2.3-amd64
-PLATFORMS=linux/arm64 deploys/scripts/core-docker-image.sh v1.2.3                     # zhongkui:v1.2.3-arm64
-PLATFORMS=linux/amd64,linux/arm64 deploys/scripts/core-docker-image.sh v1.2.3 --push   # 多平台 manifest
+PLATFORMS=linux/amd64 scripts/image.sh normal v1.2.3                     # zhongkui:v1.2.3-amd64
+PLATFORMS=linux/arm64 scripts/image.sh normal v1.2.3                     # zhongkui:v1.2.3-arm64
+PLATFORMS=linux/amd64,linux/arm64 scripts/image.sh normal v1.2.3 --push  # 多平台 manifest
 
 # 推送 tag 到 Gitee
 git push origin master --follow-tags
