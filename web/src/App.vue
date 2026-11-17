@@ -7,6 +7,8 @@
          未登录（登出或会话失效）时不挂载，避免抽屉残留在登录页等公开页面 -->
     <assistant-drawer v-if="userStore.valid" v-model="assistantStore.opened" />
     <v-snackbar-queue v-model="appStore.messages" />
+    <!-- 构建标识：贴靠视口右下角，供线上排障时核对代码版本 -->
+    <build-stamp />
   </v-app>
 </template>
 

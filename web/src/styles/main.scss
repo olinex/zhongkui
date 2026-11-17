@@ -257,6 +257,25 @@ html {
   color: rgb(var(--v-theme-error));
 }
 
+// 构建标识：右下角的极淡技术标识（版本 tag + commit）。
+// 常态低不透明度避免抢夺注意力，悬停 / 键盘聚焦时加深，提示可点击复制；
+// 以按钮承载，需压掉浏览器默认外观。
+.zk-build-stamp {
+  font-family: $zk-font-mono;
+  font-size: var(--zk-font-size-caption);
+  color: rgb(var(--v-theme-on-surface-variant));
+  opacity: var(--zk-opacity-build-stamp);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  transition: opacity var(--zk-transition-fast);
+}
+
+.zk-build-stamp:hover,
+.zk-build-stamp:focus-visible {
+  opacity: var(--zk-opacity-build-stamp-hover);
+}
+
 // ---------------------------------------------------------------------------
 // 编辑器外壳（CodeMirror 族）
 // 三个编辑器（Rego / Go 模板 / 标签表达式）与两个 DryRun 面板共同引用，
