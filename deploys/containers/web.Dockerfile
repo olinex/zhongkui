@@ -39,6 +39,10 @@ ARG VITE_ZHONGKUI_BASE_URL=/api/v1
 ARG VITE_DOCS_URL=/docs/
 ARG DOCS_BASE=/docs/
 ARG DOCS_CONSOLE_URL=/console
+# 控制台构建标识：展示在页面右下角，用于把线上页面与 tag / commit 对应；
+# 未注入时前端回落到 web/build.config.ts 的默认值（dev / unknown）。
+ARG VITE_BUILD_TAG=dev
+ARG VITE_BUILD_COMMIT=unknown
 
 # ============================================================
 # 步骤 1：前端编译环境（Node + pnpm）
@@ -115,6 +119,8 @@ ARG VITE_ZHONGKUI_BASE_URL
 ARG VITE_DOCS_URL
 ARG DOCS_BASE
 ARG DOCS_CONSOLE_URL
+ARG VITE_BUILD_TAG
+ARG VITE_BUILD_COMMIT
 # Node 编译堆上限（可选）：CI 小内存机器上压低 Vite/VitePress 堆峰值，
 # 未传时默认 --max-old-space-size=3072，这里允许外部覆盖。
 ARG NODE_OPTIONS
@@ -127,7 +133,9 @@ COPY . .
 ENV VITE_ZHONGKUI_BASE_URL=${VITE_ZHONGKUI_BASE_URL} \
     VITE_DOCS_URL=${VITE_DOCS_URL} \
     DOCS_BASE=${DOCS_BASE} \
-    DOCS_CONSOLE_URL=${DOCS_CONSOLE_URL}
+    DOCS_CONSOLE_URL=${DOCS_CONSOLE_URL} \
+    VITE_BUILD_TAG=${VITE_BUILD_TAG} \
+    VITE_BUILD_COMMIT=${VITE_BUILD_COMMIT}
 
 # 串行构建：内存受限环境下两个 Node 构建并发会触发 OOM。
 # DOCS_LAST_UPDATED=false 是静态默认值（构建上下文不含 .git）。

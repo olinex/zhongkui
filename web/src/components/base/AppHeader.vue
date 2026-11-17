@@ -1,9 +1,20 @@
 <template>
   <v-app-bar class="zk-hairline-bottom">
     <template #prepend>
-      <v-btn variant="text" @click="gotoHome">
-        <v-img src="@/assets/logo.png" size="xs" cover absolute round />
-      </v-btn>
+      <!-- logo 用 VAvatar 承载：圆形头像与 32×32 图形等大，不会被容器裁切；
+           以原生 button 作根节点保留可点击与键盘可达性，且不影响工具栏高度 -->
+      <v-avatar
+        tag="button"
+        type="button"
+        variant="text"
+        size="32"
+        class="cursor-pointer"
+        :title="$t('title.home')"
+        :aria-label="$t('title.home')"
+        @click="gotoHome"
+      >
+        <v-img :src="logoSrc" width="32" height="32" contain />
+      </v-avatar>
       <v-menu transition="scale-transition">
         <template #activator="{ props }">
           <v-btn
@@ -132,11 +143,18 @@ import { useUserStore } from "@/stores/user";
 import { SUPPORT_LANGUAGES } from "@/utils/options";
 import i18n from "@/utils/i18n";
 import { asLanguagePath } from "@/router";
+import logoBlack from "@/assets/logo-black.svg";
+import logoWhite from "@/assets/logo-white.svg";
 
 const route = useRoute();
 const appStore = useAppStore();
 const userStore = useUserStore();
 const assistantStore = useAssistantStore();
+
+// 导航栏 logo 按主题切换：dark 用白色，light 用黑色，保证在对应底色上可辨
+const logoSrc = computed(() =>
+  appStore.theme === DARK_THEME ? logoWhite : logoBlack,
+);
 
 const avaliableNamespaces = ref([] as string[]);
 
