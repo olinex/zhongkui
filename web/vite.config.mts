@@ -13,9 +13,17 @@ import path from "path";
 import { defineConfig, loadEnv } from "vite";
 import { fileURLToPath, URL } from "node:url";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
+import { buildInfoEnv, defaultBuildInfo } from "./build.config";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
+  // loadEnv 同时读取 .env* 与 process.env，环境变量优先于 build.config.ts 的默认值
+  const env = loadEnv(mode, process.cwd(), "VITE_");
+  const buildInfo = {
+    tag: env[buildInfoEnv.tag]?.trim() || defaultBuildInfo.tag,
+    commit: env[buildInfoEnv.commit]?.trim() || defaultBuildInfo.commit,
+  };
+
   return {
     plugins: [
       vueI18n({
@@ -71,8 +79,10 @@ export default defineConfig(({ mode }) => {
     ],
     define: {
       "process.env": {
-        ZHONGKUI_BASE_URL: loadEnv(mode, process.cwd()).VITE_ZHONGKUI_BASE_URL,
+        ZHONGKUI_BASE_URL: env.VITE_ZHONGKUI_BASE_URL,
       },
+      // 构建标识（tag / commit）编译期固化进产物，展示见 components/base/BuildStamp.vue
+      __BUILD_INFO__: JSON.stringify(buildInfo),
     },
     resolve: {
       alias: {

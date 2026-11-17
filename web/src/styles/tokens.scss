@@ -215,9 +215,13 @@ $zk-surface-raised-opacity: 0.1;
 // ---------------------------------------------------------------------------
 // 不透明度
 //   opacity-disabled  被闸住 / 禁用的整体弱化（仍保持形态可辨）
+//   opacity-build-stamp        构建标识常态强度：极淡，不抢夺注意力
+//   opacity-build-stamp-hover  构建标识悬停强度：加深提示可点击复制
 // ---------------------------------------------------------------------------
 
 $zk-opacity-disabled: 0.6;
+$zk-opacity-build-stamp: 0.28;
+$zk-opacity-build-stamp-hover: 0.95;
 
 // ---------------------------------------------------------------------------
 // 开关（Switch）轨道
@@ -326,6 +330,8 @@ $zk-shadow-md:
   --zk-surface-subtle-opacity: #{$zk-surface-subtle-opacity};
   --zk-surface-raised-opacity: #{$zk-surface-raised-opacity};
   --zk-opacity-disabled: #{$zk-opacity-disabled};
+  --zk-opacity-build-stamp: #{$zk-opacity-build-stamp};
+  --zk-opacity-build-stamp-hover: #{$zk-opacity-build-stamp-hover};
   --zk-switch-track-opacity: #{$zk-switch-track-opacity};
   --zk-switch-disabled-opacity: #{$zk-switch-disabled-opacity};
   --zk-z-dialog: #{$zk-z-dialog};

@@ -4,7 +4,7 @@
       <app-header />
     </template>
     <template #body>
-      <v-card prepend-avatar="@/assets/logo.png">
+      <v-card prepend-avatar="@/assets/logo-gradient.svg">
         <template #title>
           <span class="font-weight-black">{{ $t("title.zk") }}</span>
         </template>
