@@ -96,7 +96,7 @@
             <v-card class="profile-summary">
               <div class="text-center pa-6">
                 <v-avatar size="96" color="primary" variant="tonal" class="mx-auto mb-4">
-                  <v-img src="@/assets/logo.png" cover />
+                  <v-img src="@/assets/logo-white.svg" cover />
                 </v-avatar>
                 <div class="text-title-large font-weight-bold text-truncate">
                   {{ userStore.nickleName }}

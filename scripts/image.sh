@@ -173,7 +173,11 @@ slim)
 	;;
 web)
 	DOCKERFILE="deploys/containers/web.Dockerfile"
-	build_args=()
+	# 控制台页面角落展示的构建标识：tag 取位置参数 / VERSION，commit 取当前工作区 HEAD
+	build_args=(
+		--build-arg VITE_BUILD_TAG="$VERSION"
+		--build-arg VITE_BUILD_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+	)
 	;;
 esac
 

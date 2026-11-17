@@ -22,6 +22,7 @@ declare module 'vue' {
     BarsChart: typeof import('./components/charts/BarsChart.vue')['default']
     BooleanChip: typeof import('./components/base/BooleanChip.vue')['default']
     Breadcrumbs: typeof import('./components/base/Breadcrumbs.vue')['default']
+    BuildStamp: typeof import('./components/base/BuildStamp.vue')['default']
     CentralLayout: typeof import('./layouts/CentralLayout.vue')['default']
     ChipSearchField: typeof import('./components/forms/ChipSearchField.vue')['default']
     ClauseField: typeof import('./components/forms/ClauseField.vue')['default']
