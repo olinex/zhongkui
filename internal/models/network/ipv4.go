@@ -245,12 +245,13 @@ func (i *IPv4Headers) DstAddr() net.IP {
 }
 
 // PacketIPv4 表示完整的IPv4网络数据包
-// 该结构体组合了以太网层（链路层）和IPv4层（网络层）的头部信息
+// 该结构体组合了链路无关基座与IPv4层（网络层）的头部信息
 // 用于存储和分析从网络捕获的原始IPv4数据包
 //
 // 结构组成:
-//   - PacketEthernet: 以太网层头部信息，包含MAC地址、以太网类型等
-//   - IPv4Headers:    IPv4网络层头部信息，包含IP地址、协议类型、TTL等
+//   - PacketLink: 链路无关的数据包基座（元数据 + 行唯一标识）
+//   - LinkSlots:  通用链路槽位，含义由 link_type 决定，Raw IP 时为空
+//   - IPv4Headers: IPv4网络层头部信息，包含IP地址、协议类型、TTL等
 //
 // 数据库特性:
 //   - 使用MergeTree引擎存储，支持高性能查询
@@ -259,8 +260,8 @@ func (i *IPv4Headers) DstAddr() net.IP {
 //   - 复合排序键，优化常见查询模式
 //
 // 查询优化:
-//   - 排序键包含namespace、capture、version、session_id等维度
-//   - 支持按源/目的IP、协议类型、MAC地址等字段快速过滤
+//   - 排序键包含namespace、capture、version、session_id、link_type等维度
+//   - 支持按源/目的IP、协议类型、链路槽位等字段快速过滤
 //   - 时间戳分区支持高效的时间范围查询
 //
 // 使用场景:
@@ -269,7 +270,8 @@ func (i *IPv4Headers) DstAddr() net.IP {
 //   - 网络流量监控和统计
 //   - 协议分析和故障诊断
 type PacketIPv4 struct {
-	PacketEthernet
+	PacketLink
+	LinkSlots
 	IPv4Headers
 	// 加密存储的 IP 载荷
 	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=16429,length=32"`

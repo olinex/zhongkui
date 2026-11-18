@@ -16,14 +16,23 @@
   - [func \(f \*NotFactor\) String\(\) string](<#NotFactor.String>)
 - [type TagEventCondition](<#TagEventCondition>)
   - [func \(c \*TagEventCondition\) ExprValidate\(\) \(string, error\)](<#TagEventCondition.ExprValidate>)
+  - [func \(m \*TagEventCondition\) TableName\(\) string](<#TagEventCondition.TableName>)
 - [type TagEventRecord](<#TagEventRecord>)
+  - [func \(m \*TagEventRecord\) TableName\(\) string](<#TagEventRecord.TableName>)
 - [type TagEventRecordHit](<#TagEventRecordHit>)
+  - [func \(m \*TagEventRecordHit\) TableName\(\) string](<#TagEventRecordHit.TableName>)
 - [type TagEventRule](<#TagEventRule>)
+  - [func \(m \*TagEventRule\) TableName\(\) string](<#TagEventRule.TableName>)
 - [type TagEventRuleVersion](<#TagEventRuleVersion>)
+  - [func \(m \*TagEventRuleVersion\) TableName\(\) string](<#TagEventRuleVersion.TableName>)
 - [type TagRule](<#TagRule>)
+  - [func \(m \*TagRule\) TableName\(\) string](<#TagRule.TableName>)
 - [type TagRuleSample](<#TagRuleSample>)
+  - [func \(m \*TagRuleSample\) TableName\(\) string](<#TagRuleSample.TableName>)
 - [type TagRuleVersion](<#TagRuleVersion>)
+  - [func \(m \*TagRuleVersion\) TableName\(\) string](<#TagRuleVersion.TableName>)
 - [type TagSumming](<#TagSumming>)
+  - [func \(m \*TagSumming\) TableName\(\) string](<#TagSumming.TableName>)
 
 
 ## Constants
@@ -195,6 +204,15 @@ func (c *TagEventCondition) ExprValidate() (string, error)
 
 ExprValidate 验证标签事件条件中的标签组合表达式语法是否正确 使用布尔表达式解析器检查表达式是否可以被正确解析 返回精炼后的表达式字符串（去除无意义的空格和回车）和错误信息
 
+<a name="TagEventCondition.TableName"></a>
+### func \(\*TagEventCondition\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/table_name.go#L6>)
+
+```go
+func (m *TagEventCondition) TableName() string
+```
+
+TableName 返回 TagEventCondition 对应的数据库表名。
+
 <a name="TagEventRecord"></a>
 ## type [TagEventRecord](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_record.go#L37-L60>)
 
@@ -226,6 +244,15 @@ type TagEventRecord struct {
     Hits []TagEventRecordHit `gorm:"foreignKey:TagEventRecordID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 ```
+
+<a name="TagEventRecord.TableName"></a>
+### func \(\*TagEventRecord\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/table_name.go#L11>)
+
+```go
+func (m *TagEventRecord) TableName() string
+```
+
+TableName 返回 TagEventRecord 对应的数据库表名。
 
 <a name="TagEventRecordHit"></a>
 ## type [TagEventRecordHit](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_record.go#L65-L93>)
@@ -264,6 +291,15 @@ type TagEventRecordHit struct {
 }
 ```
 
+<a name="TagEventRecordHit.TableName"></a>
+### func \(\*TagEventRecordHit\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/table_name.go#L16>)
+
+```go
+func (m *TagEventRecordHit) TableName() string
+```
+
+TableName 返回 TagEventRecordHit 对应的数据库表名。
+
 <a name="TagEventRule"></a>
 ## type [TagEventRule](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_rule.go#L162-L185>)
 
@@ -296,6 +332,15 @@ type TagEventRule struct {
 }
 ```
 
+<a name="TagEventRule.TableName"></a>
+### func \(\*TagEventRule\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/table_name.go#L21>)
+
+```go
+func (m *TagEventRule) TableName() string
+```
+
+TableName 返回 TagEventRule 对应的数据库表名。
+
 <a name="TagEventRuleVersion"></a>
 ## type [TagEventRuleVersion](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_event_rule_version.go#L18-L39>)
 
@@ -326,6 +371,15 @@ type TagEventRuleVersion struct {
 }
 ```
 
+<a name="TagEventRuleVersion.TableName"></a>
+### func \(\*TagEventRuleVersion\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/table_name.go#L26>)
+
+```go
+func (m *TagEventRuleVersion) TableName() string
+```
+
+TableName 返回 TagEventRuleVersion 对应的数据库表名。
+
 <a name="TagRule"></a>
 ## type [TagRule](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_rule.go#L12-L29>)
 
@@ -352,6 +406,15 @@ type TagRule struct {
 }
 ```
 
+<a name="TagRule.TableName"></a>
+### func \(\*TagRule\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/table_name.go#L31>)
+
+```go
+func (m *TagRule) TableName() string
+```
+
+TableName 返回 TagRule 对应的数据库表名。
+
 <a name="TagRuleSample"></a>
 ## type [TagRuleSample](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_rule_sample.go#L15-L29>)
 
@@ -374,6 +437,15 @@ type TagRuleSample struct {
     Description string `gorm:"type:VARCHAR(512)"`
 }
 ```
+
+<a name="TagRuleSample.TableName"></a>
+### func \(\*TagRuleSample\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/table_name.go#L36>)
+
+```go
+func (m *TagRuleSample) TableName() string
+```
+
+TableName 返回 TagRuleSample 对应的数据库表名。
 
 <a name="TagRuleVersion"></a>
 ## type [TagRuleVersion](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_rule_version.go#L16-L34>)
@@ -401,6 +473,15 @@ type TagRuleVersion struct {
     Rego string `gorm:"type:TEXT"`
 }
 ```
+
+<a name="TagRuleVersion.TableName"></a>
+### func \(\*TagRuleVersion\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/table_name.go#L41>)
+
+```go
+func (m *TagRuleVersion) TableName() string
+```
+
+TableName 返回 TagRuleVersion 对应的数据库表名。
 
 <a name="TagSumming"></a>
 ## type [TagSumming](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/tag_summing.go#L32-L50>)
@@ -448,3 +529,12 @@ type TagSumming struct {
     IDs serializer.HexUUIDs `gorm:"type:Array(UUID)" json:"ids"`
 }
 ```
+
+<a name="TagSumming.TableName"></a>
+### func \(\*TagSumming\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/tag/table_name.go#L46>)
+
+```go
+func (m *TagSumming) TableName() string
+```
+
+TableName 返回 TagSumming 对应的数据库表名。

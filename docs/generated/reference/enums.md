@@ -110,6 +110,14 @@
 | `redis` | `redis` | Redis |
 | `sqlite_file` | `sqlite_file` | SQLite 文件 |
 
+## decodeKind
+
+| Key | 存储值 | 展示名 |
+| --- | --- | --- |
+| `continue` | `continue` | 继续解析 |
+| `recurse` | `recurse` | 递归解析 |
+| `stop` | `stop` | 终止解析 |
+
 ## diagnosisCategory
 
 | Key | 存储值 | 展示名 |

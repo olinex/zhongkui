@@ -270,7 +270,7 @@ func Registry() []Entry
 Registry 返回全部文档条目，是文档体系的唯一注册点。 每个包至多对应一个叙述档条目，避免相同知识内容被重复索引。
 
 <a name="KnowledgeDocument"></a>
-## type [KnowledgeDocument](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/schema.go#L431-L438>)
+## type [KnowledgeDocument](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/schema.go#L490-L497>)
 
 KnowledgeDocument 是一篇可入 RAG 的生成知识文档：Title 为同步与去重的稳定键，Content 为正文。
 
@@ -286,7 +286,7 @@ type KnowledgeDocument struct {
 ```
 
 <a name="SchemaKnowledgeDocuments"></a>
-### func [SchemaKnowledgeDocuments](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/schema.go#L443>)
+### func [SchemaKnowledgeDocuments](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/schema.go#L502>)
 
 ```go
 func SchemaKnowledgeDocuments(projectRoot string) ([]KnowledgeDocument, error)

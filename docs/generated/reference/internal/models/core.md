@@ -19,6 +19,7 @@
   - [func \(a \*AccessKey\) ExpiredAt\(\) \*time.Time](<#AccessKey.ExpiredAt>)
   - [func \(a \*AccessKey\) IsEnabled\(\) bool](<#AccessKey.IsEnabled>)
   - [func \(a \*AccessKey\) Secret\(\) string](<#AccessKey.Secret>)
+  - [func \(m \*AccessKey\) TableName\(\) string](<#AccessKey.TableName>)
   - [func \(a \*AccessKey\) UserID\(\) string](<#AccessKey.UserID>)
 - [type AccessKeyPool](<#AccessKeyPool>)
   - [func NewAccessKeyPool\(db \*database.DB, cache \*redis.Client, ttl time.Duration\) \*AccessKeyPool](<#NewAccessKeyPool>)
@@ -31,14 +32,18 @@
   - [func \(c \*Capturer\) DeleteWithConfig\(db \*database.DB, client \*etcd.EtcdClient\) error](<#Capturer.DeleteWithConfig>)
   - [func \(c \*Capturer\) GetConfig\(ctx context.Context, client \*etcd.EtcdClient\) \(\*reporter\_v1.Config, error\)](<#Capturer.GetConfig>)
   - [func \(c \*Capturer\) GetStatusList\(ctx context.Context, client \*etcd.EtcdClient\) \(\[\]\*reporter\_v1.Status, error\)](<#Capturer.GetStatusList>)
+  - [func \(m \*Capturer\) TableName\(\) string](<#Capturer.TableName>)
   - [func \(c \*Capturer\) UpdateConfig\(ctx context.Context, client \*etcd.EtcdClient, cfg \*reporter\_v1.Config\) error](<#Capturer.UpdateConfig>)
 - [type Datasource](<#Datasource>)
   - [func \(d \*Datasource\) ConfigData\(\) \[\]byte](<#Datasource.ConfigData>)
+  - [func \(m \*Datasource\) TableName\(\) string](<#Datasource.TableName>)
 - [type Group](<#Group>)
+  - [func \(m \*Group\) TableName\(\) string](<#Group.TableName>)
 - [type Namespace](<#Namespace>)
   - [func \(n \*Namespace\) AfterCreate\(\_ \*database.DB\) error](<#Namespace.AfterCreate>)
   - [func \(n \*Namespace\) AfterDelete\(\_ \*database.DB\) error](<#Namespace.AfterDelete>)
   - [func \(n \*Namespace\) AfterUpdate\(db \*database.DB\) error](<#Namespace.AfterUpdate>)
+  - [func \(m \*Namespace\) TableName\(\) string](<#Namespace.TableName>)
 - [type NamespaceCache](<#NamespaceCache>)
   - [func NewNamespaceCache\(\) \*NamespaceCache](<#NewNamespaceCache>)
   - [func \(n \*NamespaceCache\) Add\(namespace string\)](<#NamespaceCache.Add>)
@@ -49,21 +54,31 @@
   - [func \(n \*NamespaceCache\) SetDB\(db \*database.DB\)](<#NamespaceCache.SetDB>)
 - [type NotificationChannel](<#NotificationChannel>)
   - [func \(c \*NotificationChannel\) ConfigData\(\) \[\]byte](<#NotificationChannel.ConfigData>)
+  - [func \(m \*NotificationChannel\) TableName\(\) string](<#NotificationChannel.TableName>)
 - [type NotificationGroup](<#NotificationGroup>)
+  - [func \(m \*NotificationGroup\) TableName\(\) string](<#NotificationGroup.TableName>)
 - [type NotificationGroupTarget](<#NotificationGroupTarget>)
+  - [func \(m \*NotificationGroupTarget\) TableName\(\) string](<#NotificationGroupTarget.TableName>)
 - [type NotificationRecord](<#NotificationRecord>)
+  - [func \(m \*NotificationRecord\) TableName\(\) string](<#NotificationRecord.TableName>)
 - [type NotificationTarget](<#NotificationTarget>)
   - [func \(t \*NotificationTarget\) ConfigData\(\) \[\]byte](<#NotificationTarget.ConfigData>)
+  - [func \(m \*NotificationTarget\) TableName\(\) string](<#NotificationTarget.TableName>)
 - [type NotificationTemplate](<#NotificationTemplate>)
+  - [func \(m \*NotificationTemplate\) TableName\(\) string](<#NotificationTemplate.TableName>)
 - [type RbacPolicy](<#RbacPolicy>)
   - [func NewGroupPolicy\(group, target, action, effect string\) \*RbacPolicy](<#NewGroupPolicy>)
   - [func NewUserPolicy\(unionID serializer.HexUUID, group, namespace string\) \*RbacPolicy](<#NewUserPolicy>)
+  - [func \(m \*RbacPolicy\) TableName\(\) string](<#RbacPolicy.TableName>)
 - [type RbacPolicyTemplate](<#RbacPolicyTemplate>)
   - [func NewRbacPolicyTemplate\(target, action string\) \*RbacPolicyTemplate](<#NewRbacPolicyTemplate>)
+  - [func \(m \*RbacPolicyTemplate\) TableName\(\) string](<#RbacPolicyTemplate.TableName>)
 - [type User](<#User>)
   - [func \(u \*User\) Create\(db \*database.DB, superuser bool\) error](<#User.Create>)
   - [func \(u \*User\) ResetPassword\(db \*database.DB, password string\) error](<#User.ResetPassword>)
+  - [func \(m \*User\) TableName\(\) string](<#User.TableName>)
 - [type UserPasswordReset](<#UserPasswordReset>)
+  - [func \(m \*UserPasswordReset\) TableName\(\) string](<#UserPasswordReset.TableName>)
 
 
 ## Constants
@@ -332,6 +347,15 @@ func (a *AccessKey) Secret() string
 
 Secret 返回访问键的密钥 实现 auth.AccessKey 接口
 
+<a name="AccessKey.TableName"></a>
+### func \(\*AccessKey\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/table_name.go#L6>)
+
+```go
+func (m *AccessKey) TableName() string
+```
+
+TableName 返回 AccessKey 对应的数据库表名。
+
 <a name="AccessKey.UserID"></a>
 ### func \(\*AccessKey\) [UserID](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/access_key.go#L68>)
 
@@ -549,6 +573,15 @@ GetStatusList 从 etcd 获取采集器的状态列表 该方法查询 etcd 中�
 - 每个状态记录对应一个采集器会话
 - 如果没有任何状态记录，返回 \(nil, nil\) 而不是错误
 
+<a name="Capturer.TableName"></a>
+### func \(\*Capturer\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/table_name.go#L11>)
+
+```go
+func (m *Capturer) TableName() string
+```
+
+TableName 返回 Capturer 对应的数据库表名。
+
 <a name="Capturer.UpdateConfig"></a>
 ### func \(\*Capturer\) [UpdateConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/capturer.go#L155>)
 
@@ -604,6 +637,15 @@ func (d *Datasource) ConfigData() []byte
 
 ConfigData 返回数据源连接配置的明文字节，nil 安全（Config 为空或 nil 时返回 nil）。
 
+<a name="Datasource.TableName"></a>
+### func \(\*Datasource\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/table_name.go#L16>)
+
+```go
+func (m *Datasource) TableName() string
+```
+
+TableName 返回 Datasource 对应的数据库表名。
+
 <a name="Group"></a>
 ## type [Group](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/group.go#L10-L16>)
 
@@ -618,6 +660,15 @@ type Group struct {
     Description string `gorm:"type:VARCHAR(256)"`
 }
 ```
+
+<a name="Group.TableName"></a>
+### func \(\*Group\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/table_name.go#L21>)
+
+```go
+func (m *Group) TableName() string
+```
+
+TableName 返回 Group 对应的数据库表名。
 
 <a name="Namespace"></a>
 ## type [Namespace](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/namespace.go#L147-L151>)
@@ -676,6 +727,15 @@ AfterUpdate 在更新命名空间后触发的钩子函数，检查命名空间�
 返回值：
 
 - error: 如果名称被修改则返回错误，否则返回nil
+
+<a name="Namespace.TableName"></a>
+### func \(\*Namespace\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/table_name.go#L26>)
+
+```go
+func (m *Namespace) TableName() string
+```
+
+TableName 返回 Namespace 对应的数据库表名。
 
 <a name="NamespaceCache"></a>
 ## type [NamespaceCache](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/namespace.go#L19-L23>)
@@ -814,6 +874,15 @@ func (c *NotificationChannel) ConfigData() []byte
 
 ConfigData 返回渠道配置的明文字节，nil 安全（Config 为空或 nil 时返回 nil）。
 
+<a name="NotificationChannel.TableName"></a>
+### func \(\*NotificationChannel\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/table_name.go#L31>)
+
+```go
+func (m *NotificationChannel) TableName() string
+```
+
+TableName 返回 NotificationChannel 对应的数据库表名。
+
 <a name="NotificationGroup"></a>
 ## type [NotificationGroup](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/notification.go#L118-L131>)
 
@@ -836,6 +905,15 @@ type NotificationGroup struct {
 }
 ```
 
+<a name="NotificationGroup.TableName"></a>
+### func \(\*NotificationGroup\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/table_name.go#L36>)
+
+```go
+func (m *NotificationGroup) TableName() string
+```
+
+TableName 返回 NotificationGroup 对应的数据库表名。
+
 <a name="NotificationGroupTarget"></a>
 ## type [NotificationGroupTarget](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/notification.go#L136-L143>)
 
@@ -851,6 +929,15 @@ type NotificationGroupTarget struct {
     TargetID uint `gorm:"column:target_id;type:INT;uniqueIndex:uq_notification_group_targets_group_target;index:idx_notification_group_targets_target_id"`
 }
 ```
+
+<a name="NotificationGroupTarget.TableName"></a>
+### func \(\*NotificationGroupTarget\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/table_name.go#L41>)
+
+```go
+func (m *NotificationGroupTarget) TableName() string
+```
+
+TableName 返回 NotificationGroupTarget 对应的数据库表名。
 
 <a name="NotificationRecord"></a>
 ## type [NotificationRecord](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/notification.go#L151-L181>)
@@ -890,6 +977,15 @@ type NotificationRecord struct {
     NotifiedAt *time.Time `gorm:"column:notified_at;type:TIMESTAMPTZ"`
 }
 ```
+
+<a name="NotificationRecord.TableName"></a>
+### func \(\*NotificationRecord\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/table_name.go#L46>)
+
+```go
+func (m *NotificationRecord) TableName() string
+```
+
+TableName 返回 NotificationRecord 对应的数据库表名。
 
 <a name="NotificationTarget"></a>
 ## type [NotificationTarget](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/notification.go#L78-L103>)
@@ -934,6 +1030,15 @@ func (t *NotificationTarget) ConfigData() []byte
 
 ConfigData 返回目标配置的明文字节，nil 安全（Config 为空或 nil 时返回 nil）。
 
+<a name="NotificationTarget.TableName"></a>
+### func \(\*NotificationTarget\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/table_name.go#L51>)
+
+```go
+func (m *NotificationTarget) TableName() string
+```
+
+TableName 返回 NotificationTarget 对应的数据库表名。
+
 <a name="NotificationTemplate"></a>
 ## type [NotificationTemplate](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/notification.go#L190-L211>)
 
@@ -963,6 +1068,15 @@ type NotificationTemplate struct {
     Description string `gorm:"column:description;type:VARCHAR(256)"` // 可选描述
 }
 ```
+
+<a name="NotificationTemplate.TableName"></a>
+### func \(\*NotificationTemplate\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/table_name.go#L56>)
+
+```go
+func (m *NotificationTemplate) TableName() string
+```
+
+TableName 返回 NotificationTemplate 对应的数据库表名。
 
 <a name="RbacPolicy"></a>
 ## type [RbacPolicy](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/rbac_policy.go#L12-L46>)
@@ -1046,6 +1160,15 @@ NewUserPolicy 创建新的用户策略实例 用户策略定义了用户与组�
 
 - \*RbacPolicy: 新创建的用户策略实例
 
+<a name="RbacPolicy.TableName"></a>
+### func \(\*RbacPolicy\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/table_name.go#L61>)
+
+```go
+func (m *RbacPolicy) TableName() string
+```
+
+TableName 返回 RbacPolicy 对应的数据库表名。
+
 <a name="RbacPolicyTemplate"></a>
 ## type [RbacPolicyTemplate](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/rbac_policy.go#L91-L101>)
 
@@ -1082,6 +1205,15 @@ NewRbacPolicyTemplate 创建新的RBAC策略模板实例
 返回:
 
 - \*RbacPolicyTemplate: 新创建的策略模板实例
+
+<a name="RbacPolicyTemplate.TableName"></a>
+### func \(\*RbacPolicyTemplate\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/table_name.go#L66>)
+
+```go
+func (m *RbacPolicyTemplate) TableName() string
+```
+
+TableName 返回 RbacPolicyTemplate 对应的数据库表名。
 
 <a name="User"></a>
 ## type [User](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/user.go#L14-L57>)
@@ -1186,6 +1318,15 @@ ResetPassword 重置用户密码
 3. 使用 UpdateColumn 方法直接更新密码字段，避免触发模型钩子
 4. 错误处理使用 errors.WithStack 包装错误信息，便于调试
 
+<a name="User.TableName"></a>
+### func \(\*User\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/table_name.go#L71>)
+
+```go
+func (m *User) TableName() string
+```
+
+TableName 返回 User 对应的数据库表名。
+
 <a name="UserPasswordReset"></a>
 ## type [UserPasswordReset](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/user_password_reset.go#L12-L25>)
 
@@ -1207,3 +1348,12 @@ type UserPasswordReset struct {
     Used bool `gorm:"type:BOOLEAN;default:false"`
 }
 ```
+
+<a name="UserPasswordReset.TableName"></a>
+### func \(\*UserPasswordReset\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/core/table_name.go#L76>)
+
+```go
+func (m *UserPasswordReset) TableName() string
+```
+
+TableName 返回 UserPasswordReset 对应的数据库表名。

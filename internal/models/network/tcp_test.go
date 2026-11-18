@@ -436,7 +436,7 @@ func TestPacketIPv4TCP_CaptureTimestamp(t *testing.T) {
 			now := time.Now()
 			pkt := &PacketIPv4TCP{
 				PacketIPv4: PacketIPv4{
-					PacketEthernet: PacketEthernet{
+					PacketLink: PacketLink{
 						AsPacket: AsPacket{
 							TimestampMeta: TimestampMeta{Timestamp: now},
 						},
@@ -455,7 +455,7 @@ func TestPacketIPv6TCP_CaptureTimestamp(t *testing.T) {
 			now := time.Now()
 			pkt := &PacketIPv6TCP{
 				PacketIPv6: PacketIPv6{
-					PacketEthernet: PacketEthernet{
+					PacketLink: PacketLink{
 						AsPacket: AsPacket{
 							TimestampMeta: TimestampMeta{Timestamp: now},
 						},

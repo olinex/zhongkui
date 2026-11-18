@@ -43,7 +43,7 @@ const (
 ```
 
 <a name="ExtractPacketFromPcap"></a>
-## func [ExtractPacketFromPcap](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/extractor.go#L36>)
+## func [ExtractPacketFromPcap](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/extractor.go#L38>)
 
 ```go
 func ExtractPacketFromPcap(ctx context.Context, task etl.Task, channel chan<- any) error
@@ -88,14 +88,15 @@ func WithPcapStats(ctx context.Context, stats *PcapStats) context.Context
 WithPcapStats 将 PcapStats 实例注入到 context 中
 
 <a name="PcapItem"></a>
-## type [PcapItem](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/extractor.go#L28-L32>)
+## type [PcapItem](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/handlers/pcap/extractor.go#L29-L34>)
 
-PcapItem 表示从 PCAP 文件中提取的数据包项。 包含会话 ID、数据源信息和 gopacket 包。
+PcapItem 表示从 PCAP 文件中提取的数据包项。 包含会话 ID、数据源信息、pcap 真实链路类型和 gopacket 包。
 
 ```go
 type PcapItem struct {
     SessionID serializer.HexUUID      // 会话唯一标识符
     Source    reporter_v1.ResourceRaw // 数据源信息
+    LinkType  layers.LinkType         // pcap 文件真实链路类型
     Packet    gopacket.Packet         // gopacket 数据包对象
 }
 ```

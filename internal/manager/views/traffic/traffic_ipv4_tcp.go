@@ -69,15 +69,42 @@ type Ipv4TcpListGetListItemOut struct {
 	// ---- PacketMeta ----
 	// LayerStack 网络层堆栈信息
 	LayerStack []LayerInfoOut `json:"layerStack"`
-	// ---- EthernetHeaders ----
-	// EthDstMAC 目的 MAC 地址
-	EthDstMAC serializer.MacAddr `json:"ethDstMac"`
-	// EthSrcMAC 源 MAC 地址
-	EthSrcMAC serializer.MacAddr `json:"ethSrcMac"`
-	// EthType 以太网类型
-	EthType layers.EthernetType `json:"ethType"`
-	// EthLength 帧长度
-	EthLength uint16 `json:"ethLength"`
+	// ---- LinkMeta ----
+	// LinkType 链路类型
+	LinkType layers.LinkType `json:"linkType"`
+	// ---- LinkSlots ----
+	// Link1 链路槽位 1
+	Link1 string `json:"link1"`
+	// Link2 链路槽位 2
+	Link2 string `json:"link2"`
+	// Link3 链路槽位 3
+	Link3 string `json:"link3"`
+	// Link4 链路槽位 4
+	Link4 string `json:"link4"`
+	// Link5 链路槽位 5
+	Link5 string `json:"link5"`
+	// Link6 链路槽位 6
+	Link6 string `json:"link6"`
+	// Link7 链路槽位 7
+	Link7 string `json:"link7"`
+	// Link8 链路槽位 8
+	Link8 string `json:"link8"`
+	// Link9 链路槽位 9
+	Link9 string `json:"link9"`
+	// Link10 链路槽位 10
+	Link10 string `json:"link10"`
+	// Link11 链路槽位 11
+	Link11 string `json:"link11"`
+	// Link12 链路槽位 12
+	Link12 string `json:"link12"`
+	// Link13 链路槽位 13
+	Link13 string `json:"link13"`
+	// Link14 链路槽位 14
+	Link14 string `json:"link14"`
+	// Link15 链路槽位 15
+	Link15 string `json:"link15"`
+	// Link16 链路槽位 16
+	Link16 string `json:"link16"`
 	// ---- IPv4Headers ----
 	// IPv4Version 协议版本号
 	IPv4Version uint8 `json:"ipv4Version"`
@@ -228,11 +255,25 @@ func newIpv4TcpListGetListItemOut(p *network.PacketIPv4TCP) *Ipv4TcpListGetListI
 		CaptureLength: p.CaptureLength,
 		// PacketMeta
 		LayerStack: toLayerInfoOuts(p.LayerStack),
-		// EthernetHeaders
-		EthDstMAC: p.EthDstMAC,
-		EthSrcMAC: p.EthSrcMAC,
-		EthType:   p.EthType,
-		EthLength: p.EthLength,
+		// LinkMeta
+		LinkType: p.LinkType,
+		// LinkSlots
+		Link1:  p.Link1,
+		Link2:  p.Link2,
+		Link3:  p.Link3,
+		Link4:  p.Link4,
+		Link5:  p.Link5,
+		Link6:  p.Link6,
+		Link7:  p.Link7,
+		Link8:  p.Link8,
+		Link9:  p.Link9,
+		Link10: p.Link10,
+		Link11: p.Link11,
+		Link12: p.Link12,
+		Link13: p.Link13,
+		Link14: p.Link14,
+		Link15: p.Link15,
+		Link16: p.Link16,
 		// IPv4Headers
 		IPv4Version:    p.IPv4Version,
 		IPv4IHL:        p.IPv4IHL,

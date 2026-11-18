@@ -71,6 +71,52 @@ model:
       no: 否
       "true": 是
       "false": 否
+      linkType:
+        "null": 空链路
+        ethernet: 以太网
+        ppp: PPP
+        pppEthernet: PPPoE
+        raw: 原始 IP
+        ieee80211: IEEE 802.11
+        loop: 回环
+        linuxSll: Linux SLL
+        prism: Prism
+        ieee80211Radio: 802.11 RadioTap
+        ipv4: 原始 IPv4
+        ipv6: 原始 IPv6
+        linuxSll2: Linux SLL2
+      linkSlot:
+        generic: "链路槽位 {slot}"
+        ethernet:
+          "1": 目的 MAC
+          "2": 源 MAC
+          "3": 以太网类型
+          "4": 帧长度
+        dot11:
+          "1": 接收方地址
+          "2": 发送方地址
+          "3": 地址 3
+          "4": 地址 4
+          "5": 帧类型
+          "6": 帧标志
+          "7": 序列号
+          "8": 分片号
+        linuxSll:
+          "1": 数据包类型
+          "2": 地址长度
+          "3": 链路地址
+          "4": 地址类型
+          "5": 内层协议类型
+        linuxSll2:
+          "1": 内层协议类型
+          "2": 接口索引
+          "3": ARP 硬件类型
+          "4": 数据包类型
+          "5": 地址长度
+          "6": 链路地址
+        ppp:
+          "1": PPP 协议类型
+          "2": HDLC 前缀
   notificationChannel:
     name: 通知渠道
     field:
@@ -741,10 +787,23 @@ model:
       captureLength: 采集长度
       layerStack: 协议栈
       payload: 负载
-      ethDstMac: 目的 MAC
-      ethSrcMac: 源 MAC
-      ethType: 以太网类型
-      ethLength: 以太网长度
+      linkType: 链路类型
+      link1: 链路槽位 1
+      link2: 链路槽位 2
+      link3: 链路槽位 3
+      link4: 链路槽位 4
+      link5: 链路槽位 5
+      link6: 链路槽位 6
+      link7: 链路槽位 7
+      link8: 链路槽位 8
+      link9: 链路槽位 9
+      link10: 链路槽位 10
+      link11: 链路槽位 11
+      link12: 链路槽位 12
+      link13: 链路槽位 13
+      link14: 链路槽位 14
+      link15: 链路槽位 15
+      link16: 链路槽位 16
       # IPv4
       ipv4Version: IPv4 版本
       ipv4Ihl: IPv4 头部长度
@@ -805,10 +864,23 @@ model:
       captureLength: 采集长度
       layerStack: 协议栈
       payload: 负载
-      ethDstMac: 目的 MAC
-      ethSrcMac: 源 MAC
-      ethType: 以太网类型
-      ethLength: 以太网长度
+      linkType: 链路类型
+      link1: 链路槽位 1
+      link2: 链路槽位 2
+      link3: 链路槽位 3
+      link4: 链路槽位 4
+      link5: 链路槽位 5
+      link6: 链路槽位 6
+      link7: 链路槽位 7
+      link8: 链路槽位 8
+      link9: 链路槽位 9
+      link10: 链路槽位 10
+      link11: 链路槽位 11
+      link12: 链路槽位 12
+      link13: 链路槽位 13
+      link14: 链路槽位 14
+      link15: 链路槽位 15
+      link16: 链路槽位 16
       # IPv6
       ipv6Version: IPv6 版本
       ipv6TrafficClass: 流量类别
@@ -1083,6 +1155,7 @@ model:
     header:
       title: 协议头部详情
       rawJson: 查看原始 JSON
+      empty: 无头部字段
       loopbackNote: 本机回环（Loopback）流量，无真实链路层信息
       col:
         field: 字段
@@ -1136,6 +1209,54 @@ model:
         urgent: 紧急指针
         options: TCP 选项
         length: 数据长度
+        # 链路层新协议字段
+        priority: 优先级（PCP）
+        dropEligible: 丢弃资格（DEI）
+        vlanIdentifier: VLAN 标识（VID）
+        dsap: 目的服务访问点（DSAP）
+        ig: 组地址指示位（IG）
+        ssap: 源服务访问点（SSAP）
+        cr: 命令/响应指示位（CR）
+        control: 控制字段
+        organizationalCode: 组织代码（OUI）
+        pppType: PPP 协议类型
+        pppHasPPTPHeader: HDLC 前缀
+        pppoeVersion: PPPoE 版本
+        pppoeType: PPPoE 类型
+        pppoeCode: PPPoE 消息码
+        sessionID: 会话 ID
+        pppoeLength: PPPoE 载荷长度
+        radioTapVersion: RadioTap 版本
+        radioTapLength: RadioTap 头部长度
+        prismCode: Prism 消息码
+        prismLength: Prism 头部长度
+        deviceName: 抓包设备名称
+        sllPacketType: 数据包类型
+        sllAddrLen: 地址长度
+        sllAddr: 链路地址
+        sllAddrType: 地址类型
+        sllProtocol: 内层协议类型
+        sll2ProtocolType: 内层协议类型
+        sll2InterfaceIndex: 接口索引
+        sll2ArpHardwareType: ARP 硬件类型
+        sll2PacketType: 数据包类型
+        sll2AddrLength: 地址长度
+        sll2Addr: 链路地址
+        dot11Type: 帧类型/子类型
+        dot11Proto: 协议版本
+        dot11Flags: 帧控制标志
+        dot11DurationID: 持续时间/关联标识
+        dot11Address1: 接收方地址
+        dot11Address2: 发送方地址
+        dot11Address3: 地址 3
+        dot11Address4: 地址 4
+        dot11SequenceNumber: 序列号
+        dot11FragmentNumber: 分片号
+        dot11HasQOS: 包含 QoS 控制
+        dot11QOSTID: 流量标识（TID）
+        dot11QOSEOSP: 服务期结束（EOSP）
+        dot11QOSAckPolicy: 确认策略
+        dot11QOSTXOP: 发送机会限制（TXOP）
       desc:
         ethDstMac: 目的 MAC 地址，标识数据帧的目标网卡
         ethSrcMac: 源 MAC 地址，标识数据帧的发送网卡
@@ -1184,6 +1305,53 @@ model:
         urgent: 紧急指针，配合 URG 标志使用
         options: TCP 选项列表（MSS、窗口缩放、时间戳等）
         length: UDP 数据报总长度（头部 + 数据，字节）
+        priority: VLAN 优先级（PCP），3 bit
+        dropEligible: 丢弃资格指示（DEI）
+        vlanIdentifier: VLAN 标识（VID），12 bit
+        dsap: 目的服务访问点
+        ig: 组地址指示位
+        ssap: 源服务访问点
+        cr: 命令/响应指示位
+        control: LLC 控制字段
+        organizationalCode: 组织唯一标识（OUI），十六进制
+        pppType: PPP 协议类型，标识内层协议（IPv4、IPv6 等）
+        pppHasPPTPHeader: 是否带有 0xff03（HDLC 地址/控制字段）前缀
+        pppoeVersion: PPPoE 版本号
+        pppoeType: PPPoE 类型字段
+        pppoeCode: PPPoE 消息码，0 表示会话数据，其余为发现阶段报文
+        sessionID: PPPoE 会话标识
+        pppoeLength: PPPoE 载荷长度（字节）
+        radioTapVersion: RadioTap 版本号
+        radioTapLength: RadioTap 头部总长度（字节）
+        prismCode: Prism 消息码
+        prismLength: Prism 头部长度（字节）
+        deviceName: 抓包设备名称
+        sllPacketType: Linux SLL 数据包类型（主机、广播、组播等）
+        sllAddrLen: 链路地址长度（字节）
+        sllAddr: 链路地址
+        sllAddrType: 链路地址类型
+        sllProtocol: 内层协议类型（以太网类型语义）
+        sll2ProtocolType: 内层协议类型（以太网类型语义）
+        sll2InterfaceIndex: 抓包接口索引
+        sll2ArpHardwareType: ARP 硬件类型（以太网、回环、Radiotap 等）
+        sll2PacketType: Linux SLL2 数据包类型（主机、广播、组播等）
+        sll2AddrLength: 链路地址长度（字节）
+        sll2Addr: 链路地址
+        dot11Type: 802.11 帧类型与子类型
+        dot11Proto: 802.11 协议版本
+        dot11Flags: 802.11 帧控制标志位
+        dot11DurationID: 持续时间或关联标识
+        dot11Address1: 接收方地址
+        dot11Address2: 发送方地址
+        dot11Address3: 第三个地址
+        dot11Address4: 第四个地址
+        dot11SequenceNumber: 帧序列号
+        dot11FragmentNumber: 分片号
+        dot11HasQOS: 是否带有 QoS 控制字段
+        dot11QOSTID: 流量标识（TID）
+        dot11QOSEOSP: 服务期结束标志（EOSP）
+        dot11QOSAckPolicy: QoS 确认策略
+        dot11QOSTXOP: 发送机会限制（TXOP）
       value:
         yes: 是
         no: 否
@@ -1192,6 +1360,27 @@ model:
         evil: 保留位
         df: 不分片（DF）
         mf: 更多分片（MF）
+        toDs: 发往 DS（ToDS）
+        fromDs: 来自 DS（FromDS）
+        moreFrag: 更多分片（MoreFrag）
+        retry: 重传（Retry）
+        powerManagement: 电源管理（PowerManagement）
+        moreData: 更多数据（MoreData）
+        protected: 受保护（Protected）
+        order: 严格顺序（Order）
+      dot11AckPolicy:
+        normal: 普通确认（Normal Ack）
+        none: 无确认（No Ack）
+        noExplicit: 无显式确认（No Explicit Ack）
+        block: 块确认（Block Ack）
+      sllPacketType:
+        host: 主机（Host）
+        broadcast: 广播（Broadcast）
+        multicast: 组播（Multicast）
+        otherhost: 其他主机（Otherhost）
+        outgoing: 发出（Outgoing）
+        loopback: 回环（Loopback）
+        fastroute: 快速路由（Fastroute）
 chart:
   title:
     queueSize: 管道大小

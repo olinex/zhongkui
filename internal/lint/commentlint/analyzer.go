@@ -6,7 +6,8 @@
 //     同样计入，测试变体（含外部测试包 `xxx_test`）不在其列（包注释由主包承载）；
 //   - 导出类型、导出函数、导出方法、导出常量与导出变量必须带注释；
 //   - 导出结构体的字段必须带注释（含非导出字段），字段 struct tag 含 `comment:"` 视为已有注释；
-//   - 导出接口的方法必须带注释。
+//   - 导出接口的方法必须带注释；
+//   - panic 参数中的字符串字面量必须使用英文（不得包含汉字）。
 //
 // 豁免规则：
 //
@@ -20,15 +21,17 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"strconv"
 	"strings"
+	"unicode"
 
 	"golang.org/x/tools/go/analysis"
 )
 
-// Analyzer 检查包注释、导出声明与结构体字段注释的完备性。
+// Analyzer 检查包注释、导出声明与结构体字段注释的完备性，并约束 panic 消息使用英文。
 var Analyzer = &analysis.Analyzer{
 	Name: "commentlint",
-	Doc:  "检查包注释、导出声明与结构体字段注释的完备性",
+	Doc:  "检查包注释、导出声明、结构体字段注释的完备性，并约束 panic 消息使用英文",
 	Run:  run,
 }
 
@@ -117,6 +120,7 @@ func hasPackageComment(pass *analysis.Pass, files []*ast.File) bool {
 
 // checkFile 检查单个文件中的全部声明。
 func checkFile(pass *analysis.Pass, f *ast.File, isTest bool) {
+	checkPanicMessages(pass, f)
 	for _, decl := range f.Decls {
 		switch d := decl.(type) {
 		case *ast.FuncDecl:
@@ -125,6 +129,46 @@ func checkFile(pass *analysis.Pass, f *ast.File, isTest bool) {
 			checkGenDecl(pass, d)
 		}
 	}
+}
+
+// checkPanicMessages 检查 panic 调用参数中的字符串字面量是否包含汉字。
+// 仅检查 panic 调用内部（含 fmt.Sprintf/fmt.Errorf/errors.Newf 等嵌套包装）的字面量，
+// 普通业务字符串不受影响。
+func checkPanicMessages(pass *analysis.Pass, f *ast.File) {
+	ast.Inspect(f, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		ident, ok := call.Fun.(*ast.Ident)
+		if !ok || ident.Name != "panic" {
+			return true
+		}
+		for _, arg := range call.Args {
+			ast.Inspect(arg, func(n ast.Node) bool {
+				lit, ok := n.(*ast.BasicLit)
+				if !ok || lit.Kind != token.STRING {
+					return true
+				}
+				text, err := strconv.Unquote(lit.Value)
+				if err == nil && containsHan(text) {
+					pass.Reportf(lit.Pos(), "panic 消息必须使用英文")
+				}
+				return true
+			})
+		}
+		return true
+	})
+}
+
+// containsHan 报告字符串是否包含汉字。
+func containsHan(s string) bool {
+	for _, r := range s {
+		if unicode.Is(unicode.Han, r) {
+			return true
+		}
+	}
+	return false
 }
 
 // checkFuncDecl 检查导出函数与导出方法；测试文件中的测试入口函数豁免。

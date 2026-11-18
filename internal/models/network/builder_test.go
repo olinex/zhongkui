@@ -231,9 +231,9 @@ func TestModelBuilder(t *testing.T) {
 			Version:   "v1.0.0",
 		}
 
-		builder := NewPacketModelBuilder(packet, sessionID, source)
+		builder := NewPacketModelBuilderWithLinkType(packet, sessionID, source, layers.LinkTypeEthernet)
 
-		Convey("NewPacketModelBuilder should create valid builder", func() {
+		Convey("NewPacketModelBuilderWithLinkType should create valid builder", func() {
 			So(builder, ShouldNotBeNil)
 			So(builder.SessionID, ShouldResemble, sessionID)
 			So(builder.Source.Namespace, ShouldEqual, "test-namespace")
@@ -484,7 +484,7 @@ func BenchmarkModelBuilder(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		builder := NewPacketModelBuilder(packet, sessionID, source)
+		builder := NewPacketModelBuilderWithLinkType(packet, sessionID, source, layers.LinkTypeEthernet)
 		builder.BuildAsPacketModel()
 	}
 }

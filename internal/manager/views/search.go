@@ -3689,6 +3689,153 @@ func (i *sessionIDIpv4TcpListGetFilterByItem) GetValue() any {
 	return i.Value
 }
 
+type linkTypeIpv4TcpListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq neq"`
+	Value  uint16 `mapstructure:"value" binding:""`
+}
+
+func (i *linkTypeIpv4TcpListGetFilterByItem) GetName() string {
+	return "linkType"
+}
+
+func (i *linkTypeIpv4TcpListGetFilterByItem) GetColumn() string {
+	return "link_type"
+}
+
+func (i *linkTypeIpv4TcpListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *linkTypeIpv4TcpListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type link1Ipv4TcpListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *link1Ipv4TcpListGetFilterByItem) GetName() string {
+	return "link1"
+}
+
+func (i *link1Ipv4TcpListGetFilterByItem) GetColumn() string {
+	return "link_1"
+}
+
+func (i *link1Ipv4TcpListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *link1Ipv4TcpListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type link2Ipv4TcpListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *link2Ipv4TcpListGetFilterByItem) GetName() string {
+	return "link2"
+}
+
+func (i *link2Ipv4TcpListGetFilterByItem) GetColumn() string {
+	return "link_2"
+}
+
+func (i *link2Ipv4TcpListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *link2Ipv4TcpListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type link3Ipv4TcpListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *link3Ipv4TcpListGetFilterByItem) GetName() string {
+	return "link3"
+}
+
+func (i *link3Ipv4TcpListGetFilterByItem) GetColumn() string {
+	return "link_3"
+}
+
+func (i *link3Ipv4TcpListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *link3Ipv4TcpListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type link4Ipv4TcpListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *link4Ipv4TcpListGetFilterByItem) GetName() string {
+	return "link4"
+}
+
+func (i *link4Ipv4TcpListGetFilterByItem) GetColumn() string {
+	return "link_4"
+}
+
+func (i *link4Ipv4TcpListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *link4Ipv4TcpListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type link5Ipv4TcpListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *link5Ipv4TcpListGetFilterByItem) GetName() string {
+	return "link5"
+}
+
+func (i *link5Ipv4TcpListGetFilterByItem) GetColumn() string {
+	return "link_5"
+}
+
+func (i *link5Ipv4TcpListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *link5Ipv4TcpListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type link6Ipv4TcpListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *link6Ipv4TcpListGetFilterByItem) GetName() string {
+	return "link6"
+}
+
+func (i *link6Ipv4TcpListGetFilterByItem) GetColumn() string {
+	return "link_6"
+}
+
+func (i *link6Ipv4TcpListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *link6Ipv4TcpListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
 type tcpStreamIDIpv4TcpListGetFilterByItem struct {
 	Action string `mapstructure:"action" binding:"required,oneof=eq"`
 	Value  string `mapstructure:"value" binding:""`
@@ -3801,6 +3948,13 @@ type Ipv4TcpListGetFilterBy struct {
 	CreatedAtTo   createdAtToIpv4TcpListGetFilterByItem    `mapstructure:"createdAtTo" binding:"required"`
 	Namespace     namespaceIpv4TcpListGetFilterByItem      `mapstructure:"namespace" binding:"required"`
 	SessionID     *sessionIDIpv4TcpListGetFilterByItem     `mapstructure:"sessionID"`
+	LinkType      *linkTypeIpv4TcpListGetFilterByItem      `mapstructure:"linkType"`
+	Link1         *link1Ipv4TcpListGetFilterByItem         `mapstructure:"link1"`
+	Link2         *link2Ipv4TcpListGetFilterByItem         `mapstructure:"link2"`
+	Link3         *link3Ipv4TcpListGetFilterByItem         `mapstructure:"link3"`
+	Link4         *link4Ipv4TcpListGetFilterByItem         `mapstructure:"link4"`
+	Link5         *link5Ipv4TcpListGetFilterByItem         `mapstructure:"link5"`
+	Link6         *link6Ipv4TcpListGetFilterByItem         `mapstructure:"link6"`
 	TcpStreamID   *tcpStreamIDIpv4TcpListGetFilterByItem   `mapstructure:"tcpStreamID"`
 	Ipv4Src       *ipv4SrcIpv4TcpListGetFilterByItem       `mapstructure:"ipv4Src"`
 	Ipv4Dst       *ipv4DstIpv4TcpListGetFilterByItem       `mapstructure:"ipv4Dst"`
@@ -3848,6 +4002,27 @@ func (s *Ipv4TcpListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
 	items["namespace"] = &s.FilterBy.Namespace
 	if s.FilterBy.SessionID != nil {
 		items["sessionID"] = s.FilterBy.SessionID
+	}
+	if s.FilterBy.LinkType != nil {
+		items["linkType"] = s.FilterBy.LinkType
+	}
+	if s.FilterBy.Link1 != nil {
+		items["link1"] = s.FilterBy.Link1
+	}
+	if s.FilterBy.Link2 != nil {
+		items["link2"] = s.FilterBy.Link2
+	}
+	if s.FilterBy.Link3 != nil {
+		items["link3"] = s.FilterBy.Link3
+	}
+	if s.FilterBy.Link4 != nil {
+		items["link4"] = s.FilterBy.Link4
+	}
+	if s.FilterBy.Link5 != nil {
+		items["link5"] = s.FilterBy.Link5
+	}
+	if s.FilterBy.Link6 != nil {
+		items["link6"] = s.FilterBy.Link6
 	}
 	if s.FilterBy.TcpStreamID != nil {
 		items["tcpStreamID"] = s.FilterBy.TcpStreamID
@@ -3906,14 +4081,40 @@ func (s *Ipv4TcpListGetSearchIn) ResolveSelectColumns() []string {
 			add("capture_length")
 		case "layerStack":
 			add("layer_stack")
-		case "ethDstMac":
-			add("eth_dst_mac")
-		case "ethSrcMac":
-			add("eth_src_mac")
-		case "ethType":
-			add("eth_type")
-		case "ethLength":
-			add("eth_length")
+		case "linkType":
+			add("link_type")
+		case "link1":
+			add("link_1")
+		case "link2":
+			add("link_2")
+		case "link3":
+			add("link_3")
+		case "link4":
+			add("link_4")
+		case "link5":
+			add("link_5")
+		case "link6":
+			add("link_6")
+		case "link7":
+			add("link_7")
+		case "link8":
+			add("link_8")
+		case "link9":
+			add("link_9")
+		case "link10":
+			add("link_10")
+		case "link11":
+			add("link_11")
+		case "link12":
+			add("link_12")
+		case "link13":
+			add("link_13")
+		case "link14":
+			add("link_14")
+		case "link15":
+			add("link_15")
+		case "link16":
+			add("link_16")
 		case "ipv4Version":
 			add("ipv4_version")
 		case "ipv4Ihl":
@@ -4045,6 +4246,56 @@ func (s *Ipv4TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
 				},
 			},
 			{
+				Name: "linkType",
+				Type: "uint16",
+				Actions: []string{
+					"eq",
+					"neq",
+				},
+			},
+			{
+				Name: "link1",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
+			{
+				Name: "link2",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
+			{
+				Name: "link3",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
+			{
+				Name: "link4",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
+			{
+				Name: "link5",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
+			{
+				Name: "link6",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
+			{
 				Name: "tcpStreamID",
 				Type: "string",
 				Actions: []string{
@@ -4103,10 +4354,23 @@ func (s *Ipv4TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
 			"truncated",
 			"captureLength",
 			"layerStack",
-			"ethDstMac",
-			"ethSrcMac",
-			"ethType",
-			"ethLength",
+			"linkType",
+			"link1",
+			"link2",
+			"link3",
+			"link4",
+			"link5",
+			"link6",
+			"link7",
+			"link8",
+			"link9",
+			"link10",
+			"link11",
+			"link12",
+			"link13",
+			"link14",
+			"link15",
+			"link16",
 			"ipv4Version",
 			"ipv4Ihl",
 			"ipv4Tos",
@@ -4297,6 +4561,153 @@ func (i *sessionIDIpv6TcpListGetFilterByItem) GetValue() any {
 	return i.Value
 }
 
+type linkTypeIpv6TcpListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq neq"`
+	Value  uint16 `mapstructure:"value" binding:""`
+}
+
+func (i *linkTypeIpv6TcpListGetFilterByItem) GetName() string {
+	return "linkType"
+}
+
+func (i *linkTypeIpv6TcpListGetFilterByItem) GetColumn() string {
+	return "link_type"
+}
+
+func (i *linkTypeIpv6TcpListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *linkTypeIpv6TcpListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type link1Ipv6TcpListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *link1Ipv6TcpListGetFilterByItem) GetName() string {
+	return "link1"
+}
+
+func (i *link1Ipv6TcpListGetFilterByItem) GetColumn() string {
+	return "link_1"
+}
+
+func (i *link1Ipv6TcpListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *link1Ipv6TcpListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type link2Ipv6TcpListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *link2Ipv6TcpListGetFilterByItem) GetName() string {
+	return "link2"
+}
+
+func (i *link2Ipv6TcpListGetFilterByItem) GetColumn() string {
+	return "link_2"
+}
+
+func (i *link2Ipv6TcpListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *link2Ipv6TcpListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type link3Ipv6TcpListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *link3Ipv6TcpListGetFilterByItem) GetName() string {
+	return "link3"
+}
+
+func (i *link3Ipv6TcpListGetFilterByItem) GetColumn() string {
+	return "link_3"
+}
+
+func (i *link3Ipv6TcpListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *link3Ipv6TcpListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type link4Ipv6TcpListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *link4Ipv6TcpListGetFilterByItem) GetName() string {
+	return "link4"
+}
+
+func (i *link4Ipv6TcpListGetFilterByItem) GetColumn() string {
+	return "link_4"
+}
+
+func (i *link4Ipv6TcpListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *link4Ipv6TcpListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type link5Ipv6TcpListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *link5Ipv6TcpListGetFilterByItem) GetName() string {
+	return "link5"
+}
+
+func (i *link5Ipv6TcpListGetFilterByItem) GetColumn() string {
+	return "link_5"
+}
+
+func (i *link5Ipv6TcpListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *link5Ipv6TcpListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type link6Ipv6TcpListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *link6Ipv6TcpListGetFilterByItem) GetName() string {
+	return "link6"
+}
+
+func (i *link6Ipv6TcpListGetFilterByItem) GetColumn() string {
+	return "link_6"
+}
+
+func (i *link6Ipv6TcpListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *link6Ipv6TcpListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
 type tcpStreamIDIpv6TcpListGetFilterByItem struct {
 	Action string `mapstructure:"action" binding:"required,oneof=eq"`
 	Value  string `mapstructure:"value" binding:""`
@@ -4409,6 +4820,13 @@ type Ipv6TcpListGetFilterBy struct {
 	CreatedAtTo   createdAtToIpv6TcpListGetFilterByItem    `mapstructure:"createdAtTo" binding:"required"`
 	Namespace     namespaceIpv6TcpListGetFilterByItem      `mapstructure:"namespace" binding:"required"`
 	SessionID     *sessionIDIpv6TcpListGetFilterByItem     `mapstructure:"sessionID"`
+	LinkType      *linkTypeIpv6TcpListGetFilterByItem      `mapstructure:"linkType"`
+	Link1         *link1Ipv6TcpListGetFilterByItem         `mapstructure:"link1"`
+	Link2         *link2Ipv6TcpListGetFilterByItem         `mapstructure:"link2"`
+	Link3         *link3Ipv6TcpListGetFilterByItem         `mapstructure:"link3"`
+	Link4         *link4Ipv6TcpListGetFilterByItem         `mapstructure:"link4"`
+	Link5         *link5Ipv6TcpListGetFilterByItem         `mapstructure:"link5"`
+	Link6         *link6Ipv6TcpListGetFilterByItem         `mapstructure:"link6"`
 	TcpStreamID   *tcpStreamIDIpv6TcpListGetFilterByItem   `mapstructure:"tcpStreamID"`
 	Ipv6Src       *ipv6SrcIpv6TcpListGetFilterByItem       `mapstructure:"ipv6Src"`
 	Ipv6Dst       *ipv6DstIpv6TcpListGetFilterByItem       `mapstructure:"ipv6Dst"`
@@ -4456,6 +4874,27 @@ func (s *Ipv6TcpListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
 	items["namespace"] = &s.FilterBy.Namespace
 	if s.FilterBy.SessionID != nil {
 		items["sessionID"] = s.FilterBy.SessionID
+	}
+	if s.FilterBy.LinkType != nil {
+		items["linkType"] = s.FilterBy.LinkType
+	}
+	if s.FilterBy.Link1 != nil {
+		items["link1"] = s.FilterBy.Link1
+	}
+	if s.FilterBy.Link2 != nil {
+		items["link2"] = s.FilterBy.Link2
+	}
+	if s.FilterBy.Link3 != nil {
+		items["link3"] = s.FilterBy.Link3
+	}
+	if s.FilterBy.Link4 != nil {
+		items["link4"] = s.FilterBy.Link4
+	}
+	if s.FilterBy.Link5 != nil {
+		items["link5"] = s.FilterBy.Link5
+	}
+	if s.FilterBy.Link6 != nil {
+		items["link6"] = s.FilterBy.Link6
 	}
 	if s.FilterBy.TcpStreamID != nil {
 		items["tcpStreamID"] = s.FilterBy.TcpStreamID
@@ -4514,14 +4953,40 @@ func (s *Ipv6TcpListGetSearchIn) ResolveSelectColumns() []string {
 			add("capture_length")
 		case "layerStack":
 			add("layer_stack")
-		case "ethDstMac":
-			add("eth_dst_mac")
-		case "ethSrcMac":
-			add("eth_src_mac")
-		case "ethType":
-			add("eth_type")
-		case "ethLength":
-			add("eth_length")
+		case "linkType":
+			add("link_type")
+		case "link1":
+			add("link_1")
+		case "link2":
+			add("link_2")
+		case "link3":
+			add("link_3")
+		case "link4":
+			add("link_4")
+		case "link5":
+			add("link_5")
+		case "link6":
+			add("link_6")
+		case "link7":
+			add("link_7")
+		case "link8":
+			add("link_8")
+		case "link9":
+			add("link_9")
+		case "link10":
+			add("link_10")
+		case "link11":
+			add("link_11")
+		case "link12":
+			add("link_12")
+		case "link13":
+			add("link_13")
+		case "link14":
+			add("link_14")
+		case "link15":
+			add("link_15")
+		case "link16":
+			add("link_16")
 		case "ipv6Version":
 			add("ipv6_version")
 		case "ipv6TrafficClass":
@@ -4643,6 +5108,56 @@ func (s *Ipv6TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
 				},
 			},
 			{
+				Name: "linkType",
+				Type: "uint16",
+				Actions: []string{
+					"eq",
+					"neq",
+				},
+			},
+			{
+				Name: "link1",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
+			{
+				Name: "link2",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
+			{
+				Name: "link3",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
+			{
+				Name: "link4",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
+			{
+				Name: "link5",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
+			{
+				Name: "link6",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
+			{
 				Name: "tcpStreamID",
 				Type: "string",
 				Actions: []string{
@@ -4701,10 +5216,23 @@ func (s *Ipv6TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
 			"truncated",
 			"captureLength",
 			"layerStack",
-			"ethDstMac",
-			"ethSrcMac",
-			"ethType",
-			"ethLength",
+			"linkType",
+			"link1",
+			"link2",
+			"link3",
+			"link4",
+			"link5",
+			"link6",
+			"link7",
+			"link8",
+			"link9",
+			"link10",
+			"link11",
+			"link12",
+			"link13",
+			"link14",
+			"link15",
+			"link16",
 			"ipv6Version",
 			"ipv6TrafficClass",
 			"ipv6FlowLabel",

@@ -167,24 +167,26 @@ func TestPacketEthernet(t *testing.T) {
 			srcMAC, _ := net.ParseMAC("aa:bb:cc:dd:ee:ff")
 
 			packet := PacketEthernet{
-				AsPacket: AsPacket{
-					BaseMeta: BaseMeta{
-						Namespace: "test",
-						Capture:   "eth0",
-						Version:   "v1",
-						SessionID: sessionID,
-					},
-					TimestampMeta: TimestampMeta{Timestamp: now},
-					CaptureMeta: CaptureMeta{
-						Truncated:     false,
-						CaptureLength: 1514,
-					},
-					PacketMeta: PacketMeta{
-						LayerStack: LayerStack{
-							{
-								Level:   LayerLevelLink,
-								Proto:   layers.LayerTypeEthernet,
-								Headers: map[string]any{"test": "value"},
+				PacketLink: PacketLink{
+					AsPacket: AsPacket{
+						BaseMeta: BaseMeta{
+							Namespace: "test",
+							Capture:   "eth0",
+							Version:   "v1",
+							SessionID: sessionID,
+						},
+						TimestampMeta: TimestampMeta{Timestamp: now},
+						CaptureMeta: CaptureMeta{
+							Truncated:     false,
+							CaptureLength: 1514,
+						},
+						PacketMeta: PacketMeta{
+							LayerStack: LayerStack{
+								{
+									Level:   LayerLevelLink,
+									Proto:   layers.LayerTypeEthernet,
+									Headers: map[string]any{"test": "value"},
+								},
 							},
 						},
 					},
@@ -226,14 +228,16 @@ func TestPacketEthernet(t *testing.T) {
 			srcMAC, _ := net.ParseMAC("aa:bb:cc:dd:ee:ff")
 
 			packet := PacketEthernet{
-				AsPacket: AsPacket{
-					BaseMeta: BaseMeta{
-						Namespace: "test",
-						Capture:   "eth0",
-						Version:   "v1",
-						SessionID: sessionID,
+				PacketLink: PacketLink{
+					AsPacket: AsPacket{
+						BaseMeta: BaseMeta{
+							Namespace: "test",
+							Capture:   "eth0",
+							Version:   "v1",
+							SessionID: sessionID,
+						},
+						TimestampMeta: TimestampMeta{Timestamp: time.Now()},
 					},
-					TimestampMeta: TimestampMeta{Timestamp: time.Now()},
 				},
 				EthernetHeaders: EthernetHeaders{
 					EthDstMAC: serializer.MacAddr(dstMAC),

@@ -258,7 +258,7 @@ func DescribeCryptoConfig() config.ConfigDescriptions
 DescribeCryptoConfig 返回加密密钥相关配置项描述。
 
 <a name="DescribeDatabaseConfig"></a>
-## func [DescribeDatabaseConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L189>)
+## func [DescribeDatabaseConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L185>)
 
 ```go
 func DescribeDatabaseConfig() config.ConfigDescriptions
@@ -420,7 +420,7 @@ func InjectCommand(i do.Injector, cmd *cobra.Command)
 InjectCommand 向依赖注入器注册给定的 cobra 命令。
 
 <a name="InjectCoreDatabase"></a>
-## func [InjectCoreDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L135>)
+## func [InjectCoreDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L131>)
 
 ```go
 func InjectCoreDatabase(i do.Injector)
@@ -636,7 +636,7 @@ func InjectPipelineServer(ctx context.Context, i do.Injector)
 InjectPipelineServer 向依赖注入器注册流水线服务端 provider。
 
 <a name="InjectRawDatabase"></a>
-## func [InjectRawDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L140>)
+## func [InjectRawDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L136>)
 
 ```go
 func InjectRawDatabase(i do.Injector)
@@ -780,7 +780,7 @@ func InvokeCommand(i do.Injector) (*cobra.Command, error)
 InvokeCommand 从依赖注入器解析 cobra 命令。
 
 <a name="InvokeCoreDatabase"></a>
-## func [InvokeCoreDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L145>)
+## func [InvokeCoreDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L141>)
 
 ```go
 func InvokeCoreDatabase(i do.Injector) (*database.DB, error)
@@ -789,7 +789,7 @@ func InvokeCoreDatabase(i do.Injector) (*database.DB, error)
 InvokeCoreDatabase 从依赖注入器解析 core 数据库，错误交由调用方处理。
 
 <a name="InvokeDatabase"></a>
-## func [InvokeDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L165>)
+## func [InvokeDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L161>)
 
 ```go
 func InvokeDatabase(i do.Injector, dbName string) (*database.DB, error)
@@ -996,7 +996,7 @@ func InvokePipelineTaskRegistry(i do.Injector) (etl.HandlerFuncs, error)
 InvokePipelineTaskRegistry 从依赖注入器解析流水线任务注册表，错误交由调用方处理。
 
 <a name="InvokeRawDatabase"></a>
-## func [InvokeRawDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L155>)
+## func [InvokeRawDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L151>)
 
 ```go
 func InvokeRawDatabase(i do.Injector) (*database.DB, error)
@@ -1077,7 +1077,7 @@ func InvokeViper(i do.Injector) (*viper.Viper, error)
 InvokeViper 从依赖注入器解析 Viper 配置实例，错误由调用方处理。
 
 <a name="Models"></a>
-## func [Models](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L123>)
+## func [Models](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L119>)
 
 ```go
 func Models(dbName string) []any
@@ -1140,7 +1140,7 @@ func MustInvokeCaptureLogger(i do.Injector) *logging.Logger
 MustInvokeCaptureLogger 从依赖注入器解析抓包日志器，失败时 panic。
 
 <a name="MustInvokeCoreDatabase"></a>
-## func [MustInvokeCoreDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L150>)
+## func [MustInvokeCoreDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L146>)
 
 ```go
 func MustInvokeCoreDatabase(i do.Injector) *database.DB
@@ -1149,7 +1149,7 @@ func MustInvokeCoreDatabase(i do.Injector) *database.DB
 MustInvokeCoreDatabase 从依赖注入器解析 core 数据库，失败时 panic。
 
 <a name="MustInvokeDatabase"></a>
-## func [MustInvokeDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L177>)
+## func [MustInvokeDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L173>)
 
 ```go
 func MustInvokeDatabase(i do.Injector, dbName string) *database.DB
@@ -1347,7 +1347,7 @@ func MustInvokePipelineTaskRegistry(i do.Injector) etl.HandlerFuncs
 MustInvokePipelineTaskRegistry 从依赖注入器解析流水线任务注册表，失败时 panic。
 
 <a name="MustInvokeRawDatabase"></a>
-## func [MustInvokeRawDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L160>)
+## func [MustInvokeRawDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L156>)
 
 ```go
 func MustInvokeRawDatabase(i do.Injector) *database.DB
@@ -1464,7 +1464,7 @@ func NewCaptureLogger() do.Provider[*logging.Logger]
 NewCaptureLogger 返回构建抓包日志器的 provider 工厂。
 
 <a name="NewCoreDatabase"></a>
-## func [NewCoreDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L113>)
+## func [NewCoreDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L109>)
 
 ```go
 func NewCoreDatabase() do.Provider[*database.DB]
@@ -1649,7 +1649,7 @@ func NewPipelineTaskRegistry() do.Provider[etl.HandlerFuncs]
 NewPipelineTaskRegistry 返回构建流水线任务注册表的 provider 工厂。
 
 <a name="NewRawDatabase"></a>
-## func [NewRawDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L118>)
+## func [NewRawDatabase](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L114>)
 
 ```go
 func NewRawDatabase() do.Provider[*database.DB]
@@ -1694,13 +1694,13 @@ func NewS3() do.Provider[*s3.S3Client]
 NewS3 返回 S3 客户端的依赖注入 provider 工厂。
 
 <a name="RawModels"></a>
-## func [RawModels](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L75>)
+## func [RawModels](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/database.go#L77>)
 
 ```go
 func RawModels() []any
 ```
 
-RawModels 返回 raw 数据库的全部打标模型清单，供迁移一致性检查使用。
+RawModels 返回 raw 数据库的全部打标模型清单，供迁移一致性检查使用。 数据包模型由注册的装配器统一汇总（顺序稳定、已按运行时类型去重）， 新增链路层等协议模型无需再手工修改本清单。
 
 <a name="TaskContext"></a>
 ## func [TaskContext](<https://gitee.com/olinex/zhongkui/blob/master/internal/provider/pipeline.go#L22>)

@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	// 第三方
@@ -139,7 +140,6 @@ func loadSchemaModels(projectRoot string, tables map[string]string) ([]schemaMod
 		return nil, errors.WithStack(err)
 	}
 
-	naming := schema.NamingStrategy{}
 	var models []schemaModel
 	for _, entry := range entries {
 		if !entry.IsDir() {
@@ -152,15 +152,17 @@ func loadSchemaModels(projectRoot string, tables map[string]string) ([]schemaMod
 			return nil, err
 		}
 		for _, item := range parsed {
-			table := naming.TableName(item.Name)
-			driver, ok := tables[table]
+			if item.TableName == "" {
+				panic(errors.Newf("docs: model %s does not declare TableName(), cannot determine table name", item.Name))
+			}
+			driver, ok := tables[item.TableName]
 			if !ok {
 				continue
 			}
 			models = append(models, schemaModel{
 				Domain: domain,
 				Name:   item.Name,
-				Table:  table,
+				Table:  item.TableName,
 				Doc:    item.Doc,
 				Fields: item.Fields,
 				driver: driver,
@@ -180,6 +182,8 @@ func loadSchemaModels(projectRoot string, tables map[string]string) ([]schemaMod
 type schemaType struct {
 	// Name 是结构体名。
 	Name string
+	// TableName 是结构体 TableName() 方法显式声明的表名，必须非空。
+	TableName string
 	// Doc 是结构体说明。
 	Doc string
 	// Fields 是展开后的字段。
@@ -206,9 +210,16 @@ func parseSchemaPackage(dir string, tables map[string]string) ([]schemaType, err
 
 	naming := schema.NamingStrategy{}
 	structs := make(map[string]structInfo)
+	explicitTables := make(map[string]string)
 	for _, pkg := range pkgs {
 		for _, file := range pkg.Files {
 			for _, decl := range file.Decls {
+				if fn, ok := decl.(*ast.FuncDecl); ok {
+					if name, table := explicitTableName(fn); table != "" {
+						explicitTables[name] = table
+					}
+					continue
+				}
 				gen, ok := decl.(*ast.GenDecl)
 				if !ok || gen.Tok != token.TYPE {
 					continue
@@ -241,12 +252,60 @@ func parseSchemaPackage(dir string, tables map[string]string) ([]schemaType, err
 	var out []schemaType
 	for _, name := range names {
 		info := structs[name]
-		table := naming.TableName(name)
+		table, ok := explicitTables[name]
+		if !ok {
+			// 未声明 TableName() 的结构体若是已迁移表模型，属于契约缺失，直接失败；
+			// 其余为值对象或嵌入结构，不作为数据表导出。
+			if derived := naming.TableName(name); tables[derived] != "" {
+				panic(fmt.Sprintf("docs: model %s maps to migrated table %s but does not declare TableName()", name, derived))
+			}
+			continue
+		}
+		if table == "" {
+			panic(fmt.Sprintf("docs: model %s TableName() returned an empty string", name))
+		}
 		seen := make(map[string]bool)
 		fields := expandSchemaFields(info.Struct, structs, seen, naming, table, tables[table])
-		out = append(out, schemaType{Name: name, Doc: info.Doc, Fields: fields})
+		out = append(out, schemaType{Name: name, TableName: table, Doc: info.Doc, Fields: fields})
 	}
 	return out, nil
+}
+
+// explicitTableName 识别 `func (r *T) TableName() string { return "literal" }`
+// 形式的显式表名声明，返回接收者结构体名与表名字面量；不匹配时返回空串。
+func explicitTableName(fn *ast.FuncDecl) (string, string) {
+	if fn.Recv == nil || len(fn.Recv.List) != 1 || fn.Name.Name != "TableName" {
+		return "", ""
+	}
+	name := receiverTypeName(fn.Recv.List[0].Type)
+	if name == "" || fn.Body == nil || len(fn.Body.List) != 1 {
+		return "", ""
+	}
+	ret, ok := fn.Body.List[0].(*ast.ReturnStmt)
+	if !ok || len(ret.Results) != 1 {
+		return "", ""
+	}
+	lit, ok := ret.Results[0].(*ast.BasicLit)
+	if !ok || lit.Kind != token.STRING {
+		return "", ""
+	}
+	table, err := strconv.Unquote(lit.Value)
+	if err != nil || table == "" {
+		return "", ""
+	}
+	return name, table
+}
+
+// receiverTypeName 取方法接收者的结构体名（支持 T 与 *T）。
+func receiverTypeName(expr ast.Expr) string {
+	switch t := expr.(type) {
+	case *ast.StarExpr:
+		return receiverTypeName(t.X)
+	case *ast.Ident:
+		return t.Name
+	default:
+		return ""
+	}
 }
 
 // expandSchemaFields 展开结构体字段与同包嵌入结构体，保持声明顺序。

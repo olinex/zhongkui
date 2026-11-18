@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 
 	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
 	"github.com/gopacket/gopacket/pcap"
 	"github.com/minio/minio-go/v7"
 	"zhongkuisec.com/zhongkui/internal/pkg/base"
@@ -24,10 +25,11 @@ import (
 )
 
 // PcapItem 表示从 PCAP 文件中提取的数据包项。
-// 包含会话 ID、数据源信息和 gopacket 包。
+// 包含会话 ID、数据源信息、pcap 真实链路类型和 gopacket 包。
 type PcapItem struct {
 	SessionID serializer.HexUUID      // 会话唯一标识符
 	Source    reporter_v1.ResourceRaw // 数据源信息
+	LinkType  layers.LinkType         // pcap 文件真实链路类型
 	Packet    gopacket.Packet         // gopacket 数据包对象
 }
 
@@ -129,7 +131,8 @@ func ExtractPacketFromPcap(ctx context.Context, task etl.Task, channel chan<- an
 			return errors.WithStack(e)
 		}
 		defer handle.Close()
-		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+		linkType := handle.LinkType()
+		packetSource := gopacket.NewPacketSource(handle, linkType)
 		for packet := range packetSource.Packets() {
 			if packet == nil {
 				continue
@@ -159,7 +162,8 @@ func ExtractPacketFromPcap(ctx context.Context, task etl.Task, channel chan<- an
 					Name:      obj.Name,
 					Version:   obj.Version,
 				},
-				Packet: packet,
+				LinkType: linkType,
+				Packet:   packet,
 			}
 		}
 		return nil
