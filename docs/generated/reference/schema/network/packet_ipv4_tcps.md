@@ -21,16 +21,29 @@ PacketIPv4TCP 表示IPv4 TCP数据包
 | capture | LowCardinality(String) CODEC(ZSTD(3)) | 否 | - | 抓包实例标识 |
 | version | LowCardinality(String) CODEC(ZSTD(3)) | 否 | - | 数据版本 |
 | session_id | UUID CODEC(ZSTD(3)) | 否 | - | 会话唯一标识 |
+| link_type | UInt16 CODEC(ZSTD(3)) | 否 | - | LinkType pcap 链路类型，如 Ethernet、Linux SLL、PPP、Raw IP 等 |
 | timestamp | DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3)) | 否 | - | 采集时间：数据包被捕获的时刻 |
 | created_at | DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3)) | 否 | - | 入库时间：数据写入数据库的时刻 |
 | truncated | Bool | 否 | - | 数据包是否被截断 |
 | capture_length | UInt32 CODEC(ZSTD(3)) | 否 | - | 实际捕获长度（字节） |
 | layer_stack | String CODEC(ZSTD(3)) | 否 | - | 网络层堆栈信息 |
 | id | UUID CODEC(ZSTD(3)) | 否 | - | 全局唯一 ID |
-| eth_dst_mac | FixedString(6) | 否 | - | EthDstMAC 目的 MAC 地址 |
-| eth_src_mac | FixedString(6) | 否 | - | EthSrcMAC 源 MAC 地址 |
-| eth_type | UInt16 CODEC(ZSTD(3)) | 否 | - | EthType 以太网类型，标识上层协议类型（如 IPv4、IPv6、ARP 等） |
-| eth_length | UInt16 CODEC(ZSTD(3)) | 否 | - | EthLength 以太网帧数据部分长度（字节） |
+| link_1 | String CODEC(ZSTD(3)) | 否 | - | Link1 链路槽位 1 |
+| link_2 | String CODEC(ZSTD(3)) | 否 | - | Link2 链路槽位 2 |
+| link_3 | String CODEC(ZSTD(3)) | 否 | - | Link3 链路槽位 3 |
+| link_4 | String CODEC(ZSTD(3)) | 否 | - | Link4 链路槽位 4 |
+| link_5 | String CODEC(ZSTD(3)) | 否 | - | Link5 链路槽位 5 |
+| link_6 | String CODEC(ZSTD(3)) | 否 | - | Link6 链路槽位 6 |
+| link_7 | String CODEC(ZSTD(3)) | 否 | - | Link7 链路槽位 7（仅输出，不建索引） |
+| link_8 | String CODEC(ZSTD(3)) | 否 | - | Link8 链路槽位 8（仅输出，不建索引） |
+| link_9 | String CODEC(ZSTD(3)) | 否 | - | Link9 链路槽位 9（仅输出，不建索引） |
+| link_10 | String CODEC(ZSTD(3)) | 否 | - | Link10 链路槽位 10（仅输出，不建索引） |
+| link_11 | String CODEC(ZSTD(3)) | 否 | - | Link11 链路槽位 11（仅输出，不建索引） |
+| link_12 | String CODEC(ZSTD(3)) | 否 | - | Link12 链路槽位 12（仅输出，不建索引） |
+| link_13 | String CODEC(ZSTD(3)) | 否 | - | Link13 链路槽位 13（仅输出，不建索引） |
+| link_14 | String CODEC(ZSTD(3)) | 否 | - | Link14 链路槽位 14（仅输出，不建索引） |
+| link_15 | String CODEC(ZSTD(3)) | 否 | - | Link15 链路槽位 15（仅输出，不建索引） |
+| link_16 | String CODEC(ZSTD(3)) | 否 | - | Link16 链路槽位 16（仅输出，不建索引） |
 | ipv4_version | UInt8 CODEC(ZSTD(3)) | 否 | - | IPv4Version 协议版本号，固定为 4（4 位） |
 | ipv4_ihl | UInt8 CODEC(ZSTD(3)) | 否 | - | IPv4IHL 头部长度（IHL），以 32 位字为单位（4 位） |
 | ipv4_tos | UInt8 CODEC(ZSTD(3)) | 否 | - | IPv4TOS 服务类型（TOS），用于 QoS 优先级控制（8 位） |

@@ -124,7 +124,7 @@ func TestPacketIPv4UDP_Basic(t *testing.T) {
 		Convey("Should create PacketIPv4UDP with embedded structures", func() {
 			packet := &PacketIPv4UDP{
 				PacketIPv4: PacketIPv4{
-					PacketEthernet: PacketEthernet{
+					PacketLink: PacketLink{
 						AsPacket: AsPacket{
 							BaseMeta: BaseMeta{
 								Namespace: "test-namespace",
@@ -143,12 +143,8 @@ func TestPacketIPv4UDP_Basic(t *testing.T) {
 								LayerStack: LayerStack{},
 							},
 						},
-						EthernetHeaders: EthernetHeaders{
-							EthSrcMAC: serializer.MacAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
-							EthDstMAC: serializer.MacAddr{0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF},
-							EthType:   layers.EthernetTypeIPv4,
-						},
 					},
+					LinkSlots: NewLinkSlots("aa:bb:cc:dd:ee:ff", "00:11:22:33:44:55", "2048"),
 					IPv4Headers: IPv4Headers{
 						IPv4Version:    4,
 						IPv4IHL:        5,
@@ -213,7 +209,7 @@ func TestPacketIPv6UDP_Basic(t *testing.T) {
 		Convey("Should create PacketIPv6UDP with embedded structures", func() {
 			packet := &PacketIPv6UDP{
 				PacketIPv6: PacketIPv6{
-					PacketEthernet: PacketEthernet{
+					PacketLink: PacketLink{
 						AsPacket: AsPacket{
 							BaseMeta: BaseMeta{
 								Namespace: "ipv6-test",
@@ -222,12 +218,8 @@ func TestPacketIPv6UDP_Basic(t *testing.T) {
 								SessionID: serializer.HexUUID{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00},
 							},
 						},
-						EthernetHeaders: EthernetHeaders{
-							EthSrcMAC: serializer.MacAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
-							EthDstMAC: serializer.MacAddr{0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF},
-							EthType:   layers.EthernetTypeIPv6,
-						},
 					},
+					LinkSlots: NewLinkSlots("aa:bb:cc:dd:ee:ff", "00:11:22:33:44:55", "34525"),
 					IPv6Headers: IPv6Headers{
 						IPv6Base: IPv6Base{
 							IPv6Version:      6,

@@ -548,13 +548,8 @@ func TestPacketIPv6_Basic(t *testing.T) {
 			dstIP := net.ParseIP("2001:db8::2")
 
 			packet := PacketIPv6{
-				PacketEthernet: PacketEthernet{
-					EthernetHeaders: EthernetHeaders{
-						EthSrcMAC: serializer.MacAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
-						EthDstMAC: serializer.MacAddr{0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff},
-						EthType:   layers.EthernetTypeIPv6,
-					},
-				},
+				PacketLink: PacketLink{},
+				LinkSlots:  NewLinkSlots("aa:bb:cc:dd:ee:ff", "00:11:22:33:44:55", "34525"),
 				IPv6Headers: IPv6Headers{
 					IPv6Base: IPv6Base{
 						IPv6Version:      6,
@@ -571,9 +566,8 @@ func TestPacketIPv6_Basic(t *testing.T) {
 				},
 			}
 
-			So(packet.EthSrcMAC.String(), ShouldEqual, "00:11:22:33:44:55")
-			So(packet.EthDstMAC.String(), ShouldEqual, "aa:bb:cc:dd:ee:ff")
-			So(packet.EthType, ShouldEqual, layers.EthernetTypeIPv6)
+			So(packet.Link1, ShouldEqual, "aa:bb:cc:dd:ee:ff")
+			So(packet.Link2, ShouldEqual, "00:11:22:33:44:55")
 			So(packet.IPv6Version, ShouldEqual, 6)
 			So(packet.SrcAddr().String(), ShouldEqual, "2001:db8::1")
 			So(packet.DstAddr().String(), ShouldEqual, "2001:db8::2")
@@ -585,13 +579,8 @@ func TestPacketIPv6_Basic(t *testing.T) {
 			dstIP := net.ParseIP("2001:db8::b")
 
 			packet := PacketIPv6{
-				PacketEthernet: PacketEthernet{
-					EthernetHeaders: EthernetHeaders{
-						EthSrcMAC: serializer.MacAddr{0x01, 0x02, 0x03, 0x04, 0x05, 0x06},
-						EthDstMAC: serializer.MacAddr{0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c},
-						EthType:   layers.EthernetTypeIPv6,
-					},
-				},
+				PacketLink: PacketLink{},
+				LinkSlots:  NewLinkSlots("07:08:09:0a:0b:0c", "01:02:03:04:05:06", "34525"),
 				IPv6Headers: IPv6Headers{
 					IPv6Base: IPv6Base{
 						IPv6Version:      6,
@@ -613,7 +602,7 @@ func TestPacketIPv6_Basic(t *testing.T) {
 			var decoded PacketIPv6
 			err = json.Unmarshal(jsonData, &decoded)
 			So(err, ShouldBeNil)
-			So(decoded.EthType, ShouldEqual, layers.EthernetTypeIPv6)
+			So(decoded.Link3, ShouldEqual, "34525")
 			So(decoded.IPv6Version, ShouldEqual, 6)
 			So(decoded.IPv6LastHeader, ShouldEqual, layers.IPProtocolUDP)
 		})
