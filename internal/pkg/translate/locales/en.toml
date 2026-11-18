@@ -2494,6 +2494,16 @@ other = "HTTP/2"
 [enum.httpVersion."HTTP/3"]
 other = "HTTP/3"
 
+# Layer decode continuation (enum class decodeKind)
+[enum.decodeKind.continue]
+other = "Continue"
+
+[enum.decodeKind.recurse]
+other = "Recurse"
+
+[enum.decodeKind.stop]
+other = "Stop"
+
 # LLM model kind (enum class llmModelKind)
 [enum.llmModelKind.chat]
 other = "Chat Model"

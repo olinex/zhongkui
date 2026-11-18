@@ -72,20 +72,16 @@ func CoreModels() []any {
 }
 
 // RawModels 返回 raw 数据库的全部打标模型清单，供迁移一致性检查使用。
+// 数据包模型由注册的装配器统一汇总（顺序稳定、已按运行时类型去重），
+// 新增链路层等协议模型无需再手工修改本清单。
 func RawModels() []any {
-	return []any{
-		&netmodel.PacketIPv4{},
-		&netmodel.PacketIPv6{},
-		&netmodel.PacketIPv4TCP{},
-		&netmodel.PacketIPv6TCP{},
-		&netmodel.PacketIPv4UDP{},
-		&netmodel.PacketIPv6UDP{},
+	return append(netmodel.PacketModelPrototypes(),
 		&netmodel.HttpTransport{},
 		&netmodel.NetworkStack{},
 		&apimodel.HttpApiMeta{},
 		&apimodel.HttpApiNode{},
 		&tagmodel.TagSumming{},
-	}
+	)
 }
 
 func newDatabaseProvider(name string) do.Provider[*database.DB] {
