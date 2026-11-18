@@ -5,10 +5,16 @@
 ## Index
 
 - [func ExtractLayerInfos\(packet gopacket.Packet, baseLevel LayerLevel\) \(currentLevel LayerLevel, stack LayerStack, payload \[\]byte\)](<#ExtractLayerInfos>)
+- [func PacketModelPrototypes\(\) \[\]any](<#PacketModelPrototypes>)
+- [func RegisterTypedAssembler\[H any\]\(level LayerLevel, layerType gopacket.LayerType, header func\(LayerStack\) \(H, bool\), build func\(\*ModelBuilder, H\) any, prototypes func\(\) \[\]any\)](<#RegisterTypedAssembler>)
+- [func RegisterTypedDecoder\[L gopacket.Layer\]\(decode func\(DecodeContext, L\) \(DecodeResult, error\)\)](<#RegisterTypedDecoder>)
 - [type AppTailer](<#AppTailer>)
 - [type AsPacket](<#AsPacket>)
 - [type BaseMeta](<#BaseMeta>)
 - [type CaptureMeta](<#CaptureMeta>)
+- [type DecodeContext](<#DecodeContext>)
+- [type DecodeKind](<#DecodeKind>)
+- [type DecodeResult](<#DecodeResult>)
 - [type DirectionMeta](<#DirectionMeta>)
 - [type EthernetHeaders](<#EthernetHeaders>)
   - [func NewEthernetHeaders\(eth \*layers.Ethernet\) \*EthernetHeaders](<#NewEthernetHeaders>)
@@ -69,6 +75,8 @@
   - [func \(h \*IPv6HopByHop\) Value\(\) \(driver.Value, error\)](<#IPv6HopByHop.Value>)
 - [type IPv6Routing](<#IPv6Routing>)
   - [func NewIPv6Routing\(ipv6 \*layers.IPv6Routing\) \*IPv6Routing](<#NewIPv6Routing>)
+- [type LayerDecoder](<#LayerDecoder>)
+  - [func LayerDecoders\(\) \[\]LayerDecoder](<#LayerDecoders>)
 - [type LayerInfo](<#LayerInfo>)
 - [type LayerLevel](<#LayerLevel>)
   - [func \(l LayerLevel\) Next\(\) LayerLevel](<#LayerLevel.Next>)
@@ -77,6 +85,7 @@
   - [func \(l LayerStack\) Value\(\) \(driver.Value, error\)](<#LayerStack.Value>)
 - [type MPLSChannel](<#MPLSChannel>)
   - [func NewMPLSChannel\(mpls \*layers.MPLS\) \*MPLSChannel](<#NewMPLSChannel>)
+- [type ModelAssembler](<#ModelAssembler>)
 - [type ModelBuilder](<#ModelBuilder>)
   - [func NewPacketModelBuilder\(packet gopacket.Packet, sessionID serializer.HexUUID, source reporter\_v1.ResourceRaw\) \*ModelBuilder](<#NewPacketModelBuilder>)
   - [func \(b \*ModelBuilder\) BuildAsPacketApplicationModel\(\) any](<#ModelBuilder.BuildAsPacketApplicationModel>)
@@ -142,13 +151,13 @@
 
 
 <a name="ExtractLayerInfos"></a>
-## func [ExtractLayerInfos](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L38>)
+## func [ExtractLayerInfos](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L31>)
 
 ```go
 func ExtractLayerInfos(packet gopacket.Packet, baseLevel LayerLevel) (currentLevel LayerLevel, stack LayerStack, payload []byte)
 ```
 
-ExtractLayerInfos 从数据包中提取网络层信息 该函数递归地解析网络数据包的各个协议层，构建层堆栈并提取载荷数据
+ExtractLayerInfos 从数据包中提取网络层信息 该函数按层解码注册表逐层解析网络数据包，构建层堆栈并提取载荷数据
 
 参数:
 
@@ -163,19 +172,36 @@ ExtractLayerInfos 从数据包中提取网络层信息 该函数递归地解析�
 
 功能说明:
 
-1. 支持多种网络协议层解析，包括以太网、IPv4/IPv6、TCP/UDP、隧道协议等
-2. 处理隧道封装（VXLAN、GRE、Geneve、MPLS等）的递归解析
-3. 支持IP\-in\-IP封装（IPIP）的嵌套解析
-4. 自动构建从链路层到传输层的完整协议栈
-5. 提取最终的应用层载荷数据
+1. 已注册协议由 LayerDecoder 给出层信息与推进方式（继续、递归、终止）， 本函数只负责层级推进、递归解析与终止编排
+2. 未注册协议走统一默认规则：按下一层级记录该层（Headers 为 nil）， 提取剩余载荷后终止，后续可通过注册新解码器改变行为
+3. 解码器返回错误时终止解析并保留当前已构建的堆栈，不 panic
 
-支持的协议层类型:
+<a name="PacketModelPrototypes"></a>
+## func [PacketModelPrototypes](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/assemble_registry.go#L151>)
 
-- 链路层: Ethernet
-- 网络层: IPv4, IPv6, IPv6扩展头（Destination, Fragment, HopByHop, Routing）
-- 传输层: TCP, UDP
-- 隧道协议: VXLAN, GRE, Geneve, MPLS
-- 应用层: TLS（暂未实现详细解析）, 原始载荷
+```go
+func PacketModelPrototypes() []any
+```
+
+PacketModelPrototypes 汇总所有已注册装配器声明的持久化模型原型 输出顺序与装配器注册顺序一致，并按运行时类型去重（如 Ethernet 与 Loopback 共用 PacketEthernet）
+
+<a name="RegisterTypedAssembler"></a>
+## func [RegisterTypedAssembler](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/assemble_registry.go#L82-L88>)
+
+```go
+func RegisterTypedAssembler[H any](level LayerLevel, layerType gopacket.LayerType, header func(LayerStack) (H, bool), build func(*ModelBuilder, H) any, prototypes func() []any)
+```
+
+RegisterTypedAssembler 以具体 Header 类型注册模型装配器 header 负责从层堆栈提取头部，build 在头部提取成功后被调用； 同一层级与协议类型重复注册会在启动期 panic
+
+<a name="RegisterTypedDecoder"></a>
+## func [RegisterTypedDecoder](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/decode_registry.go#L96>)
+
+```go
+func RegisterTypedDecoder[L gopacket.Layer](decode func(DecodeContext, L) (DecodeResult, error))
+```
+
+RegisterTypedDecoder 以具体 Layer 类型注册解码器 协议类型由 L 的 LayerType 方法推导，注册点无需手写 any 类型断言； 同一协议类型重复注册会在启动期 panic
 
 <a name="AppTailer"></a>
 ## type [AppTailer](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L418-L439>)
@@ -247,6 +273,62 @@ CaptureMeta 表示捕获元数据 包含数据包捕获时的状态信息
 type CaptureMeta struct {
     Truncated     bool   `gorm:"type:Bool" json:"truncated"`                      // 数据包是否被截断
     CaptureLength uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"captureLength"` // 实际捕获长度（字节）
+}
+```
+
+<a name="DecodeContext"></a>
+## type [DecodeContext](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/decode_registry.go#L40-L45>)
+
+DecodeContext 表示解码单层协议时可见的层级上下文
+
+```go
+type DecodeContext struct {
+    // CurrentLevel 当前层级，供不推进层级的协议（如 IPv6 扩展头）使用
+    CurrentLevel LayerLevel
+    // NextLevel 下一层级，供常规头部与解码失败层使用
+    NextLevel LayerLevel
+}
+```
+
+<a name="DecodeKind"></a>
+## type [DecodeKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/decode_registry.go#L15>)
+
+DecodeKind 表示层解码器对解析流程的推进方式 编排器根据该值决定继续解析下一层、递归解析内层数据包或终止解析； 该类型注册为枚举类 decodeKind，取值空间为 continue / recurse / stop
+
+```go
+type DecodeKind string
+```
+
+<a name="DecodeContinue"></a>层解码器的解析推进方式
+
+```go
+const (
+    // DecodeContinue 表示当前层解析完成后继续解析下一层
+    DecodeContinue DecodeKind = "continue"
+    // DecodeRecurse 表示当前层是封装协议，需要递归解析内层数据包
+    DecodeRecurse DecodeKind = "recurse"
+    // DecodeStop 表示解析在当前层终止，不再解析后续层
+    DecodeStop DecodeKind = "stop"
+)
+```
+
+<a name="DecodeResult"></a>
+## type [DecodeResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/decode_registry.go#L49-L60>)
+
+DecodeResult 表示单层协议的解码结果 编排器据此追加层信息、推进层级、递归解析内层数据包或终止解析
+
+```go
+type DecodeResult struct {
+    // Info 需要进入层堆栈的层信息，nil 表示该层不进入堆栈
+    Info *LayerInfo
+    // Kind 解析推进方式
+    Kind DecodeKind
+    // Inner 递归解析的内层数据包，仅 Kind 为 DecodeRecurse 时使用
+    Inner gopacket.Packet
+    // InnerBase 内层递归解析的起始层级，仅 Kind 为 DecodeRecurse 时使用
+    InnerBase LayerLevel
+    // Payload 终止解析时返回的载荷数据，仅 Kind 为 DecodeStop 时使用
+    Payload []byte
 }
 ```
 
@@ -1988,6 +2070,29 @@ ipv6 - gopacket的IPv6Routing指针
 *IPv6Routing - 转换后的路由头部结构指针
 ```
 
+<a name="LayerDecoder"></a>
+## type [LayerDecoder](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/decode_registry.go#L64-L69>)
+
+LayerDecoder 表示单个 gopacket 协议层的解码器 新增协议只需实现该接口或通过 RegisterTypedDecoder 注册解码函数
+
+```go
+type LayerDecoder interface {
+    // LayerType 返回解码器负责的协议类型
+    LayerType() gopacket.LayerType
+    // Decode 解码一层协议并给出解析推进方式
+    Decode(DecodeContext, gopacket.Layer) (DecodeResult, error)
+}
+```
+
+<a name="LayerDecoders"></a>
+### func [LayerDecoders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/decode_registry.go#L136>)
+
+```go
+func LayerDecoders() []LayerDecoder
+```
+
+LayerDecoders 返回按注册顺序排列的解码器快照 输出顺序稳定，可用于检查当前已注册的协议类型
+
 <a name="LayerInfo"></a>
 ## type [LayerInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L53-L57>)
 
@@ -2105,8 +2210,26 @@ NewMPLSChannel 从gopacket MPLS层创建MPLSChannel 将gopacket库中的MPLS层�
 3. 便于后续序列化和存储
 4. 支持MPLS标签栈的递归解析（通过builder.go中的ExtractLayerInfos函数）
 
+<a name="ModelAssembler"></a>
+## type [ModelAssembler](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/assemble_registry.go#L22-L31>)
+
+ModelAssembler 表示某一层级协议的持久化模型装配器 新增协议只需实现该接口或通过 RegisterTypedAssembler 注册装配函数
+
+```go
+type ModelAssembler interface {
+    // Level 返回装配器负责的协议层级
+    Level() LayerLevel
+    // LayerType 返回装配器负责的协议类型
+    LayerType() gopacket.LayerType
+    // Build 从构建器提取该层头部并装配持久化模型，无法装配时返回 nil
+    Build(*ModelBuilder) any
+    // ModelPrototypes 返回该装配器声明的持久化模型原型
+    ModelPrototypes() []any
+}
+```
+
 <a name="ModelBuilder"></a>
-## type [ModelBuilder](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L285-L294>)
+## type [ModelBuilder](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L102-L111>)
 
 ModelBuilder 数据包模型构建器 用于将原始网络数据包转换为特定层级的结构化数据模型 支持从链路层到传输层的模型构建，便于后续存储、查询和分析
 
@@ -2124,7 +2247,7 @@ type ModelBuilder struct {
 ```
 
 <a name="NewPacketModelBuilder"></a>
-### func [NewPacketModelBuilder](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L574>)
+### func [NewPacketModelBuilder](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L281>)
 
 ```go
 func NewPacketModelBuilder(packet gopacket.Packet, sessionID serializer.HexUUID, source reporter_v1.ResourceRaw) *ModelBuilder
@@ -2154,7 +2277,7 @@ NewPacketModelBuilder 创建数据包模型构建器 工厂函数，用于从原
 4. 返回可直接用于模型构建的实例
 
 <a name="ModelBuilder.BuildAsPacketApplicationModel"></a>
-### func \(\*ModelBuilder\) [BuildAsPacketApplicationModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L521>)
+### func \(\*ModelBuilder\) [BuildAsPacketApplicationModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L228>)
 
 ```go
 func (b *ModelBuilder) BuildAsPacketApplicationModel() any
@@ -2173,7 +2296,7 @@ BuildAsPacketApplicationModel 构建应用层数据包模型 将原始数据包�
 3. 保持接口一致性，便于后续功能扩展
 
 <a name="ModelBuilder.BuildAsPacketLinkModel"></a>
-### func \(\*ModelBuilder\) [BuildAsPacketLinkModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L313>)
+### func \(\*ModelBuilder\) [BuildAsPacketLinkModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L125>)
 
 ```go
 func (b *ModelBuilder) BuildAsPacketLinkModel() any
@@ -2183,24 +2306,17 @@ BuildAsPacketLinkModel 构建链路层数据包模型 将原始数据包转换�
 
 返回值:
 
-- any: 返回具体的链路层数据包模型，目前支持 PacketEthernet
-
-异常:
-
-- 如果层堆栈为空，会触发panic
-- 如果第一层不是链路层，会触发panic
-- 如果头部信息为nil，会触发panic
-- 如果协议类型不支持，会触发panic
+- any: 返回具体的链路层数据包模型，目前支持 PacketEthernet； 协议未注册装配器时返回 nil
 
 功能说明:
 
 1. 验证层堆栈的有效性
-2. 提取以太网头部信息
-3. 构建包含完整元数据的以太网数据包模型
+2. 按层级与协议类型查找已注册的模型装配器
+3. 由装配器提取链路层头部并构建包含完整元数据的模型
 4. 返回可用于数据库存储的结构化数据
 
 <a name="ModelBuilder.BuildAsPacketModel"></a>
-### func \(\*ModelBuilder\) [BuildAsPacketModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L540>)
+### func \(\*ModelBuilder\) [BuildAsPacketModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L247>)
 
 ```go
 func (b *ModelBuilder) BuildAsPacketModel() any
@@ -2224,7 +2340,7 @@ BuildAsPacketModel 根据层级构建数据包模型 根据数据包的最高解
 4. 简化上层代码调用，无需手动判断层级
 
 <a name="ModelBuilder.BuildAsPacketNetworkModel"></a>
-### func \(\*ModelBuilder\) [BuildAsPacketNetworkModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L379>)
+### func \(\*ModelBuilder\) [BuildAsPacketNetworkModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L161>)
 
 ```go
 func (b *ModelBuilder) BuildAsPacketNetworkModel() any
@@ -2234,26 +2350,23 @@ BuildAsPacketNetworkModel 构建网络层数据包模型 将原始数据包转�
 
 返回值:
 
-- any: 返回具体的网络层数据包模型，支持 PacketIPv4 或 PacketIPv6
+- any: 返回具体的网络层数据包模型，支持 PacketIPv4 或 PacketIPv6； 协议未注册装配器时返回 nil
 
 异常:
 
 - 如果层堆栈少于2层，会触发panic
 - 如果第二层不是网络层，会触发panic
 - 如果头部信息为nil，会触发panic
-- 如果链路层模型构建失败，会触发panic
-- 如果协议类型不支持，会触发panic
 
 功能说明:
 
 1. 验证网络层堆栈的有效性
-2. 构建底层链路层模型作为基础
-3. 提取IPv4或IPv6头部信息
-4. 组合链路层和网络层信息构建完整模型
-5. 返回可用于数据库存储的结构化数据
+2. 按层级与协议类型查找已注册的模型装配器
+3. 由装配器复用链路层模型并组合网络层头部
+4. 返回可用于数据库存储的结构化数据
 
 <a name="ModelBuilder.BuildAsPacketTransportModel"></a>
-### func \(\*ModelBuilder\) [BuildAsPacketTransportModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L443>)
+### func \(\*ModelBuilder\) [BuildAsPacketTransportModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L199>)
 
 ```go
 func (b *ModelBuilder) BuildAsPacketTransportModel() any
@@ -2263,29 +2376,23 @@ BuildAsPacketTransportModel 构建传输层数据包模型 将原始数据包转
 
 返回值:
 
-- any: 返回具体的传输层数据包模型，支持 PacketIPv4TCP、PacketIPv4UDP、PacketIPv6TCP 或 PacketIPv6UDP
+- any: 返回具体的传输层数据包模型，支持 PacketIPv4TCP、PacketIPv4UDP、PacketIPv6TCP 或 PacketIPv6UDP； 协议未注册装配器时返回 nil
 
 异常:
 
 - 如果层堆栈少于3层，会触发panic
 - 如果最后一层不是传输层，会触发panic
-- 如果头部信息为nil，会触发panic
-- 如果网络层模型构建失败，会触发panic
-- 如果协议类型不支持，会触发panic
 
 功能说明:
 
 1. 验证传输层堆栈的有效性（最后一层必须是传输层）
-2. 构建底层网络层模型作为基础
-3. 根据网络层协议类型（IPv4/IPv6）选择相应的传输层处理逻辑
-4. 提取TCP或UDP头部信息
-5. 组合链路层、网络层和传输层信息构建完整模型
-6. 返回可用于数据库存储的结构化数据
+2. 按层级与协议类型查找已注册的模型装配器
+3. 由装配器复用网络层模型并组合传输层头部
+4. 返回可用于数据库存储的结构化数据
 
 注意:
 
 - 该函数假设传输层是协议栈的最后一层（在应用层之前）
-- 支持IPv4/TCP、IPv4/UDP、IPv6/TCP、IPv6/UDP四种组合
 
 <a name="NetworkFrame"></a>
 ## type [NetworkFrame](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/stack.go#L12>)

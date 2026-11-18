@@ -11,7 +11,7 @@ import (
 )
 
 // ExtractLayerInfos 从数据包中提取网络层信息
-// 该函数递归地解析网络数据包的各个协议层，构建层堆栈并提取载荷数据
+// 该函数按层解码注册表逐层解析网络数据包，构建层堆栈并提取载荷数据
 //
 // 参数:
 //   - packet: gopacket.Packet 类型，表示原始网络数据包
@@ -23,242 +23,59 @@ import (
 //   - payload: []byte 类型，表示应用层载荷数据（如果有）
 //
 // 功能说明:
-//  1. 支持多种网络协议层解析，包括以太网、IPv4/IPv6、TCP/UDP、隧道协议等
-//  2. 处理隧道封装（VXLAN、GRE、Geneve、MPLS等）的递归解析
-//  3. 支持IP-in-IP封装（IPIP）的嵌套解析
-//  4. 自动构建从链路层到传输层的完整协议栈
-//  5. 提取最终的应用层载荷数据
-//
-// 支持的协议层类型:
-//   - 链路层: Ethernet
-//   - 网络层: IPv4, IPv6, IPv6扩展头（Destination, Fragment, HopByHop, Routing）
-//   - 传输层: TCP, UDP
-//   - 隧道协议: VXLAN, GRE, Geneve, MPLS
-//   - 应用层: TLS（暂未实现详细解析）, 原始载荷
+//  1. 已注册协议由 LayerDecoder 给出层信息与推进方式（继续、递归、终止），
+//     本函数只负责层级推进、递归解析与终止编排
+//  2. 未注册协议走统一默认规则：按下一层级记录该层（Headers 为 nil），
+//     提取剩余载荷后终止，后续可通过注册新解码器改变行为
+//  3. 解码器返回错误时终止解析并保留当前已构建的堆栈，不 panic
 func ExtractLayerInfos(packet gopacket.Packet, baseLevel LayerLevel) (currentLevel LayerLevel, stack LayerStack, payload []byte) {
 	currentLevel = baseLevel
 	nextLevel := currentLevel
 	mainLayers := packet.Layers()
 	stack = make(LayerStack, 0, 4)
-	opts := gopacket.DecodeOptions{NoCopy: true, Lazy: true}
 	for _, layer := range mainLayers {
-		switch layerType := layer.LayerType(); layerType {
-		case layers.LayerTypeEthernet:
+		decoder, ok := lookupLayerDecoder(layer.LayerType())
+		if !ok {
+			// 未注册协议层，记录到堆栈中并提取载荷数据
 			currentLevel = nextLevel
-			eth := layer.(*layers.Ethernet)
-			headers := NewEthernetHeaders(eth)
-			info := LayerInfo{
+			stack = append(stack, &LayerInfo{
 				Level:   currentLevel,
-				Proto:   layerType,
-				Headers: headers,
-			}
-			stack = append(stack, &info)
-		case layers.LayerTypeLoopback:
-			// Loopback 链路层（pcap DLT_NULL/DLT_LOOP），不包含 MAC 地址
-			// 递归解析内层数据包，起始层级为网络层（无链路层头部）
-			currentLevel = nextLevel
-			loop := layer.(*layers.Loopback)
-			info := LayerInfo{
-				Level:   currentLevel,
-				Proto:   layerType,
-				Headers: NewLoopbackHeaders(),
-			}
-			stack = append(stack, &info)
-			innerPacket := gopacket.NewPacket(layer.LayerPayload(), loop.NextLayerType(), opts)
-			innerLevel, innerInfos, innerPayload := ExtractLayerInfos(innerPacket, LayerLevelNetwork)
-			stack = append(stack, innerInfos...)
-			payload = innerPayload
-			currentLevel = innerLevel
-			return
-		case layers.LayerTypeIPv4:
-			currentLevel = nextLevel
-			ip := layer.(*layers.IPv4)
-			headers := NewIPv4Headers(ip)
-			info := LayerInfo{
-				Level:   currentLevel,
-				Proto:   layerType,
-				Headers: headers,
-			}
-			stack = append(stack, &info)
-			// 处理IP-in-IP封装（IPIP协议）
-			if ip.Protocol == layers.IPProtocolIPIP {
-				innerPacket := gopacket.NewPacket(ip.LayerPayload(), layers.LayerTypeIPv4, opts)
-				innerLevel, innerInfos, innerPayload := ExtractLayerInfos(innerPacket, currentLevel)
-				stack = append(stack, innerInfos...)
-				payload = innerPayload
-				currentLevel = innerLevel
-				return
-			}
-		case layers.LayerTypeIPv6:
-			currentLevel = nextLevel
-			ip := layer.(*layers.IPv6)
-			headers := NewIPv6Headers(ip)
-			info := LayerInfo{
-				Level:   currentLevel,
-				Proto:   layerType,
-				Headers: headers,
-			}
-			stack = append(stack, &info)
-		case layers.LayerTypeIPv6Destination:
-			dest := layer.(*layers.IPv6Destination)
-			headers := NewIPv6Destination(dest)
-			info := LayerInfo{
-				Level:   currentLevel,
-				Proto:   layerType,
-				Headers: headers,
-			}
-			stack = append(stack, &info)
-			continue
-		case layers.LayerTypeIPv6Fragment:
-			fragment := layer.(*layers.IPv6Fragment)
-			headers := NewIPv6Fragment(fragment)
-			info := LayerInfo{
-				Level:   currentLevel,
-				Proto:   layerType,
-				Headers: headers,
-			}
-			stack = append(stack, &info)
-			continue
-		case layers.LayerTypeIPv6HopByHop:
-			headers := NewIPv6HopByHop(layer.(*layers.IPv6HopByHop))
-			info := LayerInfo{
-				Level:   currentLevel,
-				Proto:   layerType,
-				Headers: headers,
-			}
-			stack = append(stack, &info)
-			continue
-		case layers.LayerTypeIPv6Routing:
-			routing := layer.(*layers.IPv6Routing)
-			headers := NewIPv6Routing(routing)
-			info := LayerInfo{
-				Level:   currentLevel,
-				Proto:   layerType,
-				Headers: headers,
-			}
-			stack = append(stack, &info)
-			continue
-		case layers.LayerTypeTCP:
-			currentLevel = nextLevel
-			tcp := layer.(*layers.TCP)
-			headers := NewTCPHeaders(tcp)
-			info := LayerInfo{
-				Level:   currentLevel,
-				Proto:   layerType,
-				Headers: headers,
-			}
-			stack = append(stack, &info)
-		case layers.LayerTypeUDP:
-			currentLevel = nextLevel
-			udp := layer.(*layers.UDP)
-			headers := NewUDPHeaders(udp)
-			info := LayerInfo{
-				Level:   currentLevel,
-				Proto:   layerType,
-				Headers: headers,
-			}
-			stack = append(stack, &info)
-		case layers.LayerTypeTLS:
-			// TLS层暂未实现详细解析，保留占位符
-		case layers.LayerTypeVXLAN:
-			currentLevel = nextLevel
-			vxlan := layer.(*layers.VXLAN)
-			headers := NewVXLANChannel(vxlan)
-			info := LayerInfo{
-				Level:   currentLevel,
-				Proto:   layerType,
-				Headers: headers,
-			}
-			stack = append(stack, &info)
-			// VXLAN隧道封装：解析内层以太网帧
-			innerPacket := gopacket.NewPacket(layer.LayerPayload(), layers.LayerTypeEthernet, opts)
-			innerLevel, innerInfos, innerPayload := ExtractLayerInfos(innerPacket, LayerLevelLink)
-			stack = append(stack, innerInfos...)
-			payload = innerPayload
-			currentLevel = innerLevel
-			return
-		case layers.LayerTypeGRE:
-			currentLevel = nextLevel
-			gre := layer.(*layers.GRE)
-			headers := NewGREChannel(gre)
-			info := LayerInfo{
-				Level:   currentLevel,
-				Proto:   layerType,
-				Headers: headers,
-			}
-			stack = append(stack, &info)
-			// GRE隧道封装：根据协议类型解析内层数据包
-			innerPacket := gopacket.NewPacket(layer.LayerPayload(), gre.Protocol, opts)
-			innerBaseLevel := getTunnelInnerBaseLevel(gre.Protocol)
-			innerLevel, innerInfos, innerPayload := ExtractLayerInfos(innerPacket, innerBaseLevel)
-			stack = append(stack, innerInfos...)
-			payload = innerPayload
-			currentLevel = innerLevel
-			return
-		case layers.LayerTypeGeneve:
-			currentLevel = nextLevel
-			gnv := layer.(*layers.Geneve)
-			headers := NewGeneveChannel(gnv)
-			info := LayerInfo{
-				Level:   currentLevel,
-				Proto:   layerType,
-				Headers: headers,
-			}
-			stack = append(stack, &info)
-			// Geneve隧道封装：根据协议类型解析内层数据包
-			innerPacket := gopacket.NewPacket(layer.LayerPayload(), gnv.Protocol, opts)
-			innerBaseLevel := getTunnelInnerBaseLevel(gnv.Protocol)
-			innerLevel, innerInfos, innerPayload := ExtractLayerInfos(innerPacket, innerBaseLevel)
-			stack = append(stack, innerInfos...)
-			payload = innerPayload
-			currentLevel = innerLevel
-			return
-		case layers.LayerTypeMPLS:
-			currentLevel = nextLevel
-			mpls := layer.(*layers.MPLS)
-			headers := NewMPLSChannel(mpls)
-			info := LayerInfo{
-				Level:   currentLevel,
-				Proto:   layerType,
-				Headers: headers,
-			}
-			stack = append(stack, &info)
-			// MPLS标签栈：递归解析下一个MPLS标签或内层数据包
-			innerPacket := gopacket.NewPacket(layer.LayerPayload(), layers.LayerTypeMPLS, opts)
-			innerLevel, innerInfos, innerPayload := ExtractLayerInfos(innerPacket, currentLevel.Next())
-			stack = append(stack, innerInfos...)
-			payload = innerPayload
-			currentLevel = innerLevel
-			return
-		case gopacket.LayerTypePayload:
-			// 到达载荷层，提取原始数据
-			raw := layer.(*gopacket.Payload)
-			payload = raw.Payload()
-			return
-		case gopacket.LayerTypeDecodeFailure:
-			// 解码失败，直接提取载荷数据
-			raw := layer.(*gopacket.DecodeFailure)
-			info := LayerInfo{
-				Level:   nextLevel,
-				Proto:   layerType,
+				Proto:   layer.LayerType(),
 				Headers: nil,
-			}
-			payload = raw.LayerContents()
-			stack = append(stack, &info)
-			return
-		default:
-			// 未知协议层，记录到堆栈中并提取载荷数据
-			currentLevel = nextLevel
-			info := LayerInfo{
-				Level:   currentLevel,
-				Proto:   layerType,
-				Headers: nil,
-			}
-			stack = append(stack, &info)
+			})
 			payload = layer.LayerPayload()
 			return
 		}
-		nextLevel = currentLevel.Next()
+		result, err := decoder.Decode(DecodeContext{CurrentLevel: currentLevel, NextLevel: nextLevel}, layer)
+		if err != nil {
+			return
+		}
+		switch result.Kind {
+		case DecodeRecurse:
+			if result.Info != nil {
+				stack = append(stack, result.Info)
+			}
+			innerLevel, innerInfos, innerPayload := ExtractLayerInfos(result.Inner, result.InnerBase)
+			stack = append(stack, innerInfos...)
+			payload = innerPayload
+			currentLevel = innerLevel
+			return
+		case DecodeStop:
+			if result.Info != nil {
+				stack = append(stack, result.Info)
+			}
+			payload = result.Payload
+			return
+		default:
+			if result.Info == nil {
+				// 该层不进入层堆栈（如 TLS），但仍需按原语义推进下一层级
+				nextLevel = currentLevel.Next()
+				continue
+			}
+			stack = append(stack, result.Info)
+			currentLevel = result.Info.Level
+			nextLevel = currentLevel.Next()
+		}
 	}
 	return
 }
@@ -297,18 +114,13 @@ type ModelBuilder struct {
 // 将原始数据包转换为链路层（OSI第2层）的数据模型
 //
 // 返回值:
-//   - any: 返回具体的链路层数据包模型，目前支持 PacketEthernet
-//
-// 异常:
-//   - 如果层堆栈为空，会触发panic
-//   - 如果第一层不是链路层，会触发panic
-//   - 如果头部信息为nil，会触发panic
-//   - 如果协议类型不支持，会触发panic
+//   - any: 返回具体的链路层数据包模型，目前支持 PacketEthernet；
+//     协议未注册装配器时返回 nil
 //
 // 功能说明:
 //  1. 验证层堆栈的有效性
-//  2. 提取以太网头部信息
-//  3. 构建包含完整元数据的以太网数据包模型
+//  2. 按层级与协议类型查找已注册的模型装配器
+//  3. 由装配器提取链路层头部并构建包含完整元数据的模型
 //  4. 返回可用于数据库存储的结构化数据
 func (b *ModelBuilder) BuildAsPacketLinkModel() any {
 	if len(b.Stack) < 1 {
@@ -321,39 +133,11 @@ func (b *ModelBuilder) BuildAsPacketLinkModel() any {
 	if info.Headers == nil {
 		return nil
 	}
-	switch info.Proto {
-	case layers.LayerTypeEthernet, layers.LayerTypeLoopback:
-		eth := info.Headers.(*EthernetHeaders)
-		return &PacketEthernet{
-			AsPacket: AsPacket{
-				BaseMeta: BaseMeta{
-					SessionID: b.SessionID,
-					Namespace: b.Source.Namespace,
-					Capture:   b.Source.Name,
-					Version:   b.Source.Version,
-				},
-				TimestampMeta: TimestampMeta{
-					Timestamp: b.Timestamp,
-					CreatedAt: time.Now(),
-				},
-				CaptureMeta: CaptureMeta{
-					Truncated:     b.Truncated,
-					CaptureLength: uint32(b.CaptureLength),
-				},
-				PacketMeta: PacketMeta{
-					LayerStack: b.Stack,
-				},
-			},
-			// 行详情接口依赖非空的全局唯一 ID，构造时即生成，落库路径无需再补；
-			// 作为最底层模型，其 ID 经嵌入传递被 IPv4/IPv6/UDP/TCP 各上层数据包模型继承
-			RowMeta: RowMeta{
-				ID: serializer.NewHexUUIDv4(),
-			},
-			EthernetHeaders: *eth,
-		}
-	default:
+	assembler, ok := lookupModelAssembler(LayerLevelLink, info.Proto)
+	if !ok {
 		return nil
 	}
+	return assembler.Build(b)
 }
 
 // BuildAsPacketNetworkModel 构建网络层数据包模型
@@ -361,21 +145,19 @@ func (b *ModelBuilder) BuildAsPacketLinkModel() any {
 // 支持IPv4和IPv6协议，构建包含链路层和网络层信息的完整数据包模型
 //
 // 返回值:
-//   - any: 返回具体的网络层数据包模型，支持 PacketIPv4 或 PacketIPv6
+//   - any: 返回具体的网络层数据包模型，支持 PacketIPv4 或 PacketIPv6；
+//     协议未注册装配器时返回 nil
 //
 // 异常:
 //   - 如果层堆栈少于2层，会触发panic
 //   - 如果第二层不是网络层，会触发panic
 //   - 如果头部信息为nil，会触发panic
-//   - 如果链路层模型构建失败，会触发panic
-//   - 如果协议类型不支持，会触发panic
 //
 // 功能说明:
 //  1. 验证网络层堆栈的有效性
-//  2. 构建底层链路层模型作为基础
-//  3. 提取IPv4或IPv6头部信息
-//  4. 组合链路层和网络层信息构建完整模型
-//  5. 返回可用于数据库存储的结构化数据
+//  2. 按层级与协议类型查找已注册的模型装配器
+//  3. 由装配器复用链路层模型并组合网络层头部
+//  4. 返回可用于数据库存储的结构化数据
 func (b *ModelBuilder) BuildAsPacketNetworkModel() any {
 	if len(b.Stack) < 2 {
 		panic("network layer stack have not enough layers")
@@ -387,32 +169,11 @@ func (b *ModelBuilder) BuildAsPacketNetworkModel() any {
 	if info.Headers == nil {
 		panic("second stack layer headers is nil")
 	}
-	switch info.Proto {
-	case layers.LayerTypeIPv4:
-		net := info.Headers.(*IPv4Headers)
-		model := b.BuildAsPacketLinkModel()
-		if model == nil {
-			return nil
-		}
-		return &PacketIPv4{
-			PacketEthernet: *model.(*PacketEthernet),
-			IPv4Headers:    *net,
-			Payload:        serializer.NewCrypto(b.Payload),
-		}
-	case layers.LayerTypeIPv6:
-		net := info.Headers.(*IPv6Headers)
-		model := b.BuildAsPacketLinkModel()
-		if model == nil {
-			return nil
-		}
-		return &PacketIPv6{
-			PacketEthernet: *model.(*PacketEthernet),
-			IPv6Headers:    *net,
-			Payload:        serializer.NewCrypto(b.Payload),
-		}
-	default:
-		panic(fmt.Sprintf("unknown network layer protocol %s", info.Proto))
+	assembler, ok := lookupModelAssembler(LayerLevelNetwork, info.Proto)
+	if !ok {
+		return nil
 	}
+	return assembler.Build(b)
 }
 
 // BuildAsPacketTransportModel 构建传输层数据包模型
@@ -420,26 +181,21 @@ func (b *ModelBuilder) BuildAsPacketNetworkModel() any {
 // 支持TCP和UDP协议，构建包含链路层、网络层和传输层信息的完整数据包模型
 //
 // 返回值:
-//   - any: 返回具体的传输层数据包模型，支持 PacketIPv4TCP、PacketIPv4UDP、PacketIPv6TCP 或 PacketIPv6UDP
+//   - any: 返回具体的传输层数据包模型，支持 PacketIPv4TCP、PacketIPv4UDP、PacketIPv6TCP 或 PacketIPv6UDP；
+//     协议未注册装配器时返回 nil
 //
 // 异常:
 //   - 如果层堆栈少于3层，会触发panic
 //   - 如果最后一层不是传输层，会触发panic
-//   - 如果头部信息为nil，会触发panic
-//   - 如果网络层模型构建失败，会触发panic
-//   - 如果协议类型不支持，会触发panic
 //
 // 功能说明:
 //  1. 验证传输层堆栈的有效性（最后一层必须是传输层）
-//  2. 构建底层网络层模型作为基础
-//  3. 根据网络层协议类型（IPv4/IPv6）选择相应的传输层处理逻辑
-//  4. 提取TCP或UDP头部信息
-//  5. 组合链路层、网络层和传输层信息构建完整模型
-//  6. 返回可用于数据库存储的结构化数据
+//  2. 按层级与协议类型查找已注册的模型装配器
+//  3. 由装配器复用网络层模型并组合传输层头部
+//  4. 返回可用于数据库存储的结构化数据
 //
 // 注意:
 //   - 该函数假设传输层是协议栈的最后一层（在应用层之前）
-//   - 支持IPv4/TCP、IPv4/UDP、IPv6/TCP、IPv6/UDP四种组合
 func (b *ModelBuilder) BuildAsPacketTransportModel() any {
 	if len(b.Stack) < 3 {
 		panic("transport layer stack have not enough layers")
@@ -451,60 +207,11 @@ func (b *ModelBuilder) BuildAsPacketTransportModel() any {
 	if info.Headers == nil {
 		return nil
 	}
-	model := b.BuildAsPacketNetworkModel()
-	if model == nil {
+	assembler, ok := lookupModelAssembler(LayerLevelTransport, info.Proto)
+	if !ok {
 		return nil
 	}
-	switch model.(type) {
-	case *PacketIPv4:
-		switch info.Proto {
-		case layers.LayerTypeTCP:
-			tcp := info.Headers.(*TCPHeaders)
-			pkt := &PacketIPv4TCP{
-				PacketIPv4: *model.(*PacketIPv4),
-				TCPHeaders: *tcp,
-				Payload:    serializer.NewCrypto(b.Payload),
-			}
-			pkt.TCPStreamID = pkt.StreamID()
-			return pkt
-		case layers.LayerTypeUDP:
-			udp := info.Headers.(*UDPHeaders)
-			pkt := &PacketIPv4UDP{
-				PacketIPv4: *model.(*PacketIPv4),
-				UDPHeaders: *udp,
-				Payload:    serializer.NewCrypto(b.Payload),
-			}
-			pkt.UDPStreamID = pkt.StreamID()
-			return pkt
-		default:
-			panic(fmt.Sprintf("unknown transport layer protocol %s", info.Proto))
-		}
-	case *PacketIPv6:
-		switch info.Proto {
-		case layers.LayerTypeTCP:
-			tcp := info.Headers.(*TCPHeaders)
-			pkt := &PacketIPv6TCP{
-				PacketIPv6: *model.(*PacketIPv6),
-				TCPHeaders: *tcp,
-				Payload:    serializer.NewCrypto(b.Payload),
-			}
-			pkt.TCPStreamID = pkt.StreamID()
-			return pkt
-		case layers.LayerTypeUDP:
-			udp := info.Headers.(*UDPHeaders)
-			pkt := &PacketIPv6UDP{
-				PacketIPv6: *model.(*PacketIPv6),
-				UDPHeaders: *udp,
-				Payload:    serializer.NewCrypto(b.Payload),
-			}
-			pkt.UDPStreamID = pkt.StreamID()
-			return pkt
-		default:
-			panic(fmt.Sprintf("unknown transport layer protocol %s", info.Proto))
-		}
-	default:
-		panic(fmt.Sprintf("unknown transport layer protocol %s", info.Proto))
-	}
+	return assembler.Build(b)
 }
 
 // BuildAsPacketApplicationModel 构建应用层数据包模型

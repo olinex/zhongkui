@@ -1,4 +1,34 @@
 -- +goose Up
+CREATE TABLE IF NOT EXISTS packet_ethernets (
+	id UUID COMMENT 'the globally unique id of the row' CODEC(ZSTD(3)),
+	namespace LowCardinality(String) COMMENT 'the namespace the packet belongs to' CODEC(ZSTD(3)),
+	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
+	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
+	session_id UUID COMMENT 'the session id of the packet' CODEC(ZSTD(3)),
+	timestamp DateTime64(6, 'UTC') COMMENT 'the capture timestamp of the packet' CODEC(DoubleDelta, ZSTD(3)),
+	created_at DateTime64(6, 'UTC') COMMENT 'the time the record is created' CODEC(DoubleDelta, ZSTD(3)),
+	truncated Bool COMMENT 'whether the packet is truncated',
+	capture_length UInt32 COMMENT 'the captured length of the packet in bytes' CODEC(ZSTD(3)),
+	layer_stack String COMMENT 'the network layer stack of the packet' CODEC(ZSTD(3)),
+	eth_dst_mac FixedString(6) COMMENT 'the destination MAC address of the ethernet frame',
+	eth_src_mac FixedString(6) COMMENT 'the source MAC address of the ethernet frame',
+	eth_type UInt16 COMMENT 'the ethernet type of the frame, identifying the upper layer protocol' CODEC(ZSTD(3)),
+	eth_length UInt16 COMMENT 'the data length of the ethernet frame in bytes' CODEC(ZSTD(3)),
+	INDEX idx_packet_ethernets_id id TYPE bloom_filter(0.01) GRANULARITY 4
+) ENGINE = MergeTree()
+ORDER BY (
+	namespace,
+	capture,
+	version,
+	session_id,
+	eth_src_mac,
+	eth_dst_mac,
+	eth_type,
+	timestamp
+)
+PARTITION BY toStartOfHour(created_at)
+TTL toDateTime(created_at) + INTERVAL 24 HOUR DELETE;
+
 CREATE TABLE IF NOT EXISTS packet_ipv4 (
 	id UUID COMMENT 'the globally unique id of the row' CODEC(ZSTD(3)),
 	namespace LowCardinality(String) COMMENT 'the namespace the packet belongs to' CODEC(ZSTD(3)),
@@ -663,6 +693,7 @@ WHERE length(tags) > 0
 GROUP BY namespace, minute, model, dimension, item, tags;
 
 -- +goose Down
+DROP TABLE IF EXISTS packet_ethernets;
 DROP TABLE IF EXISTS packet_ipv4;
 DROP TABLE IF EXISTS packet_ipv6;
 DROP TABLE IF EXISTS packet_ipv4_tcps;

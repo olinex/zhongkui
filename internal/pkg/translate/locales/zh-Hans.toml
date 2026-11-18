@@ -1974,6 +1974,16 @@ other = "HTTP/2"
 [enum.httpVersion."HTTP/3"]
 other = "HTTP/3"
 
+# 逐包层解码推进方式（枚举类 decodeKind）
+[enum.decodeKind.continue]
+other = "继续解析"
+
+[enum.decodeKind.recurse]
+other = "递归解析"
+
+[enum.decodeKind.stop]
+other = "终止解析"
+
 # LLM 模型类型（枚举类 llmModelKind）
 [enum.llmModelKind.chat]
 other = "对话模型"
