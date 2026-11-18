@@ -35,6 +35,10 @@
             />
           </div>
         </template>
+        <!-- linkType 以可读名称展示（如 1 (以太网)），槽位列仍交 AdaptiveCell -->
+        <template #cell-linkType="{ value }">
+          {{ linkTypeName(value) }}
+        </template>
         <!-- 加密 / S3 列由 SearchTable 按 OPTIONS kind 自动分发为加密单元格，
              明文查看事件由 @view-plaintext 统一接收；其余列交 AdaptiveCell -->
       </search-table>
@@ -96,6 +100,7 @@ import { BackendDataType, SearchAction } from "@/types";
 import { vuetifyCfg } from "@/utils/form";
 import { isEmptyCiphertext } from "@/utils/encrypted";
 import i18n from "@/utils/i18n";
+import { linkSlotIndex, linkSlotName, linkTypeName } from "@/utils/link";
 import { modelFieldTitle } from "@/utils/modelField";
 import { enumFieldTypeOfMeta, enumOptionsOf, ensureEnum } from "@/utils/enums";
 import { fieldKindSetsOfMeta, fieldMetaOfMeta, fieldRenderTypeOfMeta } from "@/utils/meta";
@@ -198,10 +203,23 @@ const IPV4_TCP_EXTRA_KEYS = [
   "captureLength",
   "layerStack",
   "payload",
-  "ethDstMac",
-  "ethSrcMac",
-  "ethType",
-  "ethLength",
+  "linkType",
+  "link1",
+  "link2",
+  "link3",
+  "link4",
+  "link5",
+  "link6",
+  "link7",
+  "link8",
+  "link9",
+  "link10",
+  "link11",
+  "link12",
+  "link13",
+  "link14",
+  "link15",
+  "link16",
   "ipv4Version",
   "ipv4Ihl",
   "ipv4Tos",
@@ -226,10 +244,23 @@ const IPV6_TCP_EXTRA_KEYS = [
   "captureLength",
   "layerStack",
   "payload",
-  "ethDstMac",
-  "ethSrcMac",
-  "ethType",
-  "ethLength",
+  "linkType",
+  "link1",
+  "link2",
+  "link3",
+  "link4",
+  "link5",
+  "link6",
+  "link7",
+  "link8",
+  "link9",
+  "link10",
+  "link11",
+  "link12",
+  "link13",
+  "link14",
+  "link15",
+  "link16",
   "ipv6Version",
   "ipv6TrafficClass",
   "ipv6FlowLabel",
@@ -429,6 +460,15 @@ const trafficFieldTitle = (key: string): string => {
   return modelFieldTitle(typeKey.value, key);
 };
 
+// linkFieldType 链路字段的渲染类型：linkType 为数值，link1~link16 为字符串；
+// 其余字段返回 undefined，交 OPTIONS 元信息推导
+const linkFieldType = (key: string): BackendDataType | undefined => {
+  if (key === "linkType") {
+    return BackendDataType.UINT16;
+  }
+  return linkSlotIndex(key) ? BackendDataType.STRING : undefined;
+};
+
 // h 便捷构造表头：类型与展示语义由 OPTIONS 自省推导（type 仅在少数自定义列显式覆盖），
 // defaultVisible 控制默认是否展示（非常用字段显式传 false）
 const h = (key: string, type?: BackendDataType, defaultVisible = true): TableHeader => {
@@ -519,7 +559,7 @@ const headers = computed((): Array<TableHeader> => {
     ...tcpFingerprint,
     ...commonTail,
     ...(ipv4 ? IPV4_TCP_EXTRA_KEYS : IPV6_TCP_EXTRA_KEYS).map((key) =>
-      h(key, undefined, false),
+      h(key, linkFieldType(key), false),
     ),
     actionsHeader,
   ];
@@ -799,6 +839,13 @@ const detailFieldTypes = computed(() => {
   return map;
 });
 
+// detailFieldTitle 详情字段标签：链路槽位按当前行 linkType 解释含义，
+// 其余字段沿用模型字段翻译
+const detailFieldTitle = (key: string, item: Record<string, unknown>): string => {
+  const slot = linkSlotIndex(key);
+  return slot ? linkSlotName(item.linkType, slot) : trafficFieldTitle(key);
+};
+
 // detailFields 行详情字段列表：列表已返回全字段，直接由行数据渲染
 // crypto/s3 字段清单复用顶层 cryptoKeys / s3Keys（与列表单元格展示一致）
 const detailFields = computed((): DetailField[] => {
@@ -831,9 +878,20 @@ const detailFields = computed((): DetailField[] => {
     return !metaKeys.includes(key);
   });
   return [...meta, ...rest].map(([key, value]) => {
-    // 字段标签统一走 trafficFieldTitle：按类型取模型字段翻译，避免界面露出原始 key
-    const label = trafficFieldTitle(key);
+    // 字段标签统一走 detailFieldTitle：按类型取模型字段翻译，避免界面露出原始 key
+    const label = detailFieldTitle(key, item);
     const fieldType = detailFieldTypes.value[key] ?? BackendDataType.STRING;
+    if (key === "linkType") {
+      return {
+        key,
+        label,
+        display: "",
+        kind: "plain" as const,
+        length: 0,
+        value: linkTypeName(value),
+        type: BackendDataType.STRING,
+      };
+    }
     if (cryptoKeys.value.has(key)) {
       return {
         key,

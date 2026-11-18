@@ -6,7 +6,9 @@
 
 - [Constants](<#constants>)
 - [type HttpApiMeta](<#HttpApiMeta>)
+  - [func \(m \*HttpApiMeta\) TableName\(\) string](<#HttpApiMeta.TableName>)
 - [type HttpApiNode](<#HttpApiNode>)
+  - [func \(m \*HttpApiNode\) TableName\(\) string](<#HttpApiNode.TableName>)
 
 
 ## Constants
@@ -44,6 +46,15 @@ type HttpApiMeta struct {
     LastHitTime time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))"`
 }
 ```
+
+<a name="HttpApiMeta.TableName"></a>
+### func \(\*HttpApiMeta\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/api/table_name.go#L6>)
+
+```go
+func (m *HttpApiMeta) TableName() string
+```
+
+TableName 返回 HttpApiMeta 对应的数据库表名。
 
 <a name="HttpApiNode"></a>
 ## type [HttpApiNode](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/api/http.go#L37-L80>)
@@ -96,3 +107,12 @@ type HttpApiNode struct {
     ChildsConcentrationSquareSum string `gorm:"type:String CODEC(ZSTD(3))"`
 }
 ```
+
+<a name="HttpApiNode.TableName"></a>
+### func \(\*HttpApiNode\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/api/table_name.go#L11>)
+
+```go
+func (m *HttpApiNode) TableName() string
+```
+
+TableName 返回 HttpApiNode 对应的数据库表名。

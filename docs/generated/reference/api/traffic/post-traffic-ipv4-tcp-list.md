@@ -53,6 +53,34 @@
       "action": "string",
       "value": ""
     },
+    "linkType": {
+      "action": "string",
+      "value": 0
+    },
+    "link1": {
+      "action": "string",
+      "value": "string"
+    },
+    "link2": {
+      "action": "string",
+      "value": "string"
+    },
+    "link3": {
+      "action": "string",
+      "value": "string"
+    },
+    "link4": {
+      "action": "string",
+      "value": "string"
+    },
+    "link5": {
+      "action": "string",
+      "value": "string"
+    },
+    "link6": {
+      "action": "string",
+      "value": "string"
+    },
     "tcpStreamID": {
       "action": "string",
       "value": "string"
@@ -114,12 +142,22 @@
 | --- | --- | --- | --- | --- | --- |
 | namespace | views.namespaceIpv4TcpListGetFilterByItem | 是 | required | - | - |
 | sessionID | views.sessionIDIpv4TcpListGetFilterByItem | - | - | - | - |
-| tcpStreamID | views.tcpStreamIDIpv4TcpListGetFilterByItem | - | - | - | - |
-| ipv4Src | views.ipv4SrcIpv4TcpListGetFilterByItem | - | - | - | - |
-| ipv4Dst | views.ipv4DstIpv4TcpListGetFilterByItem | - | - | - | - |
+| linkType | views.linkTypeIpv4TcpListGetFilterByItem | - | - | - | - |
+| link1 | views.link1Ipv4TcpListGetFilterByItem | - | - | - | - |
+| link2 | views.link2Ipv4TcpListGetFilterByItem | - | - | - | - |
 
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
+| link3 | views.link3Ipv4TcpListGetFilterByItem | - | - | - | - |
+| link4 | views.link4Ipv4TcpListGetFilterByItem | - | - | - | - |
+| link5 | views.link5Ipv4TcpListGetFilterByItem | - | - | - | - |
+| link6 | views.link6Ipv4TcpListGetFilterByItem | - | - | - | - |
+| tcpStreamID | views.tcpStreamIDIpv4TcpListGetFilterByItem | - | - | - | - |
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| ipv4Src | views.ipv4SrcIpv4TcpListGetFilterByItem | - | - | - | - |
+| ipv4Dst | views.ipv4DstIpv4TcpListGetFilterByItem | - | - | - | - |
 | srcPort | views.srcPortIpv4TcpListGetFilterByItem | - | - | - | - |
 | dstPort | views.dstPortIpv4TcpListGetFilterByItem | - | - | - | - |
 
@@ -164,6 +202,55 @@
 | --- | --- | --- | --- | --- | --- |
 | action | string | 是 | required,oneof=eq neq | - | - |
 | value | serializer.HexUUID | - | - | - | - |
+
+### filterBy.linkType（views.linkTypeIpv4TcpListGetFilterByItem）
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| action | string | 是 | required,oneof=eq neq | - | - |
+| value | uint16 | - | - | - | - |
+
+### filterBy.link1（views.link1Ipv4TcpListGetFilterByItem）
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| action | string | 是 | required,oneof=eq | - | - |
+| value | string | - | - | - | - |
+
+### filterBy.link2（views.link2Ipv4TcpListGetFilterByItem）
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| action | string | 是 | required,oneof=eq | - | - |
+| value | string | - | - | - | - |
+
+### filterBy.link3（views.link3Ipv4TcpListGetFilterByItem）
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| action | string | 是 | required,oneof=eq | - | - |
+| value | string | - | - | - | - |
+
+### filterBy.link4（views.link4Ipv4TcpListGetFilterByItem）
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| action | string | 是 | required,oneof=eq | - | - |
+| value | string | - | - | - | - |
+
+### filterBy.link5（views.link5Ipv4TcpListGetFilterByItem）
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| action | string | 是 | required,oneof=eq | - | - |
+| value | string | - | - | - | - |
+
+### filterBy.link6（views.link6Ipv4TcpListGetFilterByItem）
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| action | string | 是 | required,oneof=eq | - | - |
+| value | string | - | - | - | - |
 
 ### filterBy.tcpStreamID（views.tcpStreamIDIpv4TcpListGetFilterByItem）
 
@@ -217,17 +304,33 @@
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
 | layerStack | []traffic.LayerInfoOut | - | - | - | - |
-| ethDstMac | serializer.MacAddr | - | - | - | - |
-| ethSrcMac | serializer.MacAddr | - | - | - | - |
-| ethType | layers.EthernetType | - | - | - | - |
-| ethLength | uint16 | - | - | - | - |
-| ipv4Version | uint8 | - | - | - | - |
-| ipv4Ihl | uint8 | - | - | - | - |
-| ipv4Tos | uint8 | - | - | - | - |
-| ipv4Length | uint16 | - | - | - | - |
+| linkType | layers.LinkType | - | - | - | - |
+| link1 | string | - | - | - | - |
+| link2 | string | - | - | - | - |
+| link3 | string | - | - | - | - |
+| link4 | string | - | - | - | - |
+| link5 | string | - | - | - | - |
+| link6 | string | - | - | - | - |
+| link7 | string | - | - | - | - |
+| link8 | string | - | - | - | - |
 
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
+| link9 | string | - | - | - | - |
+| link10 | string | - | - | - | - |
+| link11 | string | - | - | - | - |
+| link12 | string | - | - | - | - |
+| link13 | string | - | - | - | - |
+| link14 | string | - | - | - | - |
+| link15 | string | - | - | - | - |
+| link16 | string | - | - | - | - |
+| ipv4Version | uint8 | - | - | - | - |
+| ipv4Ihl | uint8 | - | - | - | - |
+| ipv4Tos | uint8 | - | - | - | - |
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| ipv4Length | uint16 | - | - | - | - |
 | ipv4ID | uint16 | - | - | - | - |
 | ipv4Flags | layers.IPv4Flag | - | - | - | - |
 | ipv4FragOffset | uint16 | - | - | - | - |
@@ -308,20 +411,33 @@
       "headers": {}
     }
   ],
-  "ethDstMac": "",
-  "ethSrcMac": "",
-  "ethType": 0,
-  "ethLength": 0,
-  "ipv4Version": 0,
-  "ipv4Ihl": 0,
-  "ipv4Tos": 0,
-  "ipv4Length": 0,
-  "ipv4ID": 0
+  "linkType": 0,
+  "link1": "string",
+  "link2": "string",
+  "link3": "string",
+  "link4": "string",
+  "link5": "string",
+  "link6": "string"
 }
 ```
 
 ```json
 {
+  "link7": "string",
+  "link8": "string",
+  "link9": "string",
+  "link10": "string",
+  "link11": "string",
+  "link12": "string",
+  "link13": "string",
+  "link14": "string",
+  "link15": "string",
+  "link16": "string",
+  "ipv4Version": 0,
+  "ipv4Ihl": 0,
+  "ipv4Tos": 0,
+  "ipv4Length": 0,
+  "ipv4ID": 0,
   "ipv4Flags": 0,
   "ipv4FragOffset": 0,
   "ipv4Ttl": 0,
@@ -329,7 +445,12 @@
   "ipv4Checksum": 0,
   "ipv4Src": "",
   "ipv4Dst": "",
-  "ipv4Options": [{}],
+  "ipv4Options": [{}]
+}
+```
+
+```json
+{
   "ipv4Padding": "string",
   "srcPort": 0,
   "dstPort": 0,
@@ -346,12 +467,7 @@
   "bitCwr": false,
   "bitNs": false,
   "window": 0,
-  "checksum": 0
-}
-```
-
-```json
-{
+  "checksum": 0,
   "urgent": 0,
   "options": [
     {
@@ -362,7 +478,12 @@
   ],
   "fpOs": "string",
   "fpOsQuality": 0,
-  "fpSig": "string",
+  "fpSig": "string"
+}
+```
+
+```json
+{
   "fpMtu": 0,
   "tcpStreamID": "string",
   "payload": {}

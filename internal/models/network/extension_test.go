@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
 	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
@@ -187,7 +188,7 @@ func TestExtensibleLinkLayerRegistration(t *testing.T) {
 		Version:   "v1.0.0",
 	}
 
-	builder := NewPacketModelBuilder(packet, sessionID, source)
+	builder := NewPacketModelBuilderWithLinkType(packet, sessionID, source, layers.LinkTypeEthernet)
 	if builder.Level != LayerLevelLink {
 		t.Fatalf("builder.Level = %d, want %d", builder.Level, LayerLevelLink)
 	}

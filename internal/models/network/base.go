@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
@@ -165,11 +166,26 @@ type TagsMeta struct {
 	Tags []string `gorm:"type:Array(String)" json:"tags"`
 }
 
+// LinkMeta 表示链路层元数据
+// 记录数据包实际捕获链路的类型，供上层模型按链路类型解释通用槽位
+type LinkMeta struct {
+	// LinkType pcap 链路类型，如 Ethernet、Linux SLL、PPP、Raw IP 等
+	LinkType layers.LinkType `gorm:"column:link_type;type:UInt16 CODEC(ZSTD(3))" json:"linkType"`
+}
+
 // AsPacket 表示数据包的结构
 // 用于存储原始网络数据包，包含完整的元数据和载荷
 type AsPacket struct {
 	BaseMeta
+	LinkMeta
 	TimestampMeta
 	CaptureMeta
 	PacketMeta
+}
+
+// PacketLink 表示链路无关的数据包基座
+// 组合数据包元数据与行唯一标识，供各类链路模型与上层模型嵌入
+type PacketLink struct {
+	AsPacket
+	RowMeta
 }

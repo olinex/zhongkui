@@ -1,7 +1,11 @@
 <template>
   <div>
+    <!-- 无头部字段的层（如 Dot11Data）：显示占位提示，不渲染空 JSON chip -->
+    <span v-if="headers.trim() === ''" class="text-body-small on-surface-variant">
+      {{ $t("model.networkStack.header.empty") }}
+    </span>
     <!-- 无法解析或未知协议时回退到原始 JSON chip -->
-    <json-chip v-if="!decoded" :value="headers" color="info" density="compact" />
+    <json-chip v-else-if="!decoded" :value="headers" color="info" density="compact" />
     <!-- 已知协议：显示一行可读摘要，点击打开逐字段说明表格 -->
     <div v-else class="zk-stack-header" @click="dialog = true">
       <div class="zk-stack-header-primary font-mono text-body-medium" :title="summary?.primary">
@@ -119,11 +123,12 @@ const rows = computed(() => {
     if (value === undefined) {
       continue;
     }
+    const i18nKey = meta.i18nKey ?? meta.key;
     out.push({
       key: meta.key,
-      label: i18n.global.t(`model.networkStack.header.field.${meta.key}`),
+      label: i18n.global.t(`model.networkStack.header.field.${i18nKey}`),
       value: formatHeaderValue(meta.kind, value),
-      desc: i18n.global.t(`model.networkStack.header.desc.${meta.key}`),
+      desc: i18n.global.t(`model.networkStack.header.desc.${i18nKey}`),
     });
   }
   return out;

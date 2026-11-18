@@ -9,12 +9,12 @@
 
 ## Variables
 
-<a name="Analyzer"></a>Analyzer 检查包注释、导出声明与结构体字段注释的完备性。
+<a name="Analyzer"></a>Analyzer 检查包注释、导出声明与结构体字段注释的完备性，并约束 panic 消息使用英文。
 
 ```go
 var Analyzer = &analysis.Analyzer{
     Name: "commentlint",
-    Doc:  "检查包注释、导出声明与结构体字段注释的完备性",
+    Doc:  "检查包注释、导出声明、结构体字段注释的完备性，并约束 panic 消息使用英文",
     Run:  run,
 }
 ```

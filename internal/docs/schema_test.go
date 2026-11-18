@@ -19,6 +19,9 @@ type Widget struct {
 	Note string ` + "`gorm:\"type:TEXT\"`" + ` // 备注
 }
 
+// TableName 返回示例表名。
+func (w *Widget) TableName() string { return "widgets" }
+
 // Base 是嵌入基类。
 type Base struct {
 	ID uint ` + "`gorm:\"primarykey\"`" + `
@@ -45,8 +48,8 @@ type ValueObject struct {
 	if !ok {
 		t.Fatalf("未解析到 Widget: %+v", parsed)
 	}
-	if _, ok := byName["Base"]; !ok {
-		t.Fatalf("未解析到嵌入类型 Base: %+v", parsed)
+	if _, ok := byName["Base"]; ok {
+		t.Fatalf("未声明 TableName 的 Base 不应作为数据表导出: %+v", parsed)
 	}
 	if len(widget.Fields) != 3 {
 		t.Fatalf("字段数 = %d, want 3: %+v", len(widget.Fields), widget.Fields)
@@ -71,6 +74,9 @@ type Packet struct {
 	Fixed string ` + "`gorm:\"type:LowCardinality(String)\"`" + `
 	Maybe string ` + "`gorm:\"type:Nullable(String)\"`" + `
 }
+
+// TableName 返回示例表名。
+func (p *Packet) TableName() string { return "packets" }
 `
 	if err := os.WriteFile(filepath.Join(dir, "packet.go"), []byte(source), 0o644); err != nil {
 		t.Fatalf("写入测试源码失败: %v", err)

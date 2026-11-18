@@ -52,7 +52,7 @@ func HttpTransportStackListGet(c *gin.Context)
 HttpTransportStackListGet 处理 HTTP 传输关联网络堆栈列表查询请求 以 HttpTransport 携带的 traceId（\+ namespace/sessionId/时间范围）为键， 查询 raw 库（ClickHouse）中该 TCP 流的全部 NetworkStack 记录； 前端借助 HttpTransport.AppTailer 的 payload offset 与记录的 payloadStartOffset/payloadEndOffset 相交，定位请求/响应各自的数据包。
 
 <a name="Ipv4TcpDetailGet"></a>
-## func [Ipv4TcpDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv4_tcp.go#L320>)
+## func [Ipv4TcpDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv4_tcp.go#L361>)
 
 ```go
 func Ipv4TcpDetailGet(c *gin.Context)
@@ -61,7 +61,7 @@ func Ipv4TcpDetailGet(c *gin.Context)
 Ipv4TcpDetailGet 处理 IPv4 TCP 包详情查询请求 以 namespace \+ id 精确定位单条记录；列表投影后行详情/收藏样例/堆栈下钻等 消费方经此接口补齐全量字段
 
 <a name="Ipv4TcpListGet"></a>
-## func [Ipv4TcpListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv4_tcp.go#L166>)
+## func [Ipv4TcpListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv4_tcp.go#L193>)
 
 ```go
 func Ipv4TcpListGet(c *gin.Context)
@@ -70,7 +70,7 @@ func Ipv4TcpListGet(c *gin.Context)
 Ipv4TcpListGet 处理 IPv4 TCP 包列表查询请求 通过 Ipv4TcpListGetSearchIn 应用过滤、排序与分页，查询 raw 库（ClickHouse）中的包数据， 以局部扫描容器承载 gorm 模型与 total 列，再映射为独立 Out 结构（含全部字段）
 
 <a name="Ipv6TcpDetailGet"></a>
-## func [Ipv6TcpDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv6_tcp.go#L256>)
+## func [Ipv6TcpDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv6_tcp.go#L297>)
 
 ```go
 func Ipv6TcpDetailGet(c *gin.Context)
@@ -79,7 +79,7 @@ func Ipv6TcpDetailGet(c *gin.Context)
 Ipv6TcpDetailGet 处理 IPv6 TCP 包详情查询请求 以 namespace \+ id 精确定位单条记录；列表投影后行详情/收藏样例/堆栈下钻等 消费方经此接口补齐全量字段
 
 <a name="Ipv6TcpListGet"></a>
-## func [Ipv6TcpListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv6_tcp.go#L133>)
+## func [Ipv6TcpListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv6_tcp.go#L160>)
 
 ```go
 func Ipv6TcpListGet(c *gin.Context)
@@ -530,7 +530,7 @@ func NewHttpTransportListGetListItemOut(p *network.HttpTransport) *HttpTransport
 NewHttpTransportListGetListItemOut 将 network.HttpTransport 映射为独立 Out 结构。 模型字段均为共享/第三方类型，逐字段直接复制，无类型转换。
 
 <a name="Ipv4TcpDetailGetIn"></a>
-## type [Ipv4TcpDetailGetIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv4_tcp.go#L310-L315>)
+## type [Ipv4TcpDetailGetIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv4_tcp.go#L351-L356>)
 
 Ipv4TcpDetailGetIn IPv4 TCP 包详情查询入参 按命名空间 \+ 行唯一 ID 精确查询单条 IPv4 TCP 包记录
 
@@ -544,7 +544,7 @@ type Ipv4TcpDetailGetIn struct {
 ```
 
 <a name="Ipv4TcpListGetListItemOut"></a>
-## type [Ipv4TcpListGetListItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv4_tcp.go#L46-L161>)
+## type [Ipv4TcpListGetListItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv4_tcp.go#L46-L188>)
 
 Ipv4TcpListGetListItemOut IPv4 TCP 包列表输出项 独立扁平结构体，逐一镜像 network.PacketIPv4TCP 的全部顶层 json 字段 （payload 已转存 S3，单条返回字节量可控），BaseTotalOut 承接 COUNT\(\*\) OVER\(\) 的总数
 
@@ -575,15 +575,42 @@ type Ipv4TcpListGetListItemOut struct {
     // ---- PacketMeta ----
     // LayerStack 网络层堆栈信息
     LayerStack []LayerInfoOut `json:"layerStack"`
-    // ---- EthernetHeaders ----
-    // EthDstMAC 目的 MAC 地址
-    EthDstMAC serializer.MacAddr `json:"ethDstMac"`
-    // EthSrcMAC 源 MAC 地址
-    EthSrcMAC serializer.MacAddr `json:"ethSrcMac"`
-    // EthType 以太网类型
-    EthType layers.EthernetType `json:"ethType"`
-    // EthLength 帧长度
-    EthLength uint16 `json:"ethLength"`
+    // ---- LinkMeta ----
+    // LinkType 链路类型
+    LinkType layers.LinkType `json:"linkType"`
+    // ---- LinkSlots ----
+    // Link1 链路槽位 1
+    Link1 string `json:"link1"`
+    // Link2 链路槽位 2
+    Link2 string `json:"link2"`
+    // Link3 链路槽位 3
+    Link3 string `json:"link3"`
+    // Link4 链路槽位 4
+    Link4 string `json:"link4"`
+    // Link5 链路槽位 5
+    Link5 string `json:"link5"`
+    // Link6 链路槽位 6
+    Link6 string `json:"link6"`
+    // Link7 链路槽位 7
+    Link7 string `json:"link7"`
+    // Link8 链路槽位 8
+    Link8 string `json:"link8"`
+    // Link9 链路槽位 9
+    Link9 string `json:"link9"`
+    // Link10 链路槽位 10
+    Link10 string `json:"link10"`
+    // Link11 链路槽位 11
+    Link11 string `json:"link11"`
+    // Link12 链路槽位 12
+    Link12 string `json:"link12"`
+    // Link13 链路槽位 13
+    Link13 string `json:"link13"`
+    // Link14 链路槽位 14
+    Link14 string `json:"link14"`
+    // Link15 链路槽位 15
+    Link15 string `json:"link15"`
+    // Link16 链路槽位 16
+    Link16 string `json:"link16"`
     // ---- IPv4Headers ----
     // IPv4Version 协议版本号
     IPv4Version uint8 `json:"ipv4Version"`
@@ -668,7 +695,7 @@ type Ipv4TcpListGetListItemOut struct {
 ```
 
 <a name="Ipv6TcpDetailGetIn"></a>
-## type [Ipv6TcpDetailGetIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv6_tcp.go#L246-L251>)
+## type [Ipv6TcpDetailGetIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv6_tcp.go#L287-L292>)
 
 Ipv6TcpDetailGetIn IPv6 TCP 包详情查询入参 按命名空间 \+ 行唯一 ID 精确查询单条 IPv6 TCP 包记录
 
@@ -682,7 +709,7 @@ type Ipv6TcpDetailGetIn struct {
 ```
 
 <a name="Ipv6TcpListGetListItemOut"></a>
-## type [Ipv6TcpListGetListItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv6_tcp.go#L22-L128>)
+## type [Ipv6TcpListGetListItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/traffic/traffic_ipv6_tcp.go#L22-L155>)
 
 Ipv6TcpListGetListItemOut IPv6 TCP 包列表输出项 独立扁平结构体，逐一镜像 network.PacketIPv6TCP 的全部顶层 json 字段 （payload 已转存 S3，单条返回字节量可控），BaseTotalOut 承接 COUNT\(\*\) OVER\(\) 的总数
 
@@ -713,15 +740,42 @@ type Ipv6TcpListGetListItemOut struct {
     // ---- PacketMeta ----
     // LayerStack 网络层堆栈信息
     LayerStack []LayerInfoOut `json:"layerStack"`
-    // ---- EthernetHeaders ----
-    // EthDstMAC 目的 MAC 地址
-    EthDstMAC serializer.MacAddr `json:"ethDstMac"`
-    // EthSrcMAC 源 MAC 地址
-    EthSrcMAC serializer.MacAddr `json:"ethSrcMac"`
-    // EthType 以太网类型
-    EthType layers.EthernetType `json:"ethType"`
-    // EthLength 帧长度
-    EthLength uint16 `json:"ethLength"`
+    // ---- LinkMeta ----
+    // LinkType 链路类型
+    LinkType layers.LinkType `json:"linkType"`
+    // ---- LinkSlots ----
+    // Link1 链路槽位 1
+    Link1 string `json:"link1"`
+    // Link2 链路槽位 2
+    Link2 string `json:"link2"`
+    // Link3 链路槽位 3
+    Link3 string `json:"link3"`
+    // Link4 链路槽位 4
+    Link4 string `json:"link4"`
+    // Link5 链路槽位 5
+    Link5 string `json:"link5"`
+    // Link6 链路槽位 6
+    Link6 string `json:"link6"`
+    // Link7 链路槽位 7
+    Link7 string `json:"link7"`
+    // Link8 链路槽位 8
+    Link8 string `json:"link8"`
+    // Link9 链路槽位 9
+    Link9 string `json:"link9"`
+    // Link10 链路槽位 10
+    Link10 string `json:"link10"`
+    // Link11 链路槽位 11
+    Link11 string `json:"link11"`
+    // Link12 链路槽位 12
+    Link12 string `json:"link12"`
+    // Link13 链路槽位 13
+    Link13 string `json:"link13"`
+    // Link14 链路槽位 14
+    Link14 string `json:"link14"`
+    // Link15 链路槽位 15
+    Link15 string `json:"link15"`
+    // Link16 链路槽位 16
+    Link16 string `json:"link16"`
     // ---- IPv6Base ----
     // IPv6Version 协议版本号
     IPv6Version uint8 `json:"ipv6Version"`

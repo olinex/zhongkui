@@ -2,6 +2,7 @@ package network
 
 import (
 	"net"
+	"strconv"
 
 	"github.com/gopacket/gopacket/layers"
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
@@ -60,13 +61,11 @@ func NewLoopbackHeaders() *EthernetHeaders {
 }
 
 // PacketEthernet 表示完整的以太网数据包
-// 该结构体组合了AsPacket基础结构和EthernetHeaders以太网头部信息，
+// 该结构体组合了链路无关基座 PacketLink 与 EthernetHeaders 以太网头部信息，
 // 用于存储和分析原始的网络数据包。它包含了数据包的所有元数据和载荷。
 //
 // 结构说明:
-//   - AsPacket: 提供数据包的基础元数据，包括时间戳、捕获信息、层堆栈等
-//   - RowMeta: 提供行级全局唯一 ID，供行详情接口按 namespace + id 定位单行；
-//     作为最底层的数据包模型，其 ID 经嵌入传递被 IPv4/IPv6/UDP/TCP 各上层数据包模型继承
+//   - PacketLink: 提供数据包的基础元数据（含链路类型）与行级全局唯一 ID
 //   - EthernetHeaders: 提供以太网特定的头部信息
 //
 // 使用场景:
@@ -75,7 +74,22 @@ func NewLoopbackHeaders() *EthernetHeaders {
 //   - 安全审计和入侵检测
 //   - 网络故障排查
 type PacketEthernet struct {
-	AsPacket
-	RowMeta
+	PacketLink
 	EthernetHeaders
+}
+
+// LinkSlotValues 按以太网槽位约定返回链路槽位
+// link_1=目的 MAC、link_2=源 MAC、link_3=以太网类型（十进制）、link_4=帧长度（十进制）。
+// 回环链路与以太网共用本模型，其 MAC 为空，此时槽位全部保持空串。
+func (p *PacketEthernet) LinkSlotValues() LinkSlots {
+	dstMAC, srcMAC := p.EthDstMAC.String(), p.EthSrcMAC.String()
+	if dstMAC == "" && srcMAC == "" {
+		return LinkSlots{}
+	}
+	return NewLinkSlots(
+		dstMAC,
+		srcMAC,
+		strconv.FormatUint(uint64(p.EthType), 10),
+		strconv.FormatUint(uint64(p.EthLength), 10),
+	)
 }

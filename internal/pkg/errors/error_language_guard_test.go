@@ -48,9 +48,10 @@ func TestErrorMessagesAreEnglish(t *testing.T) {
 			return walkErr
 		}
 		if d.IsDir() {
-			// 非后端源码目录与生成产物目录不参与扫描
+			// 非后端源码目录、分析器 testdata 与生成产物目录不参与扫描：
+			// testdata 存放故意不合规的样例代码，用于验证分析器本身
 			switch d.Name() {
-			case ".git", "vendor", "node_modules", "web", "docs", "tmp",
+			case ".git", "vendor", "node_modules", "web", "docs", "tmp", "testdata",
 				".trae", ".trae-html-share-packages", ".screenshots", ".vscode", ".gitee", ".github":
 				return filepath.SkipDir
 			}

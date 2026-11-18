@@ -19,7 +19,9 @@
 - [func ValidateSkillFixedFields\(fields map\[string\]json.RawMessage, periodic bool, inputFields \[\]SkillInputField\) error](<#ValidateSkillFixedFields>)
 - [func ValidateSkillPeriodicInputFields\(periodic bool, fields \[\]SkillInputField\) error](<#ValidateSkillPeriodicInputFields>)
 - [type AgentCheckpoint](<#AgentCheckpoint>)
+  - [func \(m \*AgentCheckpoint\) TableName\(\) string](<#AgentCheckpoint.TableName>)
 - [type AgentInteraction](<#AgentInteraction>)
+  - [func \(m \*AgentInteraction\) TableName\(\) string](<#AgentInteraction.TableName>)
 - [type AgentInteractionState](<#AgentInteractionState>)
   - [func AllAgentInteractionStates\(\) \[\]AgentInteractionState](<#AllAgentInteractionStates>)
   - [func ParseAgentInteractionState\(raw AgentInteractionState\) \(AgentInteractionState, error\)](<#ParseAgentInteractionState>)
@@ -30,9 +32,13 @@
   - [func AllAgentKinds\(\) \[\]AgentKind](<#AllAgentKinds>)
   - [func ParseAgentKind\(raw AgentKind\) \(AgentKind, error\)](<#ParseAgentKind>)
 - [type AgentMemory](<#AgentMemory>)
+  - [func \(m \*AgentMemory\) TableName\(\) string](<#AgentMemory.TableName>)
 - [type AgentMessage](<#AgentMessage>)
+  - [func \(m \*AgentMessage\) TableName\(\) string](<#AgentMessage.TableName>)
 - [type AgentParam](<#AgentParam>)
+  - [func \(m \*AgentParam\) TableName\(\) string](<#AgentParam.TableName>)
 - [type AgentRun](<#AgentRun>)
+  - [func \(m \*AgentRun\) TableName\(\) string](<#AgentRun.TableName>)
 - [type AgentRunPhase](<#AgentRunPhase>)
   - [func AllAgentRunPhases\(\) \[\]AgentRunPhase](<#AllAgentRunPhases>)
   - [func ParseAgentRunPhase\(raw AgentRunPhase\) \(AgentRunPhase, error\)](<#ParseAgentRunPhase>)
@@ -40,19 +46,28 @@
   - [func AllAgentRunStatuses\(\) \[\]AgentRunStatus](<#AllAgentRunStatuses>)
   - [func ParseAgentRunStatus\(raw AgentRunStatus\) \(AgentRunStatus, error\)](<#ParseAgentRunStatus>)
 - [type AgentSession](<#AgentSession>)
+  - [func \(m \*AgentSession\) TableName\(\) string](<#AgentSession.TableName>)
 - [type AgentSessionCompaction](<#AgentSessionCompaction>)
+  - [func \(m \*AgentSessionCompaction\) TableName\(\) string](<#AgentSessionCompaction.TableName>)
 - [type AgentSkill](<#AgentSkill>)
+  - [func \(m \*AgentSkill\) TableName\(\) string](<#AgentSkill.TableName>)
 - [type InteractionKind](<#InteractionKind>)
 - [type InteractionStatus](<#InteractionStatus>)
 - [type KnowledgeChunk](<#KnowledgeChunk>)
+  - [func \(m \*KnowledgeChunk\) TableName\(\) string](<#KnowledgeChunk.TableName>)
 - [type KnowledgeDocStatus](<#KnowledgeDocStatus>)
 - [type KnowledgeDocument](<#KnowledgeDocument>)
+  - [func \(m \*KnowledgeDocument\) TableName\(\) string](<#KnowledgeDocument.TableName>)
 - [type LlmBinding](<#LlmBinding>)
+  - [func \(m \*LlmBinding\) TableName\(\) string](<#LlmBinding.TableName>)
 - [type LlmModel](<#LlmModel>)
   - [func \(l \*LlmModel\) APIKeyData\(\) \[\]byte](<#LlmModel.APIKeyData>)
+  - [func \(m \*LlmModel\) TableName\(\) string](<#LlmModel.TableName>)
 - [type LlmTool](<#LlmTool>)
+  - [func \(m \*LlmTool\) TableName\(\) string](<#LlmTool.TableName>)
 - [type McpServer](<#McpServer>)
   - [func \(m \*McpServer\) HeadersData\(\) \[\]byte](<#McpServer.HeadersData>)
+  - [func \(m \*McpServer\) TableName\(\) string](<#McpServer.TableName>)
 - [type MemoryKind](<#MemoryKind>)
   - [func AllMemoryKinds\(\) \[\]MemoryKind](<#AllMemoryKinds>)
   - [func ParseMemoryKind\(raw MemoryKind\) \(MemoryKind, error\)](<#ParseMemoryKind>)
@@ -61,8 +76,11 @@
   - [func ParseMemoryStatus\(raw MemoryStatus\) \(MemoryStatus, error\)](<#ParseMemoryStatus>)
 - [type MessageRole](<#MessageRole>)
 - [type PeriodicReportPlan](<#PeriodicReportPlan>)
+  - [func \(m \*PeriodicReportPlan\) TableName\(\) string](<#PeriodicReportPlan.TableName>)
 - [type PeriodicReportPlanWatch](<#PeriodicReportPlanWatch>)
+  - [func \(m \*PeriodicReportPlanWatch\) TableName\(\) string](<#PeriodicReportPlanWatch.TableName>)
 - [type PeriodicReportRun](<#PeriodicReportRun>)
+  - [func \(m \*PeriodicReportRun\) TableName\(\) string](<#PeriodicReportRun.TableName>)
 - [type PeriodicReportRunStatus](<#PeriodicReportRunStatus>)
 - [type ReviewValve](<#ReviewValve>)
 - [type SessionOrigin](<#SessionOrigin>)
@@ -238,6 +256,15 @@ type AgentCheckpoint struct {
 }
 ```
 
+<a name="AgentCheckpoint.TableName"></a>
+### func \(\*AgentCheckpoint\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L6>)
+
+```go
+func (m *AgentCheckpoint) TableName() string
+```
+
+TableName 返回 AgentCheckpoint 对应的数据库表名。
+
 <a name="AgentInteraction"></a>
 ## type [AgentInteraction](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/agent_interaction.go#L42-L65>)
 
@@ -269,6 +296,15 @@ type AgentInteraction struct {
     Payload *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12822,length=32"`
 }
 ```
+
+<a name="AgentInteraction.TableName"></a>
+### func \(\*AgentInteraction\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L11>)
+
+```go
+func (m *AgentInteraction) TableName() string
+```
+
+TableName 返回 AgentInteraction 对应的数据库表名。
 
 <a name="AgentInteractionState"></a>
 ## type [AgentInteractionState](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L96>)
@@ -445,6 +481,15 @@ type AgentMemory struct {
 }
 ```
 
+<a name="AgentMemory.TableName"></a>
+### func \(\*AgentMemory\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L16>)
+
+```go
+func (m *AgentMemory) TableName() string
+```
+
+TableName 返回 AgentMemory 对应的数据库表名。
+
 <a name="AgentMessage"></a>
 ## type [AgentMessage](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/session.go#L60-L109>)
 
@@ -505,6 +550,15 @@ type AgentMessage struct {
 }
 ```
 
+<a name="AgentMessage.TableName"></a>
+### func \(\*AgentMessage\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L21>)
+
+```go
+func (m *AgentMessage) TableName() string
+```
+
+TableName 返回 AgentMessage 对应的数据库表名。
+
 <a name="AgentParam"></a>
 ## type [AgentParam](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/llm.go#L103-L114>)
 
@@ -524,6 +578,15 @@ type AgentParam struct {
     DefaultValue string `gorm:"column:default_value;type:TEXT"`
 }
 ```
+
+<a name="AgentParam.TableName"></a>
+### func \(\*AgentParam\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L26>)
+
+```go
+func (m *AgentParam) TableName() string
+```
+
+TableName 返回 AgentParam 对应的数据库表名。
 
 <a name="AgentRun"></a>
 ## type [AgentRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/agent_run.go#L21-L49>)
@@ -563,6 +626,15 @@ type AgentRun struct {
     CheckpointID string `json:"checkpointID" gorm:"type:VARCHAR(64);not null;default:''"`
 }
 ```
+
+<a name="AgentRun.TableName"></a>
+### func \(\*AgentRun\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L31>)
+
+```go
+func (m *AgentRun) TableName() string
+```
+
+TableName 返回 AgentRun 对应的数据库表名。
 
 <a name="AgentRunPhase"></a>
 ## type [AgentRunPhase](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L76>)
@@ -689,6 +761,15 @@ type AgentSession struct {
 }
 ```
 
+<a name="AgentSession.TableName"></a>
+### func \(\*AgentSession\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L36>)
+
+```go
+func (m *AgentSession) TableName() string
+```
+
+TableName 返回 AgentSession 对应的数据库表名。
+
 <a name="AgentSessionCompaction"></a>
 ## type [AgentSessionCompaction](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/session.go#L131-L157>)
 
@@ -724,6 +805,15 @@ type AgentSessionCompaction struct {
 }
 ```
 
+<a name="AgentSessionCompaction.TableName"></a>
+### func \(\*AgentSessionCompaction\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L41>)
+
+```go
+func (m *AgentSessionCompaction) TableName() string
+```
+
+TableName 返回 AgentSessionCompaction 对应的数据库表名。
+
 <a name="AgentSkill"></a>
 ## type [AgentSkill](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/skill.go#L28-L54>)
 
@@ -758,6 +848,15 @@ type AgentSkill struct {
     FixedFields datatypes.JSON `gorm:"type:JSONB;not null;default:'{}'"`
 }
 ```
+
+<a name="AgentSkill.TableName"></a>
+### func \(\*AgentSkill\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L46>)
+
+```go
+func (m *AgentSkill) TableName() string
+```
+
+TableName 返回 AgentSkill 对应的数据库表名。
 
 <a name="InteractionKind"></a>
 ## type [InteractionKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/agent_interaction.go#L12>)
@@ -831,6 +930,15 @@ type KnowledgeChunk struct {
 }
 ```
 
+<a name="KnowledgeChunk.TableName"></a>
+### func \(\*KnowledgeChunk\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L51>)
+
+```go
+func (m *KnowledgeChunk) TableName() string
+```
+
+TableName 返回 KnowledgeChunk 对应的数据库表名。
+
 <a name="KnowledgeDocStatus"></a>
 ## type [KnowledgeDocStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L30>)
 
@@ -895,6 +1003,15 @@ type KnowledgeDocument struct {
 }
 ```
 
+<a name="KnowledgeDocument.TableName"></a>
+### func \(\*KnowledgeDocument\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L56>)
+
+```go
+func (m *KnowledgeDocument) TableName() string
+```
+
+TableName 返回 KnowledgeDocument 对应的数据库表名。
+
 <a name="LlmBinding"></a>
 ## type [LlmBinding](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/llm.go#L88-L97>)
 
@@ -912,6 +1029,15 @@ type LlmBinding struct {
     Model LlmModel `gorm:"foreignKey:ModelID;references:ID;constraint:OnDelete:RESTRICT"`
 }
 ```
+
+<a name="LlmBinding.TableName"></a>
+### func \(\*LlmBinding\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L61>)
+
+```go
+func (m *LlmBinding) TableName() string
+```
+
+TableName 返回 LlmBinding 对应的数据库表名。
 
 <a name="LlmModel"></a>
 ## type [LlmModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/llm.go#L28-L75>)
@@ -978,6 +1104,15 @@ func (l *LlmModel) APIKeyData() []byte
 
 APIKeyData 返回模型访问凭据的明文字节，nil 安全（APIKey 为空或 nil 时返回 nil）。
 
+<a name="LlmModel.TableName"></a>
+### func \(\*LlmModel\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L66>)
+
+```go
+func (m *LlmModel) TableName() string
+```
+
+TableName 返回 LlmModel 对应的数据库表名。
+
 <a name="LlmTool"></a>
 ## type [LlmTool](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/llm.go#L158-L178>)
 
@@ -1006,6 +1141,15 @@ type LlmTool struct {
     Enabled bool `gorm:"type:BOOLEAN;default:false"`
 }
 ```
+
+<a name="LlmTool.TableName"></a>
+### func \(\*LlmTool\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L71>)
+
+```go
+func (m *LlmTool) TableName() string
+```
+
+TableName 返回 LlmTool 对应的数据库表名。
 
 <a name="McpServer"></a>
 ## type [McpServer](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/llm.go#L123-L142>)
@@ -1043,6 +1187,15 @@ func (m *McpServer) HeadersData() []byte
 ```
 
 HeadersData 返回请求头的明文字节，nil 安全（Headers 为空或 nil 时返回 nil）。
+
+<a name="McpServer.TableName"></a>
+### func \(\*McpServer\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L76>)
+
+```go
+func (m *McpServer) TableName() string
+```
+
+TableName 返回 McpServer 对应的数据库表名。
 
 <a name="MemoryKind"></a>
 ## type [MemoryKind](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/enum.go#L182>)
@@ -1182,6 +1335,15 @@ type PeriodicReportPlan struct {
 }
 ```
 
+<a name="PeriodicReportPlan.TableName"></a>
+### func \(\*PeriodicReportPlan\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L81>)
+
+```go
+func (m *PeriodicReportPlan) TableName() string
+```
+
+TableName 返回 PeriodicReportPlan 对应的数据库表名。
+
 <a name="PeriodicReportPlanWatch"></a>
 ## type [PeriodicReportPlanWatch](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/periodicreport.go#L97-L106>)
 
@@ -1199,6 +1361,15 @@ type PeriodicReportPlanWatch struct {
     PlanID uint `gorm:"type:BIGINT;not null;uniqueIndex:uq_periodic_report_plan_watches_user_id_namespace_name_plan_id,where:deleted_at IS NULL"`
 }
 ```
+
+<a name="PeriodicReportPlanWatch.TableName"></a>
+### func \(\*PeriodicReportPlanWatch\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L86>)
+
+```go
+func (m *PeriodicReportPlanWatch) TableName() string
+```
+
+TableName 返回 PeriodicReportPlanWatch 对应的数据库表名。
 
 <a name="PeriodicReportRun"></a>
 ## type [PeriodicReportRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/periodicreport.go#L67-L93>)
@@ -1234,6 +1405,15 @@ type PeriodicReportRun struct {
     FinishedAt *time.Time `gorm:"type:TIMESTAMPTZ"`
 }
 ```
+
+<a name="PeriodicReportRun.TableName"></a>
+### func \(\*PeriodicReportRun\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L91>)
+
+```go
+func (m *PeriodicReportRun) TableName() string
+```
+
+TableName 返回 PeriodicReportRun 对应的数据库表名。
 
 <a name="PeriodicReportRunStatus"></a>
 ## type [PeriodicReportRunStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/periodicreport.go#L22>)

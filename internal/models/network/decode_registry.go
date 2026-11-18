@@ -90,6 +90,26 @@ func (d *typedLayerDecoder[L]) Decode(ctx DecodeContext, layer gopacket.Layer) (
 	return d.decode(ctx, typed)
 }
 
+// familyLayerDecoder 把同一协议族的一类层适配为 LayerDecoder
+// 用于协议族包含多个具体 Layer 类型（如 802.11 的多种数据帧变体）的场景，
+// 由注册点显式给出协议类型，避免为每个变体重复声明解码函数。
+type familyLayerDecoder struct {
+	// layerType 解码器负责的协议类型
+	layerType gopacket.LayerType
+	// decode 协议族的解码函数
+	decode func(DecodeContext, gopacket.Layer) (DecodeResult, error)
+}
+
+// LayerType 返回解码器负责的协议类型
+func (d *familyLayerDecoder) LayerType() gopacket.LayerType {
+	return d.layerType
+}
+
+// Decode 直接调用协议族解码函数
+func (d *familyLayerDecoder) Decode(ctx DecodeContext, layer gopacket.Layer) (DecodeResult, error) {
+	return d.decode(ctx, layer)
+}
+
 // RegisterTypedDecoder 以具体 Layer 类型注册解码器
 // 协议类型由 L 的 LayerType 方法推导，注册点无需手写 any 类型断言；
 // 同一协议类型重复注册会在启动期 panic
@@ -98,6 +118,18 @@ func RegisterTypedDecoder[L gopacket.Layer](decode func(DecodeContext, L) (Decod
 		layerType: deriveLayerType[L](),
 		decode:    decode,
 	})
+}
+
+// RegisterTypedFamilyLayerDecoders 以同一解码函数注册一组协议族的解码器
+// 适用于协议族包含多个具体 Layer 类型（如 802.11 的多种数据帧变体）的场景，
+// 协议类型由调用方显式给出；同一协议类型重复注册会在启动期 panic
+func RegisterTypedFamilyLayerDecoders(layerTypes []gopacket.LayerType, decode func(DecodeContext, gopacket.Layer) (DecodeResult, error)) {
+	for _, layerType := range layerTypes {
+		registerLayerDecoder(&familyLayerDecoder{
+			layerType: layerType,
+			decode:    decode,
+		})
+	}
 }
 
 // deriveLayerType 推导具体 Layer 类型对应的协议类型

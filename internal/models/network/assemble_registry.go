@@ -115,6 +115,29 @@ func lookupModelAssembler(level LayerLevel, layerType gopacket.LayerType) (Model
 	return assembler, ok
 }
 
+// firstLayerOfLevel 返回层堆栈中首个指定层级的层信息，未命中返回 nil
+// 用于按层级定位链路层与网络层，避免依赖固定的栈索引
+func firstLayerOfLevel(stack LayerStack, level LayerLevel) *LayerInfo {
+	for _, info := range stack {
+		if info != nil && info.Level == level {
+			return info
+		}
+	}
+	return nil
+}
+
+// lastLayerOfLevel 返回层堆栈中最后一个指定层级的层信息，未命中返回 nil
+// 用于定位传输层：传输层模型始终以协议栈中最后一个传输层为准
+func lastLayerOfLevel(stack LayerStack, level LayerLevel) *LayerInfo {
+	for i := len(stack) - 1; i >= 0; i-- {
+		info := stack[i]
+		if info != nil && info.Level == level {
+			return info
+		}
+	}
+	return nil
+}
+
 // firstHeaderOf 在层堆栈中提取指定层级的首个目标类型头部
 // 扫描同层级的所有层，返回首个类型断言成功者；未命中返回 H 的零值与 false
 func firstHeaderOf[H any](stack LayerStack, level LayerLevel) (H, bool) {
