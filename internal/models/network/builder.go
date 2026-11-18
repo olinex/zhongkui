@@ -105,6 +105,7 @@ type ModelBuilder struct {
 	CaptureLength uint32                  // 捕获的数据包长度
 	SessionID     serializer.HexUUID      // 会话ID，唯一标识一次数据捕获会话
 	Source        reporter_v1.ResourceRaw // 数据源信息（命名空间、捕获器、版本等）
+	LinkType      layers.LinkType         // pcap 链路类型，决定解析起始层级与链路槽位含义
 	Level         LayerLevel              // 数据包的最高解析层级
 	Stack         LayerStack              // 网络层堆栈信息
 	Payload       []byte                  // 应用层载荷数据
@@ -114,23 +115,17 @@ type ModelBuilder struct {
 // 将原始数据包转换为链路层（OSI第2层）的数据模型
 //
 // 返回值:
-//   - any: 返回具体的链路层数据包模型，目前支持 PacketEthernet；
-//     协议未注册装配器时返回 nil
+//   - any: 返回具体的链路层数据包模型，支持 PacketEthernet、PacketLinuxSLL、
+//     PacketLinuxSLL2、PacketPPP、PacketDot11；无链路层或协议未注册装配器时返回 nil
 //
 // 功能说明:
-//  1. 验证层堆栈的有效性
+//  1. 按层级查找层堆栈中的第一个链路层
 //  2. 按层级与协议类型查找已注册的模型装配器
 //  3. 由装配器提取链路层头部并构建包含完整元数据的模型
 //  4. 返回可用于数据库存储的结构化数据
 func (b *ModelBuilder) BuildAsPacketLinkModel() any {
-	if len(b.Stack) < 1 {
-		return nil
-	}
-	info := b.Stack[0]
-	if info.Level != LayerLevelLink {
-		return nil
-	}
-	if info.Headers == nil {
+	info := firstLayerOfLevel(b.Stack, LayerLevelLink)
+	if info == nil || info.Headers == nil {
 		return nil
 	}
 	assembler, ok := lookupModelAssembler(LayerLevelLink, info.Proto)
@@ -140,34 +135,39 @@ func (b *ModelBuilder) BuildAsPacketLinkModel() any {
 	return assembler.Build(b)
 }
 
+// linkSlots 返回当前数据包的链路槽位
+// 由链路层模型提供槽位映射；无链路层（Raw IP）或模型未实现 LinkSlotted 时返回空槽位
+func (b *ModelBuilder) linkSlots() LinkSlots {
+	if slotted, ok := b.BuildAsPacketLinkModel().(LinkSlotted); ok {
+		return slotted.LinkSlotValues()
+	}
+	return LinkSlots{}
+}
+
 // BuildAsPacketNetworkModel 构建网络层数据包模型
 // 将原始数据包转换为网络层（OSI第3层）的数据模型
-// 支持IPv4和IPv6协议，构建包含链路层和网络层信息的完整数据包模型
+// 支持IPv4和IPv6协议，构建包含链路槽位和网络层信息的完整数据包模型
 //
 // 返回值:
 //   - any: 返回具体的网络层数据包模型，支持 PacketIPv4 或 PacketIPv6；
 //     协议未注册装配器时返回 nil
 //
 // 异常:
-//   - 如果层堆栈少于2层，会触发panic
-//   - 如果第二层不是网络层，会触发panic
-//   - 如果头部信息为nil，会触发panic
+//   - 如果层堆栈中不存在网络层，会触发panic
+//   - 如果网络层头部信息为nil，会触发panic
 //
 // 功能说明:
-//  1. 验证网络层堆栈的有效性
+//  1. 按层级查找层堆栈中的第一个网络层
 //  2. 按层级与协议类型查找已注册的模型装配器
-//  3. 由装配器复用链路层模型并组合网络层头部
+//  3. 由装配器组合链路槽位与网络层头部
 //  4. 返回可用于数据库存储的结构化数据
 func (b *ModelBuilder) BuildAsPacketNetworkModel() any {
-	if len(b.Stack) < 2 {
+	info := firstLayerOfLevel(b.Stack, LayerLevelNetwork)
+	if info == nil {
 		panic("network layer stack have not enough layers")
 	}
-	info := b.Stack[1]
-	if info.Level != LayerLevelNetwork {
-		panic("second stack layer is not network layer")
-	}
 	if info.Headers == nil {
-		panic("second stack layer headers is nil")
+		panic("network layer stack headers is nil")
 	}
 	assembler, ok := lookupModelAssembler(LayerLevelNetwork, info.Proto)
 	if !ok {
@@ -178,31 +178,24 @@ func (b *ModelBuilder) BuildAsPacketNetworkModel() any {
 
 // BuildAsPacketTransportModel 构建传输层数据包模型
 // 将原始数据包转换为传输层（OSI第4层）的数据模型
-// 支持TCP和UDP协议，构建包含链路层、网络层和传输层信息的完整数据包模型
+// 支持TCP和UDP协议，构建包含链路槽位、网络层和传输层信息的完整数据包模型
 //
 // 返回值:
 //   - any: 返回具体的传输层数据包模型，支持 PacketIPv4TCP、PacketIPv4UDP、PacketIPv6TCP 或 PacketIPv6UDP；
 //     协议未注册装配器时返回 nil
 //
 // 异常:
-//   - 如果层堆栈少于3层，会触发panic
-//   - 如果最后一层不是传输层，会触发panic
+//   - 如果层堆栈中不存在传输层，会触发panic
 //
 // 功能说明:
-//  1. 验证传输层堆栈的有效性（最后一层必须是传输层）
+//  1. 按层级查找层堆栈中的最后一个传输层
 //  2. 按层级与协议类型查找已注册的模型装配器
 //  3. 由装配器复用网络层模型并组合传输层头部
 //  4. 返回可用于数据库存储的结构化数据
-//
-// 注意:
-//   - 该函数假设传输层是协议栈的最后一层（在应用层之前）
 func (b *ModelBuilder) BuildAsPacketTransportModel() any {
-	if len(b.Stack) < 3 {
+	info := lastLayerOfLevel(b.Stack, LayerLevelTransport)
+	if info == nil {
 		panic("transport layer stack have not enough layers")
-	}
-	info := b.Stack[len(b.Stack)-1]
-	if info.Level != LayerLevelTransport {
-		panic("last stack layer is not transport layer")
 	}
 	if info.Headers == nil {
 		return nil
@@ -259,39 +252,47 @@ func (b *ModelBuilder) BuildAsPacketModel() any {
 	}
 }
 
-// NewPacketModelBuilder 创建数据包模型构建器
-// 工厂函数，用于从原始网络数据包创建ModelBuilder实例
+// NewPacketModelBuilderWithLinkType 创建带链路类型的数据包模型构建器
+// 按 pcap 真实链路类型决定解析起始层级：Raw IP（Raw/IPv4/IPv6）从网络层开始，
+// 其余链路类型从链路层开始；链路类型同时写入模型元数据。
 //
 // 参数:
 //   - packet: gopacket.Packet 类型，原始网络数据包
 //   - sessionID: serializer.HexUUID 类型，数据捕获会话的唯一标识
 //   - source: reporter_v1.ResourceRaw 类型，数据源信息（命名空间、捕获器、版本）
+//   - linkType: layers.LinkType 类型，pcap 文件真实链路类型
 //
 // 返回值:
 //   - *ModelBuilder: 初始化完成的模型构建器实例
 //
 // 异常:
 //   - 如果数据包元数据为nil，会触发panic
-//
-// 功能说明:
-//  1. 提取数据包元数据（时间戳、截断状态、捕获长度）
-//  2. 调用ExtractLayerInfos解析网络层信息
-//  3. 初始化ModelBuilder所有字段
-//  4. 返回可直接用于模型构建的实例
-func NewPacketModelBuilder(packet gopacket.Packet, sessionID serializer.HexUUID, source reporter_v1.ResourceRaw) *ModelBuilder {
+func NewPacketModelBuilderWithLinkType(packet gopacket.Packet, sessionID serializer.HexUUID, source reporter_v1.ResourceRaw, linkType layers.LinkType) *ModelBuilder {
 	metadata := packet.Metadata()
 	if metadata == nil {
 		panic("packet metadata is nil")
 	}
-	level, stack, payload := ExtractLayerInfos(packet, LayerLevelLink)
+	level, stack, payload := ExtractLayerInfos(packet, startLayerLevel(linkType))
 	return &ModelBuilder{
 		Timestamp:     metadata.Timestamp,
 		Truncated:     metadata.Truncated,
 		CaptureLength: uint32(metadata.CaptureLength),
 		SessionID:     sessionID,
 		Source:        source,
+		LinkType:      linkType,
 		Level:         level,
 		Stack:         stack,
 		Payload:       payload,
+	}
+}
+
+// startLayerLevel 根据链路类型确定解析起始层级
+// Raw IP（Raw/IPv4/IPv6）数据包直接以网络层开始，其余链路类型从链路层开始。
+func startLayerLevel(linkType layers.LinkType) LayerLevel {
+	switch linkType {
+	case layers.LinkTypeRaw, layers.LinkTypeIPv4, layers.LinkTypeIPv6:
+		return LayerLevelNetwork
+	default:
+		return LayerLevelLink
 	}
 }

@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS packet_ethernets (
 	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
 	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
 	session_id UUID COMMENT 'the session id of the packet' CODEC(ZSTD(3)),
+	link_type UInt16 COMMENT 'the link type of the packet, determining the meaning of the link slots' CODEC(ZSTD(3)),
 	timestamp DateTime64(6, 'UTC') COMMENT 'the capture timestamp of the packet' CODEC(DoubleDelta, ZSTD(3)),
 	created_at DateTime64(6, 'UTC') COMMENT 'the time the record is created' CODEC(DoubleDelta, ZSTD(3)),
 	truncated Bool COMMENT 'whether the packet is truncated',
@@ -29,22 +30,171 @@ ORDER BY (
 PARTITION BY toStartOfHour(created_at)
 TTL toDateTime(created_at) + INTERVAL 24 HOUR DELETE;
 
+CREATE TABLE IF NOT EXISTS packet_linux_slls (
+	id UUID COMMENT 'the globally unique id of the row' CODEC(ZSTD(3)),
+	namespace LowCardinality(String) COMMENT 'the namespace the packet belongs to' CODEC(ZSTD(3)),
+	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
+	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
+	session_id UUID COMMENT 'the session id of the packet' CODEC(ZSTD(3)),
+	link_type UInt16 COMMENT 'the link type of the packet, determining the meaning of the link slots' CODEC(ZSTD(3)),
+	timestamp DateTime64(6, 'UTC') COMMENT 'the capture timestamp of the packet' CODEC(DoubleDelta, ZSTD(3)),
+	created_at DateTime64(6, 'UTC') COMMENT 'the time the record is created' CODEC(DoubleDelta, ZSTD(3)),
+	truncated Bool COMMENT 'whether the packet is truncated',
+	capture_length UInt32 COMMENT 'the captured length of the packet in bytes' CODEC(ZSTD(3)),
+	layer_stack String COMMENT 'the network layer stack of the packet' CODEC(ZSTD(3)),
+	sll_packet_type UInt16 COMMENT 'the packet type of the Linux SLL header' CODEC(ZSTD(3)),
+	sll_addr_len UInt16 COMMENT 'the link layer address length of the Linux SLL header' CODEC(ZSTD(3)),
+	sll_addr String COMMENT 'the link layer address of the Linux SLL header' CODEC(ZSTD(3)),
+	sll_addr_type UInt16 COMMENT 'the link layer address type of the Linux SLL header' CODEC(ZSTD(3)),
+	sll_protocol UInt16 COMMENT 'the upper layer protocol type of the Linux SLL header' CODEC(ZSTD(3)),
+	INDEX idx_packet_linux_slls_id id TYPE bloom_filter(0.01) GRANULARITY 4
+) ENGINE = MergeTree()
+ORDER BY (
+	namespace,
+	capture,
+	version,
+	session_id,
+	link_type,
+	sll_packet_type,
+	sll_protocol,
+	timestamp
+)
+PARTITION BY toStartOfHour(created_at)
+TTL toDateTime(created_at) + INTERVAL 24 HOUR DELETE;
+
+CREATE TABLE IF NOT EXISTS packet_linux_sll2s (
+	id UUID COMMENT 'the globally unique id of the row' CODEC(ZSTD(3)),
+	namespace LowCardinality(String) COMMENT 'the namespace the packet belongs to' CODEC(ZSTD(3)),
+	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
+	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
+	session_id UUID COMMENT 'the session id of the packet' CODEC(ZSTD(3)),
+	link_type UInt16 COMMENT 'the link type of the packet, determining the meaning of the link slots' CODEC(ZSTD(3)),
+	timestamp DateTime64(6, 'UTC') COMMENT 'the capture timestamp of the packet' CODEC(DoubleDelta, ZSTD(3)),
+	created_at DateTime64(6, 'UTC') COMMENT 'the time the record is created' CODEC(DoubleDelta, ZSTD(3)),
+	truncated Bool COMMENT 'whether the packet is truncated',
+	capture_length UInt32 COMMENT 'the captured length of the packet in bytes' CODEC(ZSTD(3)),
+	layer_stack String COMMENT 'the network layer stack of the packet' CODEC(ZSTD(3)),
+	sll2_protocol_type UInt16 COMMENT 'the upper layer protocol type of the Linux SLL2 header' CODEC(ZSTD(3)),
+	sll2_interface_index UInt32 COMMENT 'the capture interface index of the Linux SLL2 header' CODEC(ZSTD(3)),
+	sll2_arp_hardware_type UInt16 COMMENT 'the ARP hardware type of the Linux SLL2 header' CODEC(ZSTD(3)),
+	sll2_packet_type UInt8 COMMENT 'the packet type of the Linux SLL2 header' CODEC(ZSTD(3)),
+	sll2_addr_length UInt8 COMMENT 'the link layer address length of the Linux SLL2 header' CODEC(ZSTD(3)),
+	sll2_addr String COMMENT 'the link layer address of the Linux SLL2 header' CODEC(ZSTD(3)),
+	INDEX idx_packet_linux_sll2s_id id TYPE bloom_filter(0.01) GRANULARITY 4
+) ENGINE = MergeTree()
+ORDER BY (
+	namespace,
+	capture,
+	version,
+	session_id,
+	link_type,
+	sll2_protocol_type,
+	sll2_interface_index,
+	timestamp
+)
+PARTITION BY toStartOfHour(created_at)
+TTL toDateTime(created_at) + INTERVAL 24 HOUR DELETE;
+
+CREATE TABLE IF NOT EXISTS packet_ppps (
+	id UUID COMMENT 'the globally unique id of the row' CODEC(ZSTD(3)),
+	namespace LowCardinality(String) COMMENT 'the namespace the packet belongs to' CODEC(ZSTD(3)),
+	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
+	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
+	session_id UUID COMMENT 'the session id of the packet' CODEC(ZSTD(3)),
+	link_type UInt16 COMMENT 'the link type of the packet, determining the meaning of the link slots' CODEC(ZSTD(3)),
+	timestamp DateTime64(6, 'UTC') COMMENT 'the capture timestamp of the packet' CODEC(DoubleDelta, ZSTD(3)),
+	created_at DateTime64(6, 'UTC') COMMENT 'the time the record is created' CODEC(DoubleDelta, ZSTD(3)),
+	truncated Bool COMMENT 'whether the packet is truncated',
+	capture_length UInt32 COMMENT 'the captured length of the packet in bytes' CODEC(ZSTD(3)),
+	layer_stack String COMMENT 'the network layer stack of the packet' CODEC(ZSTD(3)),
+	ppp_type UInt16 COMMENT 'the PPP protocol type identifying the upper layer protocol' CODEC(ZSTD(3)),
+	ppp_has_pptp_header Bool COMMENT 'whether the PPP frame carries the 0xff03 HDLC address and control prefix',
+	INDEX idx_packet_ppps_id id TYPE bloom_filter(0.01) GRANULARITY 4
+) ENGINE = MergeTree()
+ORDER BY (
+	namespace,
+	capture,
+	version,
+	session_id,
+	link_type,
+	ppp_type,
+	timestamp
+)
+PARTITION BY toStartOfHour(created_at)
+TTL toDateTime(created_at) + INTERVAL 24 HOUR DELETE;
+
+CREATE TABLE IF NOT EXISTS packet_dot11s (
+	id UUID COMMENT 'the globally unique id of the row' CODEC(ZSTD(3)),
+	namespace LowCardinality(String) COMMENT 'the namespace the packet belongs to' CODEC(ZSTD(3)),
+	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
+	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
+	session_id UUID COMMENT 'the session id of the packet' CODEC(ZSTD(3)),
+	link_type UInt16 COMMENT 'the link type of the packet, determining the meaning of the link slots' CODEC(ZSTD(3)),
+	timestamp DateTime64(6, 'UTC') COMMENT 'the capture timestamp of the packet' CODEC(DoubleDelta, ZSTD(3)),
+	created_at DateTime64(6, 'UTC') COMMENT 'the time the record is created' CODEC(DoubleDelta, ZSTD(3)),
+	truncated Bool COMMENT 'whether the packet is truncated',
+	capture_length UInt32 COMMENT 'the captured length of the packet in bytes' CODEC(ZSTD(3)),
+	layer_stack String COMMENT 'the network layer stack of the packet' CODEC(ZSTD(3)),
+	dot11_type UInt8 COMMENT 'the frame type and subtype of the 802.11 frame' CODEC(ZSTD(3)),
+	dot11_proto UInt8 COMMENT 'the protocol version of the 802.11 frame' CODEC(ZSTD(3)),
+	dot11_flags UInt8 COMMENT 'the flags of the 802.11 frame' CODEC(ZSTD(3)),
+	dot11_duration_id UInt16 COMMENT 'the duration or association id of the 802.11 frame' CODEC(ZSTD(3)),
+	dot11_address_1 String COMMENT 'the receiver address of the 802.11 frame' CODEC(ZSTD(3)),
+	dot11_address_2 String COMMENT 'the transmitter address of the 802.11 frame' CODEC(ZSTD(3)),
+	dot11_address_3 String COMMENT 'the third address of the 802.11 frame' CODEC(ZSTD(3)),
+	dot11_address_4 String COMMENT 'the fourth address of the 802.11 frame' CODEC(ZSTD(3)),
+	dot11_sequence_number UInt16 COMMENT 'the sequence number of the 802.11 frame' CODEC(ZSTD(3)),
+	dot11_fragment_number UInt16 COMMENT 'the fragment number of the 802.11 frame' CODEC(ZSTD(3)),
+	dot11_has_qos Bool COMMENT 'whether the 802.11 frame carries a QoS control field',
+	dot11_qos_tid UInt8 COMMENT 'the traffic identifier of the 802.11 QoS control field' CODEC(ZSTD(3)),
+	dot11_qos_eosp Bool COMMENT 'the end of service period flag of the 802.11 QoS control field',
+	dot11_qos_ack_policy UInt8 COMMENT 'the acknowledgement policy of the 802.11 QoS control field' CODEC(ZSTD(3)),
+	dot11_qos_txop UInt8 COMMENT 'the transmission opportunity limit of the 802.11 QoS control field' CODEC(ZSTD(3)),
+	INDEX idx_packet_dot11s_id id TYPE bloom_filter(0.01) GRANULARITY 4
+) ENGINE = MergeTree()
+ORDER BY (
+	namespace,
+	capture,
+	version,
+	session_id,
+	link_type,
+	dot11_address_1,
+	dot11_address_2,
+	dot11_type,
+	timestamp
+)
+PARTITION BY toStartOfHour(created_at)
+TTL toDateTime(created_at) + INTERVAL 24 HOUR DELETE;
+
 CREATE TABLE IF NOT EXISTS packet_ipv4 (
 	id UUID COMMENT 'the globally unique id of the row' CODEC(ZSTD(3)),
 	namespace LowCardinality(String) COMMENT 'the namespace the packet belongs to' CODEC(ZSTD(3)),
 	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
 	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
 	session_id UUID COMMENT 'the session id of the packet' CODEC(ZSTD(3)),
+	link_type UInt16 COMMENT 'the link type of the packet, determining the meaning of the link slots' CODEC(ZSTD(3)),
 	timestamp DateTime64(6, 'UTC') COMMENT 'the capture timestamp of the packet' CODEC(DoubleDelta, ZSTD(3)),
 	created_at DateTime64(6, 'UTC') COMMENT 'the time the record is created' CODEC(DoubleDelta, ZSTD(3)),
 	truncated Bool COMMENT 'whether the packet is truncated',
 	capture_length UInt32 COMMENT 'the captured length of the packet in bytes' CODEC(ZSTD(3)),
 	layer_stack String COMMENT 'the network layer stack of the packet' CODEC(ZSTD(3)),
+	link_1 String COMMENT 'link slot 1; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_2 String COMMENT 'link slot 2; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_3 String COMMENT 'link slot 3; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_4 String COMMENT 'link slot 4; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_5 String COMMENT 'link slot 5; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_6 String COMMENT 'link slot 6; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_7 String COMMENT 'link slot 7; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_8 String COMMENT 'link slot 8; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_9 String COMMENT 'link slot 9; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_10 String COMMENT 'link slot 10; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_11 String COMMENT 'link slot 11; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_12 String COMMENT 'link slot 12; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_13 String COMMENT 'link slot 13; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_14 String COMMENT 'link slot 14; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_15 String COMMENT 'link slot 15; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_16 String COMMENT 'link slot 16; meaning determined by link_type' CODEC(ZSTD(3)),
 	payload String COMMENT 'the payload of the packet' CODEC(ZSTD(3)),
-	eth_dst_mac FixedString(6) COMMENT 'the destination MAC address of the ethernet frame',
-	eth_src_mac FixedString(6) COMMENT 'the source MAC address of the ethernet frame',
-	eth_type UInt16 COMMENT 'the ethernet type of the frame, identifying the upper layer protocol' CODEC(ZSTD(3)),
-	eth_length UInt16 COMMENT 'the data length of the ethernet frame in bytes' CODEC(ZSTD(3)),
 	ipv4_version UInt8 COMMENT 'the version of the IPv4 protocol, always 4' CODEC(ZSTD(3)),
 	ipv4_ihl UInt8 COMMENT 'the internet header length of the IPv4 header in 32-bit words' CODEC(ZSTD(3)),
 	ipv4_tos UInt8 COMMENT 'the type of service of the IPv4 header' CODEC(ZSTD(3)),
@@ -59,19 +209,23 @@ CREATE TABLE IF NOT EXISTS packet_ipv4 (
 	ipv4_dst IPv4 COMMENT 'the destination IPv4 address',
 	ipv4_options String COMMENT 'the options of the IPv4 header' CODEC(ZSTD(3)),
 	ipv4_padding String COMMENT 'the padding bytes of the IPv4 header' CODEC(ZSTD(3)),
-	INDEX idx_packet_ipv4_id id TYPE bloom_filter(0.01) GRANULARITY 4
+	INDEX idx_packet_ipv4_id id TYPE bloom_filter(0.01) GRANULARITY 4,
+	INDEX idx_packet_ipv4_link_1 link_1 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv4_link_2 link_2 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv4_link_3 link_3 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv4_link_4 link_4 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv4_link_5 link_5 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv4_link_6 link_6 TYPE bloom_filter(0.02) GRANULARITY 4
 ) ENGINE = MergeTree()
 ORDER BY (
 	namespace,
 	capture,
 	version,
 	session_id,
+	link_type,
 	ipv4_src,
 	ipv4_dst,
 	ipv4_ip_protocol,
-	eth_src_mac,
-	eth_dst_mac,
-	eth_type,
 	timestamp
 )
 PARTITION BY toStartOfHour(created_at)
@@ -83,16 +237,29 @@ CREATE TABLE IF NOT EXISTS packet_ipv6 (
 	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
 	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
 	session_id UUID COMMENT 'the session id of the packet' CODEC(ZSTD(3)),
+	link_type UInt16 COMMENT 'the link type of the packet, determining the meaning of the link slots' CODEC(ZSTD(3)),
 	timestamp DateTime64(6, 'UTC') COMMENT 'the capture timestamp of the packet' CODEC(DoubleDelta, ZSTD(3)),
 	created_at DateTime64(6, 'UTC') COMMENT 'the time the record is created' CODEC(DoubleDelta, ZSTD(3)),
 	truncated Bool COMMENT 'whether the packet is truncated',
 	capture_length UInt32 COMMENT 'the captured length of the packet in bytes' CODEC(ZSTD(3)),
 	layer_stack String COMMENT 'the network layer stack of the packet' CODEC(ZSTD(3)),
+	link_1 String COMMENT 'link slot 1; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_2 String COMMENT 'link slot 2; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_3 String COMMENT 'link slot 3; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_4 String COMMENT 'link slot 4; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_5 String COMMENT 'link slot 5; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_6 String COMMENT 'link slot 6; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_7 String COMMENT 'link slot 7; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_8 String COMMENT 'link slot 8; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_9 String COMMENT 'link slot 9; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_10 String COMMENT 'link slot 10; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_11 String COMMENT 'link slot 11; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_12 String COMMENT 'link slot 12; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_13 String COMMENT 'link slot 13; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_14 String COMMENT 'link slot 14; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_15 String COMMENT 'link slot 15; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_16 String COMMENT 'link slot 16; meaning determined by link_type' CODEC(ZSTD(3)),
 	payload String COMMENT 'the payload of the packet' CODEC(ZSTD(3)),
-	eth_dst_mac FixedString(6) COMMENT 'the destination MAC address of the ethernet frame',
-	eth_src_mac FixedString(6) COMMENT 'the source MAC address of the ethernet frame',
-	eth_type UInt16 COMMENT 'the ethernet type of the frame, identifying the upper layer protocol' CODEC(ZSTD(3)),
-	eth_length UInt16 COMMENT 'the data length of the ethernet frame in bytes' CODEC(ZSTD(3)),
 	ipv6_version UInt8 COMMENT 'the version of the IPv6 protocol, always 6' CODEC(ZSTD(3)),
 	ipv6_traffic_class UInt8 COMMENT 'the traffic class of the IPv6 header for QoS' CODEC(ZSTD(3)),
 	ipv6_flow_label UInt32 COMMENT 'the flow label of the IPv6 header identifying packets of the same flow' CODEC(ZSTD(3)),
@@ -103,20 +270,24 @@ CREATE TABLE IF NOT EXISTS packet_ipv6 (
 	ipv6_dst IPv6 COMMENT 'the destination IPv6 address',
 	ipv6_hop_by_hop String COMMENT 'the hop-by-hop options extension header of the IPv6 packet' CODEC(ZSTD(3)),
 	ipv6_last_header UInt8 COMMENT 'the last header type of the IPv6 packet, usually the transport layer protocol' CODEC(ZSTD(3)),
-	INDEX idx_packet_ipv6_id id TYPE bloom_filter(0.01) GRANULARITY 4
+	INDEX idx_packet_ipv6_id id TYPE bloom_filter(0.01) GRANULARITY 4,
+	INDEX idx_packet_ipv6_link_1 link_1 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv6_link_2 link_2 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv6_link_3 link_3 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv6_link_4 link_4 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv6_link_5 link_5 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv6_link_6 link_6 TYPE bloom_filter(0.02) GRANULARITY 4
 ) ENGINE = MergeTree()
 ORDER BY (
 	namespace,
 	capture,
 	version,
 	session_id,
+	link_type,
 	ipv6_src,
 	ipv6_dst,
 	ipv6_flow_label,
 	ipv6_last_header,
-	eth_src_mac,
-	eth_dst_mac,
-	eth_type,
 	timestamp
 )
 PARTITION BY toStartOfHour(created_at)
@@ -128,16 +299,29 @@ CREATE TABLE IF NOT EXISTS packet_ipv4_tcps (
 	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
 	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
 	session_id UUID COMMENT 'the session id of the packet' CODEC(ZSTD(3)),
+	link_type UInt16 COMMENT 'the link type of the packet, determining the meaning of the link slots' CODEC(ZSTD(3)),
 	timestamp DateTime64(6, 'UTC') COMMENT 'the capture timestamp of the packet' CODEC(DoubleDelta, ZSTD(3)),
 	created_at DateTime64(6, 'UTC') COMMENT 'the time the record is created' CODEC(DoubleDelta, ZSTD(3)),
 	truncated Bool COMMENT 'whether the packet is truncated',
 	capture_length UInt32 COMMENT 'the captured length of the packet in bytes' CODEC(ZSTD(3)),
 	layer_stack String COMMENT 'the network layer stack of the packet' CODEC(ZSTD(3)),
+	link_1 String COMMENT 'link slot 1; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_2 String COMMENT 'link slot 2; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_3 String COMMENT 'link slot 3; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_4 String COMMENT 'link slot 4; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_5 String COMMENT 'link slot 5; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_6 String COMMENT 'link slot 6; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_7 String COMMENT 'link slot 7; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_8 String COMMENT 'link slot 8; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_9 String COMMENT 'link slot 9; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_10 String COMMENT 'link slot 10; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_11 String COMMENT 'link slot 11; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_12 String COMMENT 'link slot 12; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_13 String COMMENT 'link slot 13; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_14 String COMMENT 'link slot 14; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_15 String COMMENT 'link slot 15; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_16 String COMMENT 'link slot 16; meaning determined by link_type' CODEC(ZSTD(3)),
 	payload String COMMENT 'the payload of the packet' CODEC(ZSTD(3)),
-	eth_dst_mac FixedString(6) COMMENT 'the destination MAC address of the ethernet frame',
-	eth_src_mac FixedString(6) COMMENT 'the source MAC address of the ethernet frame',
-	eth_type UInt16 COMMENT 'the ethernet type of the frame, identifying the upper layer protocol' CODEC(ZSTD(3)),
-	eth_length UInt16 COMMENT 'the data length of the ethernet frame in bytes' CODEC(ZSTD(3)),
 	ipv4_version UInt8 COMMENT 'the version of the IPv4 protocol, always 4' CODEC(ZSTD(3)),
 	ipv4_ihl UInt8 COMMENT 'the internet header length of the IPv4 header in 32-bit words' CODEC(ZSTD(3)),
 	ipv4_tos UInt8 COMMENT 'the type of service of the IPv4 header' CODEC(ZSTD(3)),
@@ -180,16 +364,20 @@ CREATE TABLE IF NOT EXISTS packet_ipv4_tcps (
 	INDEX idx_ipv4_tcps_ipv4_src ipv4_src TYPE bloom_filter(0.02) GRANULARITY 4,
 	INDEX idx_ipv4_tcps_ipv4_dst ipv4_dst TYPE bloom_filter(0.02) GRANULARITY 4,
 	INDEX idx_ipv4_tcps_tcp_src_port tcp_src_port TYPE bloom_filter(0.02) GRANULARITY 4,
-	INDEX idx_ipv4_tcps_tcp_dst_port tcp_dst_port TYPE bloom_filter(0.02) GRANULARITY 4
+	INDEX idx_ipv4_tcps_tcp_dst_port tcp_dst_port TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv4_tcps_link_1 link_1 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv4_tcps_link_2 link_2 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv4_tcps_link_3 link_3 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv4_tcps_link_4 link_4 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv4_tcps_link_5 link_5 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv4_tcps_link_6 link_6 TYPE bloom_filter(0.02) GRANULARITY 4
 ) ENGINE = MergeTree()
 ORDER BY (
 	timestamp,
 	namespace,
+	link_type,
 	tcp_stream_id,
 	ipv4_ip_protocol,
-	LEAST(eth_src_mac, eth_dst_mac),
-	GREATEST(eth_src_mac, eth_dst_mac),
-	eth_type,
 	tcp_seq
 )
 PARTITION BY toStartOfHour(created_at)
@@ -201,16 +389,29 @@ CREATE TABLE IF NOT EXISTS packet_ipv6_tcps (
 	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
 	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
 	session_id UUID COMMENT 'the session id of the packet' CODEC(ZSTD(3)),
+	link_type UInt16 COMMENT 'the link type of the packet, determining the meaning of the link slots' CODEC(ZSTD(3)),
 	timestamp DateTime64(6, 'UTC') COMMENT 'the capture timestamp of the packet' CODEC(DoubleDelta, ZSTD(3)),
 	created_at DateTime64(6, 'UTC') COMMENT 'the time the record is created' CODEC(DoubleDelta, ZSTD(3)),
 	truncated Bool COMMENT 'whether the packet is truncated',
 	capture_length UInt32 COMMENT 'the captured length of the packet in bytes' CODEC(ZSTD(3)),
 	layer_stack String COMMENT 'the network layer stack of the packet' CODEC(ZSTD(3)),
+	link_1 String COMMENT 'link slot 1; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_2 String COMMENT 'link slot 2; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_3 String COMMENT 'link slot 3; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_4 String COMMENT 'link slot 4; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_5 String COMMENT 'link slot 5; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_6 String COMMENT 'link slot 6; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_7 String COMMENT 'link slot 7; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_8 String COMMENT 'link slot 8; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_9 String COMMENT 'link slot 9; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_10 String COMMENT 'link slot 10; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_11 String COMMENT 'link slot 11; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_12 String COMMENT 'link slot 12; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_13 String COMMENT 'link slot 13; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_14 String COMMENT 'link slot 14; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_15 String COMMENT 'link slot 15; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_16 String COMMENT 'link slot 16; meaning determined by link_type' CODEC(ZSTD(3)),
 	payload String COMMENT 'the payload of the packet' CODEC(ZSTD(3)),
-	eth_dst_mac FixedString(6) COMMENT 'the destination MAC address of the ethernet frame',
-	eth_src_mac FixedString(6) COMMENT 'the source MAC address of the ethernet frame',
-	eth_type UInt16 COMMENT 'the ethernet type of the frame, identifying the upper layer protocol' CODEC(ZSTD(3)),
-	eth_length UInt16 COMMENT 'the data length of the ethernet frame in bytes' CODEC(ZSTD(3)),
 	ipv6_version UInt8 COMMENT 'the version of the IPv6 protocol, always 6' CODEC(ZSTD(3)),
 	ipv6_traffic_class UInt8 COMMENT 'the traffic class of the IPv6 header for QoS' CODEC(ZSTD(3)),
 	ipv6_flow_label UInt32 COMMENT 'the flow label of the IPv6 header identifying packets of the same flow' CODEC(ZSTD(3)),
@@ -249,17 +450,21 @@ CREATE TABLE IF NOT EXISTS packet_ipv6_tcps (
 	INDEX idx_ipv6_tcps_ipv6_src ipv6_src TYPE bloom_filter(0.02) GRANULARITY 4,
 	INDEX idx_ipv6_tcps_ipv6_dst ipv6_dst TYPE bloom_filter(0.02) GRANULARITY 4,
 	INDEX idx_ipv6_tcps_tcp_src_port tcp_src_port TYPE bloom_filter(0.02) GRANULARITY 4,
-	INDEX idx_ipv6_tcps_tcp_dst_port tcp_dst_port TYPE bloom_filter(0.02) GRANULARITY 4
+	INDEX idx_ipv6_tcps_tcp_dst_port tcp_dst_port TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv6_tcps_link_1 link_1 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv6_tcps_link_2 link_2 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv6_tcps_link_3 link_3 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv6_tcps_link_4 link_4 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv6_tcps_link_5 link_5 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv6_tcps_link_6 link_6 TYPE bloom_filter(0.02) GRANULARITY 4
 ) ENGINE = MergeTree()
 ORDER BY (
 	timestamp,
 	namespace,
+	link_type,
 	tcp_stream_id,
 	ipv6_flow_label,
 	ipv6_last_header,
-	LEAST(eth_src_mac, eth_dst_mac),
-	GREATEST(eth_src_mac, eth_dst_mac),
-	eth_type,
 	tcp_seq
 )
 PARTITION BY toStartOfHour(created_at)
@@ -271,16 +476,29 @@ CREATE TABLE IF NOT EXISTS packet_ipv4_udps (
 	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
 	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
 	session_id UUID COMMENT 'the session id of the packet' CODEC(ZSTD(3)),
+	link_type UInt16 COMMENT 'the link type of the packet, determining the meaning of the link slots' CODEC(ZSTD(3)),
 	timestamp DateTime64(6, 'UTC') COMMENT 'the capture timestamp of the packet' CODEC(DoubleDelta, ZSTD(3)),
 	created_at DateTime64(6, 'UTC') COMMENT 'the time the record is created' CODEC(DoubleDelta, ZSTD(3)),
 	truncated Bool COMMENT 'whether the packet is truncated',
 	capture_length UInt32 COMMENT 'the captured length of the packet in bytes' CODEC(ZSTD(3)),
 	layer_stack String COMMENT 'the network layer stack of the packet' CODEC(ZSTD(3)),
+	link_1 String COMMENT 'link slot 1; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_2 String COMMENT 'link slot 2; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_3 String COMMENT 'link slot 3; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_4 String COMMENT 'link slot 4; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_5 String COMMENT 'link slot 5; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_6 String COMMENT 'link slot 6; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_7 String COMMENT 'link slot 7; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_8 String COMMENT 'link slot 8; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_9 String COMMENT 'link slot 9; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_10 String COMMENT 'link slot 10; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_11 String COMMENT 'link slot 11; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_12 String COMMENT 'link slot 12; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_13 String COMMENT 'link slot 13; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_14 String COMMENT 'link slot 14; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_15 String COMMENT 'link slot 15; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_16 String COMMENT 'link slot 16; meaning determined by link_type' CODEC(ZSTD(3)),
 	payload String COMMENT 'the payload of the packet' CODEC(ZSTD(3)),
-	eth_dst_mac FixedString(6) COMMENT 'the destination MAC address of the ethernet frame',
-	eth_src_mac FixedString(6) COMMENT 'the source MAC address of the ethernet frame',
-	eth_type UInt16 COMMENT 'the ethernet type of the frame, identifying the upper layer protocol' CODEC(ZSTD(3)),
-	eth_length UInt16 COMMENT 'the data length of the ethernet frame in bytes' CODEC(ZSTD(3)),
 	ipv4_version UInt8 COMMENT 'the version of the IPv4 protocol, always 4' CODEC(ZSTD(3)),
 	ipv4_ihl UInt8 COMMENT 'the internet header length of the IPv4 header in 32-bit words' CODEC(ZSTD(3)),
 	ipv4_tos UInt8 COMMENT 'the type of service of the IPv4 header' CODEC(ZSTD(3)),
@@ -300,16 +518,20 @@ CREATE TABLE IF NOT EXISTS packet_ipv4_udps (
 	udp_dst_port UInt16 COMMENT 'the destination port of the UDP header' CODEC(ZSTD(3)),
 	udp_length UInt16 COMMENT 'the total length of the UDP datagram including the header and data' CODEC(ZSTD(3)),
 	udp_checksum UInt16 COMMENT 'the checksum of the UDP header' CODEC(ZSTD(3)),
-	INDEX idx_packet_ipv4_udps_id id TYPE bloom_filter(0.01) GRANULARITY 4
+	INDEX idx_packet_ipv4_udps_id id TYPE bloom_filter(0.01) GRANULARITY 4,
+	INDEX idx_packet_ipv4_udps_link_1 link_1 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv4_udps_link_2 link_2 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv4_udps_link_3 link_3 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv4_udps_link_4 link_4 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv4_udps_link_5 link_5 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv4_udps_link_6 link_6 TYPE bloom_filter(0.02) GRANULARITY 4
 ) ENGINE = MergeTree()
 ORDER BY (
 	timestamp,
 	namespace,
+	link_type,
 	udp_stream_id,
-	ipv4_ip_protocol,
-	LEAST(eth_src_mac, eth_dst_mac),
-	GREATEST(eth_src_mac, eth_dst_mac),
-	eth_type
+	ipv4_ip_protocol
 )
 PARTITION BY toStartOfHour(created_at)
 TTL toDateTime(created_at) + INTERVAL 24 HOUR DELETE;
@@ -320,16 +542,29 @@ CREATE TABLE IF NOT EXISTS packet_ipv6_udps (
 	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
 	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
 	session_id UUID COMMENT 'the session id of the packet' CODEC(ZSTD(3)),
+	link_type UInt16 COMMENT 'the link type of the packet, determining the meaning of the link slots' CODEC(ZSTD(3)),
 	timestamp DateTime64(6, 'UTC') COMMENT 'the capture timestamp of the packet' CODEC(DoubleDelta, ZSTD(3)),
 	created_at DateTime64(6, 'UTC') COMMENT 'the time the record is created' CODEC(DoubleDelta, ZSTD(3)),
 	truncated Bool COMMENT 'whether the packet is truncated',
 	capture_length UInt32 COMMENT 'the captured length of the packet in bytes' CODEC(ZSTD(3)),
 	layer_stack String COMMENT 'the network layer stack of the packet' CODEC(ZSTD(3)),
+	link_1 String COMMENT 'link slot 1; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_2 String COMMENT 'link slot 2; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_3 String COMMENT 'link slot 3; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_4 String COMMENT 'link slot 4; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_5 String COMMENT 'link slot 5; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_6 String COMMENT 'link slot 6; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_7 String COMMENT 'link slot 7; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_8 String COMMENT 'link slot 8; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_9 String COMMENT 'link slot 9; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_10 String COMMENT 'link slot 10; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_11 String COMMENT 'link slot 11; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_12 String COMMENT 'link slot 12; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_13 String COMMENT 'link slot 13; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_14 String COMMENT 'link slot 14; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_15 String COMMENT 'link slot 15; meaning determined by link_type' CODEC(ZSTD(3)),
+	link_16 String COMMENT 'link slot 16; meaning determined by link_type' CODEC(ZSTD(3)),
 	payload String COMMENT 'the payload of the packet' CODEC(ZSTD(3)),
-	eth_dst_mac FixedString(6) COMMENT 'the destination MAC address of the ethernet frame',
-	eth_src_mac FixedString(6) COMMENT 'the source MAC address of the ethernet frame',
-	eth_type UInt16 COMMENT 'the ethernet type of the frame, identifying the upper layer protocol' CODEC(ZSTD(3)),
-	eth_length UInt16 COMMENT 'the data length of the ethernet frame in bytes' CODEC(ZSTD(3)),
 	ipv6_version UInt8 COMMENT 'the version of the IPv6 protocol, always 6' CODEC(ZSTD(3)),
 	ipv6_traffic_class UInt8 COMMENT 'the traffic class of the IPv6 header for QoS' CODEC(ZSTD(3)),
 	ipv6_flow_label UInt32 COMMENT 'the flow label of the IPv6 header identifying packets of the same flow' CODEC(ZSTD(3)),
@@ -345,17 +580,21 @@ CREATE TABLE IF NOT EXISTS packet_ipv6_udps (
 	udp_dst_port UInt16 COMMENT 'the destination port of the UDP header' CODEC(ZSTD(3)),
 	udp_length UInt16 COMMENT 'the total length of the UDP datagram including the header and data' CODEC(ZSTD(3)),
 	udp_checksum UInt16 COMMENT 'the checksum of the UDP header' CODEC(ZSTD(3)),
-	INDEX idx_packet_ipv6_udps_id id TYPE bloom_filter(0.01) GRANULARITY 4
+	INDEX idx_packet_ipv6_udps_id id TYPE bloom_filter(0.01) GRANULARITY 4,
+	INDEX idx_packet_ipv6_udps_link_1 link_1 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv6_udps_link_2 link_2 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv6_udps_link_3 link_3 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv6_udps_link_4 link_4 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv6_udps_link_5 link_5 TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_packet_ipv6_udps_link_6 link_6 TYPE bloom_filter(0.02) GRANULARITY 4
 ) ENGINE = MergeTree()
 ORDER BY (
 	timestamp,
 	namespace,
+	link_type,
 	udp_stream_id,
 	ipv6_flow_label,
-	ipv6_last_header,
-	LEAST(eth_src_mac, eth_dst_mac),
-	GREATEST(eth_src_mac, eth_dst_mac),
-	eth_type
+	ipv6_last_header
 )
 PARTITION BY toStartOfHour(created_at)
 TTL toDateTime(created_at) + INTERVAL 24 HOUR DELETE;
@@ -665,13 +904,14 @@ ORDER BY (namespace, minute, model, dimension, item, tags)
 PARTITION BY toStartOfHour(minute)
 TTL toDateTime(minute) + INTERVAL 72 HOUR DELETE;
 
--- 标签聚合物化视图：按命名空间 + 分钟 + 目标模型 + 指纹维度 + 指纹值 + 标签组合聚合 HttpTransport 的标签命中次数
--- namespace 由 http_transports 的命名空间字段直接透传，实现多租户聚合隔离
--- dimension/item 由客户端/服务端指纹两列展开而来：dimension 为字段的驼峰标识（fpTcpClientSig/fpTcpServerSig，
--- 与 gorm json 字段名一致），item 为字段值
--- 指纹值为空的行在 ARRAY JOIN 展开前被过滤（arrayFilter 作用于元组数组）
--- 标签为空（去重后无任何标签）的行不进入聚合，避免无意义的空标签统计
--- ids 收集每个聚合分组下原始记录（http_transports）的 ID，与 cnt 等长，合并时拼接，保留聚合到原始记录的追溯关系
+-- Tag aggregation materialized view: aggregates HttpTransport tag hit counts by namespace + minute + target model + fingerprint dimension + fingerprint value + tag combination
+-- namespace is passed through from http_transports.namespace to isolate tenant aggregations
+-- dimension/item are expanded from the client/server fingerprint columns: dimension is the camelCase field identifier
+-- (fpTcpClientSig/fpTcpServerSig, matching the gorm JSON field names), item is the field value
+-- rows with empty fingerprint values are filtered before the ARRAY JOIN expansion (arrayFilter applies to the tuple array)
+-- rows with no tags after deduplication are excluded to avoid meaningless empty-tag statistics
+-- ids collects the original http_transports IDs under each aggregation group; it has the same length as cnt and is
+-- concatenated during merges, preserving traceability from aggregations back to original records
 CREATE MATERIALIZED VIEW IF NOT EXISTS http_transports_2_tag_summings_mv
 TO tag_summings
 AS
@@ -694,6 +934,10 @@ GROUP BY namespace, minute, model, dimension, item, tags;
 
 -- +goose Down
 DROP TABLE IF EXISTS packet_ethernets;
+DROP TABLE IF EXISTS packet_linux_slls;
+DROP TABLE IF EXISTS packet_linux_sll2s;
+DROP TABLE IF EXISTS packet_ppps;
+DROP TABLE IF EXISTS packet_dot11s;
 DROP TABLE IF EXISTS packet_ipv4;
 DROP TABLE IF EXISTS packet_ipv6;
 DROP TABLE IF EXISTS packet_ipv4_tcps;

@@ -458,15 +458,13 @@ func TestIPv4Headers_Methods(t *testing.T) {
 // TestPacketIPv4_Structure 测试PacketIPv4结构体的组合关系
 func TestPacketIPv4_Structure(t *testing.T) {
 	Convey("Test PacketIPv4 structure", t, func() {
-		Convey("Should correctly embed PacketEthernet and IPv4Headers", func() {
-			srcMAC, _ := net.ParseMAC("00:11:22:33:44:55")
-			dstMAC, _ := net.ParseMAC("aa:bb:cc:dd:ee:ff")
+		Convey("Should correctly embed PacketLink and IPv4Headers", func() {
 			srcIP := net.ParseIP("192.168.1.100")
 			dstIP := net.ParseIP("10.0.0.1")
 
 			sessionID, _ := serializer.HexUUIDv4FromString("123e4567-e89b-12d3-a456-426614174000")
 			packet := PacketIPv4{
-				PacketEthernet: PacketEthernet{
+				PacketLink: PacketLink{
 					AsPacket: AsPacket{
 						BaseMeta: BaseMeta{
 							SessionID: sessionID,
@@ -477,12 +475,6 @@ func TestPacketIPv4_Structure(t *testing.T) {
 						TimestampMeta: TimestampMeta{
 							Timestamp: time.Now(),
 						},
-					},
-					EthernetHeaders: EthernetHeaders{
-						EthDstMAC: serializer.MacAddr(dstMAC),
-						EthSrcMAC: serializer.MacAddr(srcMAC),
-						EthType:   layers.EthernetTypeIPv4,
-						EthLength: 1500,
 					},
 				},
 				IPv4Headers: IPv4Headers{
@@ -500,9 +492,6 @@ func TestPacketIPv4_Structure(t *testing.T) {
 			So(packet.Namespace, ShouldEqual, "test-namespace")
 			So(packet.Capture, ShouldEqual, "test-capture")
 			So(packet.Version, ShouldEqual, "v1.0")
-			So(packet.EthSrcMAC.String(), ShouldEqual, "00:11:22:33:44:55")
-			So(packet.EthDstMAC.String(), ShouldEqual, "aa:bb:cc:dd:ee:ff")
-			So(packet.EthType, ShouldEqual, layers.EthernetTypeIPv4)
 			So(packet.IPv4Version, ShouldEqual, 4)
 			So(packet.SrcAddr().String(), ShouldEqual, "192.168.1.100")
 			So(packet.DstAddr().String(), ShouldEqual, "10.0.0.1")

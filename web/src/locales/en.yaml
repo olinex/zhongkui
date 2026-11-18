@@ -72,6 +72,52 @@ model:
       no: No
       "true": Yes
       "false": No
+      linkType:
+        "null": None
+        ethernet: Ethernet
+        ppp: PPP
+        pppEthernet: PPPoE
+        raw: Raw IP
+        ieee80211: IEEE 802.11
+        loop: Loopback
+        linuxSll: Linux SLL
+        prism: Prism
+        ieee80211Radio: 802.11 RadioTap
+        ipv4: Raw IPv4
+        ipv6: Raw IPv6
+        linuxSll2: Linux SLL2
+      linkSlot:
+        generic: "Link Slot {slot}"
+        ethernet:
+          "1": Destination MAC
+          "2": Source MAC
+          "3": Ethernet Type
+          "4": Frame Length
+        dot11:
+          "1": Receiver Address
+          "2": Transmitter Address
+          "3": Address 3
+          "4": Address 4
+          "5": Frame Type
+          "6": Frame Flags
+          "7": Sequence Number
+          "8": Fragment Number
+        linuxSll:
+          "1": Packet Type
+          "2": Address Length
+          "3": Link Address
+          "4": Address Type
+          "5": Inner Protocol Type
+        linuxSll2:
+          "1": Inner Protocol Type
+          "2": Interface Index
+          "3": ARP Hardware Type
+          "4": Packet Type
+          "5": Address Length
+          "6": Link Address
+        ppp:
+          "1": PPP Protocol Type
+          "2": HDLC Prefix
   notificationChannel:
     name: Notification Channel
     field:
@@ -744,10 +790,23 @@ model:
       captureLength: Capture Length
       layerStack: Protocol Stack
       payload: Payload
-      ethDstMac: Destination MAC
-      ethSrcMac: Source MAC
-      ethType: Ethernet Type
-      ethLength: Ethernet Length
+      linkType: Link Type
+      link1: Link Slot 1
+      link2: Link Slot 2
+      link3: Link Slot 3
+      link4: Link Slot 4
+      link5: Link Slot 5
+      link6: Link Slot 6
+      link7: Link Slot 7
+      link8: Link Slot 8
+      link9: Link Slot 9
+      link10: Link Slot 10
+      link11: Link Slot 11
+      link12: Link Slot 12
+      link13: Link Slot 13
+      link14: Link Slot 14
+      link15: Link Slot 15
+      link16: Link Slot 16
       # IPv4
       ipv4Version: IPv4 Version
       ipv4Ihl: IPv4 Header Length
@@ -808,10 +867,23 @@ model:
       captureLength: Capture Length
       layerStack: Protocol Stack
       payload: Payload
-      ethDstMac: Destination MAC
-      ethSrcMac: Source MAC
-      ethType: Ethernet Type
-      ethLength: Ethernet Length
+      linkType: Link Type
+      link1: Link Slot 1
+      link2: Link Slot 2
+      link3: Link Slot 3
+      link4: Link Slot 4
+      link5: Link Slot 5
+      link6: Link Slot 6
+      link7: Link Slot 7
+      link8: Link Slot 8
+      link9: Link Slot 9
+      link10: Link Slot 10
+      link11: Link Slot 11
+      link12: Link Slot 12
+      link13: Link Slot 13
+      link14: Link Slot 14
+      link15: Link Slot 15
+      link16: Link Slot 16
       # IPv6
       ipv6Version: IPv6 Version
       ipv6TrafficClass: Traffic Class
@@ -1086,6 +1158,7 @@ model:
     header:
       title: Protocol Header Details
       rawJson: View Raw JSON
+      empty: No header fields
       loopbackNote: Loopback traffic, no real link-layer header information
       col:
         field: Field
@@ -1139,6 +1212,54 @@ model:
         urgent: Urgent Pointer
         options: TCP Options
         length: Data Length
+        # Link-layer protocol fields
+        priority: Priority (PCP)
+        dropEligible: Drop Eligible (DEI)
+        vlanIdentifier: VLAN Identifier (VID)
+        dsap: Destination SAP (DSAP)
+        ig: Group Address (IG)
+        ssap: Source SAP (SSAP)
+        cr: Command/Response (CR)
+        control: Control Field
+        organizationalCode: Organization Code (OUI)
+        pppType: PPP Protocol Type
+        pppHasPPTPHeader: HDLC Prefix
+        pppoeVersion: PPPoE Version
+        pppoeType: PPPoE Type
+        pppoeCode: PPPoE Code
+        sessionID: Session ID
+        pppoeLength: PPPoE Payload Length
+        radioTapVersion: RadioTap Version
+        radioTapLength: RadioTap Header Length
+        prismCode: Prism Code
+        prismLength: Prism Header Length
+        deviceName: Capture Device Name
+        sllPacketType: Packet Type
+        sllAddrLen: Address Length
+        sllAddr: Link Address
+        sllAddrType: Address Type
+        sllProtocol: Inner Protocol Type
+        sll2ProtocolType: Inner Protocol Type
+        sll2InterfaceIndex: Interface Index
+        sll2ArpHardwareType: ARP Hardware Type
+        sll2PacketType: Packet Type
+        sll2AddrLength: Address Length
+        sll2Addr: Link Address
+        dot11Type: Frame Type/Subtype
+        dot11Proto: Protocol Version
+        dot11Flags: Frame Control Flags
+        dot11DurationID: Duration/Association ID
+        dot11Address1: Receiver Address
+        dot11Address2: Transmitter Address
+        dot11Address3: Address 3
+        dot11Address4: Address 4
+        dot11SequenceNumber: Sequence Number
+        dot11FragmentNumber: Fragment Number
+        dot11HasQOS: Has QoS Control
+        dot11QOSTID: Traffic Identifier (TID)
+        dot11QOSEOSP: End of Service Period (EOSP)
+        dot11QOSAckPolicy: Ack Policy
+        dot11QOSTXOP: Transmission Opportunity (TXOP)
       desc:
         ethDstMac: Destination MAC address of the data frame
         ethSrcMac: Source MAC address of the data frame
@@ -1187,6 +1308,53 @@ model:
         urgent: Urgent pointer offset, used with the URG flag
         options: TCP option list (MSS, window scale, timestamps, etc.)
         length: Total UDP datagram length (header + data) in bytes
+        priority: VLAN priority (PCP), 3 bits
+        dropEligible: Drop eligible indicator (DEI)
+        vlanIdentifier: VLAN identifier (VID), 12 bits
+        dsap: Destination service access point
+        ig: Group address indicator bit
+        ssap: Source service access point
+        cr: Command/response indicator bit
+        control: LLC control field
+        organizationalCode: Organizationally unique identifier (OUI) in hex
+        pppType: PPP protocol type identifying the inner protocol (IPv4, IPv6, etc.)
+        pppHasPPTPHeader: Whether the 0xff03 (HDLC address/control) prefix is present
+        pppoeVersion: PPPoE version number
+        pppoeType: PPPoE type field
+        pppoeCode: "PPPoE code: 0 for session data, others for discovery packets"
+        sessionID: PPPoE session identifier
+        pppoeLength: PPPoE payload length in bytes
+        radioTapVersion: RadioTap version number
+        radioTapLength: Total RadioTap header length in bytes
+        prismCode: Prism message code
+        prismLength: Prism header length in bytes
+        deviceName: Capture device name
+        sllPacketType: Linux SLL packet type (host, broadcast, multicast, etc.)
+        sllAddrLen: Link address length in bytes
+        sllAddr: Link address
+        sllAddrType: Link address type
+        sllProtocol: Inner protocol type (Ethernet type semantics)
+        sll2ProtocolType: Inner protocol type (Ethernet type semantics)
+        sll2InterfaceIndex: Capture interface index
+        sll2ArpHardwareType: ARP hardware type (Ethernet, loopback, radiotap, etc.)
+        sll2PacketType: Linux SLL2 packet type (host, broadcast, multicast, etc.)
+        sll2AddrLength: Link address length in bytes
+        sll2Addr: Link address
+        dot11Type: IEEE 802.11 frame type and subtype
+        dot11Proto: IEEE 802.11 protocol version
+        dot11Flags: IEEE 802.11 frame control flags
+        dot11DurationID: Duration or association identifier
+        dot11Address1: Receiver address
+        dot11Address2: Transmitter address
+        dot11Address3: Third address
+        dot11Address4: Fourth address
+        dot11SequenceNumber: Frame sequence number
+        dot11FragmentNumber: Fragment number
+        dot11HasQOS: Whether the QoS control field is present
+        dot11QOSTID: Traffic identifier (TID)
+        dot11QOSEOSP: End of service period (EOSP)
+        dot11QOSAckPolicy: QoS acknowledgment policy
+        dot11QOSTXOP: Transmission opportunity limit (TXOP)
       value:
         yes: "Yes"
         no: "No"
@@ -1195,6 +1363,27 @@ model:
         evil: Reserved
         df: Don't Fragment (DF)
         mf: More Fragments (MF)
+        toDs: To DS
+        fromDs: From DS
+        moreFrag: More Fragments
+        retry: Retry
+        powerManagement: Power Management
+        moreData: More Data
+        protected: Protected
+        order: Strictly Ordered
+      dot11AckPolicy:
+        normal: Normal Ack
+        none: No Ack
+        noExplicit: No Explicit Ack
+        block: Block Ack
+      sllPacketType:
+        host: Host
+        broadcast: Broadcast
+        multicast: Multicast
+        otherhost: Otherhost
+        outgoing: Outgoing
+        loopback: Loopback
+        fastroute: Fastroute
 chart:
   title:
     queueSize: Queue Size

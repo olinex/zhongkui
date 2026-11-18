@@ -19,6 +19,10 @@ func LoadPacketModelToTable(ctx context.Context, items []any) error {
 		return errors.WithStack(err)
 	}
 	ethModels := make([]*network.PacketEthernet, 0)
+	sllModels := make([]*network.PacketLinuxSLL, 0)
+	sll2Models := make([]*network.PacketLinuxSLL2, 0)
+	pppModels := make([]*network.PacketPPP, 0)
+	dot11Models := make([]*network.PacketDot11, 0)
 	ipv4Models := make([]*network.PacketIPv4, 0)
 	ipv6Models := make([]*network.PacketIPv6, 0)
 	ipv4TCPModels := make([]*network.PacketIPv4TCP, 0)
@@ -36,6 +40,14 @@ func LoadPacketModelToTable(ctx context.Context, items []any) error {
 			if stats != nil {
 				stats.RecordEth()
 			}
+		case *network.PacketLinuxSLL:
+			sllModels = append(sllModels, model)
+		case *network.PacketLinuxSLL2:
+			sll2Models = append(sll2Models, model)
+		case *network.PacketPPP:
+			pppModels = append(pppModels, model)
+		case *network.PacketDot11:
+			dot11Models = append(dot11Models, model)
 		case *network.PacketIPv4:
 			ipv4Models = append(ipv4Models, model)
 			if stats != nil {
@@ -74,6 +86,38 @@ func LoadPacketModelToTable(ctx context.Context, items []any) error {
 	if len(ethModels) > 0 {
 		wg.GoNamed("eth", func() error {
 			if err := rawDB.WithContext(innerCtx).Create(ethModels).Error; err != nil {
+				return errors.WithStack(err)
+			}
+			return nil
+		})
+	}
+	if len(sllModels) > 0 {
+		wg.GoNamed("linux-sll", func() error {
+			if err := rawDB.WithContext(innerCtx).Create(sllModels).Error; err != nil {
+				return errors.WithStack(err)
+			}
+			return nil
+		})
+	}
+	if len(sll2Models) > 0 {
+		wg.GoNamed("linux-sll2", func() error {
+			if err := rawDB.WithContext(innerCtx).Create(sll2Models).Error; err != nil {
+				return errors.WithStack(err)
+			}
+			return nil
+		})
+	}
+	if len(pppModels) > 0 {
+		wg.GoNamed("ppp", func() error {
+			if err := rawDB.WithContext(innerCtx).Create(pppModels).Error; err != nil {
+				return errors.WithStack(err)
+			}
+			return nil
+		})
+	}
+	if len(dot11Models) > 0 {
+		wg.GoNamed("dot11", func() error {
+			if err := rawDB.WithContext(innerCtx).Create(dot11Models).Error; err != nil {
 				return errors.WithStack(err)
 			}
 			return nil

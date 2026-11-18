@@ -20,7 +20,7 @@ func TransFromPacketToModel(ctx context.Context, i any) (any, error) {
 	if !ok {
 		return nil, errors.Newf("Expect pcap.PcapItem, got %T", i)
 	}
-	builder := n.NewPacketModelBuilder(item.Packet, item.SessionID, item.Source)
+	builder := n.NewPacketModelBuilderWithLinkType(item.Packet, item.SessionID, item.Source, item.LinkType)
 	model := builder.BuildAsPacketModel()
 	if model == nil {
 		// 调试：当模型构建失败时，打印层堆栈以定位原因

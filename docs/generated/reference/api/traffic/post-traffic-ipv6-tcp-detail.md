@@ -45,16 +45,32 @@
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
 | layerStack | []traffic.LayerInfoOut | - | - | - | - |
-| ethDstMac | serializer.MacAddr | - | - | - | - |
-| ethSrcMac | serializer.MacAddr | - | - | - | - |
-| ethType | layers.EthernetType | - | - | - | - |
-| ethLength | uint16 | - | - | - | - |
-| ipv6Version | uint8 | - | - | - | - |
-| ipv6TrafficClass | uint8 | - | - | - | - |
-| ipv6FlowLabel | uint32 | - | - | - | - |
+| linkType | layers.LinkType | - | - | - | - |
+| link1 | string | - | - | - | - |
+| link2 | string | - | - | - | - |
+| link3 | string | - | - | - | - |
+| link4 | string | - | - | - | - |
+| link5 | string | - | - | - | - |
+| link6 | string | - | - | - | - |
+| link7 | string | - | - | - | - |
+| link8 | string | - | - | - | - |
 
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
+| link9 | string | - | - | - | - |
+| link10 | string | - | - | - | - |
+| link11 | string | - | - | - | - |
+| link12 | string | - | - | - | - |
+| link13 | string | - | - | - | - |
+| link14 | string | - | - | - | - |
+| link15 | string | - | - | - | - |
+| link16 | string | - | - | - | - |
+| ipv6Version | uint8 | - | - | - | - |
+| ipv6TrafficClass | uint8 | - | - | - | - |
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| ipv6FlowLabel | uint32 | - | - | - | - |
 | ipv6Length | uint16 | - | - | - | - |
 | ipv6NextHeader | layers.IPProtocol | - | - | - | - |
 | ipv6HopLimit | uint8 | - | - | - | - |
@@ -62,10 +78,10 @@
 | ipv6Dst | serializer.IPv6Addr | - | - | - | - |
 | ipv6LastHeader | layers.IPProtocol | - | - | - | - |
 | srcPort | layers.TCPPort | - | - | - | - |
-| dstPort | layers.TCPPort | - | - | - | - |
 
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
+| dstPort | layers.TCPPort | - | - | - | - |
 | seq | uint32 | - | - | - | - |
 | ack | uint32 | - | - | - | - |
 | dataOffset | uint8 | - | - | - | - |
@@ -76,10 +92,10 @@
 | bitAck | bool | - | - | - | - |
 | bitUrg | bool | - | - | - | - |
 | bitEce | bool | - | - | - | - |
-| bitCwr | bool | - | - | - | - |
 
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
+| bitCwr | bool | - | - | - | - |
 | bitNs | bool | - | - | - | - |
 | window | uint16 | - | - | - | - |
 | checksum | uint16 | - | - | - | - |
@@ -89,10 +105,10 @@
 | fpOsQuality | float64 | - | - | - | - |
 | fpSig | string | - | - | - | - |
 | fpMtu | uint16 | - | - | - | - |
-| tcpStreamID | string | - | - | - | - |
 
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
+| tcpStreamID | string | - | - | - | - |
 | payload | serializer.Crypto | - | - | - | - |
 
 ### layerStack[]（[]traffic.LayerInfoOut）
@@ -131,19 +147,32 @@
       "headers": {}
     }
   ],
-  "ethDstMac": "",
-  "ethSrcMac": "",
-  "ethType": 0,
-  "ethLength": 0,
-  "ipv6Version": 0,
-  "ipv6TrafficClass": 0,
-  "ipv6FlowLabel": 0,
-  "ipv6Length": 0
+  "linkType": 0,
+  "link1": "string",
+  "link2": "string",
+  "link3": "string",
+  "link4": "string",
+  "link5": "string",
+  "link6": "string"
 }
 ```
 
 ```json
 {
+  "link7": "string",
+  "link8": "string",
+  "link9": "string",
+  "link10": "string",
+  "link11": "string",
+  "link12": "string",
+  "link13": "string",
+  "link14": "string",
+  "link15": "string",
+  "link16": "string",
+  "ipv6Version": 0,
+  "ipv6TrafficClass": 0,
+  "ipv6FlowLabel": 0,
+  "ipv6Length": 0,
   "ipv6NextHeader": 0,
   "ipv6HopLimit": 0,
   "ipv6Src": "",
@@ -152,7 +181,12 @@
   "srcPort": 0,
   "dstPort": 0,
   "seq": 0,
-  "ack": 0,
+  "ack": 0
+}
+```
+
+```json
+{
   "dataOffset": 0,
   "bitFin": false,
   "bitSyn": false,
@@ -165,12 +199,7 @@
   "bitNs": false,
   "window": 0,
   "checksum": 0,
-  "urgent": 0
-}
-```
-
-```json
-{
+  "urgent": 0,
   "options": [
     {
       "type": 0,

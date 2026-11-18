@@ -540,11 +540,14 @@ func NewIPv6Headers(ipv6 *layers.IPv6) *IPv6Headers {
 }
 
 // PacketIPv6 表示IPv6数据包
-// IPv6数据包完整结构，包含以太网头部和IPv6头部
+// IPv6数据包完整结构，包含链路无关基座、通用链路槽位和IPv6头部
 // 该结构用于存储原始IPv6数据包信息，对应数据库中的packet_ipv6表
 type PacketIPv6 struct {
-	// PacketEthernet 以太网头部信息，包含MAC地址、以太网类型等
-	PacketEthernet
+	// PacketLink 链路无关的数据包基座（元数据 + 行唯一标识）
+	PacketLink
+
+	// LinkSlots 通用链路槽位，含义由 link_type 决定，Raw IP 时为空
+	LinkSlots
 
 	// IPv6Headers IPv6头部信息，包含IPv6基础头部和扩展头部
 	IPv6Headers

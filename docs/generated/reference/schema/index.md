@@ -50,13 +50,17 @@
 
 - [`http_transports`](./network/http_transports.md) — HttpTransport 表示HTTP传输层信息 完整的HTTP传输数据模型，组合了所有HTTP相关的元数据和内容信息 该结构体对应数据库中的http_transport表，用于存储完整的HTTP会话数据  结构组成:   - BaseMeta:             基础元数据，包含命名空间、捕获器、版本和会话ID   - FusedMeta:            融合元数据，包含帧堆栈信息   - HttpBase:             HTTP基础信息，包含客户端/服务器IP端口和协议版本   - TcpFingerprint:       TCP指纹信息，包含客户端/服务端OS、签名与MTU特征   - HttpURI:              HTTP URI信息，包含URL的各个组成部分   - HttpRequestBody:      HTTP请求正文信息，包含请求方法、主体和时间信息   - HttpRequestHeaders:   HTTP请求头信息，以宽表形式存储所有标准请求头字段   - HttpResponse:         HTTP响应正文信息，包含响应主体和时间信息   - HttpResponseHeaders:  HTTP响应头信息，以宽表形式存储所有标准响应头字段   - HttpFingerprint:      Http指纹信息，包含浏览器、服务端与设备类别猜测  使用场景:   - HTTP流量分析和监控   - Web应用性能分析   - API调用追踪和调试   - 安全审计和入侵检测
 - [`network_stacks`](./network/network_stacks.md) — NetworkStack 表示网络协议栈中的一个帧，包含协议类型、头部信息等。
-- [`packet_ethernets`](./network/packet_ethernets.md) — PacketEthernet 表示完整的以太网数据包 该结构体组合了AsPacket基础结构和EthernetHeaders以太网头部信息， 用于存储和分析原始的网络数据包。
-- [`packet_ipv4`](./network/packet_ipv4.md) — PacketIPv4 表示完整的IPv4网络数据包 该结构体组合了以太网层（链路层）和IPv4层（网络层）的头部信息 用于存储和分析从网络捕获的原始IPv4数据包  结构组成:   - PacketEthernet: 以太网层头部信息，包含MAC地址、以太网类型等   - IPv4Headers:    IPv4网络层头部信息，包含IP地址、协议类型、TTL等  数据库特性:   - 使用MergeTree引擎存储，支持高性能查询   - 按时间分区（每小时），优化时间范围查询性能   - 设置TTL（生存时间），自动清理过期数据   - 复合排序键，优化常见查询模式  查询优化:   - 排序键包含namespace、capture、version、session_id等维度   - 支持按源/目的IP、协议类型、MAC地址等字段快速过滤   - 时间戳分区支持高效的时间范围查询  使用场景:   - 原始网络数据包存储和分析   - 网络安全事件调查和取证   - 网络流量监控和统计   - 协议分析和故障诊断
+- [`packet_dot11s`](./network/packet_dot11s.md) — PacketDot11 表示 IEEE 802.11 链路层数据包 组合链路无关基座与 802.11 链路头部，用于存储无法继续解析内层协议的无线帧； RadioTap / Prism 首层的抓包同样装配为本模型，其抓包头保留在 layer_stack 中。
+- [`packet_ethernets`](./network/packet_ethernets.md) — PacketEthernet 表示完整的以太网数据包 该结构体组合了链路无关基座 PacketLink 与 EthernetHeaders 以太网头部信息， 用于存储和分析原始的网络数据包。
+- [`packet_ipv4`](./network/packet_ipv4.md) — PacketIPv4 表示完整的IPv4网络数据包 该结构体组合了链路无关基座与IPv4层（网络层）的头部信息 用于存储和分析从网络捕获的原始IPv4数据包  结构组成:   - PacketLink: 链路无关的数据包基座（元数据 + 行唯一标识）   - LinkSlots:  通用链路槽位，含义由 link_type 决定，Raw IP 时为空   - IPv4Headers: IPv4网络层头部信息，包含IP地址、协议类型、TTL等  数据库特性:   - 使用MergeTree引擎存储，支持高性能查询   - 按时间分区（每小时），优化时间范围查询性能   - 设置TTL（生存时间），自动清理过期数据   - 复合排序键，优化常见查询模式  查询优化:   - 排序键包含namespace、capture、version、session_id、link_type等维度   - 支持按源/目的IP、协议类型、链路槽位等字段快速过滤   - 时间戳分区支持高效的时间范围查询  使用场景:   - 原始网络数据包存储和分析   - 网络安全事件调查和取证   - 网络流量监控和统计   - 协议分析和故障诊断
 - [`packet_ipv4_tcps`](./network/packet_ipv4_tcps.md) — PacketIPv4TCP 表示IPv4 TCP数据包 组合了PacketIPv4和TCPHeaders，表示完整的IPv4 TCP数据包信息 包含以太网层、IPv4层和TCP层的所有头部信息
 - [`packet_ipv4_udps`](./network/packet_ipv4_udps.md) — PacketIPv4UDP 表示IPv4 UDP数据包 组合了PacketIPv4和UDPHeaders，表示完整的IPv4 UDP数据包信息 包含以太网层、IPv4层和UDP层的所有头部信息  使用场景:   - 存储和查询IPv4 UDP网络数据包   - 分析基于IPv4 UDP的应用程序协议   - 网络流量监控和安全分析
-- [`packet_ipv6`](./network/packet_ipv6.md) — PacketIPv6 表示IPv6数据包 IPv6数据包完整结构，包含以太网头部和IPv6头部 该结构用于存储原始IPv6数据包信息，对应数据库中的packet_ipv6表
+- [`packet_ipv6`](./network/packet_ipv6.md) — PacketIPv6 表示IPv6数据包 IPv6数据包完整结构，包含链路无关基座、通用链路槽位和IPv6头部 该结构用于存储原始IPv6数据包信息，对应数据库中的packet_ipv6表
 - [`packet_ipv6_tcps`](./network/packet_ipv6_tcps.md) — PacketIPv6TCP 表示IPv6 TCP数据包 组合了PacketIPv6和TCPHeaders，表示完整的IPv6 TCP数据包信息 包含以太网层、IPv6层和TCP层的所有头部信息
 - [`packet_ipv6_udps`](./network/packet_ipv6_udps.md) — PacketIPv6UDP 表示IPv6 UDP数据包 组合了PacketIPv6和UDPHeaders，表示完整的IPv6 UDP数据包信息 包含以太网层、IPv6层和UDP层的所有头部信息  使用场景:   - 存储和查询IPv6 UDP网络数据包   - 分析基于IPv6 UDP的应用程序协议（如DNS over IPv6）   - IPv6网络流量监控和性能分析
+- [`packet_linux_sll2s`](./network/packet_linux_sll2s.md) — PacketLinuxSLL2 表示 Linux SLL2 链路层数据包 组合链路无关基座与 Linux SLL2 链路头部，用于存储无法继续解析内层协议的 SLL2 帧
+- [`packet_linux_slls`](./network/packet_linux_slls.md) — PacketLinuxSLL 表示 Linux SLL 链路层数据包 组合链路无关基座与 Linux SLL 链路头部，用于存储无法继续解析内层协议的 SLL 帧
+- [`packet_ppps`](./network/packet_ppps.md) — PacketPPP 表示 PPP 链路层数据包 组合链路无关基座与 PPP 链路头部，用于存储无法继续解析内层协议的 PPP 帧
 ### tag
 
 - [`tag_event_conditions`](./tag/tag_event_conditions.md) — TagEventCondition 表示标签事件条件，是标签事件规则（TagEventRule）中单条触发条件的判定逻辑。

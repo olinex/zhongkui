@@ -8,6 +8,7 @@
 - [func PacketModelPrototypes\(\) \[\]any](<#PacketModelPrototypes>)
 - [func RegisterTypedAssembler\[H any\]\(level LayerLevel, layerType gopacket.LayerType, header func\(LayerStack\) \(H, bool\), build func\(\*ModelBuilder, H\) any, prototypes func\(\) \[\]any\)](<#RegisterTypedAssembler>)
 - [func RegisterTypedDecoder\[L gopacket.Layer\]\(decode func\(DecodeContext, L\) \(DecodeResult, error\)\)](<#RegisterTypedDecoder>)
+- [func RegisterTypedFamilyLayerDecoders\(layerTypes \[\]gopacket.LayerType, decode func\(DecodeContext, gopacket.Layer\) \(DecodeResult, error\)\)](<#RegisterTypedFamilyLayerDecoders>)
 - [type AppTailer](<#AppTailer>)
 - [type AsPacket](<#AsPacket>)
 - [type BaseMeta](<#BaseMeta>)
@@ -16,6 +17,10 @@
 - [type DecodeKind](<#DecodeKind>)
 - [type DecodeResult](<#DecodeResult>)
 - [type DirectionMeta](<#DirectionMeta>)
+- [type Dot11Headers](<#Dot11Headers>)
+  - [func NewDot11Headers\(dot11 \*layers.Dot11\) \*Dot11Headers](<#NewDot11Headers>)
+- [type Dot1QHeaders](<#Dot1QHeaders>)
+  - [func NewDot1QHeaders\(dot1q \*layers.Dot1Q\) \*Dot1QHeaders](<#NewDot1QHeaders>)
 - [type EthernetHeaders](<#EthernetHeaders>)
   - [func NewEthernetHeaders\(eth \*layers.Ethernet\) \*EthernetHeaders](<#NewEthernetHeaders>)
   - [func NewLoopbackHeaders\(\) \*EthernetHeaders](<#NewLoopbackHeaders>)
@@ -44,6 +49,7 @@
   - [func NewHttpResponseHeaders\(resp \*http.Response\) \*HttpResponseHeaders](<#NewHttpResponseHeaders>)
 - [type HttpTLS](<#HttpTLS>)
 - [type HttpTransport](<#HttpTransport>)
+  - [func \(m \*HttpTransport\) TableName\(\) string](<#HttpTransport.TableName>)
 - [type HttpURI](<#HttpURI>)
   - [func NewHttpURI\(req \*http.Request\) \(\*HttpURI, error\)](<#NewHttpURI>)
 - [type IPv4Headers](<#IPv4Headers>)
@@ -75,6 +81,8 @@
   - [func \(h \*IPv6HopByHop\) Value\(\) \(driver.Value, error\)](<#IPv6HopByHop.Value>)
 - [type IPv6Routing](<#IPv6Routing>)
   - [func NewIPv6Routing\(ipv6 \*layers.IPv6Routing\) \*IPv6Routing](<#NewIPv6Routing>)
+- [type LLCHeaders](<#LLCHeaders>)
+  - [func NewLLCHeaders\(llc \*layers.LLC\) \*LLCHeaders](<#NewLLCHeaders>)
 - [type LayerDecoder](<#LayerDecoder>)
   - [func LayerDecoders\(\) \[\]LayerDecoder](<#LayerDecoders>)
 - [type LayerInfo](<#LayerInfo>)
@@ -83,11 +91,19 @@
 - [type LayerStack](<#LayerStack>)
   - [func \(l \*LayerStack\) Scan\(value any\) error](<#LayerStack.Scan>)
   - [func \(l LayerStack\) Value\(\) \(driver.Value, error\)](<#LayerStack.Value>)
+- [type LinkMeta](<#LinkMeta>)
+- [type LinkSlots](<#LinkSlots>)
+  - [func NewLinkSlots\(values ...string\) LinkSlots](<#NewLinkSlots>)
+- [type LinkSlotted](<#LinkSlotted>)
+- [type LinuxSLL2Headers](<#LinuxSLL2Headers>)
+  - [func NewLinuxSLL2Headers\(sll2 \*layers.LinuxSLL2\) \*LinuxSLL2Headers](<#NewLinuxSLL2Headers>)
+- [type LinuxSLLHeaders](<#LinuxSLLHeaders>)
+  - [func NewLinuxSLLHeaders\(sll \*layers.LinuxSLL\) \*LinuxSLLHeaders](<#NewLinuxSLLHeaders>)
 - [type MPLSChannel](<#MPLSChannel>)
   - [func NewMPLSChannel\(mpls \*layers.MPLS\) \*MPLSChannel](<#NewMPLSChannel>)
 - [type ModelAssembler](<#ModelAssembler>)
 - [type ModelBuilder](<#ModelBuilder>)
-  - [func NewPacketModelBuilder\(packet gopacket.Packet, sessionID serializer.HexUUID, source reporter\_v1.ResourceRaw\) \*ModelBuilder](<#NewPacketModelBuilder>)
+  - [func NewPacketModelBuilderWithLinkType\(packet gopacket.Packet, sessionID serializer.HexUUID, source reporter\_v1.ResourceRaw, linkType layers.LinkType\) \*ModelBuilder](<#NewPacketModelBuilderWithLinkType>)
   - [func \(b \*ModelBuilder\) BuildAsPacketApplicationModel\(\) any](<#ModelBuilder.BuildAsPacketApplicationModel>)
   - [func \(b \*ModelBuilder\) BuildAsPacketLinkModel\(\) any](<#ModelBuilder.BuildAsPacketLinkModel>)
   - [func \(b \*ModelBuilder\) BuildAsPacketModel\(\) any](<#ModelBuilder.BuildAsPacketModel>)
@@ -96,8 +112,19 @@
 - [type NetworkFrame](<#NetworkFrame>)
   - [func NewNetworkFrame\(stack LayerStack, meta BaseMeta, timestamp time.Time\) NetworkFrame](<#NewNetworkFrame>)
 - [type NetworkStack](<#NetworkStack>)
+  - [func \(m \*NetworkStack\) TableName\(\) string](<#NetworkStack.TableName>)
+- [type PPPHeaders](<#PPPHeaders>)
+  - [func NewPPPHeaders\(ppp \*layers.PPP\) \*PPPHeaders](<#NewPPPHeaders>)
+- [type PPPoEHeaders](<#PPPoEHeaders>)
+  - [func NewPPPoEHeaders\(pppoe \*layers.PPPoE\) \*PPPoEHeaders](<#NewPPPoEHeaders>)
+- [type PacketDot11](<#PacketDot11>)
+  - [func \(p \*PacketDot11\) LinkSlotValues\(\) LinkSlots](<#PacketDot11.LinkSlotValues>)
+  - [func \(m \*PacketDot11\) TableName\(\) string](<#PacketDot11.TableName>)
 - [type PacketEthernet](<#PacketEthernet>)
+  - [func \(p \*PacketEthernet\) LinkSlotValues\(\) LinkSlots](<#PacketEthernet.LinkSlotValues>)
+  - [func \(m \*PacketEthernet\) TableName\(\) string](<#PacketEthernet.TableName>)
 - [type PacketIPv4](<#PacketIPv4>)
+  - [func \(m \*PacketIPv4\) TableName\(\) string](<#PacketIPv4.TableName>)
 - [type PacketIPv4TCP](<#PacketIPv4TCP>)
   - [func \(p \*PacketIPv4TCP\) CaptureTimestamp\(\) time.Time](<#PacketIPv4TCP.CaptureTimestamp>)
   - [func \(p \*PacketIPv4TCP\) FrameInfo\(\) \*FrameInfo](<#PacketIPv4TCP.FrameInfo>)
@@ -106,10 +133,13 @@
   - [func \(p \*PacketIPv4TCP\) Meta\(\) \*BaseMeta](<#PacketIPv4TCP.Meta>)
   - [func \(p \*PacketIPv4TCP\) NetworkFrame\(\) NetworkFrame](<#PacketIPv4TCP.NetworkFrame>)
   - [func \(p \*PacketIPv4TCP\) StreamID\(\) string](<#PacketIPv4TCP.StreamID>)
+  - [func \(m \*PacketIPv4TCP\) TableName\(\) string](<#PacketIPv4TCP.TableName>)
   - [func \(p \*PacketIPv4TCP\) TcpFingerprint\(\) \*PacketTCPFingerprint](<#PacketIPv4TCP.TcpFingerprint>)
 - [type PacketIPv4UDP](<#PacketIPv4UDP>)
   - [func \(p \*PacketIPv4UDP\) StreamID\(\) string](<#PacketIPv4UDP.StreamID>)
+  - [func \(m \*PacketIPv4UDP\) TableName\(\) string](<#PacketIPv4UDP.TableName>)
 - [type PacketIPv6](<#PacketIPv6>)
+  - [func \(m \*PacketIPv6\) TableName\(\) string](<#PacketIPv6.TableName>)
 - [type PacketIPv6TCP](<#PacketIPv6TCP>)
   - [func \(p \*PacketIPv6TCP\) CaptureTimestamp\(\) time.Time](<#PacketIPv6TCP.CaptureTimestamp>)
   - [func \(p \*PacketIPv6TCP\) FrameInfo\(\) \*FrameInfo](<#PacketIPv6TCP.FrameInfo>)
@@ -118,12 +148,30 @@
   - [func \(p \*PacketIPv6TCP\) Meta\(\) \*BaseMeta](<#PacketIPv6TCP.Meta>)
   - [func \(p \*PacketIPv6TCP\) NetworkFrame\(\) NetworkFrame](<#PacketIPv6TCP.NetworkFrame>)
   - [func \(p \*PacketIPv6TCP\) StreamID\(\) string](<#PacketIPv6TCP.StreamID>)
+  - [func \(m \*PacketIPv6TCP\) TableName\(\) string](<#PacketIPv6TCP.TableName>)
   - [func \(p \*PacketIPv6TCP\) TcpFingerprint\(\) \*PacketTCPFingerprint](<#PacketIPv6TCP.TcpFingerprint>)
 - [type PacketIPv6UDP](<#PacketIPv6UDP>)
   - [func \(p \*PacketIPv6UDP\) StreamID\(\) string](<#PacketIPv6UDP.StreamID>)
+  - [func \(m \*PacketIPv6UDP\) TableName\(\) string](<#PacketIPv6UDP.TableName>)
+- [type PacketLink](<#PacketLink>)
+- [type PacketLinuxSLL](<#PacketLinuxSLL>)
+  - [func \(p \*PacketLinuxSLL\) LinkSlotValues\(\) LinkSlots](<#PacketLinuxSLL.LinkSlotValues>)
+  - [func \(m \*PacketLinuxSLL\) TableName\(\) string](<#PacketLinuxSLL.TableName>)
+- [type PacketLinuxSLL2](<#PacketLinuxSLL2>)
+  - [func \(p \*PacketLinuxSLL2\) LinkSlotValues\(\) LinkSlots](<#PacketLinuxSLL2.LinkSlotValues>)
+  - [func \(m \*PacketLinuxSLL2\) TableName\(\) string](<#PacketLinuxSLL2.TableName>)
 - [type PacketMeta](<#PacketMeta>)
+- [type PacketPPP](<#PacketPPP>)
+  - [func \(p \*PacketPPP\) LinkSlotValues\(\) LinkSlots](<#PacketPPP.LinkSlotValues>)
+  - [func \(m \*PacketPPP\) TableName\(\) string](<#PacketPPP.TableName>)
 - [type PacketTCPFingerprint](<#PacketTCPFingerprint>)
+- [type PrismHeaders](<#PrismHeaders>)
+  - [func NewPrismHeaders\(prism \*layers.PrismHeader\) \*PrismHeaders](<#NewPrismHeaders>)
+- [type RadioTapHeaders](<#RadioTapHeaders>)
+  - [func NewRadioTapHeaders\(radioTap \*layers.RadioTap\) \*RadioTapHeaders](<#NewRadioTapHeaders>)
 - [type RowMeta](<#RowMeta>)
+- [type SNAPHeaders](<#SNAPHeaders>)
+  - [func NewSNAPHeaders\(snap \*layers.SNAP\) \*SNAPHeaders](<#NewSNAPHeaders>)
 - [type TCPHeaders](<#TCPHeaders>)
   - [func NewTCPHeaders\(tcp \*layers.TCP\) \*TCPHeaders](<#NewTCPHeaders>)
   - [func \(t \*TCPHeaders\) AckNum\(\) uint32](<#TCPHeaders.AckNum>)
@@ -177,7 +225,7 @@ ExtractLayerInfos 从数据包中提取网络层信息 该函数按层解码注�
 3. 解码器返回错误时终止解析并保留当前已构建的堆栈，不 panic
 
 <a name="PacketModelPrototypes"></a>
-## func [PacketModelPrototypes](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/assemble_registry.go#L151>)
+## func [PacketModelPrototypes](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/assemble_registry.go#L174>)
 
 ```go
 func PacketModelPrototypes() []any
@@ -195,13 +243,22 @@ func RegisterTypedAssembler[H any](level LayerLevel, layerType gopacket.LayerTyp
 RegisterTypedAssembler 以具体 Header 类型注册模型装配器 header 负责从层堆栈提取头部，build 在头部提取成功后被调用； 同一层级与协议类型重复注册会在启动期 panic
 
 <a name="RegisterTypedDecoder"></a>
-## func [RegisterTypedDecoder](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/decode_registry.go#L96>)
+## func [RegisterTypedDecoder](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/decode_registry.go#L116>)
 
 ```go
 func RegisterTypedDecoder[L gopacket.Layer](decode func(DecodeContext, L) (DecodeResult, error))
 ```
 
 RegisterTypedDecoder 以具体 Layer 类型注册解码器 协议类型由 L 的 LayerType 方法推导，注册点无需手写 any 类型断言； 同一协议类型重复注册会在启动期 panic
+
+<a name="RegisterTypedFamilyLayerDecoders"></a>
+## func [RegisterTypedFamilyLayerDecoders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/decode_registry.go#L126>)
+
+```go
+func RegisterTypedFamilyLayerDecoders(layerTypes []gopacket.LayerType, decode func(DecodeContext, gopacket.Layer) (DecodeResult, error))
+```
+
+RegisterTypedFamilyLayerDecoders 以同一解码函数注册一组协议族的解码器 适用于协议族包含多个具体 Layer 类型（如 802.11 的多种数据帧变体）的场景， 协议类型由调用方显式给出；同一协议类型重复注册会在启动期 panic
 
 <a name="AppTailer"></a>
 ## type [AppTailer](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L418-L439>)
@@ -234,13 +291,14 @@ type AppTailer struct {
 ```
 
 <a name="AsPacket"></a>
-## type [AsPacket](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L170-L175>)
+## type [AsPacket](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L178-L184>)
 
 AsPacket 表示数据包的结构 用于存储原始网络数据包，包含完整的元数据和载荷
 
 ```go
 type AsPacket struct {
     BaseMeta
+    LinkMeta
     TimestampMeta
     CaptureMeta
     PacketMeta
@@ -248,7 +306,7 @@ type AsPacket struct {
 ```
 
 <a name="BaseMeta"></a>
-## type [BaseMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L113-L121>)
+## type [BaseMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L114-L122>)
 
 BaseMeta 表示基础元数据信息 所有网络数据模型的基础字段，用于数据分区和查询优化
 
@@ -265,7 +323,7 @@ type BaseMeta struct {
 ```
 
 <a name="CaptureMeta"></a>
-## type [CaptureMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L150-L153>)
+## type [CaptureMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L151-L154>)
 
 CaptureMeta 表示捕获元数据 包含数据包捕获时的状态信息
 
@@ -333,7 +391,7 @@ type DecodeResult struct {
 ```
 
 <a name="DirectionMeta"></a>
-## type [DirectionMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L144-L146>)
+## type [DirectionMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L145-L147>)
 
 DirectionMeta 表示数据包方向元数据 Cli2Srv 标记该数据包是否为客户端到服务端方向（true表示客户端到服务端，false表示服务端到客户端）
 
@@ -343,8 +401,90 @@ type DirectionMeta struct {
 }
 ```
 
+<a name="Dot11Headers"></a>
+## type [Dot11Headers](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/dot11.go#L35-L66>)
+
+Dot11Headers 表示 IEEE 802.11 链路层头部信息
+
+数据库映射:
+
+- 使用GORM标签显式声明列名与列类型，避免 GORM 推导歧义
+- 地址字段以字符串存储，不使用 FixedString\(6\) 的 MAC 序列化器
+- 在ClickHouse中使用ZSTD\(3\)压缩算法优化存储
+
+```go
+type Dot11Headers struct {
+    // Dot11Type 帧类型与子类型
+    Dot11Type layers.Dot11Type `gorm:"column:dot11_type;type:UInt8 CODEC(ZSTD(3))" json:"dot11Type"`
+    // Dot11Proto 协议版本
+    Dot11Proto uint8 `gorm:"column:dot11_proto;type:UInt8 CODEC(ZSTD(3))" json:"dot11Proto"`
+    // Dot11Flags 帧控制标志位
+    Dot11Flags layers.Dot11Flags `gorm:"column:dot11_flags;type:UInt8 CODEC(ZSTD(3))" json:"dot11Flags"`
+    // Dot11DurationID 持续时间或关联标识
+    Dot11DurationID uint16 `gorm:"column:dot11_duration_id;type:UInt16 CODEC(ZSTD(3))" json:"dot11DurationID"`
+    // Dot11Address1 接收方地址
+    Dot11Address1 string `gorm:"column:dot11_address_1;type:String CODEC(ZSTD(3))" json:"dot11Address1"`
+    // Dot11Address2 发送方地址
+    Dot11Address2 string `gorm:"column:dot11_address_2;type:String CODEC(ZSTD(3))" json:"dot11Address2"`
+    // Dot11Address3 第三个地址
+    Dot11Address3 string `gorm:"column:dot11_address_3;type:String CODEC(ZSTD(3))" json:"dot11Address3"`
+    // Dot11Address4 第四个地址
+    Dot11Address4 string `gorm:"column:dot11_address_4;type:String CODEC(ZSTD(3))" json:"dot11Address4"`
+    // Dot11SequenceNumber 序列号
+    Dot11SequenceNumber uint16 `gorm:"column:dot11_sequence_number;type:UInt16 CODEC(ZSTD(3))" json:"dot11SequenceNumber"`
+    // Dot11FragmentNumber 分片号
+    Dot11FragmentNumber uint16 `gorm:"column:dot11_fragment_number;type:UInt16 CODEC(ZSTD(3))" json:"dot11FragmentNumber"`
+    // Dot11HasQOS 是否带有 QoS 控制字段
+    Dot11HasQOS bool `gorm:"column:dot11_has_qos;type:Bool" json:"dot11HasQOS"`
+    // Dot11QOSTID 流量标识（TID）
+    Dot11QOSTID uint8 `gorm:"column:dot11_qos_tid;type:UInt8 CODEC(ZSTD(3))" json:"dot11QOSTID"`
+    // Dot11QOSEOSP 服务期结束标志
+    Dot11QOSEOSP bool `gorm:"column:dot11_qos_eosp;type:Bool" json:"dot11QOSEOSP"`
+    // Dot11QOSAckPolicy 确认策略
+    Dot11QOSAckPolicy layers.Dot11AckPolicy `gorm:"column:dot11_qos_ack_policy;type:UInt8 CODEC(ZSTD(3))" json:"dot11QOSAckPolicy"`
+    // Dot11QOSTXOP 发送机会限制
+    Dot11QOSTXOP uint8 `gorm:"column:dot11_qos_txop;type:UInt8 CODEC(ZSTD(3))" json:"dot11QOSTXOP"`
+}
+```
+
+<a name="NewDot11Headers"></a>
+### func [NewDot11Headers](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/dot11.go#L86>)
+
+```go
+func NewDot11Headers(dot11 *layers.Dot11) *Dot11Headers
+```
+
+NewDot11Headers 从 gopacket Dot11 层创建 Dot11Headers
+
+<a name="Dot1QHeaders"></a>
+## type [Dot1QHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/dot1q.go#L9-L18>)
+
+Dot1QHeaders 表示 802.1Q / QinQ VLAN 标签头部信息 VLAN 标签属于链路层子层，不单独落表，随数据包的 layer\_stack 一并持久化。
+
+```go
+type Dot1QHeaders struct {
+    // Priority 优先级（PCP），3 bit
+    Priority uint8 `json:"priority"`
+    // DropEligible 丢弃资格指示（DEI）
+    DropEligible bool `json:"dropEligible"`
+    // VLANIdentifier VLAN 标识（VID），12 bit
+    VLANIdentifier uint16 `json:"vlanIdentifier"`
+    // Type 内层以太网类型
+    Type layers.EthernetType `json:"type"`
+}
+```
+
+<a name="NewDot1QHeaders"></a>
+### func [NewDot1QHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/dot1q.go#L21>)
+
+```go
+func NewDot1QHeaders(dot1q *layers.Dot1Q) *Dot1QHeaders
+```
+
+NewDot1QHeaders 从 gopacket Dot1Q 层创建 Dot1QHeaders
+
 <a name="EthernetHeaders"></a>
-## type [EthernetHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/eth.go#L18-L27>)
+## type [EthernetHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/eth.go#L19-L28>)
 
 EthernetHeaders 表示以太网帧的头部信息 该结构体封装了以太网帧的关键头部字段，包括源MAC地址、目的MAC地址、 以太网类型和帧长度。这些字段用于网络数据包的识别、路由和分析。
 
@@ -368,7 +508,7 @@ type EthernetHeaders struct {
 ```
 
 <a name="NewEthernetHeaders"></a>
-### func [NewEthernetHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/eth.go#L43>)
+### func [NewEthernetHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/eth.go#L44>)
 
 ```go
 func NewEthernetHeaders(eth *layers.Ethernet) *EthernetHeaders
@@ -391,7 +531,7 @@ NewEthernetHeaders 从gopacket以太网层创建EthernetHeaders实例 该函数�
 - 保持数据的原始性和准确性，不进行修改
 
 <a name="NewLoopbackHeaders"></a>
-### func [NewLoopbackHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/eth.go#L53>)
+### func [NewLoopbackHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/eth.go#L54>)
 
 ```go
 func NewLoopbackHeaders() *EthernetHeaders
@@ -400,7 +540,7 @@ func NewLoopbackHeaders() *EthernetHeaders
 NewLoopbackHeaders 构造回环（loopback）数据包使用的空以太网头部实例。
 
 <a name="FrameInfo"></a>
-## type [FrameInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L106-L109>)
+## type [FrameInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L107-L110>)
 
 FrameInfo 表示数据包的帧信息 包含时间戳和对应的网络层堆栈信息
 
@@ -1280,6 +1420,15 @@ type HttpTransport struct {
 }
 ```
 
+<a name="HttpTransport.TableName"></a>
+### func \(\*HttpTransport\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/table_name.go#L6>)
+
+```go
+func (m *HttpTransport) TableName() string
+```
+
+TableName 返回 HttpTransport 对应的数据库表名。
+
 <a name="HttpURI"></a>
 ## type [HttpURI](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/http.go#L128-L143>)
 
@@ -2070,6 +2219,35 @@ ipv6 - gopacket的IPv6Routing指针
 *IPv6Routing - 转换后的路由头部结构指针
 ```
 
+<a name="LLCHeaders"></a>
+## type [LLCHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/llc.go#L11-L22>)
+
+LLCHeaders 表示 IEEE 802.2 LLC 链路层子层头部信息 LLC 常见于 802.11 数据帧，不单独落表，随数据包的 layer\_stack 一并持久化。
+
+```go
+type LLCHeaders struct {
+    // DSAP 目的服务访问点
+    DSAP uint8 `json:"dsap"`
+    // IG 组地址指示位
+    IG  bool `json:"ig"`
+    // SSAP 源服务访问点
+    SSAP uint8 `json:"ssap"`
+    // CR 命令/响应指示位
+    CR  bool `json:"cr"`
+    // Control 控制字段
+    Control uint16 `json:"control"`
+}
+```
+
+<a name="NewLLCHeaders"></a>
+### func [NewLLCHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/llc.go#L34>)
+
+```go
+func NewLLCHeaders(llc *layers.LLC) *LLCHeaders
+```
+
+NewLLCHeaders 从 gopacket LLC 层创建 LLCHeaders
+
 <a name="LayerDecoder"></a>
 ## type [LayerDecoder](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/decode_registry.go#L64-L69>)
 
@@ -2085,7 +2263,7 @@ type LayerDecoder interface {
 ```
 
 <a name="LayerDecoders"></a>
-### func [LayerDecoders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/decode_registry.go#L136>)
+### func [LayerDecoders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/decode_registry.go#L168>)
 
 ```go
 func LayerDecoders() []LayerDecoder
@@ -2094,7 +2272,7 @@ func LayerDecoders() []LayerDecoder
 LayerDecoders 返回按注册顺序排列的解码器快照 输出顺序稳定，可用于检查当前已注册的协议类型
 
 <a name="LayerInfo"></a>
-## type [LayerInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L53-L57>)
+## type [LayerInfo](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L54-L58>)
 
 LayerInfo 表示网络层的详细信息 包含协议层级、协议类型和对应的头部信息
 
@@ -2107,7 +2285,7 @@ type LayerInfo struct {
 ```
 
 <a name="LayerLevel"></a>
-## type [LayerLevel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L36>)
+## type [LayerLevel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L37>)
 
 LayerLevel 表示网络协议栈的层次级别 使用OSI模型中的层级定义，但跳过了表示层和会话层（第5\-6层）
 
@@ -2137,7 +2315,7 @@ const (
 ```
 
 <a name="LayerLevel.Next"></a>
-### func \(LayerLevel\) [Next](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L41>)
+### func \(LayerLevel\) [Next](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L42>)
 
 ```go
 func (l LayerLevel) Next() LayerLevel
@@ -2146,7 +2324,7 @@ func (l LayerLevel) Next() LayerLevel
 Next 返回下一个协议层级别 根据OSI模型，链路层\(2\) \-\> 网络层\(3\) \-\> 传输层\(4\) \-\> 应用层\(7\) 注意：跳过了表示层\(5\)和会话层\(6\)
 
 <a name="LayerStack"></a>
-## type [LayerStack](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L61>)
+## type [LayerStack](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L62>)
 
 LayerStack 表示网络层的堆栈结构 按照从底层到高层的顺序存储网络协议层信息
 
@@ -2155,7 +2333,7 @@ type LayerStack []*LayerInfo
 ```
 
 <a name="LayerStack.Scan"></a>
-### func \(\*LayerStack\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L79>)
+### func \(\*LayerStack\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L80>)
 
 ```go
 func (l *LayerStack) Scan(value any) error
@@ -2164,13 +2342,165 @@ func (l *LayerStack) Scan(value any) error
 Scan 实现数据库反序列化接口 从数据库读取JSON字符串并反序列化为LayerStack
 
 <a name="LayerStack.Value"></a>
-### func \(LayerStack\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L65>)
+### func \(LayerStack\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L66>)
 
 ```go
 func (l LayerStack) Value() (driver.Value, error)
 ```
 
 Value 实现数据库序列化接口 将LayerStack序列化为JSON字符串存储到数据库
+
+<a name="LinkMeta"></a>
+## type [LinkMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L171-L174>)
+
+LinkMeta 表示链路层元数据 记录数据包实际捕获链路的类型，供上层模型按链路类型解释通用槽位
+
+```go
+type LinkMeta struct {
+    // LinkType pcap 链路类型，如 Ethernet、Linux SLL、PPP、Raw IP 等
+    LinkType layers.LinkType `gorm:"column:link_type;type:UInt16 CODEC(ZSTD(3))" json:"linkType"`
+}
+```
+
+<a name="LinkSlots"></a>
+## type [LinkSlots](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/link_slots.go#L10-L43>)
+
+LinkSlots 表示链路层的通用槽位 上层模型不再绑定具体链路协议，链路头信息以 link\_1～link\_16 承载； 槽位含义由 LinkMeta.LinkType 决定，未使用的槽位保持空串。
+
+数据库映射:
+
+- 所有槽位均为 String 列，使用 ZSTD\(3\) 压缩
+- link\_1～link\_6 由迁移脚本建立 bloom\_filter 索引，供精确筛选使用
+
+```go
+type LinkSlots struct {
+    // Link1 链路槽位 1
+    Link1 string `gorm:"column:link_1;type:String CODEC(ZSTD(3))" json:"link1"`
+    // Link2 链路槽位 2
+    Link2 string `gorm:"column:link_2;type:String CODEC(ZSTD(3))" json:"link2"`
+    // Link3 链路槽位 3
+    Link3 string `gorm:"column:link_3;type:String CODEC(ZSTD(3))" json:"link3"`
+    // Link4 链路槽位 4
+    Link4 string `gorm:"column:link_4;type:String CODEC(ZSTD(3))" json:"link4"`
+    // Link5 链路槽位 5
+    Link5 string `gorm:"column:link_5;type:String CODEC(ZSTD(3))" json:"link5"`
+    // Link6 链路槽位 6
+    Link6 string `gorm:"column:link_6;type:String CODEC(ZSTD(3))" json:"link6"`
+    // Link7 链路槽位 7（仅输出，不建索引）
+    Link7 string `gorm:"column:link_7;type:String CODEC(ZSTD(3))" json:"link7"`
+    // Link8 链路槽位 8（仅输出，不建索引）
+    Link8 string `gorm:"column:link_8;type:String CODEC(ZSTD(3))" json:"link8"`
+    // Link9 链路槽位 9（仅输出，不建索引）
+    Link9 string `gorm:"column:link_9;type:String CODEC(ZSTD(3))" json:"link9"`
+    // Link10 链路槽位 10（仅输出，不建索引）
+    Link10 string `gorm:"column:link_10;type:String CODEC(ZSTD(3))" json:"link10"`
+    // Link11 链路槽位 11（仅输出，不建索引）
+    Link11 string `gorm:"column:link_11;type:String CODEC(ZSTD(3))" json:"link11"`
+    // Link12 链路槽位 12（仅输出，不建索引）
+    Link12 string `gorm:"column:link_12;type:String CODEC(ZSTD(3))" json:"link12"`
+    // Link13 链路槽位 13（仅输出，不建索引）
+    Link13 string `gorm:"column:link_13;type:String CODEC(ZSTD(3))" json:"link13"`
+    // Link14 链路槽位 14（仅输出，不建索引）
+    Link14 string `gorm:"column:link_14;type:String CODEC(ZSTD(3))" json:"link14"`
+    // Link15 链路槽位 15（仅输出，不建索引）
+    Link15 string `gorm:"column:link_15;type:String CODEC(ZSTD(3))" json:"link15"`
+    // Link16 链路槽位 16（仅输出，不建索引）
+    Link16 string `gorm:"column:link_16;type:String CODEC(ZSTD(3))" json:"link16"`
+}
+```
+
+<a name="NewLinkSlots"></a>
+### func [NewLinkSlots](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/link_slots.go#L47>)
+
+```go
+func NewLinkSlots(values ...string) LinkSlots
+```
+
+NewLinkSlots 按顺序填充链路槽位 values 依次对应 link\_1～link\_16，超出固定数量的值被忽略，未提供的槽位保持空串。
+
+<a name="LinkSlotted"></a>
+## type [LinkSlotted](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/link_slots.go#L68-L71>)
+
+LinkSlotted 表示可提供链路槽位的链路层模型 上层模型通过该接口读取链路槽位，无需感知具体链路协议。
+
+```go
+type LinkSlotted interface {
+    // LinkSlotValues 返回链路模型按约定映射出的通用槽位
+    LinkSlotValues() LinkSlots
+}
+```
+
+<a name="LinuxSLL2Headers"></a>
+## type [LinuxSLL2Headers](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/linux_sll2.go#L17-L30>)
+
+LinuxSLL2Headers 表示 Linux SLL2（Linux cooked capture v2）链路层头部信息 Linux SLL2 是 SLL 的第二版封装，包含协议类型、接口索引、ARP 硬件类型、 数据包类型、地址长度与链路地址等字段。
+
+数据库映射:
+
+- 使用GORM标签显式声明列名与列类型，避免 GORM 推导歧义
+- 链路地址以字符串存储，不使用 FixedString\(6\) 的 MAC 序列化器
+- 在ClickHouse中使用ZSTD\(3\)压缩算法优化存储
+
+```go
+type LinuxSLL2Headers struct {
+    // SLL2ProtocolType 内层协议类型（以太网类型语义）
+    SLL2ProtocolType layers.EthernetType `gorm:"column:sll2_protocol_type;type:UInt16 CODEC(ZSTD(3))" json:"sll2ProtocolType"`
+    // SLL2InterfaceIndex 抓包接口索引
+    SLL2InterfaceIndex uint32 `gorm:"column:sll2_interface_index;type:UInt32 CODEC(ZSTD(3))" json:"sll2InterfaceIndex"`
+    // SLL2ARPHardwareType ARP 硬件类型（如以太网、回环、Radiotap 等）
+    SLL2ARPHardwareType layers.ARPHardwareType `gorm:"column:sll2_arp_hardware_type;type:UInt16 CODEC(ZSTD(3))" json:"sll2ArpHardwareType"`
+    // SLL2PacketType 数据包类型（主机、广播、组播等）
+    SLL2PacketType layers.LinuxSLL2PacketType `gorm:"column:sll2_packet_type;type:UInt8 CODEC(ZSTD(3))" json:"sll2PacketType"`
+    // SLL2AddrLength 链路地址长度（字节）
+    SLL2AddrLength uint8 `gorm:"column:sll2_addr_length;type:UInt8 CODEC(ZSTD(3))" json:"sll2AddrLength"`
+    // SLL2Addr 链路地址，使用 net.HardwareAddr.String() 的小写冒号十六进制表示
+    SLL2Addr string `gorm:"column:sll2_addr;type:String CODEC(ZSTD(3))" json:"sll2Addr"`
+}
+```
+
+<a name="NewLinuxSLL2Headers"></a>
+### func [NewLinuxSLL2Headers](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/linux_sll2.go#L33>)
+
+```go
+func NewLinuxSLL2Headers(sll2 *layers.LinuxSLL2) *LinuxSLL2Headers
+```
+
+NewLinuxSLL2Headers 从 gopacket Linux SLL2 层创建 LinuxSLL2Headers
+
+<a name="LinuxSLLHeaders"></a>
+## type [LinuxSLLHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/linux_sll.go#L17-L28>)
+
+LinuxSLLHeaders 表示 Linux SLL（Linux cooked capture）链路层头部信息 Linux SLL 是 libpcap 在 \`any\` 接口抓包时使用的链路封装，包含数据包类型、 地址长度、链路地址与内层以太网协议类型等字段。
+
+数据库映射:
+
+- 使用GORM标签显式声明列名与列类型，避免 GORM 推导歧义
+- 链路地址以字符串存储，不使用 FixedString\(6\) 的 MAC 序列化器
+- 在ClickHouse中使用ZSTD\(3\)压缩算法优化存储
+
+```go
+type LinuxSLLHeaders struct {
+    // SLLPacketType 数据包类型（主机、广播、组播等）
+    SLLPacketType layers.LinuxSLLPacketType `gorm:"column:sll_packet_type;type:UInt16 CODEC(ZSTD(3))" json:"sllPacketType"`
+    // SLLAddrLen 链路地址长度（字节）
+    SLLAddrLen uint16 `gorm:"column:sll_addr_len;type:UInt16 CODEC(ZSTD(3))" json:"sllAddrLen"`
+    // SLLAddr 链路地址，使用 net.HardwareAddr.String() 的小写冒号十六进制表示
+    SLLAddr string `gorm:"column:sll_addr;type:String CODEC(ZSTD(3))" json:"sllAddr"`
+    // SLLAddrType 链路地址类型
+    SLLAddrType uint16 `gorm:"column:sll_addr_type;type:UInt16 CODEC(ZSTD(3))" json:"sllAddrType"`
+    // SLLProtocol 内层协议类型（以太网类型语义）
+    SLLProtocol layers.EthernetType `gorm:"column:sll_protocol;type:UInt16 CODEC(ZSTD(3))" json:"sllProtocol"`
+}
+```
+
+<a name="NewLinuxSLLHeaders"></a>
+### func [NewLinuxSLLHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/linux_sll.go#L31>)
+
+```go
+func NewLinuxSLLHeaders(sll *layers.LinuxSLL) *LinuxSLLHeaders
+```
+
+NewLinuxSLLHeaders 从 gopacket Linux SLL 层创建 LinuxSLLHeaders
 
 <a name="MPLSChannel"></a>
 ## type [MPLSChannel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/channel.go#L285-L290>)
@@ -2229,7 +2559,7 @@ type ModelAssembler interface {
 ```
 
 <a name="ModelBuilder"></a>
-## type [ModelBuilder](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L102-L111>)
+## type [ModelBuilder](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L102-L112>)
 
 ModelBuilder 数据包模型构建器 用于将原始网络数据包转换为特定层级的结构化数据模型 支持从链路层到传输层的模型构建，便于后续存储、查询和分析
 
@@ -2240,26 +2570,28 @@ type ModelBuilder struct {
     CaptureLength uint32                  // 捕获的数据包长度
     SessionID     serializer.HexUUID      // 会话ID，唯一标识一次数据捕获会话
     Source        reporter_v1.ResourceRaw // 数据源信息（命名空间、捕获器、版本等）
+    LinkType      layers.LinkType         // pcap 链路类型，决定解析起始层级与链路槽位含义
     Level         LayerLevel              // 数据包的最高解析层级
     Stack         LayerStack              // 网络层堆栈信息
     Payload       []byte                  // 应用层载荷数据
 }
 ```
 
-<a name="NewPacketModelBuilder"></a>
-### func [NewPacketModelBuilder](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L281>)
+<a name="NewPacketModelBuilderWithLinkType"></a>
+### func [NewPacketModelBuilderWithLinkType](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L270>)
 
 ```go
-func NewPacketModelBuilder(packet gopacket.Packet, sessionID serializer.HexUUID, source reporter_v1.ResourceRaw) *ModelBuilder
+func NewPacketModelBuilderWithLinkType(packet gopacket.Packet, sessionID serializer.HexUUID, source reporter_v1.ResourceRaw, linkType layers.LinkType) *ModelBuilder
 ```
 
-NewPacketModelBuilder 创建数据包模型构建器 工厂函数，用于从原始网络数据包创建ModelBuilder实例
+NewPacketModelBuilderWithLinkType 创建带链路类型的数据包模型构建器 按 pcap 真实链路类型决定解析起始层级：Raw IP（Raw/IPv4/IPv6）从网络层开始， 其余链路类型从链路层开始；链路类型同时写入模型元数据。
 
 参数:
 
 - packet: gopacket.Packet 类型，原始网络数据包
 - sessionID: serializer.HexUUID 类型，数据捕获会话的唯一标识
 - source: reporter\_v1.ResourceRaw 类型，数据源信息（命名空间、捕获器、版本）
+- linkType: layers.LinkType 类型，pcap 文件真实链路类型
 
 返回值:
 
@@ -2269,15 +2601,8 @@ NewPacketModelBuilder 创建数据包模型构建器 工厂函数，用于从原
 
 - 如果数据包元数据为nil，会触发panic
 
-功能说明:
-
-1. 提取数据包元数据（时间戳、截断状态、捕获长度）
-2. 调用ExtractLayerInfos解析网络层信息
-3. 初始化ModelBuilder所有字段
-4. 返回可直接用于模型构建的实例
-
 <a name="ModelBuilder.BuildAsPacketApplicationModel"></a>
-### func \(\*ModelBuilder\) [BuildAsPacketApplicationModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L228>)
+### func \(\*ModelBuilder\) [BuildAsPacketApplicationModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L221>)
 
 ```go
 func (b *ModelBuilder) BuildAsPacketApplicationModel() any
@@ -2296,7 +2621,7 @@ BuildAsPacketApplicationModel 构建应用层数据包模型 将原始数据包�
 3. 保持接口一致性，便于后续功能扩展
 
 <a name="ModelBuilder.BuildAsPacketLinkModel"></a>
-### func \(\*ModelBuilder\) [BuildAsPacketLinkModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L125>)
+### func \(\*ModelBuilder\) [BuildAsPacketLinkModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L126>)
 
 ```go
 func (b *ModelBuilder) BuildAsPacketLinkModel() any
@@ -2306,17 +2631,17 @@ BuildAsPacketLinkModel 构建链路层数据包模型 将原始数据包转换�
 
 返回值:
 
-- any: 返回具体的链路层数据包模型，目前支持 PacketEthernet； 协议未注册装配器时返回 nil
+- any: 返回具体的链路层数据包模型，支持 PacketEthernet、PacketLinuxSLL、 PacketLinuxSLL2、PacketPPP、PacketDot11；无链路层或协议未注册装配器时返回 nil
 
 功能说明:
 
-1. 验证层堆栈的有效性
+1. 按层级查找层堆栈中的第一个链路层
 2. 按层级与协议类型查找已注册的模型装配器
 3. 由装配器提取链路层头部并构建包含完整元数据的模型
 4. 返回可用于数据库存储的结构化数据
 
 <a name="ModelBuilder.BuildAsPacketModel"></a>
-### func \(\*ModelBuilder\) [BuildAsPacketModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L247>)
+### func \(\*ModelBuilder\) [BuildAsPacketModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L240>)
 
 ```go
 func (b *ModelBuilder) BuildAsPacketModel() any
@@ -2340,13 +2665,13 @@ BuildAsPacketModel 根据层级构建数据包模型 根据数据包的最高解
 4. 简化上层代码调用，无需手动判断层级
 
 <a name="ModelBuilder.BuildAsPacketNetworkModel"></a>
-### func \(\*ModelBuilder\) [BuildAsPacketNetworkModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L161>)
+### func \(\*ModelBuilder\) [BuildAsPacketNetworkModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L164>)
 
 ```go
 func (b *ModelBuilder) BuildAsPacketNetworkModel() any
 ```
 
-BuildAsPacketNetworkModel 构建网络层数据包模型 将原始数据包转换为网络层（OSI第3层）的数据模型 支持IPv4和IPv6协议，构建包含链路层和网络层信息的完整数据包模型
+BuildAsPacketNetworkModel 构建网络层数据包模型 将原始数据包转换为网络层（OSI第3层）的数据模型 支持IPv4和IPv6协议，构建包含链路槽位和网络层信息的完整数据包模型
 
 返回值:
 
@@ -2354,25 +2679,24 @@ BuildAsPacketNetworkModel 构建网络层数据包模型 将原始数据包转�
 
 异常:
 
-- 如果层堆栈少于2层，会触发panic
-- 如果第二层不是网络层，会触发panic
-- 如果头部信息为nil，会触发panic
+- 如果层堆栈中不存在网络层，会触发panic
+- 如果网络层头部信息为nil，会触发panic
 
 功能说明:
 
-1. 验证网络层堆栈的有效性
+1. 按层级查找层堆栈中的第一个网络层
 2. 按层级与协议类型查找已注册的模型装配器
-3. 由装配器复用链路层模型并组合网络层头部
+3. 由装配器组合链路槽位与网络层头部
 4. 返回可用于数据库存储的结构化数据
 
 <a name="ModelBuilder.BuildAsPacketTransportModel"></a>
-### func \(\*ModelBuilder\) [BuildAsPacketTransportModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L199>)
+### func \(\*ModelBuilder\) [BuildAsPacketTransportModel](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/builder.go#L195>)
 
 ```go
 func (b *ModelBuilder) BuildAsPacketTransportModel() any
 ```
 
-BuildAsPacketTransportModel 构建传输层数据包模型 将原始数据包转换为传输层（OSI第4层）的数据模型 支持TCP和UDP协议，构建包含链路层、网络层和传输层信息的完整数据包模型
+BuildAsPacketTransportModel 构建传输层数据包模型 将原始数据包转换为传输层（OSI第4层）的数据模型 支持TCP和UDP协议，构建包含链路槽位、网络层和传输层信息的完整数据包模型
 
 返回值:
 
@@ -2380,19 +2704,14 @@ BuildAsPacketTransportModel 构建传输层数据包模型 将原始数据包转
 
 异常:
 
-- 如果层堆栈少于3层，会触发panic
-- 如果最后一层不是传输层，会触发panic
+- 如果层堆栈中不存在传输层，会触发panic
 
 功能说明:
 
-1. 验证传输层堆栈的有效性（最后一层必须是传输层）
+1. 按层级查找层堆栈中的最后一个传输层
 2. 按层级与协议类型查找已注册的模型装配器
 3. 由装配器复用网络层模型并组合传输层头部
 4. 返回可用于数据库存储的结构化数据
-
-注意:
-
-- 该函数假设传输层是协议栈的最后一层（在应用层之前）
 
 <a name="NetworkFrame"></a>
 ## type [NetworkFrame](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/stack.go#L12>)
@@ -2449,15 +2768,110 @@ type NetworkStack struct {
 }
 ```
 
-<a name="PacketEthernet"></a>
-## type [PacketEthernet](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/eth.go#L77-L81>)
+<a name="NetworkStack.TableName"></a>
+### func \(\*NetworkStack\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/table_name.go#L11>)
 
-PacketEthernet 表示完整的以太网数据包 该结构体组合了AsPacket基础结构和EthernetHeaders以太网头部信息， 用于存储和分析原始的网络数据包。它包含了数据包的所有元数据和载荷。
+```go
+func (m *NetworkStack) TableName() string
+```
+
+TableName 返回 NetworkStack 对应的数据库表名。
+
+<a name="PPPHeaders"></a>
+## type [PPPHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ppp.go#L15-L20>)
+
+PPPHeaders 表示 PPP（Point\-to\-Point Protocol）链路层头部信息 PPP 头部包含协议类型以及是否带有 PPPoE/HDLC 风格的 0xff03 前缀。
+
+数据库映射:
+
+- 使用GORM标签显式声明列名与列类型，避免 GORM 推导歧义
+- 在ClickHouse中使用ZSTD\(3\)压缩算法优化存储
+
+```go
+type PPPHeaders struct {
+    // PPPType PPP 协议类型，标识内层协议（如 IPv4、IPv6）
+    PPPType layers.PPPType `gorm:"column:ppp_type;type:UInt16 CODEC(ZSTD(3))" json:"pppType"`
+    // PPPHasPPTPHeader 是否带有 0xff03 前缀（HDLC 地址/控制字段）
+    PPPHasPPTPHeader bool `gorm:"column:ppp_has_pptp_header;type:Bool" json:"pppHasPPTPHeader"`
+}
+```
+
+<a name="NewPPPHeaders"></a>
+### func [NewPPPHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ppp.go#L23>)
+
+```go
+func NewPPPHeaders(ppp *layers.PPP) *PPPHeaders
+```
+
+NewPPPHeaders 从 gopacket PPP 层创建 PPPHeaders
+
+<a name="PPPoEHeaders"></a>
+## type [PPPoEHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/pppoe.go#L9-L20>)
+
+PPPoEHeaders 表示 PPPoE 链路层封装头部信息 PPPoE 位于以太网与 PPP 之间，不单独落表，随数据包的 layer\_stack 一并持久化。
+
+```go
+type PPPoEHeaders struct {
+    // Version PPPoE 版本号
+    Version uint8 `json:"version"`
+    // Type PPPoE 类型
+    Type uint8 `json:"type"`
+    // Code PPPoE 消息码，0 表示会话数据，其余为发现阶段报文
+    Code layers.PPPoECode `json:"code"`
+    // SessionID PPPoE 会话标识
+    SessionID uint16 `json:"sessionID"`
+    // Length PPPoE 载荷长度
+    Length uint16 `json:"length"`
+}
+```
+
+<a name="NewPPPoEHeaders"></a>
+### func [NewPPPoEHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/pppoe.go#L23>)
+
+```go
+func NewPPPoEHeaders(pppoe *layers.PPPoE) *PPPoEHeaders
+```
+
+NewPPPoEHeaders 从 gopacket PPPoE 层创建 PPPoEHeaders
+
+<a name="PacketDot11"></a>
+## type [PacketDot11](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/dot11.go#L112-L115>)
+
+PacketDot11 表示 IEEE 802.11 链路层数据包 组合链路无关基座与 802.11 链路头部，用于存储无法继续解析内层协议的无线帧； RadioTap / Prism 首层的抓包同样装配为本模型，其抓包头保留在 layer\_stack 中。
+
+```go
+type PacketDot11 struct {
+    PacketLink
+    Dot11Headers
+}
+```
+
+<a name="PacketDot11.LinkSlotValues"></a>
+### func \(\*PacketDot11\) [LinkSlotValues](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/dot11.go#L120>)
+
+```go
+func (p *PacketDot11) LinkSlotValues() LinkSlots
+```
+
+LinkSlotValues 按 802.11 槽位约定返回链路槽位 link\_1=接收方地址、link\_2=发送方地址、link\_3=地址3、link\_4=地址4、 link\_5=帧类型、link\_6=帧标志、link\_7=序列号、link\_8=分片号。
+
+<a name="PacketDot11.TableName"></a>
+### func \(\*PacketDot11\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/table_name.go#L36>)
+
+```go
+func (m *PacketDot11) TableName() string
+```
+
+TableName 返回 PacketDot11 对应的数据库表名。
+
+<a name="PacketEthernet"></a>
+## type [PacketEthernet](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/eth.go#L76-L79>)
+
+PacketEthernet 表示完整的以太网数据包 该结构体组合了链路无关基座 PacketLink 与 EthernetHeaders 以太网头部信息， 用于存储和分析原始的网络数据包。它包含了数据包的所有元数据和载荷。
 
 结构说明:
 
-- AsPacket: 提供数据包的基础元数据，包括时间戳、捕获信息、层堆栈等
-- RowMeta: 提供行级全局唯一 ID，供行详情接口按 namespace \+ id 定位单行； 作为最底层的数据包模型，其 ID 经嵌入传递被 IPv4/IPv6/UDP/TCP 各上层数据包模型继承
+- PacketLink: 提供数据包的基础元数据（含链路类型）与行级全局唯一 ID
 - EthernetHeaders: 提供以太网特定的头部信息
 
 使用场景:
@@ -2469,20 +2883,38 @@ PacketEthernet 表示完整的以太网数据包 该结构体组合了AsPacket�
 
 ```go
 type PacketEthernet struct {
-    AsPacket
-    RowMeta
+    PacketLink
     EthernetHeaders
 }
 ```
 
-<a name="PacketIPv4"></a>
-## type [PacketIPv4](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv4.go#L271-L276>)
+<a name="PacketEthernet.LinkSlotValues"></a>
+### func \(\*PacketEthernet\) [LinkSlotValues](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/eth.go#L84>)
 
-PacketIPv4 表示完整的IPv4网络数据包 该结构体组合了以太网层（链路层）和IPv4层（网络层）的头部信息 用于存储和分析从网络捕获的原始IPv4数据包
+```go
+func (p *PacketEthernet) LinkSlotValues() LinkSlots
+```
+
+LinkSlotValues 按以太网槽位约定返回链路槽位 link\_1=目的 MAC、link\_2=源 MAC、link\_3=以太网类型（十进制）、link\_4=帧长度（十进制）。 回环链路与以太网共用本模型，其 MAC 为空，此时槽位全部保持空串。
+
+<a name="PacketEthernet.TableName"></a>
+### func \(\*PacketEthernet\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/table_name.go#L16>)
+
+```go
+func (m *PacketEthernet) TableName() string
+```
+
+TableName 返回 PacketEthernet 对应的数据库表名。
+
+<a name="PacketIPv4"></a>
+## type [PacketIPv4](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv4.go#L272-L278>)
+
+PacketIPv4 表示完整的IPv4网络数据包 该结构体组合了链路无关基座与IPv4层（网络层）的头部信息 用于存储和分析从网络捕获的原始IPv4数据包
 
 结构组成:
 
-- PacketEthernet: 以太网层头部信息，包含MAC地址、以太网类型等
+- PacketLink: 链路无关的数据包基座（元数据 \+ 行唯一标识）
+- LinkSlots: 通用链路槽位，含义由 link\_type 决定，Raw IP 时为空
 - IPv4Headers: IPv4网络层头部信息，包含IP地址、协议类型、TTL等
 
 数据库特性:
@@ -2494,8 +2926,8 @@ PacketIPv4 表示完整的IPv4网络数据包 该结构体组合了以太网层�
 
 查询优化:
 
-- 排序键包含namespace、capture、version、session\_id等维度
-- 支持按源/目的IP、协议类型、MAC地址等字段快速过滤
+- 排序键包含namespace、capture、version、session\_id、link\_type等维度
+- 支持按源/目的IP、协议类型、链路槽位等字段快速过滤
 - 时间戳分区支持高效的时间范围查询
 
 使用场景:
@@ -2507,12 +2939,22 @@ PacketIPv4 表示完整的IPv4网络数据包 该结构体组合了以太网层�
 
 ```go
 type PacketIPv4 struct {
-    PacketEthernet
+    PacketLink
+    LinkSlots
     IPv4Headers
     // 加密存储的 IP 载荷
     Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=16429,length=32"`
 }
 ```
+
+<a name="PacketIPv4.TableName"></a>
+### func \(\*PacketIPv4\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/table_name.go#L41>)
+
+```go
+func (m *PacketIPv4) TableName() string
+```
+
+TableName 返回 PacketIPv4 对应的数据库表名。
 
 <a name="PacketIPv4TCP"></a>
 ## type [PacketIPv4TCP](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L260-L268>)
@@ -2594,6 +3036,15 @@ func (p *PacketIPv4TCP) StreamID() string
 
 StreamID 返回TCP流ID 通过 hash/maphash 对源IP、目的IP、源端口、目的端口计算64\-bit哈希，生成唯一的流标识符 流ID用于识别属于同一TCP连接的所有数据包 返回值: 16字符的十六进制64\-bit哈希字符串
 
+<a name="PacketIPv4TCP.TableName"></a>
+### func \(\*PacketIPv4TCP\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/table_name.go#L46>)
+
+```go
+func (m *PacketIPv4TCP) TableName() string
+```
+
+TableName 返回 PacketIPv4TCP 对应的数据库表名。
+
 <a name="PacketIPv4TCP.TcpFingerprint"></a>
 ### func \(\*PacketIPv4TCP\) [TcpFingerprint](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L285>)
 
@@ -2634,15 +3085,27 @@ func (p *PacketIPv4UDP) StreamID() string
 
 StreamID 返回TCP流ID 通过 hash/maphash 对源IP、目的IP、源端口、目的端口计算64\-bit哈希，生成唯一的流标识符 流ID用于识别属于同一TCP连接的所有数据包 返回值: 16字符的十六进制64\-bit哈希字符串
 
-<a name="PacketIPv6"></a>
-## type [PacketIPv6](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L545-L554>)
+<a name="PacketIPv4UDP.TableName"></a>
+### func \(\*PacketIPv4UDP\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/table_name.go#L51>)
 
-PacketIPv6 表示IPv6数据包 IPv6数据包完整结构，包含以太网头部和IPv6头部 该结构用于存储原始IPv6数据包信息，对应数据库中的packet\_ipv6表
+```go
+func (m *PacketIPv4UDP) TableName() string
+```
+
+TableName 返回 PacketIPv4UDP 对应的数据库表名。
+
+<a name="PacketIPv6"></a>
+## type [PacketIPv6](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ipv6.go#L545-L557>)
+
+PacketIPv6 表示IPv6数据包 IPv6数据包完整结构，包含链路无关基座、通用链路槽位和IPv6头部 该结构用于存储原始IPv6数据包信息，对应数据库中的packet\_ipv6表
 
 ```go
 type PacketIPv6 struct {
-    // PacketEthernet 以太网头部信息，包含MAC地址、以太网类型等
-    PacketEthernet
+    // PacketLink 链路无关的数据包基座（元数据 + 行唯一标识）
+    PacketLink
+
+    // LinkSlots 通用链路槽位，含义由 link_type 决定，Raw IP 时为空
+    LinkSlots
 
     // IPv6Headers IPv6头部信息，包含IPv6基础头部和扩展头部
     IPv6Headers
@@ -2651,6 +3114,15 @@ type PacketIPv6 struct {
     Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=31496,length=32"`
 }
 ```
+
+<a name="PacketIPv6.TableName"></a>
+### func \(\*PacketIPv6\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/table_name.go#L56>)
+
+```go
+func (m *PacketIPv6) TableName() string
+```
+
+TableName 返回 PacketIPv6 对应的数据库表名。
 
 <a name="PacketIPv6TCP"></a>
 ## type [PacketIPv6TCP](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L339-L348>)
@@ -2733,6 +3205,15 @@ func (p *PacketIPv6TCP) StreamID() string
 
 StreamID 返回TCP流ID 通过计算源IPv6地址、目的IPv6地址、源端口、目的端口的哈希值生成唯一的流标识符 流ID用于识别属于同一TCP连接的所有数据包，支持IPv6地址 返回值: 16字符的十六进制64\-bit哈希字符串
 
+<a name="PacketIPv6TCP.TableName"></a>
+### func \(\*PacketIPv6TCP\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/table_name.go#L61>)
+
+```go
+func (m *PacketIPv6TCP) TableName() string
+```
+
+TableName 返回 PacketIPv6TCP 对应的数据库表名。
+
 <a name="PacketIPv6TCP.TcpFingerprint"></a>
 ### func \(\*PacketIPv6TCP\) [TcpFingerprint](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L365>)
 
@@ -2773,8 +3254,89 @@ func (p *PacketIPv6UDP) StreamID() string
 
 StreamID 返回TCP流ID 通过计算源IPv6地址、目的IPv6地址、源端口、目的端口的哈希值生成唯一的流标识符 流ID用于识别属于同一TCP连接的所有数据包，支持IPv6地址 返回值: 16字符的十六进制64\-bit哈希字符串
 
+<a name="PacketIPv6UDP.TableName"></a>
+### func \(\*PacketIPv6UDP\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/table_name.go#L66>)
+
+```go
+func (m *PacketIPv6UDP) TableName() string
+```
+
+TableName 返回 PacketIPv6UDP 对应的数据库表名。
+
+<a name="PacketLink"></a>
+## type [PacketLink](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L188-L191>)
+
+PacketLink 表示链路无关的数据包基座 组合数据包元数据与行唯一标识，供各类链路模型与上层模型嵌入
+
+```go
+type PacketLink struct {
+    AsPacket
+    RowMeta
+}
+```
+
+<a name="PacketLinuxSLL"></a>
+## type [PacketLinuxSLL](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/linux_sll.go#L43-L46>)
+
+PacketLinuxSLL 表示 Linux SLL 链路层数据包 组合链路无关基座与 Linux SLL 链路头部，用于存储无法继续解析内层协议的 SLL 帧
+
+```go
+type PacketLinuxSLL struct {
+    PacketLink
+    LinuxSLLHeaders
+}
+```
+
+<a name="PacketLinuxSLL.LinkSlotValues"></a>
+### func \(\*PacketLinuxSLL\) [LinkSlotValues](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/linux_sll.go#L50>)
+
+```go
+func (p *PacketLinuxSLL) LinkSlotValues() LinkSlots
+```
+
+LinkSlotValues 按 Linux SLL 槽位约定返回链路槽位 link\_1=PacketType、link\_2=AddrLen、link\_3=Addr、link\_4=AddrType、link\_5=EthernetType。
+
+<a name="PacketLinuxSLL.TableName"></a>
+### func \(\*PacketLinuxSLL\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/table_name.go#L21>)
+
+```go
+func (m *PacketLinuxSLL) TableName() string
+```
+
+TableName 返回 PacketLinuxSLL 对应的数据库表名。
+
+<a name="PacketLinuxSLL2"></a>
+## type [PacketLinuxSLL2](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/linux_sll2.go#L46-L49>)
+
+PacketLinuxSLL2 表示 Linux SLL2 链路层数据包 组合链路无关基座与 Linux SLL2 链路头部，用于存储无法继续解析内层协议的 SLL2 帧
+
+```go
+type PacketLinuxSLL2 struct {
+    PacketLink
+    LinuxSLL2Headers
+}
+```
+
+<a name="PacketLinuxSLL2.LinkSlotValues"></a>
+### func \(\*PacketLinuxSLL2\) [LinkSlotValues](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/linux_sll2.go#L54>)
+
+```go
+func (p *PacketLinuxSLL2) LinkSlotValues() LinkSlots
+```
+
+LinkSlotValues 按 Linux SLL2 槽位约定返回链路槽位 link\_1=ProtocolType、link\_2=InterfaceIndex、link\_3=ARPHardwareType、 link\_4=PacketType、link\_5=AddrLength、link\_6=Addr。
+
+<a name="PacketLinuxSLL2.TableName"></a>
+### func \(\*PacketLinuxSLL2\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/table_name.go#L26>)
+
+```go
+func (m *PacketLinuxSLL2) TableName() string
+```
+
+TableName 返回 PacketLinuxSLL2 对应的数据库表名。
+
 <a name="PacketMeta"></a>
-## type [PacketMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L157-L159>)
+## type [PacketMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L158-L160>)
 
 PacketMeta 表示数据包元数据 包含原始数据包的网络层堆栈信息
 
@@ -2783,6 +3345,36 @@ type PacketMeta struct {
     LayerStack LayerStack `gorm:"type:String CODEC(ZSTD(3))" json:"layerStack"` // 网络层堆栈信息
 }
 ```
+
+<a name="PacketPPP"></a>
+## type [PacketPPP](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ppp.go#L32-L35>)
+
+PacketPPP 表示 PPP 链路层数据包 组合链路无关基座与 PPP 链路头部，用于存储无法继续解析内层协议的 PPP 帧
+
+```go
+type PacketPPP struct {
+    PacketLink
+    PPPHeaders
+}
+```
+
+<a name="PacketPPP.LinkSlotValues"></a>
+### func \(\*PacketPPP\) [LinkSlotValues](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/ppp.go#L39>)
+
+```go
+func (p *PacketPPP) LinkSlotValues() LinkSlots
+```
+
+LinkSlotValues 按 PPP 槽位约定返回链路槽位 link\_1=PPPType（十进制）、link\_2=HasPPTPHeader（true/false）。
+
+<a name="PacketPPP.TableName"></a>
+### func \(\*PacketPPP\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/table_name.go#L31>)
+
+```go
+func (m *PacketPPP) TableName() string
+```
+
+TableName 返回 PacketPPP 对应的数据库表名。
 
 <a name="PacketTCPFingerprint"></a>
 ## type [PacketTCPFingerprint](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L246-L255>)
@@ -2802,8 +3394,56 @@ type PacketTCPFingerprint struct {
 }
 ```
 
+<a name="PrismHeaders"></a>
+## type [PrismHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/dot11.go#L20-L27>)
+
+PrismHeaders 表示 Prism 无线抓包元数据头部
+
+```go
+type PrismHeaders struct {
+    // Code Prism 消息码
+    Code uint16 `json:"code"`
+    // Length Prism 头部长度
+    Length uint16 `json:"length"`
+    // DeviceName 抓包设备名称
+    DeviceName string `json:"deviceName"`
+}
+```
+
+<a name="NewPrismHeaders"></a>
+### func [NewPrismHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/dot11.go#L77>)
+
+```go
+func NewPrismHeaders(prism *layers.PrismHeader) *PrismHeaders
+```
+
+NewPrismHeaders 从 gopacket PrismHeader 层创建 PrismHeaders
+
+<a name="RadioTapHeaders"></a>
+## type [RadioTapHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/dot11.go#L12-L17>)
+
+RadioTapHeaders 表示 RadioTap 无线抓包元数据头部 RadioTap 的详细字段位于 gopacket 的命名空间结构中，这里仅固化稳定的版本与长度， 其余链路信息仍完整保留在数据包的 layer\_stack 中。
+
+```go
+type RadioTapHeaders struct {
+    // Version RadioTap 版本号
+    Version uint8 `json:"version"`
+    // Length RadioTap 头部总长度
+    Length uint16 `json:"length"`
+}
+```
+
+<a name="NewRadioTapHeaders"></a>
+### func [NewRadioTapHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/dot11.go#L69>)
+
+```go
+func NewRadioTapHeaders(radioTap *layers.RadioTap) *RadioTapHeaders
+```
+
+NewRadioTapHeaders 从 gopacket RadioTap 层创建 RadioTapHeaders
+
 <a name="RowMeta"></a>
-## type [RowMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L125-L127>)
+## type [RowMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L126-L128>)
 
 RowMeta 行唯一标识元数据 为流量数据行提供全局唯一 ID，供行详情接口按 namespace \+ id 定位单行
 
@@ -2812,6 +3452,29 @@ type RowMeta struct {
     ID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"id"` // 全局唯一 ID
 }
 ```
+
+<a name="SNAPHeaders"></a>
+## type [SNAPHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/llc.go#L26-L31>)
+
+SNAPHeaders 表示 LLC/SNAP 扩展头部信息 SNAP 在 LLC 之上承载以太网类型语义，不单独落表，随数据包的 layer\_stack 一并持久化。
+
+```go
+type SNAPHeaders struct {
+    // OrganizationalCode 组织代码，使用十六进制字符串表示
+    OrganizationalCode string `json:"organizationalCode"`
+    // Type 内层以太网类型
+    Type layers.EthernetType `json:"type"`
+}
+```
+
+<a name="NewSNAPHeaders"></a>
+### func [NewSNAPHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/llc.go#L45>)
+
+```go
+func NewSNAPHeaders(snap *layers.SNAP) *SNAPHeaders
+```
+
+NewSNAPHeaders 从 gopacket SNAP 层创建 SNAPHeaders
 
 <a name="TCPHeaders"></a>
 ## type [TCPHeaders](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/tcp.go#L117-L154>)
@@ -2999,7 +3662,7 @@ func (o TCPOptions) Value() (driver.Value, error)
 Value 实现数据库序列化接口 将TCPOptions序列化为JSON格式，用于存储到数据库 返回值driver.Value: 序列化后的数据库值 返回值error: 序列化过程中的错误
 
 <a name="TagsMeta"></a>
-## type [TagsMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L162-L166>)
+## type [TagsMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L163-L167>)
 
 TagsMeta 表示风险标签元数据，存储去重排序后的标签数组
 
@@ -3036,7 +3699,7 @@ type TcpFingerprint struct {
 ```
 
 <a name="TimestampMeta"></a>
-## type [TimestampMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L131-L134>)
+## type [TimestampMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L132-L135>)
 
 TimestampMeta 表示时间元数据 包含采集时间与入库时间，使用高精度时间格式存储
 
@@ -3048,7 +3711,7 @@ type TimestampMeta struct {
 ```
 
 <a name="TraceMeta"></a>
-## type [TraceMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L137-L140>)
+## type [TraceMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/network/base.go#L138-L141>)
 
 TraceMeta 表示链路追踪元数据，携带用于关联同一请求各环节的追踪 ID
 

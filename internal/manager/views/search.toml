@@ -1166,6 +1166,55 @@ binding = ""
 actions = ["eq", "neq"]
 
 [[Ipv4TcpListGet.filterByFields]]
+fieldName = "linkType"
+fieldType = "uint16"
+column = "link_type"
+binding = ""
+actions = ["eq", "neq"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "link1"
+fieldType = "string"
+column = "link_1"
+binding = ""
+actions = ["eq"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "link2"
+fieldType = "string"
+column = "link_2"
+binding = ""
+actions = ["eq"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "link3"
+fieldType = "string"
+column = "link_3"
+binding = ""
+actions = ["eq"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "link4"
+fieldType = "string"
+column = "link_4"
+binding = ""
+actions = ["eq"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "link5"
+fieldType = "string"
+column = "link_5"
+binding = ""
+actions = ["eq"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "link6"
+fieldType = "string"
+column = "link_6"
+binding = ""
+actions = ["eq"]
+
+[[Ipv4TcpListGet.filterByFields]]
 fieldName = "tcpStreamID"
 fieldType = "string"
 column = "tcp_stream_id"
@@ -1235,17 +1284,56 @@ column = "capture_length"
 fieldName = "layerStack"
 column = "layer_stack"
 [[Ipv4TcpListGet.selectFields]]
-fieldName = "ethDstMac"
-column = "eth_dst_mac"
+fieldName = "linkType"
+column = "link_type"
 [[Ipv4TcpListGet.selectFields]]
-fieldName = "ethSrcMac"
-column = "eth_src_mac"
+fieldName = "link1"
+column = "link_1"
 [[Ipv4TcpListGet.selectFields]]
-fieldName = "ethType"
-column = "eth_type"
+fieldName = "link2"
+column = "link_2"
 [[Ipv4TcpListGet.selectFields]]
-fieldName = "ethLength"
-column = "eth_length"
+fieldName = "link3"
+column = "link_3"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "link4"
+column = "link_4"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "link5"
+column = "link_5"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "link6"
+column = "link_6"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "link7"
+column = "link_7"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "link8"
+column = "link_8"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "link9"
+column = "link_9"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "link10"
+column = "link_10"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "link11"
+column = "link_11"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "link12"
+column = "link_12"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "link13"
+column = "link_13"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "link14"
+column = "link_14"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "link15"
+column = "link_15"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "link16"
+column = "link_16"
 [[Ipv4TcpListGet.selectFields]]
 fieldName = "ipv4Version"
 column = "ipv4_version"
@@ -1416,6 +1504,55 @@ binding = ""
 actions = ["eq", "neq"]
 
 [[Ipv6TcpListGet.filterByFields]]
+fieldName = "linkType"
+fieldType = "uint16"
+column = "link_type"
+binding = ""
+actions = ["eq", "neq"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "link1"
+fieldType = "string"
+column = "link_1"
+binding = ""
+actions = ["eq"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "link2"
+fieldType = "string"
+column = "link_2"
+binding = ""
+actions = ["eq"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "link3"
+fieldType = "string"
+column = "link_3"
+binding = ""
+actions = ["eq"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "link4"
+fieldType = "string"
+column = "link_4"
+binding = ""
+actions = ["eq"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "link5"
+fieldType = "string"
+column = "link_5"
+binding = ""
+actions = ["eq"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "link6"
+fieldType = "string"
+column = "link_6"
+binding = ""
+actions = ["eq"]
+
+[[Ipv6TcpListGet.filterByFields]]
 fieldName = "tcpStreamID"
 fieldType = "string"
 column = "tcp_stream_id"
@@ -1484,17 +1621,56 @@ column = "capture_length"
 fieldName = "layerStack"
 column = "layer_stack"
 [[Ipv6TcpListGet.selectFields]]
-fieldName = "ethDstMac"
-column = "eth_dst_mac"
+fieldName = "linkType"
+column = "link_type"
 [[Ipv6TcpListGet.selectFields]]
-fieldName = "ethSrcMac"
-column = "eth_src_mac"
+fieldName = "link1"
+column = "link_1"
 [[Ipv6TcpListGet.selectFields]]
-fieldName = "ethType"
-column = "eth_type"
+fieldName = "link2"
+column = "link_2"
 [[Ipv6TcpListGet.selectFields]]
-fieldName = "ethLength"
-column = "eth_length"
+fieldName = "link3"
+column = "link_3"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "link4"
+column = "link_4"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "link5"
+column = "link_5"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "link6"
+column = "link_6"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "link7"
+column = "link_7"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "link8"
+column = "link_8"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "link9"
+column = "link_9"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "link10"
+column = "link_10"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "link11"
+column = "link_11"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "link12"
+column = "link_12"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "link13"
+column = "link_13"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "link14"
+column = "link_14"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "link15"
+column = "link_15"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "link16"
+column = "link_16"
 [[Ipv6TcpListGet.selectFields]]
 fieldName = "ipv6Version"
 column = "ipv6_version"

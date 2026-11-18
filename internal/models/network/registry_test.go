@@ -158,6 +158,10 @@ func TestPacketModelPrototypes(t *testing.T) {
 	prototypes := PacketModelPrototypes()
 	expected := []any{
 		&PacketEthernet{},
+		&PacketLinuxSLL{},
+		&PacketLinuxSLL2{},
+		&PacketPPP{},
+		&PacketDot11{},
 		&PacketIPv4{},
 		&PacketIPv6{},
 		&PacketIPv4TCP{},
