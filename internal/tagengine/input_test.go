@@ -66,18 +66,30 @@ func TestBuildInput(t *testing.T) {
 			So(input, ShouldResemble, map[string]any{"custom": "doc"})
 		})
 
-		Convey("HttpTransport 应序列化字段且不暴露 Crypto 明文", func() {
+		Convey("HttpTransport 应序列化普通字段且隐藏敏感字段", func() {
 			transport := &network.HttpTransport{}
 			transport.Method = "GET"
 			transport.ReqHdrUserAgent = "curl/8.0"
 			transport.ReqHdrAuthorization = serializer.NewCrypto([]byte("secret"))
+			transport.ReqBody = serializer.NewS3Crypto("body-key")
 
 			input, err := BuildInput(transport)
 			So(err, ShouldBeNil)
 			So(input["method"], ShouldEqual, "GET")
 			So(input["reqHdrUserAgent"], ShouldEqual, "curl/8.0")
-			// 写库侧构造的 Crypto 无密文，序列化为空字符串，不向规则暴露明文
-			So(input["reqHdrAuthorization"], ShouldEqual, "")
+			// 加密字段不出现在规则输入文档中，只能经 crypto.reveal 获取明文
+			So(input, ShouldNotContainKey, "reqHdrAuthorization")
+			So(input, ShouldNotContainKey, "reqHdrCookie")
+			So(input, ShouldNotContainKey, "reqBody")
+			So(input, ShouldNotContainKey, "rspBody")
+		})
+
+		Convey("敏感字段为空时同样不出现在输入文档中", func() {
+			transport := &network.HttpTransport{}
+			input, err := BuildInput(transport)
+			So(err, ShouldBeNil)
+			So(input, ShouldNotContainKey, "reqHdrAuthorization")
+			So(input, ShouldNotContainKey, "reqBody")
 		})
 	})
 }

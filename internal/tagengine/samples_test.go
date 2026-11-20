@@ -109,7 +109,7 @@ func TestEnsureModelSamples(t *testing.T) {
 				So(json.Unmarshal(sample.Input, &transport), ShouldBeNil)
 			}
 
-			// http-example 的 Input 含 method 与 reqHdrAuthorization（值为 {}）
+			// http-example 的 Input 含 method 与 reqHdrAuthorization（空密文占位）
 			var example *tag.TagRuleSample
 			for _, sample := range samples {
 				if sample.Name == "http-example" {
@@ -120,7 +120,7 @@ func TestEnsureModelSamples(t *testing.T) {
 			var input map[string]any
 			So(json.Unmarshal(example.Input, &input), ShouldBeNil)
 			So(input["method"], ShouldEqual, "POST")
-			So(input["reqHdrAuthorization"], ShouldResemble, map[string]any{})
+			So(input["reqHdrAuthorization"], ShouldEqual, "")
 		})
 
 		Convey("重复调用 EnsureModelSamples 幂等（样例数量不变）", func() {

@@ -176,7 +176,7 @@ func TestStoreBodyDedup(t *testing.T) {
 
 		ctx := context.Background()
 		cryptoKey := []byte("0123456789abcdef0123456789abcdef")
-		// 摘要在生产由字段 secure 标签派生密钥，测试沿用同一条链路
+		// 摘要在生产由字段 hash 标签派生密钥，测试沿用同一条链路
 		reqHashKey, err := crypto.HashKeyForField(&HttpRequestBody{}, "reqBodyHash", "json")
 		So(err, ShouldBeNil)
 		rspHashKey, err := crypto.HashKeyForField(&HttpResponseBody{}, "rspBodyHash", "json")

@@ -10,7 +10,6 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	n "zhongkuisec.com/zhongkui/internal/models/network"
-	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkuisec.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/huginn"
@@ -29,10 +28,6 @@ const (
 	HttpVersion11 = "HTTP/1.1"
 	// 换行字符串
 	NewLine = "\r\n"
-	// CryptoKeyOffset 加密密钥偏移量
-	CryptoKeyOffset = 41827
-	// CryptoKeyLength 加密密钥长度
-	CryptoKeyLength = 32
 )
 
 // 编译期断言：确保 HttpDetector 实现了 tcp.AppProtocolDetector 接口
@@ -44,15 +39,12 @@ var _ AppProtocolDetector = (*HttpDetector)(nil)
 type HttpDetector struct {
 	// client S3 客户端，用于正文内容的存储与去重。
 	client *s3.S3Client
-	// kd 密钥派生器，用于生成正文加密所需的子密钥。
-	kd *key.KeyDerivation
 }
 
 // NewHttpDetector 创建 HTTP 协议检测器。
-func NewHttpDetector(client *s3.S3Client, kd *key.KeyDerivation) *HttpDetector {
+func NewHttpDetector(client *s3.S3Client) *HttpDetector {
 	return &HttpDetector{
 		client: client,
-		kd:     kd,
 	}
 }
 
@@ -297,7 +289,6 @@ func (s *HttpDetector) Build(
 		streamIndex,
 		request,
 		response,
-		s.kd,
 		tailer,
 	)
 }
@@ -430,7 +421,6 @@ func NewHttpTransport(
 	streamMeta *StreamMeta,
 	streamIndex uint32,
 	request *http.Request, response *http.Response,
-	kd *key.KeyDerivation,
 	buildTailer BuildTailer,
 ) (transport *n.HttpTransport, err error) {
 	if meta == nil {
@@ -449,10 +439,6 @@ func NewHttpTransport(
 	} else {
 		hBase.IPVersion = layers.IPProtocolIPv6
 	}
-	cryptoKey, err := kd.DeriveChildKey(CryptoKeyOffset, CryptoKeyLength)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
 	var uri *n.HttpURI
 	var requestBody *n.HttpRequestBody
 	var requestHeaders *n.HttpRequestHeaders
@@ -465,7 +451,7 @@ func NewHttpTransport(
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			requestBody, err = n.NewHttpRequestBody(ctx, s3Client, request, cryptoKey)
+			requestBody, err = n.NewHttpRequestBody(ctx, s3Client, request)
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -476,7 +462,7 @@ func NewHttpTransport(
 	})
 	wg.GoNamed("rsp-build", func() error {
 		if response != nil {
-			responseBody, err = n.NewHttpResponseBody(ctx, s3Client, response, cryptoKey)
+			responseBody, err = n.NewHttpResponseBody(ctx, s3Client, response)
 			if err != nil {
 				return errors.WithStack(err)
 			}

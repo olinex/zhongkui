@@ -55,7 +55,12 @@ func (p *Pools) StoreSQLiteObject(ctx context.Context, ns, name string, r io.Rea
 	if s == nil {
 		return ErrSQLiteStoreNotInjected
 	}
-	return s.Store(ctx, SQLiteObjectKey(ns, name), r)
+	// 数据源文件使用专属密码本派生密钥，与 S3 默认管道密钥隔离
+	cryptoKey, err := sqliteObjectCryptoKey()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return s.Store(ctx, SQLiteObjectKey(ns, name), r, cryptoKey)
 }
 
 // RemoveSQLiteObject 删除指定命名空间+数据源名对应 S3 对象的加密副本并失效本地缓存。
@@ -66,7 +71,12 @@ func (p *Pools) RemoveSQLiteObject(ctx context.Context, ns, name string) error {
 	if s == nil {
 		return ErrSQLiteStoreNotInjected
 	}
-	return s.Remove(ctx, SQLiteObjectKey(ns, name))
+	// 删除必须与写入使用同一专属密钥
+	cryptoKey, err := sqliteObjectCryptoKey()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return s.Remove(ctx, SQLiteObjectKey(ns, name), cryptoKey)
 }
 
 // Pool 返回指定命名空间的 SQLitePool，不存在则惰性创建（写锁内 double-check）。

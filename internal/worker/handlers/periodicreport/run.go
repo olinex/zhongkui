@@ -211,10 +211,10 @@ func runSessionTitle(plan *modelsai.PeriodicReportPlan, triggerAt time.Time) str
 
 // objectStore 抽象报告对象的写入与删除能力，生产实现为 *s3.ObjectCache，测试注入假实现。
 type objectStore interface {
-	// Store 以流式方式写入指定对象键对应的报告正文。
-	Store(ctx context.Context, objectKey string, r io.Reader) error
-	// Remove 删除指定对象键对应的报告对象。
-	Remove(ctx context.Context, objectKey string) error
+	// Store 以流式方式写入指定对象键对应的报告正文；cryptoKey 为字段级 S3 加密密钥。
+	Store(ctx context.Context, objectKey string, r io.Reader, cryptoKey []byte) error
+	// Remove 删除指定对象键对应的报告对象；cryptoKey 须与写入时一致。
+	Remove(ctx context.Context, objectKey string, cryptoKey []byte) error
 }
 
 // accessKeySource 抽象属主可用访问密钥的查询能力，生产实现为 *core.AccessKeyPool，测试注入假实现。
@@ -356,6 +356,11 @@ func (h *RunHandler) Do(ctx context.Context, task etl.Task) error {
 		return h.fail(ctx, run.ID, "skill time window is invalid: "+err.Error(), nowTime)
 	}
 	objectKey := fmt.Sprintf("periodic-report/%s/%d/%s.md", plan.NamespaceName, plan.ID, triggerAt.UTC().Format("20060102T150405Z"))
+	// 报告对象的加密密钥由 object_key 字段的 s3crypto 标签派生，上传、读取与删除共用同一密钥
+	reportKey, err := run.ObjectCryptoKey()
+	if err != nil {
+		return h.fail(ctx, run.ID, "report object key crypto key derivation failed: "+err.Error(), nowTime)
+	}
 	// 报告输出必须符合统一 JSON 信封；校验失败时把原因回传模型重试，最多 reportAttempts 次。
 	// 每次运行独立创建会话，重试沿用本次运行刚创建的会话，不跨运行复用。
 	sessionID := uint(0)
@@ -404,7 +409,7 @@ func (h *RunHandler) Do(ctx context.Context, task etl.Task) error {
 		query = buildPeriodicReportCorrectionQuery(parseErr.Error())
 	}
 	content := strings.TrimSpace(output.Content)
-	if err := h.objects.Store(ctx, objectKey, strings.NewReader(content)); err != nil {
+	if err := h.objects.Store(ctx, objectKey, strings.NewReader(content), reportKey); err != nil {
 		if markErr := h.store.MarkRunFailed(ctx, run.ID, err.Error(), nowTime); markErr != nil {
 			h.logger.Ctx(ctx).Warnf("periodic report run: mark run %d failed: %v", run.ID, markErr)
 		}
@@ -419,7 +424,7 @@ func (h *RunHandler) Do(ctx context.Context, task etl.Task) error {
 	// 是否仍存在以数据库更新结果为准：运行记录可能在生成期间被用户删除，此时更新不会命中，
 	// 需要删除刚写入的对象。不能在写入前做存在性检查——检查与写入之间同样可能被删除。
 	if !updated {
-		if removeErr := h.objects.Remove(ctx, objectKey); removeErr != nil {
+		if removeErr := h.objects.Remove(ctx, objectKey, reportKey); removeErr != nil {
 			h.logger.Ctx(ctx).Warnf("periodic report run: remove orphan object %s for deleted run %d failed: %v",
 				objectKey, run.ID, removeErr)
 		}

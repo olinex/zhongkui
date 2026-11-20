@@ -198,7 +198,7 @@ func CloseAllRedisClients(ctx context.Context)
 CloseAllRedisClients 关闭全部 redis client 池并销毁存活对象，释放底层连接。 供接入方在进程优雅关闭阶段调用。
 
 <a name="CloseAllSQLiteClients"></a>
-## func [CloseAllSQLiteClients](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file.go#L71>)
+## func [CloseAllSQLiteClients](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file.go#L94>)
 
 ```go
 func CloseAllSQLiteClients(ctx context.Context)
@@ -234,7 +234,7 @@ func RegisterDatasourceType(p DatasourcePlugin)
 RegisterDatasourceType 注册一种数据源类型；重复 Key 时 panic。
 
 <a name="SQLiteObjectKey"></a>
-## func [SQLiteObjectKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file.go#L46>)
+## func [SQLiteObjectKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file.go#L54>)
 
 ```go
 func SQLiteObjectKey(namespace, name string) string
@@ -791,7 +791,7 @@ func NewPools(store *s3.ObjectCache) *Pools
 NewPools 创建 Pools 持有者，并在构造期注入通用的 S3 对象缓存 store（可为 nil，表示 S3 未启用；此时 sqlite\_file 数据源注册将报「需要启用 S3」）。
 
 <a name="Pools.Close"></a>
-### func \(\*Pools\) [Close](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L119>)
+### func \(\*Pools\) [Close](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L129>)
 
 ```go
 func (p *Pools) Close(ctx context.Context)
@@ -800,7 +800,7 @@ func (p *Pools) Close(ctx context.Context)
 Close 关闭全部命名空间池（幂等）。实现对 Pools 的所有权清理。
 
 <a name="Pools.Pool"></a>
-### func \(\*Pools\) [Pool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L75>)
+### func \(\*Pools\) [Pool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L85>)
 
 ```go
 func (p *Pools) Pool(ns string) *sqlitevtab.SQLitePool
@@ -809,7 +809,7 @@ func (p *Pools) Pool(ns string) *sqlitevtab.SQLitePool
 Pool 返回指定命名空间的 SQLitePool，不存在则惰性创建（写锁内 double\-check）。 返回的 \*SQLitePool 已就绪可注册/查询；命名空间应为布尔非空（空命名空间由调用方 （engine/视图层）归一化）。
 
 <a name="Pools.Register"></a>
-### func \(\*Pools\) [Register](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L94>)
+### func \(\*Pools\) [Register](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L104>)
 
 ```go
 func (p *Pools) Register(ctx context.Context, ns, name, typ string, cfgData []byte) error
@@ -818,7 +818,7 @@ func (p *Pools) Register(ctx context.Context, ns, name, typ string, cfgData []by
 Register 在指定命名空间的池上以裸名注册一张 vtable。配置解析/建连接池逻辑见 registerInto；注册成功后该命名空间的规则即可经 sqlite.query 以裸 name 查询。
 
 <a name="Pools.RemoveSQLiteObject"></a>
-### func \(\*Pools\) [RemoveSQLiteObject](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L64>)
+### func \(\*Pools\) [RemoveSQLiteObject](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L69>)
 
 ```go
 func (p *Pools) RemoveSQLiteObject(ctx context.Context, ns, name string) error
@@ -827,7 +827,7 @@ func (p *Pools) RemoveSQLiteObject(ctx context.Context, ns, name string) error
 RemoveSQLiteObject 删除指定命名空间\+数据源名对应 S3 对象的加密副本并失效本地缓存。 数据源删除/注销后调用，实现对象与配置共存亡。store 未注入或 S3 未配置时返回 ErrSQLiteStoreNotInjected。
 
 <a name="Pools.Shutdown"></a>
-### func \(\*Pools\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L130>)
+### func \(\*Pools\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L140>)
 
 ```go
 func (p *Pools) Shutdown(ctx context.Context) error
@@ -845,7 +845,7 @@ func (p *Pools) StoreSQLiteObject(ctx context.Context, ns, name string, r io.Rea
 StoreSQLiteObject 把命名空间\+数据源名对应 S3 对象的明文读取流流式加密上传并失效旧缓存。 sqlite\_file 数据源创建/更新时调用；store 未注入或 S3 未配置时返回 ErrSQLiteStoreNotInjected。
 
 <a name="Pools.Unregister"></a>
-### func \(\*Pools\) [Unregister](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L104>)
+### func \(\*Pools\) [Unregister](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/pools.go#L114>)
 
 ```go
 func (p *Pools) Unregister(ctx context.Context, ns, name string) error
@@ -1172,7 +1172,7 @@ func (d *RedisZSetDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Co
 Open 实现 Datasource.Open：借出连接，按 key 解析计划读取 zset 成员行并返回行游标。
 
 <a name="SQLiteFileConfig"></a>
-## type [SQLiteFileConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file.go#L33-L38>)
+## type [SQLiteFileConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file.go#L41-L46>)
 
 SQLiteFileConfig 描述一个 SQLite 文件实例的接入配置。 Path 是通用对象缓存 ObjectCache.Materialize 拉取解密得到的本地明文文件绝对路径（进程内缓存， \<= 内存阈值时位于 tmpfs /dev/shm 内存目录）；注册流程负责在构造前完成 Materialize。
 
@@ -1224,7 +1224,7 @@ func (d *SQLiteFileDatasource) Open(ctx context.Context, pushdown []sqlitevtab.C
 Open 实现 Datasource.Open：借出连接、按下推约束构建参数化查询、同步取回全部行并 返回内存游标；连接作用域到 fetch 结束即归还。
 
 <a name="SQLiteFilePool"></a>
-## type [SQLiteFilePool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file.go#L66-L68>)
+## type [SQLiteFilePool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file.go#L89-L91>)
 
 SQLiteFilePool 是 SQLite 文件的 sqlDBPool 句柄，绑定一个文件路径派生的 Key。
 
@@ -1235,7 +1235,7 @@ type SQLiteFilePool struct {
 ```
 
 <a name="NewSQLiteFilePool"></a>
-### func [NewSQLiteFilePool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file.go#L57>)
+### func [NewSQLiteFilePool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/sqlitevtab/vtab/sqlite_file.go#L80>)
 
 ```go
 func NewSQLiteFilePool(cfg *SQLiteFileConfig) *SQLiteFilePool

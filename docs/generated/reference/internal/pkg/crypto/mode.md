@@ -5,11 +5,14 @@
 ## Index
 
 - [Constants](<#constants>)
+- [func Register\(name string, ctor Constructor\)](<#Register>)
 - [type AESGCMMode](<#AESGCMMode>)
   - [func NewAESGCMMode\(cryptoKey, additionalData \[\]byte\) \(\*AESGCMMode, error\)](<#NewAESGCMMode>)
   - [func \(e \*AESGCMMode\) Decrypt\(ciphertext \[\]byte\) \(\[\]byte, error\)](<#AESGCMMode.Decrypt>)
   - [func \(e \*AESGCMMode\) Encrypt\(plaintext \[\]byte\) \(\[\]byte, error\)](<#AESGCMMode.Encrypt>)
+- [type Constructor](<#Constructor>)
 - [type Mode](<#Mode>)
+  - [func New\(name string, key, additionalData \[\]byte\) \(Mode, error\)](<#New>)
 
 
 ## Constants
@@ -30,6 +33,15 @@ const (
     AesGcmNonceSize = 12
 )
 ```
+
+<a name="Register"></a>
+## func [Register](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/mode/registry.go#L23>)
+
+```go
+func Register(name string, ctor Constructor)
+```
+
+Register 注册加密模式构造函数，name 为 crypto 标签中 mode 属性的取值（如 "aes\-gcm"）。 重复注册、空名称或空构造函数属于编程错误，直接 panic 以在注册期暴露。
 
 <a name="AESGCMMode"></a>
 ## type [AESGCMMode](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/mode/aes_gcm.go#L41-L48>)
@@ -144,6 +156,15 @@ Encrypt 使用 AES\-GCM 加密明文。
 - 每次加密都会生成新的随机 nonce，确保相同明文产生不同密文
 - nonce 不需要保密，但必须唯一（使用随机数保证）
 
+<a name="Constructor"></a>
+## type [Constructor](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/mode/registry.go#L12>)
+
+Constructor 加密模式构造函数：依据派生密钥与可选附加认证数据（AAD）创建模式实例。
+
+```go
+type Constructor func(key, additionalData []byte) (Mode, error)
+```
+
 <a name="Mode"></a>
 ## type [Mode](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/mode/mode.go#L20-L42>)
 
@@ -180,3 +201,12 @@ type Mode interface {
     Decrypt(p []byte) ([]byte, error)
 }
 ```
+
+<a name="New"></a>
+### func [New](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/mode/registry.go#L39>)
+
+```go
+func New(name string, key, additionalData []byte) (Mode, error)
+```
+
+New 按 name 查找并构造加密模式实例；name 未注册时返回错误。

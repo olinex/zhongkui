@@ -591,9 +591,35 @@ func TestCapturerUpdate_Handler(t *testing.T) {
 			r := setupCapturerTestRouterWithDBAndEtcd(db, etcdClient)
 			r.POST("/api/v1/admin/capturer/:id/update", CapturerUpdate)
 
-			body := `{"device":"eth0","snapLen":65535,"timeout":30,"bpfExpr":"tcp port 80"}`
+			body := `{"device":"eth0","snapLen":65535,"timeout":30000,"bpfExpr":"tcp port 80"}`
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/capturer/abc/update", bytes.NewBufferString(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+		})
+
+		Convey("超时时长超过 24 小时上限应返回 400 参数错误", func() {
+			r := setupCapturerTestRouterWithDBAndEtcd(db, etcdClient)
+			r.POST("/api/v1/admin/capturer/:id/update", CapturerUpdate)
+
+			body := `{"device":"eth0","snapLen":65535,"timeout":86400001,"bpfExpr":"tcp port 80"}`
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/capturer/1/update", bytes.NewBufferString(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+		})
+
+		Convey("非法 BPF 表达式应返回 400 参数错误（libpcap 兜底校验）", func() {
+			r := setupCapturerTestRouterWithDBAndEtcd(db, etcdClient)
+			r.POST("/api/v1/admin/capturer/:id/update", CapturerUpdate)
+
+			body := `{"device":"eth0","snapLen":65535,"timeout":30000,"bpfExpr":"tcp port 70000"}`
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/capturer/1/update", bytes.NewBufferString(body))
 			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
@@ -604,7 +630,7 @@ func TestCapturerUpdate_Handler(t *testing.T) {
 			r := setupCapturerTestRouterWithDBAndEtcd(db, etcdClient)
 			r.POST("/api/v1/admin/capturer/:id/update", CapturerUpdate)
 
-			body := `{"device":"eth0","snapLen":65535,"timeout":30,"bpfExpr":"tcp port 80"}`
+			body := `{"device":"eth0","snapLen":65535,"timeout":30000,"bpfExpr":"tcp port 80"}`
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/capturer/99999/update", bytes.NewBufferString(body))
 			req.Header.Set("Content-Type", "application/json")

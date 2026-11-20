@@ -46,7 +46,7 @@ func CompileGroup(ctx context.Context, rules []*tag.TagRule, extraOpts ...func(*
 	opts = append(opts, extraOpts...)
 	compiled := make(map[string]*compiledRule)
 	for _, r := range rules {
-		moduleName, cr, err := CompileRule(ctx, r)
+		moduleName, cr, err := CompileRule(ctx, r, extraOpts...)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}

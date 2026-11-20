@@ -138,6 +138,7 @@
               <v-col cols="12">
                 <rego-editor
                   v-model="createRego"
+                  :label="$t('model.tagRule.field.rego')"
                   :errors="createRegoErrors"
                   :fields="createFields"
                   :extra-completions="createExtraFields"
@@ -239,6 +240,7 @@
               <v-col cols="12">
                 <rego-editor
                   v-model="editRego"
+                  :label="$t('model.tagRule.field.rego')"
                   :errors="editRegoErrors"
                   :fields="editFields"
                   :extra-completions="editExtraFields"

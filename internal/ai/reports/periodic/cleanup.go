@@ -7,6 +7,7 @@ import (
 	"time"
 
 	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
@@ -15,8 +16,8 @@ const defaultCleanupPerPlanLimit = 200
 
 // ObjectRemover 抽象报告对象存储的删除能力，生产实现为 *s3.ObjectCache。
 type ObjectRemover interface {
-	// Remove 删除指定对象键对应的报告对象。
-	Remove(ctx context.Context, objectKey string) error
+	// Remove 删除指定对象键对应的报告对象；cryptoKey 须与写入时一致。
+	Remove(ctx context.Context, objectKey string, cryptoKey []byte) error
 }
 
 // SessionRemover 抽象报告运行会话的删除能力，生产实现为 *session.Store。报告每次运行使用
@@ -66,6 +67,11 @@ func (s *Store) Cleanup(ctx context.Context, now time.Time, objects ObjectRemove
 	if perPlanLimit <= 0 {
 		perPlanLimit = defaultCleanupPerPlanLimit
 	}
+	// 报告对象的加密密钥由 object_key 字段的 s3crypto 标签派生，删除须与写入使用同一密钥
+	reportKey, err := (&ai.PeriodicReportRun{}).ObjectCryptoKey()
+	if err != nil {
+		return result, errors.WithStack(err)
+	}
 	for _, plan := range plans {
 		if plan.RetentionDays <= 0 {
 			continue
@@ -77,12 +83,12 @@ func (s *Store) Cleanup(ctx context.Context, now time.Time, objects ObjectRemove
 			continue
 		}
 		for _, run := range runs {
-			if strings.TrimSpace(run.ObjectKey) != "" {
+			if strings.TrimSpace(run.ObjectKey.Key()) != "" {
 				if objects == nil {
 					recordErr(errors.New("periodic-report cleanup: nil object remover"))
 					continue
 				}
-				if err := objects.Remove(ctx, run.ObjectKey); err != nil {
+				if err := objects.Remove(ctx, run.ObjectKey.Key(), reportKey); err != nil {
 					// 对象删除失败时保留记录待下轮重试，不因此中断清理流程。
 					continue
 				}

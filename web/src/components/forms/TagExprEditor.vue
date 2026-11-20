@@ -1,25 +1,14 @@
 <template>
-  <div class="tag-expr-editor-wrap">
-    <div class="zk-editor-header">
-      <span class="zk-editor-title">{{ $t("model.tagEventCondition.field.expression") }}</span>
-      <v-spacer />
-      <v-icon v-if="valid" size="x-small" color="success" :title="$t('action.validatePassed')">
-        mdi-check-circle
-      </v-icon>
-      <v-icon v-if="!!errorMessage" size="x-small" color="error" :title="errorMessage">
-        mdi-alert-circle
-      </v-icon>
-    </div>
-    <!-- minHeight 为公开 prop（tag-event-rule.vue 等调用方按场景传入自定义最小高度），
-         属运行时计算值，故保留 :style 绑定 -->
-    <div
-      ref="hostRef"
-      class="zk-editor"
-      :class="{ 'is-error': !!errorMessage }"
-      :style="{ minHeight }"
-    />
-    <div v-if="errorMessage" class="zk-error-text">{{ errorMessage }}</div>
-  </div>
+  <code-mirror-field
+    :label="$t('model.tagEventCondition.field.expression')"
+    :value="modelValue"
+    :error-messages="errorMessage"
+    :disabled="disabled"
+    :min-height="minHeight"
+    @focus="focusEditor"
+  >
+    <div ref="hostRef" class="tag-expr-editor-host" />
+  </code-mirror-field>
 </template>
 
 <script setup lang="ts" name="tag-expr-editor">
@@ -79,6 +68,11 @@ const appStore = useAppStore();
 const hostRef = useTemplateRef<HTMLDivElement>("hostRef");
 const view = shallowRef<EditorView>();
 
+/** 点击字段任意区域时把焦点交给 CodeMirror。 */
+function focusEditor(): void {
+  view.value?.focus();
+}
+
 // 语法高亮随主题切换，配色统一走 utils/editorHighlight 的共享方案。
 const highlightCompartment = new Compartment();
 
@@ -107,7 +101,12 @@ const exprLanguage = StreamLanguage.define(exprStreamParser);
 
 // ---- 实时检查：复用前后端一致的 parseBooleanExpr，出错位置标红下划线 + 悬停提示
 const exprLinter = linter((editorView) => {
-  const p = parseBooleanExpr(editorView.state.doc.toString());
+  const text = editorView.state.doc.toString();
+  // 空表达式交给表单必填校验，避免首次打开就出现“不能为空”的红色错误
+  if (!text.trim()) {
+    return [];
+  }
+  const p = parseBooleanExpr(text);
   if (p.ok) {
     return [];
   }
@@ -294,9 +293,9 @@ defineExpose({ focus: () => view.value?.focus() });
 </script>
 
 <style scoped>
-.tag-expr-editor-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: var(--zk-space-1);
+.tag-expr-editor-host {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
 }
 </style>

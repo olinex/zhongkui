@@ -167,7 +167,7 @@ NewRouter 创建并初始化一个新的TCP包重组路由器。 该函数创建
 - maxOutOrderPacketSize: 根据网络延迟和乱序程度设置
 
 <a name="Router[P].Run"></a>
-### func \(\*Router\[P\]\) [Run](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/tcp/router.go#L225>)
+### func \(\*Router\[P\]\) [Run](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/tcp/router.go#L230>)
 
 ```go
 func (r *Router[P]) Run(ctx context.Context, logger *logging.Logger, srcChan <-chan P, dstChan chan<- any) error

@@ -35,14 +35,18 @@ type compiledRule struct {
 }
 
 // CompileRule 将单条规则编译为可复用查询，返回模块名与已编译规则。
-func CompileRule(ctx context.Context, rule *tag.TagRule) (string, *compiledRule, error) {
+// extraOpts 允许调用方追加 rego 编译选项（如 dry-run 启用
+// rego.StrictBuiltinErrors(true)，让内置函数错误浮出为评估错误）。
+func CompileRule(ctx context.Context, rule *tag.TagRule, extraOpts ...func(*rego.Rego)) (string, *compiledRule, error) {
 	moduleName := fmt.Sprintf("%s.rego", rule.Name)
 	// 逐规则编译，供 RecognizeWithDetail 规则归属与 dry-run 逐规则详情
-	query, err := rego.New(
+	opts := []func(*rego.Rego){
 		rego.Query(regoQuery),
 		rego.SetRegoVersion(ast.RegoV1),
 		rego.Module(moduleName, rule.Rego),
-	).PrepareForEval(ctx)
+	}
+	opts = append(opts, extraOpts...)
+	query, err := rego.New(opts...).PrepareForEval(ctx)
 	if err != nil {
 		return "", nil, errors.WithStack(err)
 	}

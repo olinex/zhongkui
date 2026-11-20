@@ -16,6 +16,7 @@ import (
 
 	// 项目内部
 	coremodel "zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
@@ -35,17 +36,17 @@ type KnowledgeDocument struct {
 	// Title 文档标题，便于在文档列表中识别
 	Title string `gorm:"type:VARCHAR(256)"`
 	// Content 文档正文内容，经 crypto 序列化器加密存储
-	Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12801,length=32"`
+	Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12801,length=32"`
 	// ChunkCount 文档被切分的知识分块数量，0 表示尚未切分
 	ChunkCount int `gorm:"type:INT"`
 	// Hash 文档内容的 HMAC-SHA256 十六进制摘要（带密钥，防离线爆破），经 hash 序列化器封装，用于判断已有分块索引是否过期
-	Hash serializer.Hash `json:"hash" gorm:"type:CHAR(64);serializer:hash" secure:"mode=\"hmac-sha256\",offset=12804,length=32"`
+	Hash serializer.Hash `json:"hash" gorm:"type:CHAR(64);serializer:hash" hash:"offset=12804,length=32"`
 	// Format 文档来源格式，取值来自枚举类 documentFormat；手工录入的文档为 markdown
 	Format string `gorm:"type:VARCHAR(16)"`
 	// OriginalName 导入文档的原始文件名，手工录入的文档为空
 	OriginalName string `gorm:"type:VARCHAR(256)"`
-	// ObjectKey 原件在 S3 中的对象键，手工录入的文档为空
-	ObjectKey string `gorm:"type:VARCHAR(512)"`
+	// ObjectKey 原件在 S3 中的对象键（经 s3crypto 序列化器封装），手工录入的文档为空
+	ObjectKey serializer.S3Crypto `gorm:"type:VARCHAR(512);serializer:s3crypto" s3crypto:"offset=1638,length=32"`
 	// SizeBytes 原件字节数，手工录入的文档为 0
 	SizeBytes int64 `gorm:"type:BIGINT"`
 	// Status 文档处理状态，取值来自枚举类 knowledgeDocStatus
@@ -56,6 +57,12 @@ type KnowledgeDocument struct {
 	UseCount int `gorm:"type:INT"`
 	// LastUsedAt 最近一次被检索命中的时间，可空（从未命中为 NULL）
 	LastUsedAt *time.Time `gorm:"type:TIMESTAMPTZ"`
+}
+
+// ObjectCryptoKey 派生 object_key 字段的 S3 加密子密钥。
+// 模型无 json 标签，故按 Go 字段名匹配 s3crypto 标签。
+func (d *KnowledgeDocument) ObjectCryptoKey() ([]byte, error) {
+	return crypto.S3CryptoKeyForField(d, "ObjectKey", "")
 }
 
 // KnowledgeChunk 表示知识文档切分后的一个分块，是 RAG 检索的最小单元：
@@ -75,9 +82,9 @@ type KnowledgeChunk struct {
 	// ChunkIndex 分块在文档内的序号，从 0 开始
 	ChunkIndex int `gorm:"type:INT"`
 	// HeadingPath 分块所属的标题路径（如 "## 简介 / 架构"），用于引用溯源，经 crypto 序列化器加密存储
-	HeadingPath *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12802,length=32"`
+	HeadingPath *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12802,length=32"`
 	// Content 分块正文内容，经 crypto 序列化器加密存储
-	Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12803,length=32"`
+	Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12803,length=32"`
 	// Embedding 分块内容的向量化表示（1536 维），用于向量相似度检索
 	Embedding []float32 `gorm:"type:vector(1536);serializer:json"`
 	// Search 分块内容的全文检索表示（tsvector），用于关键词检索

@@ -553,5 +553,5 @@ type PacketIPv6 struct {
 	IPv6Headers
 
 	// Payload 有效载荷，包含IPv6头部之后的数据
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=31496,length=32"`
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" crypto:"mode=\"aes-gcm\",offset=31496,length=32"`
 }

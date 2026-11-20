@@ -34,9 +34,15 @@ type PacketProcessor[P tcp.TCPPacket] struct {
 }
 
 // Start 启动处理管道，阻塞直到 ctx 取消。
+// 仅以 ctx 是否已取消判定关机：ctx 取消 happens-before 观察到的错误，
+// 因此关机时这里的 err 必然伴随 ctx.Err() != nil；反之 ctx 仍存活时的取消属于真实故障，需照常上报。
 func (p *PacketProcessor[P]) Start(ctx context.Context, name string) error {
 	p.logger.Ctx(ctx).Infof("packet processor %s starting", name)
 	if err := p.orch.Start(ctx); err != nil {
+		if ctx.Err() != nil {
+			p.logger.Ctx(ctx).Infof("packet processor %s stopped (context canceled)", name)
+			return nil
+		}
 		p.logger.Ctx(ctx).Errorf("packet processor %s exited with error: %v", name, err)
 		return errors.WithStack(err)
 	}

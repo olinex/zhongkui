@@ -394,7 +394,7 @@ NewElection 创建一个新的领导者选举实例。
 - \*Election: 初始化完成的选举实例
 
 <a name="Election.Shutdown"></a>
-### func \(\*Election\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/election.go#L199>)
+### func \(\*Election\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/etcd/election.go#L219>)
 
 ```go
 func (e *Election) Shutdown()

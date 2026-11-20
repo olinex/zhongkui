@@ -27,9 +27,9 @@ func TestCryptoFieldTagPayload(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			spec, err := crypto.FieldTag(tc.model, tc.path, "json")
+			spec, err := crypto.CryptoFieldTag(tc.model, tc.path, "json")
 			if err != nil {
-				t.Fatalf("crypto.FieldTag(%q) failed: %v", tc.path, err)
+				t.Fatalf("crypto.CryptoFieldTag(%q) failed: %v", tc.path, err)
 			}
 			if spec.Offset != tc.offset {
 				t.Fatalf("%s offset mismatch: got %d, want %d", tc.path, spec.Offset, tc.offset)
@@ -39,30 +39,30 @@ func TestCryptoFieldTagPayload(t *testing.T) {
 }
 
 // TestPlaintextModelsSecureFieldsResolvableByJSONName 校验所有已注册明文模型的不变量：
-// 每个可见的加密字段（secure tag）都必须带 json 名，且该 json 名能被 crypto.FieldTag
+// 每个可见的加密字段（crypto tag）都必须带 json 名，且该 json 名能被 crypto.CryptoFieldTag
 // 解析回同一字段（比对 offset）。明文接口按 json 名解析字段（见 CryptoPlaintextGet），
 // 缺少 json 标签的字段会在运行时才暴露（reflection: field %q not found），故在此静态拦截。
-// 注意：仅校验可见字段；内嵌结构中被外层同名遮蔽的字段不参与单段路径解析（见 crypto.FieldTag）。
+// 注意：仅校验可见字段；内嵌结构中被外层同名遮蔽的字段不参与单段路径解析（见 crypto.CryptoFieldTag）。
 func TestPlaintextModelsSecureFieldsResolvableByJSONName(t *testing.T) {
 	for name, model := range plaintextModels {
 		for _, f := range reflect.VisibleFields(derefStructType(model, t)) {
-			secure := f.Tag.Get(crypto.SecurityTagKey)
+			secure := f.Tag.Get(crypto.CryptoTagKey)
 			if secure == "" {
 				continue
 			}
 			jsonName := strings.Split(f.Tag.Get("json"), ",")[0]
 			if jsonName == "" {
-				t.Errorf("%s: secure field %s has no json name (must be resolvable by the json name the plaintext API receives)", name, f.Name)
+				t.Errorf("%s: crypto field %s has no json name (must be resolvable by the json name the plaintext API receives)", name, f.Name)
 				continue
 			}
-			spec, err := crypto.FieldTag(model, jsonName, "json")
+			spec, err := crypto.CryptoFieldTag(model, jsonName, "json")
 			if err != nil {
-				t.Errorf("%s: secure field %s (json %q) is not resolvable: %v", name, f.Name, jsonName, err)
+				t.Errorf("%s: crypto field %s (json %q) is not resolvable: %v", name, f.Name, jsonName, err)
 				continue
 			}
 			want, err := crypto.ParseCryptoTag(secure)
 			if err != nil {
-				t.Errorf("%s: secure tag of %s is malformed: %v", name, f.Name, err)
+				t.Errorf("%s: crypto tag of %s is malformed: %v", name, f.Name, err)
 				continue
 			}
 			if spec.Offset != want.Offset {

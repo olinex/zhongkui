@@ -6,14 +6,14 @@
 
 - [Constants](<#constants>)
 - [Variables](<#variables>)
-- [func NewHttpTransport\(ctx context.Context, s3Client \*s3.S3Client, meta \*n.BaseMeta, streamMeta \*StreamMeta, streamIndex uint32, request \*http.Request, response \*http.Response, kd \*key.KeyDerivation, buildTailer BuildTailer\) \(transport \*n.HttpTransport, err error\)](<#NewHttpTransport>)
+- [func NewHttpTransport\(ctx context.Context, s3Client \*s3.S3Client, meta \*n.BaseMeta, streamMeta \*StreamMeta, streamIndex uint32, request \*http.Request, response \*http.Response, buildTailer BuildTailer\) \(transport \*n.HttpTransport, err error\)](<#NewHttpTransport>)
 - [func RegisterAppProtocolDetector\(protocol AppProtocol, detector AppProtocolDetector\)](<#RegisterAppProtocolDetector>)
 - [type AppProtocol](<#AppProtocol>)
 - [type AppProtocolDetector](<#AppProtocolDetector>)
 - [type AppTailer](<#AppTailer>)
 - [type BuildTailer](<#BuildTailer>)
 - [type HttpDetector](<#HttpDetector>)
-  - [func NewHttpDetector\(client \*s3.S3Client, kd \*key.KeyDerivation\) \*HttpDetector](<#NewHttpDetector>)
+  - [func NewHttpDetector\(client \*s3.S3Client\) \*HttpDetector](<#NewHttpDetector>)
   - [func \(s \*HttpDetector\) Build\(ctx context.Context, baseMeta \*n.BaseMeta, streamMeta \*StreamMeta, streamIndex uint32, clientPayload, serverPayload any, tailer BuildTailer\) \(app any, err error\)](<#HttpDetector.Build>)
   - [func \(s \*HttpDetector\) Detect\(ctx context.Context, peek \[\]byte, c2s bool\) \(ok bool, err error\)](<#HttpDetector.Detect>)
   - [func \(s \*HttpDetector\) Extract\(ctx context.Context, clientReader, serverReader \*bufio.Reader\) \(clientPayload, serverPayload any, err error\)](<#HttpDetector.Extract>)
@@ -36,10 +36,6 @@ const (
     HttpVersion11 = "HTTP/1.1"
     // 换行字符串
     NewLine = "\r\n"
-    // CryptoKeyOffset 加密密钥偏移量
-    CryptoKeyOffset = 41827
-    // CryptoKeyLength 加密密钥长度
-    CryptoKeyLength = 32
 )
 ```
 
@@ -58,10 +54,10 @@ var ErrDataIncomplete = errors.New("application data incomplete, retry later")
 ```
 
 <a name="NewHttpTransport"></a>
-## func [NewHttpTransport](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/http.go#L426-L435>)
+## func [NewHttpTransport](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/http.go#L417-L425>)
 
 ```go
-func NewHttpTransport(ctx context.Context, s3Client *s3.S3Client, meta *n.BaseMeta, streamMeta *StreamMeta, streamIndex uint32, request *http.Request, response *http.Response, kd *key.KeyDerivation, buildTailer BuildTailer) (transport *n.HttpTransport, err error)
+func NewHttpTransport(ctx context.Context, s3Client *s3.S3Client, meta *n.BaseMeta, streamMeta *StreamMeta, streamIndex uint32, request *http.Request, response *http.Response, buildTailer BuildTailer) (transport *n.HttpTransport, err error)
 ```
 
 Build 构建完整的HTTP传输对象 实现tcp.AppProtocolDetector接口的Build方法，用于将提取的HTTP数据构建为应用层可用的HTTP传输对象 该方法将原始的HTTP请求/响应、网络层信息和时间信息整合到一个统一的HttpTransport结构中
@@ -174,7 +170,7 @@ type BuildTailer func(ctx context.Context) (tailer *AppTailer, err error)
 ```
 
 <a name="HttpDetector"></a>
-## type [HttpDetector](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/http.go#L44-L49>)
+## type [HttpDetector](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/http.go#L39-L42>)
 
 HttpDetector HTTP协议检测器 实现tcp.AppProtocolDetector接口，用于检测和提取TCP流中的HTTP协议数据 该检测器负责识别HTTP请求和响应，解析HTTP协议头部，并构建完整的HTTP传输对象
 
@@ -185,16 +181,16 @@ type HttpDetector struct {
 ```
 
 <a name="NewHttpDetector"></a>
-### func [NewHttpDetector](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/http.go#L52>)
+### func [NewHttpDetector](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/http.go#L45>)
 
 ```go
-func NewHttpDetector(client *s3.S3Client, kd *key.KeyDerivation) *HttpDetector
+func NewHttpDetector(client *s3.S3Client) *HttpDetector
 ```
 
 NewHttpDetector 创建 HTTP 协议检测器。
 
 <a name="HttpDetector.Build"></a>
-### func \(\*HttpDetector\) [Build](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/http.go#L276-L283>)
+### func \(\*HttpDetector\) [Build](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/http.go#L268-L275>)
 
 ```go
 func (s *HttpDetector) Build(ctx context.Context, baseMeta *n.BaseMeta, streamMeta *StreamMeta, streamIndex uint32, clientPayload, serverPayload any, tailer BuildTailer) (app any, err error)
@@ -203,7 +199,7 @@ func (s *HttpDetector) Build(ctx context.Context, baseMeta *n.BaseMeta, streamMe
 Build 将提取到的 HTTP 请求与响应组装为 HttpTransport 对象。
 
 <a name="HttpDetector.Detect"></a>
-### func \(\*HttpDetector\) [Detect](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/http.go#L150>)
+### func \(\*HttpDetector\) [Detect](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/http.go#L142>)
 
 ```go
 func (s *HttpDetector) Detect(ctx context.Context, peek []byte, c2s bool) (ok bool, err error)
@@ -229,7 +225,7 @@ Detect 检测TCP流中的数据是否为HTTP协议 实现tcp.AppProtocolDetector
 3. 根据方向调用相应的检测方法： \- c2s=true: 调用isClient检测HTTP请求 \- c2s=false: 调用isServer检测HTTP响应
 
 <a name="HttpDetector.Extract"></a>
-### func \(\*HttpDetector\) [Extract](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/http.go#L195-L198>)
+### func \(\*HttpDetector\) [Extract](<https://gitee.com/olinex/zhongkui/blob/master/internal/network/detectors/http.go#L187-L190>)
 
 ```go
 func (s *HttpDetector) Extract(ctx context.Context, clientReader, serverReader *bufio.Reader) (clientPayload, serverPayload any, err error)

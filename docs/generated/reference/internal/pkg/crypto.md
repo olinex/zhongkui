@@ -10,28 +10,41 @@
 - [func GenerateRandomBase64String\(length int\) \(string, error\)](<#GenerateRandomBase64String>)
 - [func GenerateRandomString\(length int\) \(string, error\)](<#GenerateRandomString>)
 - [func HashKeyForField\(model any, path, nameTag string\) \(\[\]byte, error\)](<#HashKeyForField>)
-- [func HashKeyForTag\(cTag CryptoTag\) \(\[\]byte, error\)](<#HashKeyForTag>)
+- [func HashKeyForTag\(hTag HashTag\) \(\[\]byte, error\)](<#HashKeyForTag>)
 - [func HashPassword\(password string\) \(\[\]byte, error\)](<#HashPassword>)
 - [func ModeForField\(model any, path, nameTag string\) \(mode.Mode, error\)](<#ModeForField>)
 - [func ModeForTag\(cTag CryptoTag\) \(mode.Mode, error\)](<#ModeForTag>)
 - [func ModeFromTag\(tag string\) \(mode.Mode, error\)](<#ModeFromTag>)
+- [func S3CryptoKeyForField\(model any, path, nameTag string\) \(\[\]byte, error\)](<#S3CryptoKeyForField>)
+- [func S3CryptoKeyForTag\(sTag S3CryptoTag\) \(\[\]byte, error\)](<#S3CryptoKeyForTag>)
 - [type CryptoTag](<#CryptoTag>)
-  - [func FieldTag\(model any, path, nameTag string\) \(CryptoTag, error\)](<#FieldTag>)
+  - [func CryptoFieldTag\(model any, path, nameTag string\) \(CryptoTag, error\)](<#CryptoFieldTag>)
   - [func ParseCryptoTag\(tag string\) \(CryptoTag, error\)](<#ParseCryptoTag>)
+- [type HashTag](<#HashTag>)
+  - [func HashFieldTag\(model any, path, nameTag string\) \(HashTag, error\)](<#HashFieldTag>)
+  - [func ParseHashTag\(tag string\) \(HashTag, error\)](<#ParseHashTag>)
+- [type S3CryptoTag](<#S3CryptoTag>)
+  - [func ParseS3CryptoTag\(tag string\) \(S3CryptoTag, error\)](<#ParseS3CryptoTag>)
 
 
 ## Constants
 
-<a name="HmacSHA256"></a>HmacSHA256 带密钥摘要的算法标识，用于 secure 标签中需要确定性摘要的字段 （如内容去重的 hash）：同一密钥与内容恒得同一摘要，可等值匹配与建唯一索引， 且无密钥无法离线爆破，区别于 aes\-gcm 的可逆加密（密文随机、不可等值比较）。
+<a name="CryptoTagKey"></a>CryptoTagKey 加密字段的结构体标签键（字段类型须为 serializer.Crypto）。
 
 ```go
-const HmacSHA256 = "hmac-sha256"
+const CryptoTagKey = "crypto"
 ```
 
-<a name="SecurityTagKey"></a>SecurityTagKey 加密字段的 secure 结构体标签键。
+<a name="HashTagKey"></a>HashTagKey 摘要字段的结构体标签键（字段类型须为 serializer.Hash）。
 
 ```go
-const SecurityTagKey = "secure"
+const HashTagKey = "hash"
+```
+
+<a name="S3CryptoTagKey"></a>S3CryptoTagKey S3 对象字段的结构体标签键（字段类型须为 serializer.S3Crypto）。
+
+```go
+const S3CryptoTagKey = "s3crypto"
 ```
 
 <a name="CheckPassword"></a>
@@ -55,13 +68,13 @@ CheckPassword 校验原始密码与哈希密码是否匹配。
 - bool: 如果原始密码与哈希密码匹配则返回 true，否则返回 false
 
 <a name="DigestForField"></a>
-## func [DigestForField](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L183>)
+## func [DigestForField](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L277>)
 
 ```go
 func DigestForField(model any, path, nameTag string, data []byte) (string, error)
 ```
 
-DigestForField 按字段路径解析模型字段的 secure 标签，派生 HMAC 密钥并对数据计算 十六进制 HMAC\-SHA256 摘要，供需要确定性等值的摘要字段（如内容去重的 hash）使用： 摘要不可逆推原文，且同一密钥与内容恒得同一摘要，可安全地做等值匹配与唯一索引。
+DigestForField 按字段路径解析模型字段的 hash 标签，派生 HMAC 密钥并对数据计算 十六进制 HMAC\-SHA256 摘要，供需要确定性等值的摘要字段（如内容去重的 hash）使用： 摘要不可逆推原文，且同一密钥与内容恒得同一摘要，可安全地做等值匹配与唯一索引。
 
 与 ModeForField 同构（tag → 密钥派生 → 结果），使摘要字段与加密字段共用同一条 标签解析与密钥派生链路，不必由调用方各自就地实现。
 
@@ -75,7 +88,7 @@ DigestForField 按字段路径解析模型字段的 secure 标签，派生 HMAC 
 返回值：
 
 - string: 64 个字符的十六进制 HMAC\-SHA256 摘要
-- error: 字段无 secure 标签、算法标识不是 hmac\-sha256、密钥派生失败时返回错误
+- error: 字段无 hash 标签或密钥派生失败时返回错误
 
 <a name="GenerateRandomBase64String"></a>
 ## func [GenerateRandomBase64String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/random.go#L72>)
@@ -124,44 +137,44 @@ GenerateRandomString 生成指定长度的随机字符串。
 注意：由于每个字符独立从62个字符中选取，较短字符串的字符多样性有限。 如需更高的信息密度或更短的等价随机值，请考虑使用 GenerateRandomBase64String。
 
 <a name="HashKeyForField"></a>
-## func [HashKeyForField](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L159>)
+## func [HashKeyForField](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L205>)
 
 ```go
 func HashKeyForField(model any, path, nameTag string) ([]byte, error)
 ```
 
-HashKeyForField 按字段路径解析模型字段的 secure 标签并派生 HMAC 摘要密钥，供需要 流式计算摘要（正文体积大，无法一次性持有全部数据）的调用方复用同一条标签解析与 密钥派生链路，避免各自就地实现；一次性摘要直接用 DigestForField 即可。
+HashKeyForField 按字段路径解析模型字段的 hash 标签并派生 HMAC 摘要密钥，供需要 流式计算摘要（正文体积大，无法一次性持有全部数据）的调用方复用同一条标签解析与 密钥派生链路，避免各自就地实现；一次性摘要直接用 DigestForField 即可。
 
-nameTag 与 FieldTag 同义：字段路径按 json 名匹配，故通常传入 "json"。
+nameTag 与 HashFieldTag 同义：字段路径按 json 名匹配，故通常传入 "json"。
 
 参数：
 
 - model: 声明该字段的模型实例（或指针）
 - path: 字段路径（json 名，多段时逐层下降）
-- nameTag: 路径段匹配的字段命名标签（与 FieldTag 同义）
+- nameTag: 路径段匹配的字段命名标签（与 HashFieldTag 同义）
 
 返回值：
 
 - \[\]byte: 派生出的 HMAC 密钥
-- error: 字段无 secure 标签、算法标识不是 hmac\-sha256、密钥派生失败时返回错误
+- error: 字段无 hash 标签或密钥派生失败时返回错误
 
 <a name="HashKeyForTag"></a>
-## func [HashKeyForTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L130>)
+## func [HashKeyForTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L179>)
 
 ```go
-func HashKeyForTag(cTag CryptoTag) ([]byte, error)
+func HashKeyForTag(hTag HashTag) ([]byte, error)
 ```
 
-HashKeyForTag 校验摘要字段标签的算法标识为 hmac\-sha256 并派生摘要密钥，是整个 带密钥摘要链路（tag → 密钥）的通用前置步骤。
+HashKeyForTag 依据 hash 标签派生 HMAC 摘要密钥，是整个带密钥摘要链路 （tag → 密钥）的通用前置步骤。摘要算法固定为 HMAC\-SHA256，故标签不含算法标识。
 
 参数：
 
-- cTag: 摘要字段标签（mode/offset/length），来自 secure tag 解析
+- hTag: 摘要字段标签（offset/length），来自 hash tag 解析
 
 返回值：
 
 - \[\]byte: 派生出的 HMAC 密钥
-- error: 算法标识不是 hmac\-sha256、密钥派生器未初始化或密钥派生失败时返回错误
+- error: 密钥派生器未初始化或密钥派生失败时返回错误
 
 <a name="HashPassword"></a>
 ## func [HashPassword](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/password.go#L19>)
@@ -184,16 +197,16 @@ bcrypt 是一种自适应的密码哈希算法，内置盐值（salt），能够
 - error: 如果哈希过程中发生错误（如密码长度超过 72 字节限制），则返回非 nil 错误
 
 <a name="ModeForField"></a>
-## func [ModeForField](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L113>)
+## func [ModeForField](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L162>)
 
 ```go
 func ModeForField(model any, path, nameTag string) (mode.Mode, error)
 ```
 
-ModeForField 按字段路径解析模型字段的 secure 标签并构造加密模式，供视图层 明文查看接口（CryptoPlaintextGet）使用。nameTag 与 FieldTag 同义：明文接口的 field 参数为字段 json 名，故传入 "json"。
+ModeForField 按字段路径解析模型字段的 crypto 标签并构造加密模式，供视图层 明文查看接口（CryptoPlaintextGet）使用。nameTag 与 CryptoFieldTag 同义：明文接口的 field 参数为字段 json 名，故传入 "json"。
 
 <a name="ModeForTag"></a>
-## func [ModeForTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L79>)
+## func [ModeForTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L137>)
 
 ```go
 func ModeForTag(cTag CryptoTag) (mode.Mode, error)
@@ -203,30 +216,68 @@ ModeForTag 依据 CryptoTag 派生密钥并构造对应的加密模式实例，�
 
 参数：
 
-- cTag: 加密字段标签（mode/offset/length），来自 secure tag 解析
+- cTag: 加密字段标签（mode/offset/length），来自 crypto tag 解析
 
 返回值：
 
-- mode.Mode: 对应加密模式（当前支持 AES\-GCM）
+- mode.Mode: 对应加密模式（由 mode 包注册表解析，内置 AES\-GCM； 新增加密模式实现 Mode 接口并调用 mode.Register 注册即可，无需改动本函数）
 - error: 密钥派生器未初始化、密钥派生失败或未知加密模式时返回错误
 
 <a name="ModeFromTag"></a>
-## func [ModeFromTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L102>)
+## func [ModeFromTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L151>)
 
 ```go
 func ModeFromTag(tag string) (mode.Mode, error)
 ```
 
-ModeFromTag 解析 secure 标签字符串并构造加密模式，供 GORM crypto 序列化器 （读库扫描 Scan）使用。
+ModeFromTag 解析 crypto 标签字符串并构造加密模式，供 GORM crypto 序列化器 （读库扫描 Scan）使用。
+
+<a name="S3CryptoKeyForField"></a>
+## func [S3CryptoKeyForField](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L246>)
+
+```go
+func S3CryptoKeyForField(model any, path, nameTag string) ([]byte, error)
+```
+
+S3CryptoKeyForField 按字段路径解析模型字段的 s3crypto 标签并派生 S3 加密密钥。 nameTag 与 CryptoFieldTag 同义：网络模型字段有 json 标签，传 "json"； 无 json 标签的 AI 模型传 ""（按 Go 字段名匹配）。
+
+参数：
+
+- model: 声明该字段的模型实例（或指针）
+- path: 字段路径（nameTag 对应的字段名，多段时逐层下降）
+- nameTag: 路径段匹配的字段命名标签
+
+返回值：
+
+- \[\]byte: 派生出的 S3 加密子密钥
+- error: 字段无 s3crypto 标签或密钥派生失败时返回错误
+
+<a name="S3CryptoKeyForTag"></a>
+## func [S3CryptoKeyForTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L222>)
+
+```go
+func S3CryptoKeyForTag(sTag S3CryptoTag) ([]byte, error)
+```
+
+S3CryptoKeyForTag 依据 s3crypto 标签派生 S3 对象加密子密钥。 对象内容固定使用 zstd \+ AES\-GCM 管道，故标签只声明 offset/length。
+
+参数：
+
+- sTag: S3 对象字段标签（offset/length）
+
+返回值：
+
+- \[\]byte: 派生出的 AES 子密钥
+- error: 密钥派生器未初始化或派生失败时返回错误
 
 <a name="CryptoTag"></a>
-## type [CryptoTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L31-L38>)
+## type [CryptoTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L37-L44>)
 
-CryptoTag 加密字段标签内容（secure 标签解析结果）。
+CryptoTag 加密字段标签内容（crypto 标签解析结果）。
 
 ```go
 type CryptoTag struct {
-    // Mode 算法标识（aes-gcm 为可逆加密，hmac-sha256 为带密钥摘要）
+    // Mode 加密模式标识（由 mode 包注册表解析，内置 aes-gcm）
     Mode string `tag:"mode"`
     // Offset 派生密钥的偏移量
     Offset int `tag:"offset"`
@@ -235,25 +286,80 @@ type CryptoTag struct {
 }
 ```
 
-<a name="FieldTag"></a>
-### func [FieldTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L59>)
+<a name="CryptoFieldTag"></a>
+### func [CryptoFieldTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L102>)
 
 ```go
-func FieldTag(model any, path, nameTag string) (CryptoTag, error)
+func CryptoFieldTag(model any, path, nameTag string) (CryptoTag, error)
 ```
 
-FieldTag 按字段路径解析模型字段的 secure 标签为 CryptoTag（不做密钥派生）。 nameTag 指定路径段匹配的字段命名标签（如 "json"、"gorm"）：明文接口的 field 参数即 字段 json 名，故传入 "json"（与权限点 object、前端契约一致）。 字段解析委托 internal/pkg/utils.ExtractFieldTag：
+CryptoFieldTag 按字段路径解析模型字段的 crypto 标签为 CryptoTag（不做密钥派生）。 nameTag 指定路径段匹配的字段命名标签（如 "json"、"gorm"）：明文接口的 field 参数即 字段 json 名，故传入 "json"（与权限点 object、前端契约一致）。 字段解析委托 internal/pkg/utils.ExtractFieldTag：
 
-- 单段（如 "payload"）：浅层优先递归查找，始终返回最外层（直接声明）字段的 secure 标签， 与落库列一致（内嵌结构的同名嵌入字段被外层遮蔽，不参与列映射）；
+- 单段（如 "payload"）：浅层优先递归查找，始终返回最外层（直接声明）字段的 crypto 标签， 与落库列一致（内嵌结构的同名嵌入字段被外层遮蔽，不参与列映射）；
 - 多段（如 "PacketIPv6.Payload"）：按显式路径逐层下降，精确定位内层嵌入字段。
 
 背景：结构体嵌入会导致内外层同 json 名字段并存（如 PacketIPv6TCP 内嵌 PacketIPv6 且 两者均声明 Payload）。单段路径解析到最外层，多段路径可定位内层，从而消除歧义。
 
 <a name="ParseCryptoTag"></a>
-### func [ParseCryptoTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L41>)
+### func [ParseCryptoTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L66>)
 
 ```go
 func ParseCryptoTag(tag string) (CryptoTag, error)
 ```
 
-ParseCryptoTag 解析 secure 标签字符串为 CryptoTag。
+ParseCryptoTag 解析 crypto 标签字符串为 CryptoTag。
+
+<a name="HashTag"></a>
+## type [HashTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L49-L54>)
+
+HashTag 摘要字段标签内容（hash 标签解析结果）。 摘要算法在代码层固定为 HMAC\-SHA256（见 DigestForField / HashKeyForField）， 标签只声明密钥派生参数，不再重复 mode，避免与代码中的固定算法漂移。
+
+```go
+type HashTag struct {
+    // Offset 派生密钥的偏移量
+    Offset int `tag:"offset"`
+    // Length 派生密钥的长度
+    Length int `tag:"length"`
+}
+```
+
+<a name="HashFieldTag"></a>
+### func [HashFieldTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L116>)
+
+```go
+func HashFieldTag(model any, path, nameTag string) (HashTag, error)
+```
+
+HashFieldTag 按字段路径解析模型字段的 hash 标签为 HashTag（不做密钥派生）。 字段解析语义与 CryptoFieldTag 一致：nameTag 通常传入 "json"， 单段路径浅层优先、多段路径逐层下降。
+
+<a name="ParseHashTag"></a>
+### func [ParseHashTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L75>)
+
+```go
+func ParseHashTag(tag string) (HashTag, error)
+```
+
+ParseHashTag 解析 hash 标签字符串为 HashTag。
+
+<a name="S3CryptoTag"></a>
+## type [S3CryptoTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L58-L63>)
+
+S3CryptoTag S3 对象字段标签内容（s3crypto 标签解析结果）。 对象内容固定使用 zstd \+ AES\-GCM 管道，算法在代码层固定，故标签只声明密钥派生参数。
+
+```go
+type S3CryptoTag struct {
+    // Offset 派生密钥的偏移量
+    Offset int `tag:"offset"`
+    // Length 派生密钥的长度
+    Length int `tag:"length"`
+}
+```
+
+<a name="ParseS3CryptoTag"></a>
+### func [ParseS3CryptoTag](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/field.go#L84>)
+
+```go
+func ParseS3CryptoTag(tag string) (S3CryptoTag, error)
+```
+
+ParseS3CryptoTag 解析 s3crypto 标签字符串为 S3CryptoTag。

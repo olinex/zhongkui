@@ -57,6 +57,7 @@
   - [func \(m \*KnowledgeChunk\) TableName\(\) string](<#KnowledgeChunk.TableName>)
 - [type KnowledgeDocStatus](<#KnowledgeDocStatus>)
 - [type KnowledgeDocument](<#KnowledgeDocument>)
+  - [func \(d \*KnowledgeDocument\) ObjectCryptoKey\(\) \(\[\]byte, error\)](<#KnowledgeDocument.ObjectCryptoKey>)
   - [func \(m \*KnowledgeDocument\) TableName\(\) string](<#KnowledgeDocument.TableName>)
 - [type LlmBinding](<#LlmBinding>)
   - [func \(m \*LlmBinding\) TableName\(\) string](<#LlmBinding.TableName>)
@@ -80,6 +81,7 @@
 - [type PeriodicReportPlanWatch](<#PeriodicReportPlanWatch>)
   - [func \(m \*PeriodicReportPlanWatch\) TableName\(\) string](<#PeriodicReportPlanWatch.TableName>)
 - [type PeriodicReportRun](<#PeriodicReportRun>)
+  - [func \(r \*PeriodicReportRun\) ObjectCryptoKey\(\) \(\[\]byte, error\)](<#PeriodicReportRun.ObjectCryptoKey>)
   - [func \(m \*PeriodicReportRun\) TableName\(\) string](<#PeriodicReportRun.TableName>)
 - [type PeriodicReportRunStatus](<#PeriodicReportRunStatus>)
 - [type ReviewValve](<#ReviewValve>)
@@ -252,7 +254,7 @@ type AgentCheckpoint struct {
     CheckpointID string `json:"checkpointID" gorm:"column:checkpoint_id;type:VARCHAR(64);not null;uniqueIndex:uq_agent_checkpoints_checkpoint_id"`
     // Payload 序列化后的图运行现场字节（含消息链、工具调用与运行状态，可能携带用户内容与凭据），
     // 经 crypto 序列化器加密落库
-    Payload *serializer.Crypto `json:"payload" gorm:"column:payload;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12820,length=32"`
+    Payload *serializer.Crypto `json:"payload" gorm:"column:payload;type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12820,length=32"`
 }
 ```
 
@@ -293,7 +295,7 @@ type AgentInteraction struct {
     Status InteractionStatus `gorm:"type:VARCHAR(16);not null;default:pending"`
     // Payload 交互业务 JSON（审批调用清单与决策 / 问卷题目与作答 / 下一步列表），经 crypto
     // 序列化器加密落库；offset 12822 为本次新增分配（12821 已分配予 agent_messages.payload）
-    Payload *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12822,length=32"`
+    Payload *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12822,length=32"`
 }
 ```
 
@@ -465,13 +467,13 @@ type AgentMemory struct {
     // Title 一句话标题，便于在记忆列表中识别
     Title string `gorm:"type:VARCHAR(256)"`
     // Content 记忆正文内容，经 crypto 序列化器加密存储
-    Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12805,length=32"`
+    Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12805,length=32"`
     // Embedding 记忆正文的向量化表示（1536 维），用于向量相似度检索
     Embedding []float32 `gorm:"type:vector(1536);serializer:json"`
     // Search 记忆正文的全文检索表示（tsvector），用于关键词检索
     Search string `gorm:"type:tsvector"`
     // Hash 规范化正文的 HMAC-SHA256 十六进制摘要（带密钥，防离线爆破），经 hash 序列化器封装，用于精确去重，与隔离维度组成唯一索引
-    Hash serializer.Hash `json:"hash" gorm:"type:CHAR(64);serializer:hash;uniqueIndex:uq_agent_memories_scope_hash,priority:5" secure:"mode=\"hmac-sha256\",offset=12806,length=32"`
+    Hash serializer.Hash `json:"hash" gorm:"type:CHAR(64);serializer:hash;uniqueIndex:uq_agent_memories_scope_hash,priority:5" hash:"offset=12806,length=32"`
     // Status 记忆状态（active/archived），默认 active
     Status MemoryStatus `gorm:"type:VARCHAR(16)"`
     // UseCount 被检索命中的次数，默认 0
@@ -519,14 +521,14 @@ type AgentMessage struct {
     MessageKind llm.APIMode `gorm:"type:VARCHAR(16);not null;default:chat"`
     // Payload eino 原生消息 JSON（chat 或 responses 表示，含用户原文与模型输出），经 crypto
     // 序列化器加密落库，是会话消息的事实来源
-    Payload *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12821,length=32"`
+    Payload *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12821,length=32"`
     // Content 消息正文内容（含用户原文与模型输出，经 crypto 序列化器加密落库；追加原生消息时
     // 由 Payload 解码回填，供滚动摘要与消息列表读取）
-    Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12811,length=32"`
+    Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12811,length=32"`
     // DraftJSON 助手回复的草稿载荷（JSON，如工具调用的中间状态），可空，经 crypto 序列化器加密落库
-    DraftJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12812,length=32"`
+    DraftJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12812,length=32"`
     // CitationsJSON 引用来源列表（JSON），可空，经 crypto 序列化器加密落库（引用携带知识库正文）
-    CitationsJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12813,length=32"`
+    CitationsJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12813,length=32"`
     // PromptTokens 本轮助手回答全部模型调用的输入 token 累加（明文数值，用户消息恒为 0）
     PromptTokens int `gorm:"type:INT"`
     // CompletionTokens 本轮助手回答全部模型调用的输出 token 累加（明文数值，用户消息恒为 0）
@@ -611,10 +613,10 @@ type AgentRun struct {
     Status AgentRunStatus `json:"status" gorm:"type:VARCHAR(16)"`
     // PendingCallsJSON 待执行调用列表 JSON：callID、工具名与调用入参文本
     // （工具入参可能携带凭据，经 crypto 序列化器加密落库）
-    PendingCallsJSON *serializer.Crypto `json:"pendingCalls" gorm:"column:pending_calls;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12815,length=32"`
+    PendingCallsJSON *serializer.Crypto `json:"pendingCalls" gorm:"column:pending_calls;type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12815,length=32"`
     // CitationsJSON 检索引用列表 JSON，用于恢复后的最终轮产出引用
     // （引用携带知识库正文，经 crypto 序列化器加密落库）
-    CitationsJSON *serializer.Crypto `json:"citations" gorm:"column:citations;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12816,length=32"`
+    CitationsJSON *serializer.Crypto `json:"citations" gorm:"column:citations;type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12816,length=32"`
     // Slot 本次运行使用的档位，取值来自枚举类 llmSlot。
     // 与 checkpoint 的 graphState.Slot 重叠，用于回退续跑时构造运行入参。
     Slot Slot `json:"slot" gorm:"type:VARCHAR(255)"`
@@ -750,7 +752,7 @@ type AgentSession struct {
     ReviewValve ReviewValve `gorm:"type:VARCHAR(16);default:each"`
     // Summary 会话滚动摘要，压缩已折叠进其中的历史消息，无摘要时为空
     // （正文含用户原文，经 crypto 序列化器加密落库）
-    Summary *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12810,length=32"`
+    Summary *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12810,length=32"`
     // MessageSeq 会话内已分配的最大消息序号（seq），供消息 seq 原子分配
     MessageSeq uint `gorm:"type:BIGINT;not null"`
     // SummaryUptoSeq 滚动摘要已覆盖的最后一条消息的会话内序号（seq），0 表示尚未摘要任何消息
@@ -790,7 +792,7 @@ type AgentSessionCompaction struct {
     // UptoSeq 本次推进后的上下文起点（即当时的 summary_upto_seq 快照），同一会话内随推进单调递增
     UptoSeq uint64 `gorm:"type:BIGINT"`
     // Summary 本次推进后的会话摘要全文（对应 AgentSession.Summary，经 crypto 序列化器加密落库）
-    Summary *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12818,length=32"`
+    Summary *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12818,length=32"`
     // Reason 触发本次推进的原因：rolling（静默滚动）/ auto（自动压缩）/ manual（手动压缩）
     Reason string `gorm:"type:VARCHAR(16)"`
     // TokensBefore 本次推进时（推进动作发生前）的会话上下文占用 token，三种原因均赋予该时刻的
@@ -834,7 +836,7 @@ type AgentSkill struct {
     // Description 技能描述（明文存储），便于在技能列表中识别技能用途
     Description string `gorm:"type:VARCHAR(256)"`
     // Content 技能正文内容，经 crypto 序列化器加密存储；内置技能不落库（nil），正文取自代码注册表
-    Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12823,length=32"`
+    Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12823,length=32"`
     // Enabled 技能是否启用，默认 true；停用的技能不参与运行时装配
     Enabled bool `gorm:"type:BOOLEAN;not null;default:true"`
     // PeriodicCapable 技能是否可周期执行（由用户声明）：为 true 时应按固定周期、固定时间窗口
@@ -903,7 +905,7 @@ const (
 ```
 
 <a name="KnowledgeChunk"></a>
-## type [KnowledgeChunk](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/document.go#L66-L85>)
+## type [KnowledgeChunk](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/document.go#L73-L92>)
 
 KnowledgeChunk 表示知识文档切分后的一个分块，是 RAG 检索的最小单元： 每个分块携带向量化表示（Embedding）与全文检索表示（Search）， 支持向量相似度检索与关键词检索。标题路径与分块正文经 crypto 序列化器 加密存储（列类型 BYTEA）；Search 为 tsvector，保留明文词元以支撑全文检索。 对应表为 knowledge\_chunks。
 
@@ -920,9 +922,9 @@ type KnowledgeChunk struct {
     // ChunkIndex 分块在文档内的序号，从 0 开始
     ChunkIndex int `gorm:"type:INT"`
     // HeadingPath 分块所属的标题路径（如 "## 简介 / 架构"），用于引用溯源，经 crypto 序列化器加密存储
-    HeadingPath *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12802,length=32"`
+    HeadingPath *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12802,length=32"`
     // Content 分块正文内容，经 crypto 序列化器加密存储
-    Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12803,length=32"`
+    Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12803,length=32"`
     // Embedding 分块内容的向量化表示（1536 维），用于向量相似度检索
     Embedding []float32 `gorm:"type:vector(1536);serializer:json"`
     // Search 分块内容的全文检索表示（tsvector），用于关键词检索
@@ -964,7 +966,7 @@ const (
 ```
 
 <a name="KnowledgeDocument"></a>
-## type [KnowledgeDocument](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/document.go#L28-L59>)
+## type [KnowledgeDocument](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/document.go#L29-L60>)
 
 KnowledgeDocument 表示一份上传到知识库的文档，是 RAG 索引的输入单元： 文档按标题层级切分为多个知识分块（KnowledgeChunk），并保存内容摘要 （Hash）以判断已有分块索引是否随内容变更而过期。文档正文经 crypto 序列化器 加密存储（列类型 BYTEA），内容摘要为带密钥的 HMAC\-SHA256，均避免明文落库。 对应表为 knowledge\_documents。
 
@@ -979,17 +981,17 @@ type KnowledgeDocument struct {
     // Title 文档标题，便于在文档列表中识别
     Title string `gorm:"type:VARCHAR(256)"`
     // Content 文档正文内容，经 crypto 序列化器加密存储
-    Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12801,length=32"`
+    Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12801,length=32"`
     // ChunkCount 文档被切分的知识分块数量，0 表示尚未切分
     ChunkCount int `gorm:"type:INT"`
     // Hash 文档内容的 HMAC-SHA256 十六进制摘要（带密钥，防离线爆破），经 hash 序列化器封装，用于判断已有分块索引是否过期
-    Hash serializer.Hash `json:"hash" gorm:"type:CHAR(64);serializer:hash" secure:"mode=\"hmac-sha256\",offset=12804,length=32"`
+    Hash serializer.Hash `json:"hash" gorm:"type:CHAR(64);serializer:hash" hash:"offset=12804,length=32"`
     // Format 文档来源格式，取值来自枚举类 documentFormat；手工录入的文档为 markdown
     Format string `gorm:"type:VARCHAR(16)"`
     // OriginalName 导入文档的原始文件名，手工录入的文档为空
     OriginalName string `gorm:"type:VARCHAR(256)"`
-    // ObjectKey 原件在 S3 中的对象键，手工录入的文档为空
-    ObjectKey string `gorm:"type:VARCHAR(512)"`
+    // ObjectKey 原件在 S3 中的对象键（经 s3crypto 序列化器封装），手工录入的文档为空
+    ObjectKey serializer.S3Crypto `gorm:"type:VARCHAR(512);serializer:s3crypto" s3crypto:"offset=1638,length=32"`
     // SizeBytes 原件字节数，手工录入的文档为 0
     SizeBytes int64 `gorm:"type:BIGINT"`
     // Status 文档处理状态，取值来自枚举类 knowledgeDocStatus
@@ -1002,6 +1004,15 @@ type KnowledgeDocument struct {
     LastUsedAt *time.Time `gorm:"type:TIMESTAMPTZ"`
 }
 ```
+
+<a name="KnowledgeDocument.ObjectCryptoKey"></a>
+### func \(\*KnowledgeDocument\) [ObjectCryptoKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/document.go#L64>)
+
+```go
+func (d *KnowledgeDocument) ObjectCryptoKey() ([]byte, error)
+```
+
+ObjectCryptoKey 派生 object\_key 字段的 S3 加密子密钥。 模型无 json 标签，故按 Go 字段名匹配 s3crypto 标签。
 
 <a name="KnowledgeDocument.TableName"></a>
 ### func \(\*KnowledgeDocument\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L56>)
@@ -1060,7 +1071,7 @@ type LlmModel struct {
     BaseURL string `gorm:"type:VARCHAR(512)"`
     // APIKey 访问模型端点的凭据，以加密形式持久化（crypto serializer 密文入库，BYTEA 列）；
     // 明文经 APIKeyData() 获取
-    APIKey *serializer.Crypto `json:"apiKey" gorm:"column:api_key;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=7001,length=32"`
+    APIKey *serializer.Crypto `json:"apiKey" gorm:"column:api_key;type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=7001,length=32"`
     // ModelName 供应商侧的模型名，如 gpt-4o-mini、text-embedding-3-small；
     // 列名保持 model，Go 字段名取 ModelName 是因为内嵌的 gorm.Model 已占用 Model 标识符
     ModelName string `gorm:"column:model;type:VARCHAR(128)"`
@@ -1169,7 +1180,7 @@ type McpServer struct {
     URL string `gorm:"column:url;type:VARCHAR(512)"`
     // Headers 请求头（JSON 对象字符串，承载 Authorization 等凭据），以加密形式持久化
     // （crypto serializer 密文入库，BYTEA 列）；明文经 HeadersData() 获取
-    Headers *serializer.Crypto `json:"headers" gorm:"column:headers;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=7002,length=32"`
+    Headers *serializer.Crypto `json:"headers" gorm:"column:headers;type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=7002,length=32"`
     // TimeoutSeconds 单次请求的超时秒数，0 表示使用调用方默认值
     TimeoutSeconds int `gorm:"type:INTEGER"`
     // Enabled 是否启用，禁用的服务器及其全部工具不参与装配
@@ -1300,7 +1311,7 @@ const (
 ```
 
 <a name="PeriodicReportPlan"></a>
-## type [PeriodicReportPlan](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/periodicreport.go#L36-L63>)
+## type [PeriodicReportPlan](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/periodicreport.go#L38-L65>)
 
 PeriodicReportPlan 表示一个周期性报告计划：按 cron 表达式周期性执行指定技能，携带渲染输入所需的 实参，并按保留天数清理历史报告。对应表为 periodic\_report\_plans。
 
@@ -1345,7 +1356,7 @@ func (m *PeriodicReportPlan) TableName() string
 TableName 返回 PeriodicReportPlan 对应的数据库表名。
 
 <a name="PeriodicReportPlanWatch"></a>
-## type [PeriodicReportPlanWatch](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/periodicreport.go#L97-L106>)
+## type [PeriodicReportPlanWatch](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/periodicreport.go#L105-L114>)
 
 PeriodicReportPlanWatch 表示用户对某个报告计划的关注关系：关注后该用户的报告中心展示该计划的运行 记录。对应表为 periodic\_report\_plan\_watches。
 
@@ -1372,7 +1383,7 @@ func (m *PeriodicReportPlanWatch) TableName() string
 TableName 返回 PeriodicReportPlanWatch 对应的数据库表名。
 
 <a name="PeriodicReportRun"></a>
-## type [PeriodicReportRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/periodicreport.go#L67-L93>)
+## type [PeriodicReportRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/periodicreport.go#L69-L95>)
 
 PeriodicReportRun 表示一次报告运行的记录：由计划在 cron 触发点创建，记录触发时间、运行状态与产出 （对象存储键、标题、大小）以及失败原因。对应表为 periodic\_report\_runs。
 
@@ -1388,8 +1399,8 @@ type PeriodicReportRun struct {
     TriggerAt time.Time `gorm:"type:TIMESTAMPTZ;not null;uniqueIndex:uq_periodic_report_runs_plan_id_trigger_at,priority:2,where:deleted_at IS NULL"`
     // Status 运行状态，取值来自枚举类 periodicReportRunStatus（running/success/failed）
     Status PeriodicReportRunStatus `gorm:"type:VARCHAR(16);not null;index:idx_periodic_report_runs_status"`
-    // ObjectKey 生成的报告对象在对象存储中的键，无产出时为空
-    ObjectKey string `gorm:"type:VARCHAR(512)"`
+    // ObjectKey 生成的报告在对象存储中的键（经 s3crypto 序列化器封装），无产出时为空
+    ObjectKey serializer.S3Crypto `gorm:"type:VARCHAR(512);serializer:s3crypto" s3crypto:"offset=38549,length=32"`
     // Title 生成报告的标题
     Title string `gorm:"type:VARCHAR(256)"`
     // SizeBytes 生成的报告字节大小
@@ -1406,6 +1417,15 @@ type PeriodicReportRun struct {
 }
 ```
 
+<a name="PeriodicReportRun.ObjectCryptoKey"></a>
+### func \(\*PeriodicReportRun\) [ObjectCryptoKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/periodicreport.go#L99>)
+
+```go
+func (r *PeriodicReportRun) ObjectCryptoKey() ([]byte, error)
+```
+
+ObjectCryptoKey 派生 object\_key 字段的 S3 加密子密钥。 模型无 json 标签，故按 Go 字段名匹配 s3crypto 标签。
+
 <a name="PeriodicReportRun.TableName"></a>
 ### func \(\*PeriodicReportRun\) [TableName](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/table_name.go#L91>)
 
@@ -1416,7 +1436,7 @@ func (m *PeriodicReportRun) TableName() string
 TableName 返回 PeriodicReportRun 对应的数据库表名。
 
 <a name="PeriodicReportRunStatus"></a>
-## type [PeriodicReportRunStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/periodicreport.go#L22>)
+## type [PeriodicReportRunStatus](<https://gitee.com/olinex/zhongkui/blob/master/internal/models/ai/periodicreport.go#L24>)
 
 PeriodicReportRunStatus 是报告运行记录状态的标识：运行中（running）、成功（success）与失败（failed）。 取值与 periodic\_report\_runs.status 列的取值一致，取值空间在包内 init 注册为枚举类 periodicReportRunStatus。
 

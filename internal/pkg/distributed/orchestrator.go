@@ -167,13 +167,18 @@ func (o *Orchestrator[Handler, Item]) Start(ctx context.Context) error {
 			fmt.Sprintf("%s-%s", o.name, o.memberID),
 			func() error {
 				o.logger.Ctx(innerCtx).Infof("orchestrator %s handler started, memberID=%s", o.name, o.memberID)
-				if err := o.handler.Start(innerCtx, itemChan); err != nil {
-					o.logger.Ctx(innerCtx).Errorf("orchestrator %s handler exited with error, memberID=%s, err=%v", o.name, o.memberID, err)
-					return errors.WithStack(err)
-				} else {
+				err := o.handler.Start(innerCtx, itemChan)
+				if err == nil {
 					o.logger.Ctx(innerCtx).Infof("orchestrator %s handler exited cleanly, memberID=%s", o.name, o.memberID)
 					return nil
 				}
+				// 仅以 innerCtx 是否已取消判定关机；ctx 存活时 handler 的取消属于真实故障。
+				if innerCtx.Err() != nil {
+					o.logger.Ctx(innerCtx).Infof("orchestrator %s handler stopped (context canceled), memberID=%s", o.name, o.memberID)
+					return nil
+				}
+				o.logger.Ctx(innerCtx).Errorf("orchestrator %s handler exited with error, memberID=%s, err=%v", o.name, o.memberID, err)
+				return errors.WithStack(err)
 			},
 		)
 
@@ -186,6 +191,11 @@ func (o *Orchestrator[Handler, Item]) Start(ctx context.Context) error {
 
 		watermark, err := o.getWatermark(ctx)
 		if err != nil {
+			// 初始化期间收到关机信号同样属于正常退出路径。
+			if ctx.Err() != nil {
+				o.logger.Ctx(ctx).Infof("orchestrator %s stopped during initialization (context canceled), memberID=%s", o.name, o.memberID)
+				return nil
+			}
 			o.logger.Ctx(innerCtx).Errorf("orchestrator %s get initial watermark failed: %v", o.name, err)
 			return errors.WithStack(err)
 		}
@@ -285,6 +295,15 @@ func (o *Orchestrator[Handler, Item]) Start(ctx context.Context) error {
 					},
 				)
 				if err := pollWg.Wait(); err != nil {
+					// 关机时 Poll 会以 ctx 取消结束，属于正常退出路径。
+					if innerCtx.Err() != nil {
+						o.logger.Ctx(innerCtx).Infof(
+							"orchestrator %s poll interrupted (context canceled), memberID=%s",
+							o.name,
+							o.memberID,
+						)
+						return nil
+					}
 					o.logger.Ctx(innerCtx).Errorf(
 						"orchestrator %s poll failed, memberID=%s, err=%v",
 						o.name,
@@ -295,6 +314,11 @@ func (o *Orchestrator[Handler, Item]) Start(ctx context.Context) error {
 				}
 
 			case <-saveTicker.C:
+				// 已收到关机信号时不再发起 etcd 写入，避免取消中的调用产生
+				// “retrying of unary invoker failed: context canceled” 噪声。
+				if ctx.Err() != nil {
+					continue
+				}
 				if !watermark.IsZero() {
 					if err := o.saveWatermark(ctx, watermark); err != nil {
 						o.logger.Ctx(ctx).Errorf(

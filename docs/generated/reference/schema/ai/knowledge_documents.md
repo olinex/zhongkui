@@ -31,7 +31,7 @@ KnowledgeDocument 表示一份上传到知识库的文档，是 RAG 索引的输
 | hash | CHAR(64) | 是 | - | Hash 文档内容的 HMAC-SHA256 十六进制摘要（带密钥，防离线爆破），经 hash 序列化器封装，用于判断已有分块索引是否过期 |
 | format | VARCHAR(16) | 是 | - | Format 文档来源格式，取值来自枚举类 documentFormat；手工录入的文档为 markdown |
 | original_name | VARCHAR(256) | 是 | - | OriginalName 导入文档的原始文件名，手工录入的文档为空 |
-| object_key | VARCHAR(512) | 是 | - | ObjectKey 原件在 S3 中的对象键，手工录入的文档为空 |
+| object_key | VARCHAR(512) | 是 | - | ObjectKey 原件在 S3 中的对象键（经 s3crypto 序列化器封装），手工录入的文档为空 |
 | size_bytes | BIGINT | 是 | - | SizeBytes 原件字节数，手工录入的文档为 0 |
 | status | VARCHAR(16) | 是 | - | Status 文档处理状态，取值来自枚举类 knowledgeDocStatus |
 | parse_error | TEXT | 是 | - | ParseError 解析失败原因，解析成功或手工录入的文档为空 |

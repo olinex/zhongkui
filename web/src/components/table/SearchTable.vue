@@ -66,7 +66,9 @@
         @click:row="onRowClick"
       >
         <template #loading>
-          <v-skeleton-loader :type="`table-row@${total || pageSize}`" />
+          <!-- 骨架行数固定为每页条数：不可用 total，否则翻页时会把“总记录数”个
+               table-row 骨架（每行 6 个 cell）一次性同步渲染，总数为千/万级时直接卡住主线程 -->
+          <v-skeleton-loader :type="`table-row@${pageSize}`" />
         </template>
         <template #item="{ index, item, internalItem, isSelected, toggleSelect }">
           <tr class="text-no-wrap" :class="{ 'row-clickable': !!rowClick }">

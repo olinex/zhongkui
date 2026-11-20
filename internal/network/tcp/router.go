@@ -86,7 +86,10 @@ func NewRouter[P TCPPacket](maxReassemblerSize, maxOutOrderPacketSize int, notic
 //   - 实现LRU缓存：每次访问节点时将其移动到链表头部，保持最近使用的节点在前面
 //   - 容量管理：超过最大重组器数量时，丢弃链表尾部的节点（最近最少使用）
 //   - 生命周期管理：TCP流完成后（请求和响应负载都完成）自动移除节点
-//   - SYN包处理：只有SYN包会创建新的重组器节点，非SYN包会被忽略（如果找不到对应节点）
+//   - SYN包处理：只有SYN包会创建新的重组器节点；非SYN包在找不到节点时暂存到
+//     oop 队列，等待 SYN 到达后按序列号注入。暂存队列受 maxOutOrderPacketSize
+//     限制单条流的包数，并由 cleanup 按 noticeTimeout 丢弃始终等不到 SYN 的流
+//     （握手不在采集窗口内），避免其无限堆积
 //
 // 性能考虑:
 //   - 时间复杂度：O(n) 在最坏情况下需要遍历整个链表
@@ -115,7 +118,7 @@ func (r *Router[P]) addPacket(ctx context.Context, logger *logging.Logger, packe
 
 	if node == nil {
 		if !packet.IsSyn() {
-			group.addOOP(streamID, packet)
+			group.addOOP(streamID, packet, r.maxOutOrderPacketSize, time.Now())
 			return nil
 		}
 		node, err = newReassemblerNode(ctx, logger, streamID, packet, r.maxOutOrderPacketSize, r.noticeTimeout, dstChan)
@@ -151,13 +154,14 @@ func (r *Router[P]) addPacket(ctx context.Context, logger *logging.Logger, packe
 	return nil
 }
 
-func (r *Router[P]) cleanup(ctx context.Context, force bool) (removedCount, evictedCount, livingCount int) {
+func (r *Router[P]) cleanup(ctx context.Context, force bool) (removedCount, evictedCount, livingCount, oopDroppedCount int) {
 	ctx, span := startCleanupSpan(ctx, force)
 	defer func() {
 		span.SetAttributes(
 			attribute.Int("tcp.cleanup.removed", removedCount),
 			attribute.Int("tcp.cleanup.evicted", evictedCount),
 			attribute.Int("tcp.living", livingCount),
+			attribute.Int("tcp.cleanup.oop_dropped", oopDroppedCount),
 		)
 		recordCleanupFlowsRemoved(ctx, removedCount)
 		recordCleanupFlowsEvicted(ctx, evictedCount)
@@ -168,7 +172,7 @@ func (r *Router[P]) cleanup(ctx context.Context, force bool) (removedCount, evic
 		if group == nil {
 			continue
 		}
-		removed, evicted, living := group.cleanup(
+		removed, evicted, living, oopDropped := group.cleanup(
 			r.noticeTimeout,
 			r.maxReassemblerSize,
 			force,
@@ -176,6 +180,7 @@ func (r *Router[P]) cleanup(ctx context.Context, force bool) (removedCount, evic
 		removedCount += removed
 		evictedCount += evicted
 		livingCount += living
+		oopDroppedCount += oopDropped
 	}
 	return
 }
@@ -247,7 +252,7 @@ LOOP:
 			}
 		}
 	}
-	_, _, living := r.cleanup(ctx, false)
+	_, _, living, _ := r.cleanup(ctx, false)
 	if living > 0 {
 		timer := time.NewTicker(r.noticeTimeout)
 		defer timer.Stop()

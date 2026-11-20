@@ -33,9 +33,14 @@ type Engine struct {
 	client *etcd.EtcdClient
 	// pools 按命名空间隔离的第三方数据源池（nil 时不提供第三方数据源查询）。
 	pools *vtab.Pools
-	cache sync.Map // key: groupKey(string) → *compiledGroup
+	// s3Loader S3 加密对象读取器（nil 时不支持 crypto.reveal 读取 S3Crypto 字段）。
+	s3Loader S3ObjectLoader
+	// key: groupKey(string) → *compiledGroup
+	cache sync.Map
 	// watcher 规则变更监听器（etcd 通用层），nil 时 Start/Shutdown 直接跳过。
 	watcher *etcd.Watcher
+	// s3CryptoMaxBytes S3Crypto 字段正文读取上限（字节），超限报错。
+	s3CryptoMaxBytes int64
 }
 
 // groupKey 计算分组的缓存键。
@@ -70,6 +75,24 @@ func WithDatasourcePools(pools *vtab.Pools) EngineOption {
 	return func(e *Engine) {
 		e.pools = pools
 	}
+}
+
+// WithSensitiveRuntime 注入敏感字段解密运行时：S3 对象读取器与正文大小上限。
+// loader 为 nil 时不支持 crypto.reveal 读取 S3Crypto 字段，Crypto 字段不受影响。
+func WithSensitiveRuntime(loader S3ObjectLoader, maxBytes int64) EngineOption {
+	return func(e *Engine) {
+		e.s3Loader = loader
+		e.s3CryptoMaxBytes = maxBytes
+	}
+}
+
+// RuntimeContext 返回绑定了敏感字段解密运行时的 ctx。
+// 未注入 S3 读取器时原样返回；供引擎识别、视图 dry-run 与样例校验复用同一运行时。
+func (e *Engine) RuntimeContext(ctx context.Context) context.Context {
+	if e.s3Loader == nil {
+		return ctx
+	}
+	return WithSensitiveRuntimeContext(ctx, e.s3Loader, e.s3CryptoMaxBytes)
 }
 
 // getRulesFromDB 返回指定命名空间下目标模型中启用的规则。
@@ -123,6 +146,7 @@ func (e *Engine) Recognize(ctx context.Context, target any) ([]string, error) {
 		return nil, errors.WithStack(err)
 	}
 	ctx = e.withNamespacePool(ctx, namespace)
+	ctx = WithSensitiveTarget(e.RuntimeContext(ctx), targetType, target)
 	return group.Recognize(ctx, rego.EvalInput(input))
 }
 
@@ -144,6 +168,7 @@ func (e *Engine) RecognizeWithDetail(ctx context.Context, target any) (*GroupDet
 		return nil, errors.WithStack(err)
 	}
 	ctx = e.withNamespacePool(ctx, namespace)
+	ctx = WithSensitiveTarget(e.RuntimeContext(ctx), targetType, target)
 	return group.RecognizeWithDetail(ctx, rego.EvalInput(input)), nil
 }
 

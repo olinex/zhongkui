@@ -97,7 +97,7 @@
             </v-row>
             <v-row density="compact">
               <v-col cols="12">
-                <v-text-field
+                <bpf-expr-field
                   v-model="createBpfExpr"
                   v-bind="createBpfExprProps"
                   :label="$t('model.capturer.field.bpfExpr')"
@@ -197,7 +197,7 @@
             </v-row>
             <v-row density="compact">
               <v-col cols="12">
-                <v-text-field
+                <bpf-expr-field
                   v-model="updateBpfExpr"
                   v-bind="updateBpfExprProps"
                   :label="$t('model.capturer.field.bpfExpr')"
@@ -270,6 +270,7 @@ import {
 } from "@/apis/admin";
 import { getResponse, getSimpleResponse } from "@/apis/base";
 import type { BatchActions, ItemActions } from "@/components/@types/table";
+import BpfExprField from "@/components/forms/BpfExprField.vue";
 import type { CapturerDetailOut } from "./@types";
 import { useAppStore } from "@/stores/app";
 import type { BatchResultOut, CapturerConfigIn } from "@/apis/@types/admin";
@@ -359,7 +360,8 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
           device: rsp.data.config.device,
           bpfExpr: rsp.data.config.bpfExpr,
           snapLen: rsp.data.config.snapLen,
-          timeout: rsp.data.config.timeout,
+          // 后端 timeout 单位为毫秒，表单与校验规则使用秒，回填时换算
+          timeout: rsp.data.config.timeout / 1000,
           promisc: rsp.data.config.promisc,
           enabled: rsp.data.config.enabled,
         },
@@ -482,6 +484,8 @@ const itemUpdateAction = (proxy: Record<string, any>) => {
         ...values,
         device: (values.device as string).trim(),
         bpfExpr: (values.bpfExpr as string).trim(),
+        // 表单使用秒，后端 CapturerConfigIn.timeout 为毫秒
+        timeout: Math.round(Number(values.timeout) * 1000),
       } as CapturerConfigIn),
       async (rsp) => {
         await searchTableRef.value?.refresh();
@@ -513,7 +517,8 @@ const createAction = createForm.handleSubmit(async (values): Promise<void> => {
         device: (values.device as string).trim(),
         snapLen: values.snapLen,
         promisc: values.promisc,
-        timeout: values.timeout,
+        // 表单使用秒，后端 CapturerConfigIn.timeout 为毫秒
+        timeout: Math.round(Number(values.timeout) * 1000),
         bpfExpr: (values.bpfExpr as string).trim(),
         enabled: values.enabled,
       },

@@ -18,6 +18,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
 )
 
@@ -41,7 +42,7 @@ type fakeMaterializer struct {
 }
 
 // Materialize 返回预置路径；配置了错误时返回该错误，配置了 panicValue 时以该值 panic。
-func (f *fakeMaterializer) Materialize(_ context.Context, _ string) (string, error) {
+func (f *fakeMaterializer) Materialize(_ context.Context, _ string, _ []byte) (string, error) {
 	if f.panicValue != nil {
 		panic(f.panicValue)
 	}
@@ -142,7 +143,7 @@ func TestParseHandler_Do_Success(t *testing.T) {
 			Title:        "doc",
 			Format:       "markdown",
 			OriginalName: "doc.md",
-			ObjectKey:    "knowledge/default/1.md",
+			ObjectKey:    serializer.NewS3Crypto("knowledge/default/1.md"),
 			SizeBytes:    int64(len(source)),
 		})
 		handler := newParseHandler(t, db, &fakeMaterializer{path: writeTempSource(t, source)},
@@ -166,7 +167,7 @@ func TestParseHandler_Do_MaterializeFails(t *testing.T) {
 	convey.Convey("ParseHandler 原件拉取失败", t, func() {
 		db := newParseTestDB(t)
 		doc := seedParseDocument(t, db, &ai.KnowledgeDocument{
-			Title: "doc", Format: "markdown", ObjectKey: "knowledge/default/2.md",
+			Title: "doc", Format: "markdown", ObjectKey: serializer.NewS3Crypto("knowledge/default/2.md"),
 		})
 		handler := newParseHandler(t, db, &fakeMaterializer{err: errors.New("object not found")},
 			&fakeIndexer{db: db, chunks: 1}, true)
@@ -187,7 +188,7 @@ func TestParseHandler_Do_AIDisabled(t *testing.T) {
 	convey.Convey("ParseHandler AI 能力不可用", t, func() {
 		db := newParseTestDB(t)
 		doc := seedParseDocument(t, db, &ai.KnowledgeDocument{
-			Title: "doc", Format: "markdown", ObjectKey: "knowledge/default/3.md",
+			Title: "doc", Format: "markdown", ObjectKey: serializer.NewS3Crypto("knowledge/default/3.md"),
 		})
 		handler := newParseHandler(t, db, &fakeMaterializer{path: writeTempSource(t, "body")},
 			&fakeIndexer{db: db, chunks: 1}, false)
@@ -229,7 +230,7 @@ func TestParseHandler_Do_PanicConvergedToFailed(t *testing.T) {
 	convey.Convey("ParseHandler panic 兜底", t, func() {
 		db := newParseTestDB(t)
 		doc := seedParseDocument(t, db, &ai.KnowledgeDocument{
-			Title: "doc", Format: "pdf", ObjectKey: "knowledge/default/5.pdf",
+			Title: "doc", Format: "pdf", ObjectKey: serializer.NewS3Crypto("knowledge/default/5.pdf"),
 		})
 		handler := newParseHandler(t, db, &fakeMaterializer{panicValue: "malformed pdf"},
 			&fakeIndexer{db: db, chunks: 1}, true)
@@ -251,7 +252,7 @@ func TestParseHandler_Do_TruncatesParseError(t *testing.T) {
 	convey.Convey("ParseHandler 截断超长失败原因", t, func() {
 		db := newParseTestDB(t)
 		doc := seedParseDocument(t, db, &ai.KnowledgeDocument{
-			Title: "doc", Format: "markdown", ObjectKey: "knowledge/default/4.md",
+			Title: "doc", Format: "markdown", ObjectKey: serializer.NewS3Crypto("knowledge/default/4.md"),
 		})
 		longReason := strings.Repeat("啊", maxParseErrorBytes)
 		handler := newParseHandler(t, db, &fakeMaterializer{err: errors.New(longReason)},

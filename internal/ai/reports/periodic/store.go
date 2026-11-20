@@ -17,6 +17,7 @@ import (
 	modelsai "zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
@@ -362,15 +363,18 @@ func (s *Store) MarkRunRunning(ctx context.Context, id uint, startedAt time.Time
 // 是否命中未删除的记录。生成期间记录被用户删除时返回 false，调用方据此清理已写入的报告对象，
 // 避免「先检查存在性、后写入」之间的竞态留下无主对象。
 func (s *Store) MarkRunSuccess(ctx context.Context, id uint, objectKey, title string, size int64, finishedAt time.Time) (bool, error) {
+	// 结构体 + Select 更新以触发 s3crypto 序列化器（map 更新不会走序列化器）；
+	// Select 显式包含零值列（空 error），避免 Updates 跳过零值。
 	result := s.db.WithContext(ctx).Model(&modelsai.PeriodicReportRun{}).
 		Where("id = ?", id).
-		Updates(map[string]any{
-			"status":      modelsai.PeriodicReportRunStatusSuccess,
-			"object_key":  objectKey,
-			"title":       title,
-			"size_bytes":  size,
-			"error":       "",
-			"finished_at": finishedAt,
+		Select("status", "object_key", "title", "size_bytes", "error", "finished_at").
+		Updates(&modelsai.PeriodicReportRun{
+			Status:     modelsai.PeriodicReportRunStatusSuccess,
+			ObjectKey:  serializer.NewS3Crypto(objectKey),
+			Title:      title,
+			SizeBytes:  size,
+			Error:      "",
+			FinishedAt: &finishedAt,
 		})
 	if result.Error != nil {
 		return false, errors.WithStack(result.Error)

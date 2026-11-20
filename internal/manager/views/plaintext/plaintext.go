@@ -12,10 +12,8 @@ import (
 	"zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/models/core"
 	"zhongkuisec.com/zhongkui/internal/models/network"
-	"zhongkuisec.com/zhongkui/internal/network/detectors"
 	"zhongkuisec.com/zhongkui/internal/pkg/base"
 	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
-	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkuisec.com/zhongkui/internal/pkg/s3"
 )
 
@@ -60,7 +58,7 @@ type S3PlaintextIn struct {
 
 // CryptoPlaintextGet 处理加密字段明文查看请求（全局通用接口）
 // 请求携带模型注册名 + 字段 + base64 密文；先按字段构成权限点 object 做 RBAC 静态授权，
-// 再按模型字段的 secure 标签派生密钥解密，以 application/octet-stream 返回明文。
+// 再按模型字段的 crypto 标签派生密钥解密，以 application/octet-stream 返回明文。
 // 新增模型的加密字段仅需 RegisterPlaintextModel 注册模型 + 补模板种子，无需新增接口。
 func CryptoPlaintextGet(c *gin.Context) {
 	var in CryptoPlaintextIn
@@ -110,36 +108,28 @@ func S3PlaintextGet(c *gin.Context) {
 		err.AbortWithGinH(c)
 		return
 	}
-	if _, ok := plaintextModels[in.Model]; !ok {
+	if model, ok := plaintextModels[in.Model]; !ok {
 		response.CreateBadBodyMessageError("plaintextModelNotRegistered", in.Model).AbortWithGinH(c)
 		return
-	}
-	kd, err := key.GetKeyDerivation()
-	if err != nil {
+	} else if cryptoKey, err := crypto.S3CryptoKeyForField(model, in.Field, "json"); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
-	}
-	cryptoKey, err := kd.DeriveChildKey(detectors.CryptoKeyOffset, detectors.CryptoKeyLength)
-	if err != nil {
-		response.CreateAccidentError(err).AbortWithGinH(c)
-		return
-	}
-	rc, err := s3.NewZkcn(middlewares.GetS3Client(c), in.ObjectKey, cryptoKey, 0).Load(c)
-	if err != nil {
+	} else if rc, err := s3.NewZkcn(middlewares.GetS3Client(c), in.ObjectKey, cryptoKey, 0).Load(c); err != nil {
 		if s3.IsNotExists(err) {
 			response.ErrDefaultPageNotFound.AbortWithGinH(c)
 			return
 		}
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
+	} else {
+		defer rc.Close()
+		data, err := io.ReadAll(rc)
+		if err != nil {
+			response.CreateAccidentError(err).AbortWithGinH(c)
+			return
+		}
+		c.Data(http.StatusOK, "application/octet-stream", data)
 	}
-	defer rc.Close()
-	data, err := io.ReadAll(rc)
-	if err != nil {
-		response.CreateAccidentError(err).AbortWithGinH(c)
-		return
-	}
-	c.Data(http.StatusOK, "application/octet-stream", data)
 }
 
 // plaintextObject 构造明文查看权限点 object

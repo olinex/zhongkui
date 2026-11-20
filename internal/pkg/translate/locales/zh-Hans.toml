@@ -184,6 +184,7 @@ notBlank = "字段不能为空白字符"
 gtCurrentTime = "字段必须晚于当前时间"
 ltCurrentTime = "字段必须早于当前时间"
 cron = "字段须为合法的 cron 表达式（支持 5 段标准 cron 或 @daily 等描述符）"
+bpf = "字段须为合法的 BPF 过滤表达式（如 tcp port 80）"
 
 # =============================================================================
 # Interactive prompt texts (cliinput) - Key layout: cli.input.prompt.<Struct>.<Field>
@@ -963,6 +964,8 @@ other = "基准测试报告已保存：[[.Path]]"
 rego-invalid = "规则源码不符合标签识别契约，应为 package zki 且包含 tags 规则"
 lint-field-not-exist = "字段 %s 不存在于该模型的输入文档中，请检查拼写"
 lint-field-hint = "请从输入字段面板或补全列表中选择合法字段"
+lint-sensitive-field = "敏感字段 %s 不会出现在输入文档中，请使用 crypto.reveal(\"%s\") 获取明文"
+lint-sensitive-field-hint = "在规则中调用 crypto.reveal(\"字段名\")；字段名可从输入字段面板补全"
 
 [tagrule.hint]
 parse-unexpected = "语法错误：出现意外的符号或关键字，请检查拼写与括号/引号是否成对"
@@ -1896,6 +1899,13 @@ other = "客户端指纹签名"
 [enum.tagEventDimension.fpTcpServerSig]
 other = "服务端指纹签名"
 
+# 敏感字段可解密类型（枚举类 sensitiveKind）
+[enum.sensitiveKind.crypto]
+other = "列内加密字段"
+
+[enum.sensitiveKind.s3crypto]
+other = "S3 加密对象字段"
+
 # 通知模板来源（枚举类 notificationSource）
 [enum.notificationSource.default]
 other = "默认"
@@ -2762,6 +2772,9 @@ other = "用牛顿-拉夫逊法求解非线性方程组，给出解向量、残�
 
 [tagengine.custom-functions.sqlite.query.description]
 other = "查询第三方数据源：对注册为 sqlite vtable 的第三方数据源执行 SELECT 语句并返回行对象数组。\n参数：第一参数为查询语句（支持 ? 占位符），第二参数为按顺序绑定到占位符的参数数组。\n返回值：每行是以列名为键的对象，经下标加列名访问（如 rows[0].value）；无匹配行时返回空数组，下标访问会使规则体不满足，可先用 count(rows) > 0 判断"
+
+[tagengine.custom-functions.crypto.reveal.description]
+other = "读取当前目标模型中指定加密字段的明文：加密字段不会出现在输入文档中，field 为目标模型字段名（json 名，如 reqHdrAuthorization、reqBody）。Crypto 字段直接返回明文；S3Crypto 字段按字段密钥下载并解密 S3 对象后返回正文。字段值为空时返回空字符串；字段不可解密、S3 读取失败或正文超过 tagengine.s3cryptoMaxBytes 上限时报错（生产识别中该规则不命中，dry-run 中返回错误）。同一数据记录内同一字段只解密一次"
 
 # 任务类型（枚举类 taskType，来源 worker 的任务处理器注册表 TaskTypes()）
 [enum.taskType."network:pcapimport"]

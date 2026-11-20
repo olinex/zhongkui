@@ -222,9 +222,19 @@ export const SQL_KEYWORDS = [
  * 依据语义类型为输入字段构建可插入的 Rego 片段。可与字面量比较的字段生成
  * `input.<field> == <literal>`（字符串/数字/布尔）；对象、数组与敏感字段无法
  * 做相等比较，只生成裸引用 `input.<field>`。未知类型同样回退为裸引用。
+ * 可解密的敏感字段（Crypto / S3Crypto）生成 `crypto.reveal("<field>")`，
+ * 直接取明文参与判定。
  */
 export function fieldSnippet(field: InputFieldMeta): string {
   const ref = `input.${field.field}`;
+  if (
+    field.sensitive &&
+    (field.goType === "*serializer.Crypto" ||
+      field.goType === "serializer.Crypto" ||
+      field.goType === "serializer.S3Crypto")
+  ) {
+    return `crypto.reveal("${field.field}")`;
+  }
   switch (field.type) {
     case "string":
       return `${ref} == ""`;

@@ -12,10 +12,10 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-// HashTestModel 用于 GORM schema 解析，获取带 hmac-sha256 secure 标签的 Hash 字段。
+// HashTestModel 用于 GORM schema 解析，获取带 hash 标签的 Hash 字段。
 type HashTestModel struct {
 	// Digest 摘要字段，供 HashSerializer 的标签校验与 Scan/Value 往返验证。
-	Digest Hash `gorm:"type:CHAR(64);serializer:hash" secure:"mode=\"hmac-sha256\",offset=12804,length=32"`
+	Digest Hash `gorm:"type:CHAR(64);serializer:hash" hash:"offset=12804,length=32"`
 }
 
 // getHashField 从 HashTestModel 中解析出 schema.Field。
@@ -86,29 +86,44 @@ func TestHashSerializer_validateTag(t *testing.T) {
 	Convey("Test HashSerializer.validateTag", t, func() {
 		hs := HashSerializer{}
 
-		Convey("valid hmac-sha256 tag", func() {
-			cTag, err := hs.validateTag(getHashField())
+		Convey("valid hash tag", func() {
+			hTag, err := hs.validateTag(getHashField())
 			So(err, ShouldBeNil)
-			So(cTag.Mode, ShouldEqual, "hmac-sha256")
+			So(hTag.Offset, ShouldEqual, 12804)
+			So(hTag.Length, ShouldEqual, 32)
 		})
 
-		Convey("aes-gcm tag is rejected", func() {
-			type AesModel struct {
-				Digest Hash `gorm:"serializer:hash" secure:"mode=\"aes-gcm\",offset=12804,length=32"`
+		Convey("crypto tag on a Hash field is rejected", func() {
+			type CryptoTagModel struct {
+				Digest Hash `gorm:"serializer:hash" crypto:"mode=\"aes-gcm\",offset=12804,length=32"`
 			}
-			s, err := schema.Parse(&AesModel{}, &sync.Map{}, schema.NamingStrategy{})
+			s, err := schema.Parse(&CryptoTagModel{}, &sync.Map{}, schema.NamingStrategy{})
 			So(err, ShouldBeNil)
 			field := s.FieldsByDBName["digest"]
 			So(field, ShouldNotBeNil)
 
 			_, err = hs.validateTag(field)
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "hash: field mode must be")
+			So(err.Error(), ShouldContainSubstring, `must carry a "hash" tag`)
+		})
+
+		Convey("hash tag on a non-Hash field is rejected", func() {
+			type WrongTypeModel struct {
+				Digest string `gorm:"serializer:hash" hash:"offset=12804,length=32"`
+			}
+			s, err := schema.Parse(&WrongTypeModel{}, &sync.Map{}, schema.NamingStrategy{})
+			So(err, ShouldBeNil)
+			field := s.FieldsByDBName["digest"]
+			So(field, ShouldNotBeNil)
+
+			_, err = hs.validateTag(field)
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "hash: field Digest must be serializer.Hash")
 		})
 
 		Convey("invalid tag format is rejected", func() {
 			type BadModel struct {
-				Digest Hash `gorm:"serializer:hash" secure:"invalid_tag"`
+				Digest Hash `gorm:"serializer:hash" hash:"invalid_tag"`
 			}
 			s, err := schema.Parse(&BadModel{}, &sync.Map{}, schema.NamingStrategy{})
 			So(err, ShouldBeNil)
@@ -188,20 +203,20 @@ func TestHashSerializer_Value(t *testing.T) {
 			So(err.Error(), ShouldContainSubstring, "hash: field value must be serializer.Hash")
 		})
 
-		Convey("aes-gcm tag is rejected before value handling", func() {
-			type AesModel struct {
-				Digest Hash `gorm:"serializer:hash" secure:"mode=\"aes-gcm\",offset=12804,length=32"`
+		Convey("crypto tag is rejected before value handling", func() {
+			type CryptoTagModel struct {
+				Digest Hash `gorm:"serializer:hash" crypto:"mode=\"aes-gcm\",offset=12804,length=32"`
 			}
-			s, err := schema.Parse(&AesModel{}, &sync.Map{}, schema.NamingStrategy{})
+			s, err := schema.Parse(&CryptoTagModel{}, &sync.Map{}, schema.NamingStrategy{})
 			So(err, ShouldBeNil)
-			aesField := s.FieldsByDBName["digest"]
-			So(aesField, ShouldNotBeNil)
+			cryptoField := s.FieldsByDBName["digest"]
+			So(cryptoField, ShouldNotBeNil)
 
-			model := &AesModel{Digest: NewHashDigest("abc123")}
+			model := &CryptoTagModel{Digest: NewHashDigest("abc123")}
 			dst := reflect.ValueOf(model).Elem()
-			_, err = hs.Value(ctx, aesField, dst, model.Digest)
+			_, err = hs.Value(ctx, cryptoField, dst, model.Digest)
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "hash: field mode must be")
+			So(err.Error(), ShouldContainSubstring, `must carry a "hash" tag`)
 		})
 	})
 }

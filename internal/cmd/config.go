@@ -24,6 +24,7 @@ var describeConfigCmd = &cobra.Command{
 		descs.Join(provider.DescribePipelineConfig())
 		descs.Join(provider.DescribeMailConfig())
 		descs.Join(provider.DescribeHealthConfig())
+		descs.Join(provider.DescribeTagEngineConfig())
 		// 表头经 translate.T 按 key 本地化（cli.config.col-*）；配置项说明以结构体
 		// comment 标签为唯一事实来源，英文翻译可追加到 en.toml 的 config.<path>
 		if err := descs.Describe(func(key, fallback string) string { return translate.T(key, nil) }); err != nil {

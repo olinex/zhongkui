@@ -144,3 +144,10 @@ func (e *AESGCMMode) Decrypt(ciphertext []byte) ([]byte, error) {
 	// Open 方法解密并验证认证标签
 	return e.gcm.Open(nil, nonce, ciphertext, e.additionalData)
 }
+
+func init() {
+	// 以标签中的 mode 标识注册 AES-GCM，供 ModeForTag → mode.New 统一解析
+	Register(AesGcm, func(key, additionalData []byte) (Mode, error) {
+		return NewAESGCMMode(key, additionalData)
+	})
+}

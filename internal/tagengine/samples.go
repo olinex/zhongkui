@@ -29,7 +29,7 @@ const (
 
 // httpTransportExample HttpTransport 预置真实样例的输入文档。
 // 模拟一条真实 HTTP 登录请求，键为 HttpTransport 的 json tag 名，
-// 可反序列化回 *network.HttpTransport（加密字段 reqHdrAuthorization 为 {}）。
+// 可反序列化回 *network.HttpTransport（加密字段 reqHdrAuthorization 为空密文占位）。
 var httpTransportExample = map[string]any{
 	"namespace":           "default",
 	"capture":             "eth0",
@@ -53,7 +53,7 @@ var httpTransportExample = map[string]any{
 	"reqHdrUserAgent":     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
 	"reqHdrContentType":   "application/json",
 	"reqHdrAccept":        "application/json",
-	"reqHdrAuthorization": map[string]any{},
+	"reqHdrAuthorization": "",
 	"reqHdrHost":          "api.example.com",
 	"rspHdrContentType":   "application/json",
 	"rspHdrServer":        "nginx",

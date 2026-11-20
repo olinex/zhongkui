@@ -53,9 +53,9 @@ func defaultObjectCacheMemDir() string {
 // 生产实现为 s3Backend（经 Zkcn 管道加解密读写 S3）；S3 未配置时以 disabledBackend 空对象替代
 // 原先散落在各方法里的 nil client 判断；测试可注入内存实现。
 type objectBackend interface {
-	Store(ctx context.Context, objectKey string, r io.Reader) error
-	Fetch(ctx context.Context, objectKey string) (io.ReadCloser, error)
-	Remove(ctx context.Context, objectKey string) error
+	Store(ctx context.Context, objectKey string, r io.Reader, cryptoKey []byte) error
+	Fetch(ctx context.Context, objectKey string, cryptoKey []byte) (io.ReadCloser, error)
+	Remove(ctx context.Context, objectKey string, cryptoKey []byte) error
 }
 
 // s3Backend 是 objectBackend 的生产实现：对象经 Zkcn（zstd+AES-GCM）加密管道写入 S3，
@@ -64,17 +64,17 @@ type s3Backend struct {
 	client *S3Client
 }
 
-// Store 经 Zkcn 加密管道把明文流写入 S3。
-func (b s3Backend) Store(ctx context.Context, objectKey string, r io.Reader) error {
-	if _, err := NewZkcn(b.client, objectKey, nil, 0).Store(ctx, r); err != nil {
+// Store 经 Zkcn 加密管道把明文流写入 S3；cryptoKey 为 nil 时使用 S3Client 默认管道密钥。
+func (b s3Backend) Store(ctx context.Context, objectKey string, r io.Reader, cryptoKey []byte) error {
+	if _, err := NewZkcn(b.client, objectKey, cryptoKey, 0).Store(ctx, r); err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
 }
 
 // Fetch 下载并解密对象，返回明文读取流；对象不存在时返回明确错误。
-func (b s3Backend) Fetch(ctx context.Context, objectKey string) (io.ReadCloser, error) {
-	rc, err := NewZkcn(b.client, objectKey, nil, 0).Load(ctx)
+func (b s3Backend) Fetch(ctx context.Context, objectKey string, cryptoKey []byte) (io.ReadCloser, error) {
+	rc, err := NewZkcn(b.client, objectKey, cryptoKey, 0).Load(ctx)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -85,8 +85,8 @@ func (b s3Backend) Fetch(ctx context.Context, objectKey string) (io.ReadCloser, 
 }
 
 // Remove 删除 S3 中的加密对象。
-func (b s3Backend) Remove(ctx context.Context, objectKey string) error {
-	return errors.WithStack(NewZkcn(b.client, objectKey, nil, 0).Clear(ctx))
+func (b s3Backend) Remove(ctx context.Context, objectKey string, cryptoKey []byte) error {
+	return errors.WithStack(NewZkcn(b.client, objectKey, cryptoKey, 0).Clear(ctx))
 }
 
 // disabledBackend 是 S3 未配置时的空对象后端：三个方法各自返回带操作语义的「S3 未配置」错误，
@@ -94,17 +94,17 @@ func (b s3Backend) Remove(ctx context.Context, objectKey string) error {
 type disabledBackend struct{}
 
 // Store 返回「S3 未配置」错误。
-func (disabledBackend) Store(context.Context, string, io.Reader) error {
+func (disabledBackend) Store(context.Context, string, io.Reader, []byte) error {
 	return errors.New("s3 objectcache: S3 not configured to store object")
 }
 
 // Fetch 返回「S3 未配置」错误。
-func (disabledBackend) Fetch(context.Context, string) (io.ReadCloser, error) {
+func (disabledBackend) Fetch(context.Context, string, []byte) (io.ReadCloser, error) {
 	return nil, errors.New("s3 objectcache: S3 not configured to load object")
 }
 
 // Remove 返回「S3 未配置」错误。
-func (disabledBackend) Remove(context.Context, string) error {
+func (disabledBackend) Remove(context.Context, string, []byte) error {
 	return errors.New("s3 objectcache: S3 not configured to remove object")
 }
 
@@ -173,25 +173,26 @@ func newObjectCache(backend objectBackend, cfg Config) *ObjectCache {
 }
 
 // Store 把 reader 中的明文内容流式加密上传到 S3（复用 Zkcn 流式上传，零磁盘暂存）。
-// 对象永久存储（无 TTL），生命周期随数据源配置管理。
-func (c *ObjectCache) Store(ctx context.Context, objectKey string, r io.Reader) error {
+// 对象永久存储（无 TTL），生命周期随数据源配置管理。cryptoKey 为 nil 时使用
+// S3Client 默认管道密钥；字段级对象应传入按 s3crypto 标签派生的字段密钥。
+func (c *ObjectCache) Store(ctx context.Context, objectKey string, r io.Reader, cryptoKey []byte) error {
 	if c == nil {
 		return errors.New("s3 objectcache: unavailable")
 	}
-	return c.backend.Store(ctx, objectKey, r)
+	return c.backend.Store(ctx, objectKey, r, cryptoKey)
 }
 
 // Materialize 确保 objectKey 对应的明文已落地为本地可用文件，返回其路径。
 // 先命中 TTL 缓存复用；未缓存则拉取解密，按 size 流式分路落地（内存占用不超过阈值）。
-// 进程内并发安全。
-func (c *ObjectCache) Materialize(ctx context.Context, objectKey string) (string, error) {
+// cryptoKey 为 nil 时使用 S3Client 默认管道密钥。进程内并发安全。
+func (c *ObjectCache) Materialize(ctx context.Context, objectKey string, cryptoKey []byte) (string, error) {
 	if c == nil {
 		return "", errors.New("s3 objectcache: unavailable")
 	}
 	if path, hit := c.cached(objectKey); hit {
 		return path, nil
 	}
-	rc, err := c.backend.Fetch(ctx, objectKey)
+	rc, err := c.backend.Fetch(ctx, objectKey, cryptoKey)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
@@ -249,21 +250,22 @@ func (c *ObjectCache) materialize(rc io.Reader, objectKey string) (string, error
 
 // Open 拉取并解密 objectKey 对应的对象，返回明文读取流，供流式下载使用，避免整对象落地。
 // 直接走底层后端端口，不写入本地缓存文件，调用方负责关闭返回的 ReadCloser。c 为 nil 或 S3
-// 未配置时返回明确错误。
-func (c *ObjectCache) Open(ctx context.Context, objectKey string) (io.ReadCloser, error) {
+// 未配置时返回明确错误；cryptoKey 为 nil 时使用 S3Client 默认管道密钥。
+func (c *ObjectCache) Open(ctx context.Context, objectKey string, cryptoKey []byte) (io.ReadCloser, error) {
 	if c == nil {
 		return nil, errors.New("s3 objectcache: unavailable")
 	}
-	return c.backend.Fetch(ctx, objectKey)
+	return c.backend.Fetch(ctx, objectKey, cryptoKey)
 }
 
 // Remove 删除 S3 中 objectKey 对应的对象并失效本地缓存。用于数据源删除时清理无归属文件。
-func (c *ObjectCache) Remove(ctx context.Context, objectKey string) error {
+// cryptoKey 为 nil 时使用 S3Client 默认管道密钥。
+func (c *ObjectCache) Remove(ctx context.Context, objectKey string, cryptoKey []byte) error {
 	if c == nil {
 		return errors.New("s3 objectcache: unavailable")
 	}
 	c.Invalidate(objectKey)
-	return c.backend.Remove(ctx, objectKey)
+	return c.backend.Remove(ctx, objectKey, cryptoKey)
 }
 
 // Invalidate 仅失效本地缓存文件（不触碰 S3 对象）。供注销/更新后释放内存目录占用。

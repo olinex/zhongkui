@@ -362,7 +362,7 @@ func KnowledgeDocumentUpdate(c *gin.Context) {
 		return
 	}
 	// 导入文档：正文由解析流水线产生，只读；携带非空内容显式拒绝，标题变更不触发重新解析。
-	if instance.ObjectKey != "" {
+	if instance.ObjectKey.Key() != "" {
 		if in.Content != "" {
 			response.CreateBadBodyMessageError("knowledgeImportedContentReadOnly").AbortWithGinH(c)
 			return
@@ -443,10 +443,14 @@ func KnowledgeDocumentBatchDelete(c *gin.Context) {
 				return errors.WithStack(err)
 			}
 			// 手动录入文档无原件（ObjectKey 为空），跳过 S3 清理
-			if instance.ObjectKey == "" {
+			if instance.ObjectKey.Key() == "" {
 				return nil
 			}
-			if err := middlewares.GetObjectCache(c).Remove(c, instance.ObjectKey); err != nil {
+			docKey, err := instance.ObjectCryptoKey()
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			if err := middlewares.GetObjectCache(c).Remove(c, instance.ObjectKey.Key(), docKey); err != nil {
 				return errors.WithStack(err)
 			}
 			return nil
@@ -486,7 +490,7 @@ func KnowledgeDocumentReindex(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	if doc.ObjectKey != "" {
+	if doc.ObjectKey.Key() != "" {
 		if doc.Status == string(modelsai.KnowledgeDocStatusPending) || doc.Status == string(modelsai.KnowledgeDocStatusParsing) {
 			response.CreateBadBodyMessageError("knowledgeDocumentParsing").AbortWithGinH(c)
 			return
@@ -806,6 +810,12 @@ func KnowledgeDocumentUpload(c *gin.Context) {
 		OriginalName:  originalName,
 		Status:        string(modelsai.KnowledgeDocStatusPending),
 	}
+	// S3 原件密钥由 object_key 字段的 s3crypto 标签派生，上传/删除/下载共用同一密钥
+	docKey, err := doc.ObjectCryptoKey()
+	if err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
 	if err := db.WithContext(c).Create(doc).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -814,7 +824,7 @@ func KnowledgeDocumentUpload(c *gin.Context) {
 	// rollback 撤销已产生的副作用：删除 S3 原件（若已上传）与文档行，保证共存亡；
 	// 回滚自身的失败只记日志，不覆盖原始错误（禁止静默）。
 	rollback := func() {
-		if err := cache.Remove(c, objectKey); err != nil {
+		if err := cache.Remove(c, objectKey, docKey); err != nil {
 			middlewares.GetLogger(c).Warnf(c, nil, "knowledge upload rollback: remove object %q failed, err=%v", objectKey, err)
 		}
 		if err := db.WithContext(c).Where("id = ?", doc.ID).Delete(&modelsai.KnowledgeDocument{}).Error; err != nil {
@@ -822,7 +832,7 @@ func KnowledgeDocumentUpload(c *gin.Context) {
 		}
 	}
 	counter := &knowledgeUploadCounter{r: file}
-	if err := cache.Store(c, objectKey, counter); err != nil {
+	if err := cache.Store(c, objectKey, counter, docKey); err != nil {
 		rollback()
 		var maxErr *http.MaxBytesError
 		if errors.As(err, &maxErr) {
@@ -832,9 +842,14 @@ func KnowledgeDocumentUpload(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
+	// 结构体 + Select 更新以触发 s3crypto 序列化器（map 更新不会走序列化器）
 	if err := db.WithContext(c).Model(&modelsai.KnowledgeDocument{}).
 		Where("id = ?", doc.ID).
-		Updates(map[string]any{"size_bytes": counter.n, "object_key": objectKey}).Error; err != nil {
+		Select("size_bytes", "object_key").
+		Updates(&modelsai.KnowledgeDocument{
+			SizeBytes: counter.n,
+			ObjectKey: serializer.NewS3Crypto(objectKey),
+		}).Error; err != nil {
 		rollback()
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -884,11 +899,16 @@ func KnowledgeDocumentDownload(c *gin.Context) {
 		return
 	}
 	// 非导入文档（手工录入，无 S3 原件）不可下载
-	if doc.ObjectKey == "" {
+	if doc.ObjectKey.Key() == "" {
 		response.ErrDefaultPageNotFound.AbortWithGinH(c)
 		return
 	}
-	rc, err := middlewares.GetObjectCache(c).Open(c, doc.ObjectKey)
+	docKey, err := doc.ObjectCryptoKey()
+	if err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	rc, err := middlewares.GetObjectCache(c).Open(c, doc.ObjectKey.Key(), docKey)
 	if err != nil {
 		if s3.IsNotExists(err) {
 			response.ErrDefaultPageNotFound.AbortWithGinH(c)

@@ -134,7 +134,17 @@ func (e *Election) Start(ctx context.Context) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	defer session.Close()
+	defer func() {
+		// 关机路径下 Session 的上下文已取消，Revoke 必然失败并触发 etcd 客户端
+		// 的重试告警；此时仅停止续约，租约按 TTL 自动过期释放。
+		if e.ctx.Err() != nil {
+			session.Orphan()
+			return
+		}
+		if err := session.Close(); err != nil {
+			e.logger.Ctx(e.ctx).Warnf(`etcd election: close session %s failed: %v`, name, err)
+		}
+	}()
 	// 创建选举实例，所有竞争者的选举路径必须相同
 	elector := concurrency.NewElection(session, fmt.Sprintf(`%s%s`, electionPrefix, name))
 	electResultChan := elector.Observe(e.ctx)
@@ -184,7 +194,17 @@ func (e *Election) Start(ctx context.Context) error {
 			}
 		}
 	})
-	return wg.Wait()
+	// 仅以选举 ctx 是否已取消判定关机：ctx 取消 happens-before 观察到的错误；
+	// ctx 存活时 Campaign/业务逻辑返回的取消（如 exec 失败连带取消）仍可能是首个错误，
+	// 必须照常上报，避免真正的调度失败被吞掉。
+	if err := wg.Wait(); err != nil {
+		if e.ctx.Err() != nil {
+			e.logger.Ctx(e.ctx).Infof(`etcd election %s stopped (context canceled)`, name)
+			return nil
+		}
+		return errors.WithStack(err)
+	}
+	return nil
 }
 
 // Shutdown 优雅关闭选举实例，通知当前的选举处理器停止运行。
