@@ -33,10 +33,10 @@ type AgentRun struct {
 	Status AgentRunStatus `json:"status" gorm:"type:VARCHAR(16)"`
 	// PendingCallsJSON 待执行调用列表 JSON：callID、工具名与调用入参文本
 	// （工具入参可能携带凭据，经 crypto 序列化器加密落库）
-	PendingCallsJSON *serializer.Crypto `json:"pendingCalls" gorm:"column:pending_calls;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12815,length=32"`
+	PendingCallsJSON *serializer.Crypto `json:"pendingCalls" gorm:"column:pending_calls;type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12815,length=32"`
 	// CitationsJSON 检索引用列表 JSON，用于恢复后的最终轮产出引用
 	// （引用携带知识库正文，经 crypto 序列化器加密落库）
-	CitationsJSON *serializer.Crypto `json:"citations" gorm:"column:citations;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12816,length=32"`
+	CitationsJSON *serializer.Crypto `json:"citations" gorm:"column:citations;type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12816,length=32"`
 	// Slot 本次运行使用的档位，取值来自枚举类 llmSlot。
 	// 与 checkpoint 的 graphState.Slot 重叠，用于回退续跑时构造运行入参。
 	Slot Slot `json:"slot" gorm:"type:VARCHAR(255)"`

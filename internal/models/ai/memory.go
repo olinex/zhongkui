@@ -38,13 +38,13 @@ type AgentMemory struct {
 	// Title 一句话标题，便于在记忆列表中识别
 	Title string `gorm:"type:VARCHAR(256)"`
 	// Content 记忆正文内容，经 crypto 序列化器加密存储
-	Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12805,length=32"`
+	Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12805,length=32"`
 	// Embedding 记忆正文的向量化表示（1536 维），用于向量相似度检索
 	Embedding []float32 `gorm:"type:vector(1536);serializer:json"`
 	// Search 记忆正文的全文检索表示（tsvector），用于关键词检索
 	Search string `gorm:"type:tsvector"`
 	// Hash 规范化正文的 HMAC-SHA256 十六进制摘要（带密钥，防离线爆破），经 hash 序列化器封装，用于精确去重，与隔离维度组成唯一索引
-	Hash serializer.Hash `json:"hash" gorm:"type:CHAR(64);serializer:hash;uniqueIndex:uq_agent_memories_scope_hash,priority:5" secure:"mode=\"hmac-sha256\",offset=12806,length=32"`
+	Hash serializer.Hash `json:"hash" gorm:"type:CHAR(64);serializer:hash;uniqueIndex:uq_agent_memories_scope_hash,priority:5" hash:"offset=12806,length=32"`
 	// Status 记忆状态（active/archived），默认 active
 	Status MemoryStatus `gorm:"type:VARCHAR(16)"`
 	// UseCount 被检索命中的次数，默认 0

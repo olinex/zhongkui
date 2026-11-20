@@ -2,6 +2,7 @@ package tag
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -25,6 +26,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/manager/views"
 	"zhongkuisec.com/zhongkui/internal/models/network"
 	"zhongkuisec.com/zhongkui/internal/models/tag"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
 	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
@@ -174,8 +176,8 @@ func registerTagRuleTestRoutes(r *gin.Engine, engine *tagengine.Engine) {
 		admin.POST("/tag-rule/validate", TagRuleValidate)
 		admin.POST("/tag-rule/model/metadata", TagRuleModelMetadata)
 		admin.POST("/tag-rule/model/samples", TagRuleModelSamples)
-		admin.POST("/tag-rule/single/dry-run", TagRuleDryRun)
-		admin.POST("/tag-rule/group/dry-run", TagRuleDryRunGroup)
+		admin.POST("/tag-rule/single/dry-run", engineMiddleware, TagRuleDryRun)
+		admin.POST("/tag-rule/group/dry-run", engineMiddleware, TagRuleDryRunGroup)
 		admin.POST("/tag-rule/:id/version/list", TagRuleVersionList)
 		admin.POST("/tag-rule/:id/version/:version/rollback", engineMiddleware, TagRuleVersionRollback)
 	}
@@ -820,6 +822,33 @@ func TestTagRuleDryRun(t *testing.T) {
 			So(resp.Data.Rules["solo"].Tags, ShouldResemble, []string{"admin-login"})
 			So(resp.Data.Rules["solo"].Error, ShouldBeEmpty)
 			So(resp.Data.Rules["solo"].Duration, ShouldBeGreaterThanOrEqualTo, int64(0))
+		})
+
+		Convey("crypto.reveal 可解密输入文档中的 Crypto 密文", func() {
+			// 用 HttpTransport 的字段密钥现场生成合法 base64 密文
+			m, err := crypto.ModeForField(&network.HttpTransport{}, "reqHdrAuthorization", "json")
+			So(err, ShouldBeNil)
+			ciphertext, err := m.Encrypt([]byte("Bearer demo-token"))
+			So(err, ShouldBeNil)
+			w := doTagRuleRequest(r, http.MethodPost, "/tag-event/tag-rule/single/dry-run", map[string]any{
+				"model": httpTransportTypeKey,
+				"name":  "reveal-auth",
+				"rego": `package zki
+
+tags contains "bearer-auth" if {
+	startswith(crypto.reveal("reqHdrAuthorization"), "Bearer ")
+}`,
+				"input": map[string]any{
+					"reqHdrAuthorization": base64.StdEncoding.EncodeToString(ciphertext),
+				},
+			})
+			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Data *TagRuleDryRunOut `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Data.Tags, ShouldResemble, []string{"bearer-auth"})
+			So(resp.Data.Rules["reveal-auth"].Error, ShouldBeEmpty)
 		})
 
 		Convey("缺少规则名时以占位名兜底并正常评估", func() {

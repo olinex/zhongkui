@@ -10,6 +10,9 @@ import (
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
+// hashFieldType 摘要字段绑定的序列化类型。
+var hashFieldType = reflect.TypeOf(Hash{})
+
 // Hash 是数据库摘要字段的类型化封装：字段持有由 crypto 层预计算的十六进制
 // HMAC-SHA256 摘要，序列化器只负责 string/[]byte 互转、nil 安全与 JSON，不做
 // 加解密。摘要单向且确定性（同一密钥与内容恒得同一摘要，可等值匹配与建唯一索引），
@@ -55,25 +58,29 @@ func (h *Hash) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// HashSerializer 实现 GORM 摘要字段的序列化器：仅做类型包装与标签模式校验，
-// 摘要本身由 crypto 层在写库前预计算（见 crypto.DigestForField / crypto.HashKeyForField）。
+// HashSerializer 实现 GORM 摘要字段的序列化器：仅做类型包装与标签绑定校验，
+// 摘要算法固定为 HMAC-SHA256，摘要本身由 crypto 层在写库前预计算
+// （见 crypto.DigestForField / crypto.HashKeyForField）。
 type HashSerializer struct{}
 
-// validateTag 解析字段的 secure 标签并校验算法标识为 hmac-sha256，
-// 防止把 serializer:hash 误挂到可逆加密（aes-gcm）字段上。
-func (hs HashSerializer) validateTag(field *schema.Field) (crypto.CryptoTag, error) {
-	cTag, err := crypto.ParseCryptoTag(field.StructField.Tag.Get(crypto.SecurityTagKey))
+// validateTag 校验字段类型为 serializer.Hash 且携带 hash 标签，并解析 offset/length。
+// 摘要算法固定为 HMAC-SHA256，标签不再携带 mode，避免与代码中的固定算法漂移。
+func (hs HashSerializer) validateTag(field *schema.Field) (crypto.HashTag, error) {
+	if err := validateFieldBinding(field, crypto.HashTagKey, hashFieldType); err != nil {
+		return crypto.HashTag{}, errors.WithStack(err)
+	}
+	hTag, err := crypto.ParseHashTag(field.StructField.Tag.Get(crypto.HashTagKey))
 	if err != nil {
-		return crypto.CryptoTag{}, errors.WithStack(err)
+		return crypto.HashTag{}, errors.WithStack(err)
 	}
-	if cTag.Mode != crypto.HmacSHA256 {
-		return crypto.CryptoTag{}, errors.Newf(`hash: field mode must be %q, got %q`, crypto.HmacSHA256, cTag.Mode)
-	}
-	return cTag, nil
+	return hTag, nil
 }
 
 // Scan 从数据库读取字段值，包装为 Hash；空值与空字符串置零值。
 func (hs HashSerializer) Scan(ctx context.Context, field *schema.Field, dst reflect.Value, dbValue any) error {
+	if _, err := hs.validateTag(field); err != nil {
+		return errors.WithStack(err)
+	}
 	// 断言数据库值为 []byte 或 string（ClickHouse String 列返回 string 类型）
 	var raw string
 	switch v := dbValue.(type) {

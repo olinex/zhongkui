@@ -41,7 +41,7 @@ var _ etl.Handler = (*ParseHandler)(nil)
 // objectMaterializer 原件拉取接口，定义在消费侧并与 s3 包解耦（*s3.ObjectCache 满足该契约），
 // 便于单元测试注入替代实现，避免测试依赖真实 S3。
 type objectMaterializer interface {
-	Materialize(ctx context.Context, objectKey string) (string, error)
+	Materialize(ctx context.Context, objectKey string, cryptoKey []byte) (string, error)
 }
 
 // documentIndexer 知识库索引接口，定义在消费侧并与 ai 包解耦（*ai.Knowledge 满足该契约），
@@ -150,10 +150,14 @@ func (h *ParseHandler) parse(ctx context.Context, doc *ai.KnowledgeDocument) err
 	if h.enabled == nil || !h.enabled() {
 		return errors.New("knowledge parse: ai feature is disabled")
 	}
-	if doc.ObjectKey == "" {
+	if doc.ObjectKey.Key() == "" {
 		return errors.New("knowledge parse: document has no source file")
 	}
-	path, err := h.files.Materialize(ctx, doc.ObjectKey)
+	docKey, err := doc.ObjectCryptoKey()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	path, err := h.files.Materialize(ctx, doc.ObjectKey.Key(), docKey)
 	if err != nil {
 		return errors.WithStack(err)
 	}

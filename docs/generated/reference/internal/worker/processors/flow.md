@@ -28,7 +28,7 @@ const (
 ```
 
 <a name="NewIPv4PacketProcessorFactory"></a>
-## func [NewIPv4PacketProcessorFactory](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/processors/flow/processor.go#L54-L56>)
+## func [NewIPv4PacketProcessorFactory](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/processors/flow/processor.go#L60-L62>)
 
 ```go
 func NewIPv4PacketProcessorFactory(injector do.Injector) etl.ProcessorFactory
@@ -37,7 +37,7 @@ func NewIPv4PacketProcessorFactory(injector do.Injector) etl.ProcessorFactory
 NewIPv4PacketProcessor 创建 IPv4 TCP 处理器
 
 <a name="NewIPv6PacketProcessorFactory"></a>
-## func [NewIPv6PacketProcessorFactory](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/processors/flow/processor.go#L63-L65>)
+## func [NewIPv6PacketProcessorFactory](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/processors/flow/processor.go#L69-L71>)
 
 ```go
 func NewIPv6PacketProcessorFactory(injector do.Injector) etl.ProcessorFactory
@@ -46,7 +46,7 @@ func NewIPv6PacketProcessorFactory(injector do.Injector) etl.ProcessorFactory
 NewIPv6PacketProcessor 创建 IPv6 TCP 处理器
 
 <a name="NewPacketProcessor"></a>
-## func [NewPacketProcessor](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/processors/flow/processor.go#L72-L76>)
+## func [NewPacketProcessor](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/processors/flow/processor.go#L78-L82>)
 
 ```go
 func NewPacketProcessor[P tcp.TCPPacket](ctx context.Context, injector do.Injector, name string) (etl.Processor, error)
@@ -66,7 +66,7 @@ type PacketProcessor[P tcp.TCPPacket] struct {
 ```
 
 <a name="PacketProcessor[P].Shutdown"></a>
-### func \(\*PacketProcessor\[P\]\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/processors/flow/processor.go#L48>)
+### func \(\*PacketProcessor\[P\]\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/processors/flow/processor.go#L54>)
 
 ```go
 func (p *PacketProcessor[P]) Shutdown()
@@ -75,13 +75,13 @@ func (p *PacketProcessor[P]) Shutdown()
 Shutdown 优雅关闭处理器。
 
 <a name="PacketProcessor[P].Start"></a>
-### func \(\*PacketProcessor\[P\]\) [Start](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/processors/flow/processor.go#L37>)
+### func \(\*PacketProcessor\[P\]\) [Start](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/processors/flow/processor.go#L39>)
 
 ```go
 func (p *PacketProcessor[P]) Start(ctx context.Context, name string) error
 ```
 
-Start 启动处理管道，阻塞直到 ctx 取消。
+Start 启动处理管道，阻塞直到 ctx 取消。 仅以 ctx 是否已取消判定关机：ctx 取消 happens\-before 观察到的错误， 因此关机时这里的 err 必然伴随 ctx.Err\(\) \!= nil；反之 ctx 仍存活时的取消属于真实故障，需照常上报。
 
 <a name="Param"></a>
 ## type [Param](<https://gitee.com/olinex/zhongkui/blob/master/internal/worker/processors/flow/param.go#L9-L30>)

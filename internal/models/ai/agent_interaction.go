@@ -61,5 +61,5 @@ type AgentInteraction struct {
 	Status InteractionStatus `gorm:"type:VARCHAR(16);not null;default:pending"`
 	// Payload 交互业务 JSON（审批调用清单与决策 / 问卷题目与作答 / 下一步列表），经 crypto
 	// 序列化器加密落库；offset 12822 为本次新增分配（12821 已分配予 agent_messages.payload）
-	Payload *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12822,length=32"`
+	Payload *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12822,length=32"`
 }

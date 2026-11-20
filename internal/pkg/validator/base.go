@@ -55,6 +55,7 @@ func Funcs() map[string]validator.Func {
 		TagGreaterThanCurrentTime: ValidateGtCurrentTime,
 		TagLesserThanCurrentTime:  ValidateLtCurrentTime,
 		TagCron:                   ValidateCronSpec,
+		TagBPF:                    ValidateBPF,
 	}
 }
 

@@ -274,5 +274,5 @@ type PacketIPv4 struct {
 	LinkSlots
 	IPv4Headers
 	// 加密存储的 IP 载荷
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=16429,length=32"`
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" crypto:"mode=\"aes-gcm\",offset=16429,length=32"`
 }

@@ -21,6 +21,7 @@ import (
 	modelsai "zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/models/core"
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // periodicReportOtherTestNamespace 报告视图测试的跨命名空间用例命名空间。
@@ -99,7 +100,7 @@ func seedPeriodicReportPlanAndRun(t *testing.T, db *database.DB, namespace, obje
 		PlanID:        plan.ID,
 		TriggerAt:     time.Now().Truncate(time.Second),
 		Status:        modelsai.PeriodicReportRunStatusSuccess,
-		ObjectKey:     objectKey,
+		ObjectKey:     serializer.NewS3Crypto(objectKey),
 		Title:         "daily report",
 	}
 	if err := db.Create(run).Error; err != nil {
@@ -158,7 +159,7 @@ func TestNewPeriodicReportRunItemOut(t *testing.T) {
 			PlanID:     11,
 			Status:     modelsai.PeriodicReportRunStatusFailed,
 			Title:      "weekly",
-			ObjectKey:  "periodic-report/11.tar.gz",
+			ObjectKey:  serializer.NewS3Crypto("periodic-report/11.tar.gz"),
 			SizeBytes:  1024,
 			Error:      "boom",
 			TriggerAt:  finishedAt,

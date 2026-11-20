@@ -1,33 +1,29 @@
 <template>
   <div class="json-editor-wrap">
-    <div class="zk-editor-header">
-      <span class="zk-editor-title">{{ label }}</span>
-      <v-spacer />
-      <v-icon v-if="valid" size="x-small" color="success" :title="$t('action.validatePassed')">
-        mdi-check-circle
-      </v-icon>
-      <v-icon v-if="shownError" size="x-small" color="error" :title="shownError">
-        mdi-alert-circle
-      </v-icon>
-    </div>
-    <!-- 编辑区与操作行同处一个描边外壳内：操作按钮行位于框内底部右侧，
-         与助手输入区（assistant-composer 的 toolbar 行）的组织方式一致 -->
-    <div class="zk-editor json-editor-box" :class="{ 'is-error': !!shownError }">
-      <div ref="hostRef" class="json-editor-host" />
-      <div class="json-editor-toolbar">
-        <v-btn
-          class="beautify-btn"
-          variant="text"
-          size="small"
-          icon="mdi-auto-fix"
-          :disabled="disabled || !canBeautify"
-          :title="$t('action.beautifyJson')"
-          :aria-label="$t('action.beautifyJson')"
-          @click="beautify"
-        />
+    <code-mirror-field
+      :label="label"
+      :value="modelValue"
+      :error-messages="shownError"
+      :disabled="disabled"
+      @focus="focusEditor"
+    >
+      <!-- 编辑区与操作行同处一个 Vuetify 字段外壳内 -->
+      <div class="json-editor-box">
+        <div ref="hostRef" class="json-editor-host" />
+        <div class="json-editor-toolbar">
+          <v-btn
+            class="beautify-btn"
+            variant="text"
+            size="small"
+            icon="mdi-auto-fix"
+            :disabled="disabled || !canBeautify"
+            :title="$t('action.beautifyJson')"
+            :aria-label="$t('action.beautifyJson')"
+            @click="beautify"
+          />
+        </div>
       </div>
-    </div>
-    <div v-if="shownError" class="zk-error-text">{{ shownError }}</div>
+    </code-mirror-field>
     <div v-if="hint" class="zk-hint">{{ hint }}</div>
   </div>
 </template>
@@ -76,6 +72,11 @@ const appStore = useAppStore();
 const hostRef = useTemplateRef<HTMLDivElement>("hostRef");
 const view = shallowRef<EditorView>();
 
+/** 点击字段任意区域时把焦点交给 CodeMirror。 */
+function focusEditor(): void {
+  view.value?.focus();
+}
+
 // 语法高亮随主题切换，配色统一走 utils/editorHighlight 的共享方案。
 const highlightCompartment = new Compartment();
 
@@ -108,11 +109,16 @@ const beautify = (): void => {
 // 动态切换只读编辑状态。
 const editableCompartment = new Compartment();
 
+// 空 JSON 不视为语法错误：首次打开或清空后不立即出现红色 lint。
+const jsonLint = jsonParseLinter();
+
 const extensions: Extension[] = [
   lineNumbers(),
   json(),
   highlightCompartment.of(highlightFor(appStore.theme)),
-  linter(jsonParseLinter()),
+  linter((editorView) =>
+    editorView.state.doc.toString().trim() ? jsonLint(editorView) : [],
+  ),
   bracketMatching(),
   ...(props.placeholderText ? [placeholder(props.placeholderText)] : []),
   history(),
@@ -193,10 +199,11 @@ defineExpose({ focus: () => view.value?.focus() });
   gap: var(--zk-space-1);
 }
 
-/* 描边外壳承载编辑区与操作行两层（与 .zk-editor 的描边/圆角叠加使用） */
+/* 编辑区与操作行由 Vuetify 字段外壳包裹，这里只负责内部纵向排布 */
 .json-editor-box {
   display: flex;
   flex-direction: column;
+  width: 100%;
 }
 
 /* 编辑区固定高度：长 JSON 在 CodeMirror 自身的滚动容器内纵向浏览，与 MarkdownEditor 正文同高 */

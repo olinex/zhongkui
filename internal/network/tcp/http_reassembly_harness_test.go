@@ -90,7 +90,7 @@ func buildTestHttpTransport(
 		}
 		requestBody = n.HttpRequestBody{
 			Method:  request.Method,
-			ReqBody: readAllBody(request.Body),
+			ReqBody: serializer.NewS3Crypto(readAllBody(request.Body)),
 		}
 		requestHeaders = *n.NewHttpRequestHeaders(request)
 		hBase.HttpVersion = request.Proto
@@ -100,7 +100,7 @@ func buildTestHttpTransport(
 	var responseHeaders n.HttpResponseHeaders
 	if response != nil {
 		responseBody = n.HttpResponseBody{
-			RspBody: readBodyWithEncoding(response.Body, response.Header.Get("Content-Encoding")),
+			RspBody: serializer.NewS3Crypto(readBodyWithEncoding(response.Body, response.Header.Get("Content-Encoding"))),
 		}
 		responseHeaders = *n.NewHttpResponseHeaders(response)
 	}

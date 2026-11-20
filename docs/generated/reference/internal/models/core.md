@@ -271,7 +271,7 @@ type AccessKey struct {
     AccessKeyID string `gorm:"type:VARCHAR(32)"`
     // AccessKeySecret 是访问键的密钥
     // 通过 AES-GCM 加密存储，读取时自动解密
-    AccessKeySecret *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=3027,length=32"`
+    AccessKeySecret *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=3027,length=32"`
     // Description 是访问键的可选描述信息
     // 用于标识访问键的用途或所有者
     Description string `gorm:"type:VARCHAR(256)"`
@@ -622,7 +622,7 @@ type Datasource struct {
     Enabled bool `gorm:"column:enabled;type:BOOLEAN"`
     // Config 数据源连接配置（JSON 文本），可能含传输凭据（如密码），以加密形式持久化
     // （crypto serializer 密文入库，BYTEA 列）；明文经 ConfigData() 获取
-    Config *serializer.Crypto `json:"config" gorm:"column:config;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=21002,length=32"`
+    Config *serializer.Crypto `json:"config" gorm:"column:config;type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=21002,length=32"`
     // Description 数据源描述，说明用途
     Description string `gorm:"column:description;type:VARCHAR(256)"`
 }
@@ -859,7 +859,7 @@ type NotificationChannel struct {
     // Config 渠道配置（JSON 文本），可能含传输凭据（如 SMTP 账号密码），
     // 以加密形式持久化（crypto serializer 密文入库，BYTEA 列）；读取明文经
     // ConfigData() 获取，详情接口仅输出密文，查看明文需经明文权限接口
-    Config *serializer.Crypto `json:"config" gorm:"column:config;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=21001,length=32"`
+    Config *serializer.Crypto `json:"config" gorm:"column:config;type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=21001,length=32"`
     // Description 渠道描述，说明渠道用途
     Description string `gorm:"column:description;type:VARCHAR(256)"`
 }
@@ -1012,7 +1012,7 @@ type NotificationTarget struct {
     Enabled bool `gorm:"column:enabled;type:BOOLEAN;default:true"`
     // Config 目标配置（JSON 文本），如收件人邮箱、Webhook URL，结构随渠道类型不同而不同；
     // 以加密形式持久化（crypto serializer 密文入库，BYTEA 列），读取明文经 ConfigData() 获取
-    Config *serializer.Crypto `json:"config" gorm:"column:config;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=21069,length=32"`
+    Config *serializer.Crypto `json:"config" gorm:"column:config;type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=21069,length=32"`
     // Language 目标偏好的消息语言（如 en、zh-Hans），空字符串表示使用平台默认语言；
     // 通知消息按该语言经 locales 模板渲染（i18n）
     Language string `gorm:"column:language;type:VARCHAR(32)"`
@@ -1238,7 +1238,7 @@ type User struct {
 
     // Password 是用户的加密密码
     // 使用 bcrypt 算法加密后，再通过 AES-GCM 加密存储
-    Password *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=3985,length=32"`
+    Password *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=3985,length=32"`
 
     // Email 是用户的电子邮件地址
     // 必须唯一，用于用户通信和密码重置，长度限制为 128 个字符

@@ -20,8 +20,12 @@ func LintInputRefs(source string, fields []InputFieldMeta) []RegoError {
 		return nil
 	}
 	valid := make(map[string]any, len(fields))
+	sensitive := make(map[string]any, len(fields))
 	for _, meta := range fields {
 		valid[meta.Field] = struct{}{}
+		if meta.Sensitive {
+			sensitive[meta.Field] = struct{}{}
+		}
 	}
 	warnings := make([]RegoError, 0, 1)
 	seen := make(map[string]struct{})
@@ -45,7 +49,10 @@ func LintInputRefs(source string, fields []InputFieldMeta) []RegoError {
 		}
 		// 已确认是 input 字段引用，无需再下钻该 term 的子节点
 		if _, ok := valid[field]; ok {
-			return true
+			// 敏感字段不出现在输入文档中，只能经 crypto.reveal 获取明文
+			if _, isSensitive := sensitive[field]; !isSensitive {
+				return true
+			}
 		}
 		if _, dup := seen[field]; dup {
 			return true
@@ -58,6 +65,11 @@ func LintInputRefs(source string, fields []InputFieldMeta) []RegoError {
 			Type:    "warning",
 			Hint:    lintFieldHintKey,
 			Args:    []any{field},
+		}
+		if _, isSensitive := sensitive[field]; isSensitive {
+			warning.Message = lintSensitiveFieldKey
+			warning.Hint = lintSensitiveFieldHintKey
+			warning.Args = []any{field, field}
 		}
 		if loc := ref[1].Location; loc != nil {
 			warning.Line = loc.Row

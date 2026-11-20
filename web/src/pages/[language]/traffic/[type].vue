@@ -909,7 +909,9 @@ const detailFields = computed((): DetailField[] => {
         label,
         display: String(value),
         kind: "s3" as const,
-        length: Number(item[`${key}_length`] ?? 0),
+        // 长度字段与其它 S3 消费方保持一致，按 JSON 约定取 <key>Length（如 rspBodyLength）；
+        // 取不到长度会被详情对话框误判为“无明文内容”而不展示查看明文入口
+        length: Number(item[`${key}Length`] ?? 0),
         value,
         type: fieldType,
       };

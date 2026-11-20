@@ -1227,6 +1227,16 @@ COMMENT ON COLUMN periodic_report_plan_watches.namespace_name IS 'the namespace 
 COMMENT ON COLUMN periodic_report_plan_watches.plan_id IS 'the watched periodic report plan id';
 
 -- +goose Down
+-- 旧架构残留表（已从当前 schema 移除，见 docs/curated/explanation/agent-architecture.md）：
+-- 早期版本创建的开发库可能仍保留这些表，且其外键指向 agent_messages / agent_live_runs /
+-- agent_sessions / agent_skills / users / namespaces；不先删除会使后续 DROP TABLE 因
+-- 依赖对象存在而失败（SQLSTATE 2BP01）。新库上这些语句均为 no-op。
+DROP TABLE IF EXISTS agent_run_events;
+DROP TABLE IF EXISTS agent_message_blocks;
+DROP TABLE IF EXISTS agent_live_runs;
+DROP TABLE IF EXISTS report_plan_watches;
+DROP TABLE IF EXISTS report_runs;
+DROP TABLE IF EXISTS report_plans;
 DROP TABLE IF EXISTS periodic_report_plan_watches;
 DROP TABLE IF EXISTS periodic_report_runs;
 DROP TABLE IF EXISTS periodic_report_plans;

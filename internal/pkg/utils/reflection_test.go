@@ -5,14 +5,14 @@ import "testing"
 // testInner 内层嵌入结构体，用于验证多段路径解析与指针嵌入下降
 type testInner struct {
 	Name    string `json:"name" gorm:"column:name" mapstructure:"innerName"`
-	Payload []byte `json:"payload" secure:"mode=\"aes-gcm\",offset=100,length=32"`
+	Payload []byte `json:"payload" crypto:"mode=\"aes-gcm\",offset=100,length=32"`
 }
 
 // testOuter 外层结构体，以指针嵌入 testInner 并声明同名 Payload 字段，
 // 用于验证单段路径解析到最外层（offset=200）、多段路径精确定位内层（offset=100）。
 type testOuter struct {
 	*testInner
-	Payload []byte `json:"payload" secure:"mode=\"aes-gcm\",offset=200,length=32"`
+	Payload []byte `json:"payload" crypto:"mode=\"aes-gcm\",offset=200,length=32"`
 }
 
 // TestFindField 测试 FindField 的单段/多段路径解析与标签匹配。
@@ -22,8 +22,8 @@ func TestFindField(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FindField(payload) failed: %v", err)
 	}
-	if got := f.Tag.Get("secure"); got != `mode="aes-gcm",offset=200,length=32` {
-		t.Fatalf("outer payload secure tag mismatch: %q", got)
+	if got := f.Tag.Get("crypto"); got != `mode="aes-gcm",offset=200,length=32` {
+		t.Fatalf("outer payload crypto tag mismatch: %q", got)
 	}
 
 	// 多段路径（按 Go 字段名匹配，nameTag 传空）：逐层下降（含指针嵌入解引用），定位内层嵌入字段
@@ -31,8 +31,8 @@ func TestFindField(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FindField(testInner.Payload) failed: %v", err)
 	}
-	if got := f.Tag.Get("secure"); got != `mode="aes-gcm",offset=100,length=32` {
-		t.Fatalf("inner payload secure tag mismatch: %q", got)
+	if got := f.Tag.Get("crypto"); got != `mode="aes-gcm",offset=100,length=32` {
+		t.Fatalf("inner payload crypto tag mismatch: %q", got)
 	}
 
 	// 单段路径亦可命中内层字段（外层无同名冲突时），nameTag 指定 mapstructure 标签名匹配

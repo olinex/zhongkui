@@ -24,7 +24,7 @@ PeriodicReportRun 表示一次报告运行的记录：由计划在 cron 触发�
 | plan_id | BIGINT | 否 | - | PlanID 所属报告计划 ID |
 | trigger_at | TIMESTAMPTZ | 否 | - | TriggerAt 计划触发时间点；同一计划同一触发点唯一（未删除行范围内） |
 | status | VARCHAR(16) | 否 | - | Status 运行状态，取值来自枚举类 periodicReportRunStatus（running/success/failed） |
-| object_key | VARCHAR(512) | 是 | - | ObjectKey 生成的报告对象在对象存储中的键，无产出时为空 |
+| object_key | VARCHAR(512) | 是 | - | ObjectKey 生成的报告在对象存储中的键（经 s3crypto 序列化器封装），无产出时为空 |
 | title | VARCHAR(256) | 是 | - | Title 生成报告的标题 |
 | size_bytes | BIGINT | 是 | - | SizeBytes 生成的报告字节大小 |
 | error | VARCHAR(2048) | 是 | - | Error 运行失败原因，成功时为空 |

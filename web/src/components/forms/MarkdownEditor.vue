@@ -6,17 +6,9 @@
       class="markdown-editor-wrap"
       :class="{ 'is-fullscreen': fullscreen, 'bg-surface': fullscreen }"
     >
-      <!-- 标题行：字段标题 + 校验状态 + 操作区。全屏按钮固定最右（与 RegoEditor 一致）：
-           全屏为查看类动作，只读 / 禁用态仍可进入 -->
+      <!-- 标题由 Vuetify 浮动标签提供；这里只保留全屏操作 -->
       <div class="zk-editor-header">
-        <span v-if="label" class="zk-editor-title">{{ label }}</span>
         <v-spacer />
-        <v-icon v-if="valid" size="x-small" color="success" :title="$t('action.validatePassed')">
-          mdi-check-circle
-        </v-icon>
-        <v-icon v-if="!!shownError" size="x-small" color="error" :title="shownError">
-          mdi-alert-circle
-        </v-icon>
         <v-btn
           :icon="fullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'"
           :variant="fullscreen ? 'tonal' : 'text'"
@@ -26,52 +18,59 @@
         />
       </div>
       <!-- 明文与预览为两个独立开关：仅明文 / 仅预览 / 两者同时开启（左右分屏），至少保留一个 -->
-      <div class="zk-editor markdown-editor-box" :class="{ 'is-error': !!shownError }">
-        <div class="markdown-editor-body" :class="{ 'is-split': isSplit }">
-          <!-- 左半：CodeMirror 原文编辑区（明文与分屏时可见；切到仅预览时仅隐藏不销毁） -->
-          <div
-            v-show="showSource"
-            ref="hostRef"
-            class="markdown-editor-host zk-markdown-editor"
-          />
-          <!-- 右半：预览区（预览与分屏时挂载；仅明文视图不渲染，避免对不可见内容做整篇渲染） -->
-          <div v-if="showPreview" class="markdown-editor-preview">
-            <assistant-markdown v-if="hasContent" :content="modelValue" />
-            <span v-else class="zk-hint">{{ placeholderText }}</span>
+      <code-mirror-field
+        :label="label"
+        :value="modelValue"
+        :error-messages="shownError"
+        :disabled="disabled"
+        @focus="focusEditor"
+      >
+        <div class="markdown-editor-box">
+          <div class="markdown-editor-body" :class="{ 'is-split': isSplit }">
+            <!-- 左半：CodeMirror 原文编辑区（明文与分屏时可见；切到仅预览时仅隐藏不销毁） -->
+            <div
+              v-show="showSource"
+              ref="hostRef"
+              class="markdown-editor-host zk-markdown-editor"
+            />
+            <!-- 右半：预览区（预览与分屏时挂载；仅明文视图不渲染，避免对不可见内容做整篇渲染） -->
+            <div v-if="showPreview" class="markdown-editor-preview">
+              <assistant-markdown v-if="hasContent" :content="modelValue" />
+              <span v-else class="zk-hint">{{ placeholderText }}</span>
+            </div>
+          </div>
+          <!-- 底部工具行：左侧语法校验提示、右侧明文 / 预览两个独立开关，与 JsonEditor 的操作行同构 -->
+          <div class="markdown-editor-toolbar">
+            <v-icon
+              v-if="firstIssue"
+              size="x-small"
+              :icon="firstIssue.severity === 'error' ? 'mdi-alert-circle' : 'mdi-alert'"
+              :color="firstIssue.severity === 'error' ? 'error' : 'warning'"
+            />
+            <span
+              v-if="firstIssue"
+              class="markdown-editor-lint text-body-small"
+              :class="firstIssue.severity === 'error' ? 'text-error' : 'text-warning'"
+              :title="lintSummary"
+            >
+              {{ lintSummary }}
+            </span>
+            <v-spacer />
+            <v-btn-toggle
+              v-model="visiblePanes"
+              multiple
+              mandatory
+              density="compact"
+              size="small"
+              variant="plain"
+              color="primary"
+            >
+              <v-btn value="source" :text="$t('action.markdownSource')" />
+              <v-btn value="preview" :text="$t('action.markdownPreview')" />
+            </v-btn-toggle>
           </div>
         </div>
-        <!-- 底部工具行：左侧语法校验提示、右侧明文 / 预览两个独立开关，与 JsonEditor 的操作行同构 -->
-        <div class="markdown-editor-toolbar">
-          <v-icon
-            v-if="firstIssue"
-            size="x-small"
-            :icon="firstIssue.severity === 'error' ? 'mdi-alert-circle' : 'mdi-alert'"
-            :color="firstIssue.severity === 'error' ? 'error' : 'warning'"
-          />
-          <span
-            v-if="firstIssue"
-            class="markdown-editor-lint text-body-small"
-            :class="firstIssue.severity === 'error' ? 'text-error' : 'text-warning'"
-            :title="lintSummary"
-          >
-            {{ lintSummary }}
-          </span>
-          <v-spacer />
-          <v-btn-toggle
-            v-model="visiblePanes"
-            multiple
-            mandatory
-            density="compact"
-            size="small"
-            variant="plain"
-            color="primary"
-          >
-            <v-btn value="source" :text="$t('action.markdownSource')" />
-            <v-btn value="preview" :text="$t('action.markdownPreview')" />
-          </v-btn-toggle>
-        </div>
-      </div>
-      <div v-if="shownError" class="zk-error-text">{{ shownError }}</div>
+      </code-mirror-field>
       <div v-if="hint" class="zk-hint">{{ hint }}</div>
     </div>
   </teleport>
@@ -277,6 +276,11 @@ const lintSummary = computed(() => {
 const hostRef = useTemplateRef<HTMLDivElement>("hostRef");
 const view = shallowRef<EditorView>();
 
+/** 点击字段任意区域时把焦点交给 CodeMirror。 */
+function focusEditor(): void {
+  view.value?.focus();
+}
+
 // fullscreen 全屏编辑：正文固定高度下长文档在区内滚动，全屏时铺满视口
 const fullscreen = ref(false);
 
@@ -387,6 +391,7 @@ defineExpose({ focus: () => view.value?.focus() });
 .markdown-editor-box {
   display: flex;
   flex-direction: column;
+  width: 100%;
 }
 
 /* 编辑与预览按当前查看方式排布：明文 / 预览为单栏，split 为左右各半同高 */
@@ -442,6 +447,11 @@ defineExpose({ focus: () => view.value?.focus() });
 }
 
 /* 外壳与正文区在全屏下改为按剩余高度拉伸，不再使用固定高度 */
+.markdown-editor-wrap.is-fullscreen .cm-field-shell {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
 .markdown-editor-wrap.is-fullscreen .markdown-editor-box {
   flex: 1 1 0;
   min-height: 0;

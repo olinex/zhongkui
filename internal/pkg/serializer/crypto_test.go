@@ -24,11 +24,11 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// CryptoTestModel 用于 GORM schema 解析，获取带 secure 标签的 Field
+// CryptoTestModel 用于 GORM schema 解析，获取带 crypto 标签的 Field
 // 注意：Scan 要求字段为指针类型
 type CryptoTestModel struct {
-	// Secret 带 secure 标签的加密字段，用于验证 GORM 序列化器解析出的字段标签。
-	Secret *Crypto `gorm:"serializer:crypto" secure:"mode=\"aes-gcm\",offset=0,length=32"`
+	// Secret 带 crypto 标签的加密字段，用于验证 GORM 序列化器解析出的字段标签。
+	Secret *Crypto `gorm:"serializer:crypto" crypto:"mode=\"aes-gcm\",offset=0,length=32"`
 }
 
 // getCryptoField 从 CryptoTestModel 中解析出 schema.Field
@@ -62,7 +62,7 @@ func TestCrypto_getTagMode(t *testing.T) {
 
 		Convey("unknown mode in tag", func() {
 			type BadModel struct {
-				Secret *Crypto `gorm:"serializer:crypto" secure:"mode=\"unknown\",offset=0,length=32"`
+				Secret *Crypto `gorm:"serializer:crypto" crypto:"mode=\"unknown\",offset=0,length=32"`
 			}
 			s, err := schema.Parse(&BadModel{}, &sync.Map{}, schema.NamingStrategy{})
 			So(err, ShouldBeNil)
@@ -76,7 +76,7 @@ func TestCrypto_getTagMode(t *testing.T) {
 
 		Convey("invalid tag format", func() {
 			type BadModel struct {
-				Secret *Crypto `gorm:"serializer:crypto" secure:"invalid_tag"`
+				Secret *Crypto `gorm:"serializer:crypto" crypto:"invalid_tag"`
 			}
 			s, err := schema.Parse(&BadModel{}, &sync.Map{}, schema.NamingStrategy{})
 			So(err, ShouldBeNil)
@@ -90,7 +90,7 @@ func TestCrypto_getTagMode(t *testing.T) {
 		Convey("key length too short from tag", func() {
 			type BadModel struct {
 				// length=16 = MinKeyLength，应失败
-				Secret *Crypto `gorm:"serializer:crypto" secure:"mode=\"aes-gcm\",offset=0,length=16"`
+				Secret *Crypto `gorm:"serializer:crypto" crypto:"mode=\"aes-gcm\",offset=0,length=16"`
 			}
 			s, err := schema.Parse(&BadModel{}, &sync.Map{}, schema.NamingStrategy{})
 			So(err, ShouldBeNil)
@@ -104,7 +104,7 @@ func TestCrypto_getTagMode(t *testing.T) {
 
 		Convey("empty tag", func() {
 			type BadModel struct {
-				Secret *Crypto `gorm:"serializer:crypto" secure:""`
+				Secret *Crypto `gorm:"serializer:crypto" crypto:""`
 			}
 			s, err := schema.Parse(&BadModel{}, &sync.Map{}, schema.NamingStrategy{})
 			So(err, ShouldBeNil)
@@ -204,7 +204,7 @@ func TestCrypto_Scan(t *testing.T) {
 		Convey("dst is not a pointer returns error", func() {
 			// 使用非指针类型的 Crypto 字段，才能触发 "field must be a pointer to Crypto" 错误
 			type NonPointerModel struct {
-				Secret Crypto `gorm:"serializer:crypto" secure:"mode=\"aes-gcm\",offset=0,length=32"`
+				Secret Crypto `gorm:"serializer:crypto" crypto:"mode=\"aes-gcm\",offset=0,length=32"`
 			}
 			s, err := schema.Parse(&NonPointerModel{}, &sync.Map{}, schema.NamingStrategy{})
 			So(err, ShouldBeNil)
@@ -392,7 +392,7 @@ func TestCrypto_CryptoTag_Defaults(t *testing.T) {
 		Convey("only mode specified uses default offset=0, length=0 (fails)", func() {
 			// length=0 会触发 key derivation 校验：key length must be greater than 16, got: 0
 			type DefaultModel struct {
-				Secret *Crypto `gorm:"serializer:crypto" secure:"mode=\"aes-gcm\""`
+				Secret *Crypto `gorm:"serializer:crypto" crypto:"mode=\"aes-gcm\""`
 			}
 			s, err := schema.Parse(&DefaultModel{}, &sync.Map{}, schema.NamingStrategy{})
 			So(err, ShouldBeNil)
@@ -405,7 +405,7 @@ func TestCrypto_CryptoTag_Defaults(t *testing.T) {
 
 		Convey("custom offset in tag", func() {
 			type CustomModel struct {
-				Secret *Crypto `gorm:"serializer:crypto" secure:"mode=\"aes-gcm\",offset=100,length=32"`
+				Secret *Crypto `gorm:"serializer:crypto" crypto:"mode=\"aes-gcm\",offset=100,length=32"`
 			}
 			s, err := schema.Parse(&CustomModel{}, &sync.Map{}, schema.NamingStrategy{})
 			So(err, ShouldBeNil)
@@ -427,7 +427,7 @@ func TestCrypto_CryptoTag_Defaults(t *testing.T) {
 		Convey("custom length in tag (AES-192)", func() {
 			// AES-192 = 24 字节密钥，AES-256 = 32 字节
 			type CustomModel struct {
-				Secret *Crypto `gorm:"serializer:crypto" secure:"mode=\"aes-gcm\",offset=0,length=24"`
+				Secret *Crypto `gorm:"serializer:crypto" crypto:"mode=\"aes-gcm\",offset=0,length=24"`
 			}
 			s, err := schema.Parse(&CustomModel{}, &sync.Map{}, schema.NamingStrategy{})
 			So(err, ShouldBeNil)
@@ -493,6 +493,54 @@ func TestCrypto_ScanValue_Roundtrip(t *testing.T) {
 			err = cs.Scan(ctx, field, dstRead, nil)
 			So(err, ShouldBeNil)
 			So(modelRead.Secret, ShouldBeNil)
+		})
+	})
+}
+
+func TestCrypto_FieldBinding(t *testing.T) {
+	Convey("Test CryptoSerializer field/tag binding", t, func() {
+		cs := CryptoSerializer{}
+
+		Convey("missing crypto tag is rejected", func() {
+			type NoTagModel struct {
+				Secret *Crypto `gorm:"serializer:crypto"`
+			}
+			s, err := schema.Parse(&NoTagModel{}, &sync.Map{}, schema.NamingStrategy{})
+			So(err, ShouldBeNil)
+			field := s.FieldsByDBName["secret"]
+			So(field, ShouldNotBeNil)
+
+			_, err = cs.getTagMode(field)
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, `must carry a "crypto" tag`)
+		})
+
+		Convey("crypto tag on a non-Crypto field is rejected", func() {
+			type WrongTypeModel struct {
+				Secret string `gorm:"serializer:crypto" crypto:"mode=\"aes-gcm\",offset=0,length=32"`
+			}
+			s, err := schema.Parse(&WrongTypeModel{}, &sync.Map{}, schema.NamingStrategy{})
+			So(err, ShouldBeNil)
+			field := s.FieldsByDBName["secret"]
+			So(field, ShouldNotBeNil)
+
+			_, err = cs.getTagMode(field)
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "crypto: field Secret must be serializer.Crypto")
+		})
+
+		Convey("hash tag on a Crypto field is rejected", func() {
+			type HashTagModel struct {
+				Secret *Crypto `gorm:"serializer:crypto" hash:"offset=0,length=32"`
+			}
+			s, err := schema.Parse(&HashTagModel{}, &sync.Map{}, schema.NamingStrategy{})
+			So(err, ShouldBeNil)
+			field := s.FieldsByDBName["secret"]
+			So(field, ShouldNotBeNil)
+
+			_, err = cs.getTagMode(field)
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, `must carry a "crypto" tag`)
 		})
 	})
 }

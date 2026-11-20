@@ -264,7 +264,7 @@ type PacketIPv4TCP struct {
 	// TCP 流标识符（双向一致）
 	TCPStreamID string `gorm:"column:tcp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"tcpStreamID"`
 	// 加密存储的 TCP 载荷
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=38278,length=32"`
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" crypto:"mode=\"aes-gcm\",offset=38278,length=32"`
 }
 
 // CaptureTimestamp 返回数据包的捕获时间戳
@@ -344,7 +344,7 @@ type PacketIPv6TCP struct {
 	// TCP 流标识符（双向一致）
 	TCPStreamID string `gorm:"column:tcp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"tcpStreamID"`
 	// 加密存储的 TCP 载荷
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=50359,length=32"`
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" crypto:"mode=\"aes-gcm\",offset=50359,length=32"`
 }
 
 // CaptureTimestamp 返回数据包的捕获时间戳

@@ -21,7 +21,7 @@ import (
 // 供前端 Rego 编辑器自动补全与字段面板使用：Field 为输入文档中的扁平化字段名
 // （规则中以 input.<field> 引用），Type 为 JSON 类型，GoType 为 Go 类型名，
 // Description 为字段含义（由接口层按请求语言翻译 DescriptionKey 后填充，可为空），
-// Sensitive 标记敏感字段（secure tag 或 serializer.Crypto 类型），
+// Sensitive 标记敏感字段（crypto / s3crypto tag 或 serializer.Crypto / S3Crypto 类型），
 // Items 在 Type 为 array 时给出元素类型。
 type InputFieldMeta struct {
 	// Field 输入文档字段名（input.<field>）
@@ -35,7 +35,7 @@ type InputFieldMeta struct {
 	// DescriptionKey 字段描述的 i18n 消息键（input.<typeKey>.<field>），
 	// 翻译文案维护在 internal/pkg/translate/locales 下，注册模型须为每个字段提供翻译
 	DescriptionKey string `json:"-"`
-	// Sensitive 是否敏感字段（secure tag 或 serializer.Crypto 类型）
+	// Sensitive 是否敏感字段（crypto / s3crypto tag 或 serializer.Crypto / S3Crypto 类型）
 	Sensitive bool `json:"sensitive"`
 	// Items Type==array 时的元素类型信息
 	Items *InputItemMeta `json:"items,omitempty"`
@@ -50,33 +50,21 @@ type InputItemMeta struct {
 }
 
 // InputMetadata 返回已注册模型输入文档的扁平化字段元信息列表（按字段名排序）。
-// 字段集合与 BuildInput 零值实例文档键一致；未注册模型返回 ErrModelNotRegistered。
+// 字段集合由类型反射推导（与 JSON 序列化字段一致）；其中敏感字段虽然被
+// BuildInput 从规则 input 文档中剔除，但仍作为 crypto.reveal(field) 的合法字段名
+// 出现在元信息中（Sensitive=true）。未注册模型返回 ErrModelNotRegistered。
 // Description 字段不在此处填充，由接口层按 DescriptionKey 按请求语言翻译后输出。
 func InputMetadata(typeKey string) ([]InputFieldMeta, error) {
 	target, ok := TargetInfo(typeKey)
 	if !ok {
 		return nil, errors.WithStack(ErrModelNotRegistered)
 	}
-	// BuildInput 零值实例文档的键集合为权威字段集合（与引擎实际评估输入一致）；
-	// nil slice / 指针字段在零值文档中序列化为 null，但键仍然存在。
-	input, err := BuildInput(target.Type)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	keys := make(map[string]struct{}, len(input))
-	for key := range input {
-		keys[key] = struct{}{}
-	}
 	metas, err := deriveFieldMetas(typeKey, target.Type)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	// 仅保留出现在评估输入键集合中的字段，保证与 BuildInput 字段集合严格一致
-	result := make([]InputFieldMeta, 0, len(keys))
-	for key, meta := range metas {
-		if _, ok := keys[key]; !ok {
-			continue
-		}
+	result := make([]InputFieldMeta, 0, len(metas))
+	for _, meta := range metas {
 		result = append(result, meta)
 	}
 	sort.Slice(result, func(i, j int) bool { return result[i].Field < result[j].Field })
@@ -166,11 +154,17 @@ func jsonNameOf(sf reflect.StructField) string {
 // classifyType 推导字段的 JSON 类型、数组元素信息与敏感标记。
 // 命名类型先解引用指针、再依据基础 kind 与已知特判类型分类：
 // time.Time 与 serializer.IPAddr/IPv4Addr/HexUUID 序列化为 string，
-// datatypes.JSON（本质 []byte）为 object，serializer.Crypto 为 object 且敏感；
-// struct tag 含 secure（crypto.SecurityTagKey）或类型为 serializer.Crypto 时 Sensitive=true。
+// datatypes.JSON（本质 []byte）为 object，
+// serializer.Crypto 为 string（JSON 形态为 base64 密文）且敏感，
+// serializer.S3Crypto 为 string 且敏感（JSON 形态为对象键）。
+// 敏感字段虽不出现在规则 input 文档中，元信息仍保留其类型与敏感标记，
+// 供前端将字段补全为 crypto.reveal(field)。
+// struct tag 含 crypto（crypto.CryptoTagKey）/ s3crypto（crypto.S3CryptoTagKey）
+// 或类型为 serializer.Crypto 时 Sensitive=true。
+// hash 字段承载的是不可解密的单向摘要，不属于可解密查看的敏感明文，故不计入敏感标记。
 func classifyType(typ reflect.Type, tag reflect.StructTag) (jsonType string, items *InputItemMeta, sensitive bool) {
-	// struct tag 含 secure 即视为敏感字段
-	if tag.Get(crypto.SecurityTagKey) != "" {
+	// struct tag 含 crypto / s3crypto 即视为可解密查看的敏感字段（加密列 / S3 加密对象）
+	if tag.Get(crypto.CryptoTagKey) != "" || tag.Get(crypto.S3CryptoTagKey) != "" {
 		sensitive = true
 	}
 	// 指针解引用（如 *serializer.Crypto → serializer.Crypto）
@@ -186,7 +180,9 @@ func classifyType(typ reflect.Type, tag reflect.StructTag) (jsonType string, ite
 	case "datatypes.JSON":
 		return "object", nil, sensitive
 	case "serializer.Crypto":
-		return "object", nil, true
+		return "string", nil, true
+	case "serializer.S3Crypto":
+		return "string", nil, sensitive
 	}
 	switch typ.Kind() {
 	case reflect.String:

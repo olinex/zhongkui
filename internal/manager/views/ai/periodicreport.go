@@ -334,7 +334,7 @@ func newPeriodicReportRunItemOut(m *modelsai.PeriodicReportRun) PeriodicReportRu
 		PlanID:     m.PlanID,
 		Status:     string(m.Status),
 		Title:      m.Title,
-		ObjectKey:  m.ObjectKey,
+		ObjectKey:  m.ObjectKey.Key(),
 		SizeBytes:  m.SizeBytes,
 		Error:      m.Error,
 		TriggerAt:  m.TriggerAt,
@@ -743,11 +743,16 @@ func PeriodicReportRunDetailGet(c *gin.Context) {
 		return
 	}
 	out := PeriodicReportRunDetailOut{PeriodicReportRunItemOut: newPeriodicReportRunItemOut(run)}
-	if run.ObjectKey == "" {
+	if run.ObjectKey.Key() == "" {
 		response.SimpleOK.AbortWithGinW(c, out)
 		return
 	}
-	rc, err := middlewares.GetObjectCache(c).Open(c, run.ObjectKey)
+	reportKey, err := run.ObjectCryptoKey()
+	if err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	rc, err := middlewares.GetObjectCache(c).Open(c, run.ObjectKey.Key(), reportKey)
 	if err != nil {
 		if s3.IsNotExists(err) {
 			response.CreateCodeError(http.StatusNotFound, http.StatusNotFound,
@@ -792,8 +797,13 @@ func PeriodicReportRunDelete(c *gin.Context) {
 		abortPeriodicReportError(c, err)
 		return
 	}
-	if run.ObjectKey != "" {
-		if err := middlewares.GetObjectCache(c).Remove(c, run.ObjectKey); err != nil && !s3.IsNotExists(err) {
+	if run.ObjectKey.Key() != "" {
+		reportKey, err := run.ObjectCryptoKey()
+		if err != nil {
+			response.CreateAccidentError(err).AbortWithGinH(c)
+			return
+		}
+		if err := middlewares.GetObjectCache(c).Remove(c, run.ObjectKey.Key(), reportKey); err != nil && !s3.IsNotExists(err) {
 			response.CreateAccidentError(err).AbortWithGinH(c)
 			return
 		}

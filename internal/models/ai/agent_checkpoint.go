@@ -21,5 +21,5 @@ type AgentCheckpoint struct {
 	CheckpointID string `json:"checkpointID" gorm:"column:checkpoint_id;type:VARCHAR(64);not null;uniqueIndex:uq_agent_checkpoints_checkpoint_id"`
 	// Payload 序列化后的图运行现场字节（含消息链、工具调用与运行状态，可能携带用户内容与凭据），
 	// 经 crypto 序列化器加密落库
-	Payload *serializer.Crypto `json:"payload" gorm:"column:payload;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12820,length=32"`
+	Payload *serializer.Crypto `json:"payload" gorm:"column:payload;type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12820,length=32"`
 }

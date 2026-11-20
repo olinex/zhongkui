@@ -32,8 +32,8 @@
 | device | string | 是 | required,min=2,max=32 | - | - |
 | snapLen | uint32 | 是 | required | - | - |
 | promisc | bool | - | - | - | - |
-| timeout | serializer.DurationMS | 是 | required | - | - |
-| bpfExpr | string | 是 | required,min=3,max=1024 | - | - |
+| timeout | serializer.DurationMS | 是 | required,min=1000,max=86400000 | - | - |
+| bpfExpr | string | 是 | required,min=3,max=1024,bpf | - | - |
 | enabled | bool | - | - | - | - |
 
 ## 响应示例

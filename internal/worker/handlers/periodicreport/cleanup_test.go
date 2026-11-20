@@ -13,6 +13,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // fakePeriodicReportRemover 是报告对象删除替身：fail 为 true 时 Remove 一律失败，否则记录已删除键。
@@ -24,7 +25,7 @@ type fakePeriodicReportRemover struct {
 }
 
 // Remove 删除对象：fail 为 true 时返回错误，否则记录对象键。
-func (f *fakePeriodicReportRemover) Remove(_ context.Context, objectKey string) error {
+func (f *fakePeriodicReportRemover) Remove(_ context.Context, objectKey string, _ []byte) error {
 	if f.fail {
 		return errors.New("fake object removal failure")
 	}
@@ -94,7 +95,7 @@ func TestCleanupHandler(t *testing.T) {
 				PlanID:        activePlanID,
 				TriggerAt:     nowTime.Add(-48 * time.Hour),
 				Status:        modelsai.PeriodicReportRunStatusSuccess,
-				ObjectKey:     "periodic-report/old.md",
+				ObjectKey:     serializer.NewS3Crypto("periodic-report/old.md"),
 				SessionID:     &oldSession.ID,
 			}
 			if _, err := store.CreateRunIfAbsent(ctx, oldRun); err != nil {
@@ -108,7 +109,7 @@ func TestCleanupHandler(t *testing.T) {
 				PlanID:        activePlanID,
 				TriggerAt:     nowTime.Add(-time.Hour),
 				Status:        modelsai.PeriodicReportRunStatusSuccess,
-				ObjectKey:     "periodic-report/recent.md",
+				ObjectKey:     serializer.NewS3Crypto("periodic-report/recent.md"),
 			}
 			if _, err := store.CreateRunIfAbsent(ctx, recentRun); err != nil {
 				t.Fatalf("CreateRunIfAbsent(recent) error = %v", err)
@@ -143,8 +144,8 @@ func TestCleanupHandler(t *testing.T) {
 				if !errors.Is(err, periodic.ErrRunNotFound) {
 					t.Fatalf("old run error = %v, want ErrRunNotFound", err)
 				}
-				if len(remover.removed) != 1 || remover.removed[0] != oldRun.ObjectKey {
-					t.Fatalf("removed objects = %v, want [%q]", remover.removed, oldRun.ObjectKey)
+				if len(remover.removed) != 1 || remover.removed[0] != oldRun.ObjectKey.Key() {
+					t.Fatalf("removed objects = %v, want [%q]", remover.removed, oldRun.ObjectKey.Key())
 				}
 				if !errors.Is(sessionErr, session.ErrSessionNotFound) {
 					t.Fatalf("old session error = %v, want ErrSessionNotFound", sessionErr)

@@ -299,6 +299,13 @@
 | `auto` | `auto` | 自动审核 |
 | `none` | `none` | 无需审核 |
 
+## sensitiveKind
+
+| Key | 存储值 | 展示名 |
+| --- | --- | --- |
+| `crypto` | `crypto` | 列内加密字段 |
+| `s3crypto` | `s3crypto` | S3 加密对象字段 |
+
 ## tagAlertStatus
 
 | Key | 存储值 | 展示名 |

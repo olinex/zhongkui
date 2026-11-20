@@ -21,10 +21,18 @@ import (
 	_ "github.com/glebarez/go-sqlite"
 
 	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/resourcepool"
 	"zhongkuisec.com/zhongkui/internal/pkg/s3"
 	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
+)
+
+const (
+	// sqliteObjectCryptoKeyOffset 是从密码本派生 SQLite 数据源文件加密子密钥的偏移量。
+	sqliteObjectCryptoKeyOffset = 44550
+	// sqliteObjectCryptoKeyLength 是 SQLite 数据源文件加密子密钥长度（AES-256）。
+	sqliteObjectCryptoKeyLength = 32
 )
 
 // SQLiteFileConfig 描述一个 SQLite 文件实例的接入配置。
@@ -45,6 +53,21 @@ var sqliteFileClients = newSQLDBRegistry()
 // 数据源接入时应各自派生专属键。
 func SQLiteObjectKey(namespace, name string) string {
 	return fmt.Sprintf("datasource/%s/%s.sqlite", namespace, name)
+}
+
+// sqliteObjectCryptoKey 派生 SQLite 数据源文件在 S3 中的加密子密钥。
+// 使用数据源文件专属 offset，与 S3 默认管道密钥隔离，避免数据源文件与其他
+// 基础设施对象共用同一把密钥；上传、读取与删除必须使用同一密钥。
+func sqliteObjectCryptoKey() ([]byte, error) {
+	kd, err := key.GetKeyDerivation()
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	cryptoKey, err := kd.DeriveChildKey(sqliteObjectCryptoKeyOffset, sqliteObjectCryptoKeyLength)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return cryptoKey, nil
 }
 
 // sqliteFileKey 由配置规范化出实例 Key（Namespace + Path）。
@@ -113,7 +136,12 @@ func (sqliteFilePlugin) Register(ctx context.Context, _ *sqlitevtab.SQLitePool, 
 	// 先从 S3 拉取并解密为本地明文文件，再把该明文路径交给连接池打开；对象键由命名空间+
 	// 数据源名派生，随生命周期稳定。
 	objectKey := SQLiteObjectKey(namespace, name)
-	path, err := store.Materialize(ctx, objectKey)
+	// 数据源文件使用专属密码本派生密钥，与 S3 默认管道密钥隔离
+	cryptoKey, err := sqliteObjectCryptoKey()
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	path, err := store.Materialize(ctx, objectKey, cryptoKey)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

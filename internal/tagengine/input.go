@@ -37,8 +37,12 @@ func extractNamespace(target any) string {
 
 // BuildInput 构建规则评估的输入文档。
 // 目标模型实现 Inputer 接口时使用其自定义文档；否则将结构体 JSON 序列化
-// 后反序列化为 map 作为输入文档（字段名即 json tag，Crypto 加密字段序列化为
-// 空字符串，不向规则暴露明文）。
+// 后反序列化为 map 作为输入文档（字段名即 json tag）。
+// 敏感字段不出现在规则可见的输入文档中（从 map 中剔除），明文只能经内置函数
+// crypto.reveal(field) 获取：
+//   - serializer.Crypto（crypto tag）：密文 / 明文均不暴露；
+//   - serializer.S3Crypto（s3crypto tag）：S3 对象键不暴露；
+//   - serializer.Hash 保持不可解密的 HMAC 摘要（不属于敏感明文）。
 func BuildInput(target any) (map[string]any, error) {
 	if inputer, ok := target.(Inputer); ok {
 		return inputer.TagRecogInput()
@@ -51,5 +55,9 @@ func BuildInput(target any) (map[string]any, error) {
 	if err := json.Unmarshal(raw, &input); err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return input, nil
+	typeKey, err := TypeKey(target)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return WithoutSensitiveFields(typeKey, input), nil
 }

@@ -25,6 +25,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/pkg/s3"
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/tagengine"
 )
 
 // defaultConfigHeader 是生成配置文件顶部的说明注释。
@@ -36,18 +37,19 @@ const defaultConfigHeader = `# zhongkui 默认配置文件
 // defaultConfig 是生成默认配置文件所用的根结构体。
 // 各字段类型直接引用运行时真实配置结构体，确保生成的配置项、层级与注释不会随代码演进漂移。
 type defaultConfig struct {
-	Crypto   cryptokey.Config     `mapstructure:"crypto" comment:"密钥派生与密码本配置"`
-	API      managerconfig.Config `mapstructure:"api" comment:"API 管理层配置"`
-	Capture  capture.Config       `mapstructure:"capture" comment:"抓包配置"`
-	Pipeline pipeline.Config      `mapstructure:"pipeline" comment:"任务队列与流水线配置"`
-	Zap      namedLoggingConfig   `mapstructure:"zap" comment:"日志配置"`
-	Database namedDatabaseConfig  `mapstructure:"database" comment:"数据库配置"`
-	Redis    namedRedisConfig     `mapstructure:"redis" comment:"Redis 配置"`
-	Etcd     etcd.Config          `mapstructure:"etcd" comment:"etcd 配置"`
-	Grpc     namedGrpcConfig      `mapstructure:"grpc" comment:"gRPC 服务端与客户端配置"`
-	S3       s3.Config            `mapstructure:"s3" comment:"对象存储配置"`
-	SMTP     mail.Config          `mapstructure:"smtp" comment:"系统层邮件直发配置"`
-	Health   health.Config        `mapstructure:"health" comment:"健康探针配置"`
+	Crypto    cryptokey.Config     `mapstructure:"crypto" comment:"密钥派生与密码本配置"`
+	API       managerconfig.Config `mapstructure:"api" comment:"API 管理层配置"`
+	Capture   capture.Config       `mapstructure:"capture" comment:"抓包配置"`
+	Pipeline  pipeline.Config      `mapstructure:"pipeline" comment:"任务队列与流水线配置"`
+	Zap       namedLoggingConfig   `mapstructure:"zap" comment:"日志配置"`
+	Database  namedDatabaseConfig  `mapstructure:"database" comment:"数据库配置"`
+	Redis     namedRedisConfig     `mapstructure:"redis" comment:"Redis 配置"`
+	Etcd      etcd.Config          `mapstructure:"etcd" comment:"etcd 配置"`
+	Grpc      namedGrpcConfig      `mapstructure:"grpc" comment:"gRPC 服务端与客户端配置"`
+	S3        s3.Config            `mapstructure:"s3" comment:"对象存储配置"`
+	SMTP      mail.Config          `mapstructure:"smtp" comment:"系统层邮件直发配置"`
+	Health    health.Config        `mapstructure:"health" comment:"健康探针配置"`
+	TagEngine tagengine.Config     `mapstructure:"tagengine" comment:"标签识别引擎（Rego）配置"`
 }
 
 // namedLoggingConfig 对应按名称区分的多套日志配置（zap.<name>）。

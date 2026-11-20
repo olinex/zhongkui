@@ -34,7 +34,7 @@ type Datasource struct {
 	Enabled bool `gorm:"column:enabled;type:BOOLEAN"`
 	// Config 数据源连接配置（JSON 文本），可能含传输凭据（如密码），以加密形式持久化
 	// （crypto serializer 密文入库，BYTEA 列）；明文经 ConfigData() 获取
-	Config *serializer.Crypto `json:"config" gorm:"column:config;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=21002,length=32"`
+	Config *serializer.Crypto `json:"config" gorm:"column:config;type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=21002,length=32"`
 	// Description 数据源描述，说明用途
 	Description string `gorm:"column:description;type:VARCHAR(256)"`
 }

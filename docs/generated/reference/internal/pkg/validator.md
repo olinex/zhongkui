@@ -41,6 +41,7 @@
 - [func IsTrimmed\(value string\) bool](<#IsTrimmed>)
 - [func IsUUID\(value string\) bool](<#IsUUID>)
 - [func IsValidAlphanumSpecial\(value, specialChars string\) bool](<#IsValidAlphanumSpecial>)
+- [func IsValidBPF\(value string\) bool](<#IsValidBPF>)
 - [func IsValidCronSpec\(expr string\) bool](<#IsValidCronSpec>)
 - [func IsValidDirPath\(value string\) bool](<#IsValidDirPath>)
 - [func IsValidEnum\(className, value string\) bool](<#IsValidEnum>)
@@ -57,6 +58,7 @@
 - [func RegisterTranslation\(tag string, lang \*base.Language\) error](<#RegisterTranslation>)
 - [func StripJSONFence\(content string\) string](<#StripJSONFence>)
 - [func ValidateAlphanumSpecial\(fl validator.FieldLevel\) bool](<#ValidateAlphanumSpecial>)
+- [func ValidateBPF\(fl validator.FieldLevel\) bool](<#ValidateBPF>)
 - [func ValidateCronSpec\(fl validator.FieldLevel\) bool](<#ValidateCronSpec>)
 - [func ValidateDirPath\(fl validator.FieldLevel\) bool](<#ValidateDirPath>)
 - [func ValidateEnum\(fl validator.FieldLevel\) bool](<#ValidateEnum>)
@@ -106,6 +108,8 @@ const (
     TagTrimmed = "trimmed"
     // TagNotBlank 非空白字符串标签（去首尾空白后非空）
     TagNotBlank = "notBlank"
+    // TagBPF BPF 过滤表达式标签（经 libpcap 编译校验）
+    TagBPF = "bpf"
 )
 ```
 
@@ -239,7 +243,7 @@ func Funcs() map[string]validator.Func
 Funcs 返回全部自定义校验规则的登记表（tag → 校验函数），是自定义规则的唯一登记处： provider 用它把规则注册到全局校验器并为每个 tag 挂本地化文案，测试用它注册到自己的校验器。 集中登记可避免各调用方重复抄写 tag 清单——漏抄某项会让该 tag 在对应场景被判为未注册规则， 表现为绑定失败而非编译错误。
 
 <a name="GenerateStrongPassword"></a>
-## func [GenerateStrongPassword](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L157>)
+## func [GenerateStrongPassword](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L159>)
 
 ```go
 func GenerateStrongPassword(length int) (string, error)
@@ -268,7 +272,7 @@ func GetTranslator(lang *base.Language) ut.Translator
 GetTranslator 从通用翻译器中获取指定语言的翻译器。
 
 <a name="IsBase32"></a>
-## func [IsBase32](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L380>)
+## func [IsBase32](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L382>)
 
 ```go
 func IsBase32(value string) bool
@@ -277,7 +281,7 @@ func IsBase32(value string) bool
 IsBase32 判断字符串是否为合法的 Base32 编码。
 
 <a name="IsBase64"></a>
-## func [IsBase64](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L388>)
+## func [IsBase64](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L390>)
 
 ```go
 func IsBase64(value string) bool
@@ -286,7 +290,7 @@ func IsBase64(value string) bool
 IsBase64 判断字符串是否为合法的 Base64 编码。
 
 <a name="IsBool"></a>
-## func [IsBool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L318>)
+## func [IsBool](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L320>)
 
 ```go
 func IsBool(value string) bool
@@ -295,7 +299,7 @@ func IsBool(value string) bool
 IsBool 判断字符串是否为布尔字面量 true / false（不区分大小写）。
 
 <a name="IsCodeISO15924"></a>
-## func [IsCodeISO15924](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L484>)
+## func [IsCodeISO15924](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L486>)
 
 ```go
 func IsCodeISO15924(value string) bool
@@ -304,7 +308,7 @@ func IsCodeISO15924(value string) bool
 IsCodeISO15924 判断字符串是否为合法的 ISO 15924 文字代码（alpha\-4/名称）。
 
 <a name="IsCodesFilenameExtension"></a>
-## func [IsCodesFilenameExtension](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L504>)
+## func [IsCodesFilenameExtension](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L506>)
 
 ```go
 func IsCodesFilenameExtension(value string) bool
@@ -313,7 +317,7 @@ func IsCodesFilenameExtension(value string) bool
 IsCodesFilenameExtension 判断字符串是否为已知的文件扩展名。
 
 <a name="IsCodesISO31661"></a>
-## func [IsCodesISO31661](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L450>)
+## func [IsCodesISO31661](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L452>)
 
 ```go
 func IsCodesISO31661(value string) bool
@@ -322,7 +326,7 @@ func IsCodesISO31661(value string) bool
 IsCodesISO31661 判断字符串是否为合法的 ISO 3166\-1 国家/地区代码（alpha\-2/alpha\-3/名称）。
 
 <a name="IsCodesISO4217"></a>
-## func [IsCodesISO4217](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L474>)
+## func [IsCodesISO4217](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L476>)
 
 ```go
 func IsCodesISO4217(value string) bool
@@ -331,7 +335,7 @@ func IsCodesISO4217(value string) bool
 IsCodesISO4217 判断字符串是否为合法的 ISO 4217 货币代码（alpha\-3/名称）。
 
 <a name="IsCodesISO6392"></a>
-## func [IsCodesISO6392](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L462>)
+## func [IsCodesISO6392](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L464>)
 
 ```go
 func IsCodesISO6392(value string) bool
@@ -340,7 +344,7 @@ func IsCodesISO6392(value string) bool
 IsCodesISO6392 判断字符串是否为合法的 ISO 639\-2 语言代码（alpha\-2/alpha\-3/名称）。
 
 <a name="IsCodesRFC1766"></a>
-## func [IsCodesRFC1766](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L494>)
+## func [IsCodesRFC1766](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L496>)
 
 ```go
 func IsCodesRFC1766(value string) bool
@@ -349,7 +353,7 @@ func IsCodesRFC1766(value string) bool
 IsCodesRFC1766 判断字符串是否为合法的 RFC 1766 语言标签。
 
 <a name="IsCodesRFC4646"></a>
-## func [IsCodesRFC4646](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L499>)
+## func [IsCodesRFC4646](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L501>)
 
 ```go
 func IsCodesRFC4646(value string) bool
@@ -358,7 +362,7 @@ func IsCodesRFC4646(value string) bool
 IsCodesRFC4646 判断字符串是否为合法的 RFC 4646 语言标签。
 
 <a name="IsDate"></a>
-## func [IsDate](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L396>)
+## func [IsDate](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L398>)
 
 ```go
 func IsDate(value string) bool
@@ -367,7 +371,7 @@ func IsDate(value string) bool
 IsDate 判断字符串是否为支持的日期格式（YYYY\-MM\-DD、YYYY\-MM、MM\-DD\-YYYY、DD.MM.YYYY）。
 
 <a name="IsDatetime"></a>
-## func [IsDatetime](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L433>)
+## func [IsDatetime](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L435>)
 
 ```go
 func IsDatetime(value string) bool
@@ -376,7 +380,7 @@ func IsDatetime(value string) bool
 IsDatetime 判断字符串是否为支持的日期时间格式（以 \- 或 \_ 分隔的多种变体）。
 
 <a name="IsFloat"></a>
-## func [IsFloat](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L332>)
+## func [IsFloat](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L334>)
 
 ```go
 func IsFloat(value string) bool
@@ -385,7 +389,7 @@ func IsFloat(value string) bool
 IsFloat 判断字符串是否可解析为浮点数。
 
 <a name="IsHex"></a>
-## func [IsHex](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L364>)
+## func [IsHex](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L366>)
 
 ```go
 func IsHex(value string) bool
@@ -394,7 +398,7 @@ func IsHex(value string) bool
 IsHex 判断字符串是否为十六进制串。
 
 <a name="IsInt"></a>
-## func [IsInt](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L324>)
+## func [IsInt](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L326>)
 
 ```go
 func IsInt(value string) bool
@@ -403,7 +407,7 @@ func IsInt(value string) bool
 IsInt 判断字符串是否可解析为整数。
 
 <a name="IsMD5"></a>
-## func [IsMD5](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L340>)
+## func [IsMD5](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L342>)
 
 ```go
 func IsMD5(value string) bool
@@ -412,7 +416,7 @@ func IsMD5(value string) bool
 IsMD5 判断字符串是否为 32 位十六进制 MD5 摘要。
 
 <a name="IsNotBlank"></a>
-## func [IsNotBlank](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L684>)
+## func [IsNotBlank](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L686>)
 
 ```go
 func IsNotBlank(value string) bool
@@ -421,7 +425,7 @@ func IsNotBlank(value string) bool
 IsNotBlank 判断字符串去除首尾空白后是否非空；纯空白（含空串）视为空白。 与 trimmed 的区别：trimmed 拒绝任何首尾空白（须由前端先行去除），notBlank 只要求内容 里存在非空白字符，允许正文类字段保留有语义的缩进与换行。
 
 <a name="IsNull"></a>
-## func [IsNull](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L312>)
+## func [IsNull](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L314>)
 
 ```go
 func IsNull(value string) bool
@@ -430,7 +434,7 @@ func IsNull(value string) bool
 IsNull 判断字符串是否为 null / nil（不区分大小写）。
 
 <a name="IsSHA1"></a>
-## func [IsSHA1](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L348>)
+## func [IsSHA1](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L350>)
 
 ```go
 func IsSHA1(value string) bool
@@ -439,7 +443,7 @@ func IsSHA1(value string) bool
 IsSHA1 判断字符串是否为 40 位十六进制 SHA1 摘要。
 
 <a name="IsSHA256"></a>
-## func [IsSHA256](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L356>)
+## func [IsSHA256](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L358>)
 
 ```go
 func IsSHA256(value string) bool
@@ -448,7 +452,7 @@ func IsSHA256(value string) bool
 IsSHA256 判断字符串是否为 64 位十六进制 SHA256 摘要。
 
 <a name="IsSlug"></a>
-## func [IsSlug](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L509>)
+## func [IsSlug](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L511>)
 
 ```go
 func IsSlug(value string) bool
@@ -457,7 +461,7 @@ func IsSlug(value string) bool
 IsSlug 判断字符串是否为 slug 格式（小写字母数字，以 \- 或 \_ 连接）。
 
 <a name="IsStrictValidFileName"></a>
-## func [IsStrictValidFileName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L272>)
+## func [IsStrictValidFileName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L274>)
 
 ```go
 func IsStrictValidFileName(value string) bool
@@ -466,7 +470,7 @@ func IsStrictValidFileName(value string) bool
 IsStrictValidFileName 在 IsValidFileName 基础上施加更严格的规则：不含控制字符、 不以连字符开头且不含空格。
 
 <a name="IsTrimmed"></a>
-## func [IsTrimmed](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L677>)
+## func [IsTrimmed](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L679>)
 
 ```go
 func IsTrimmed(value string) bool
@@ -475,7 +479,7 @@ func IsTrimmed(value string) bool
 IsTrimmed 判断字符串首尾是否均无空白字符。空白由前端输入框负责去除（见 AGENTS.md 前端约定）， 后端只做判定、不做静默裁剪——静默裁剪会让「前端已提交的原值」与「实际落库值」不一致， 排查时看不到用户真正输入了什么。空字符串视为已去空白（是否允许为空由 required 决定）。
 
 <a name="IsUUID"></a>
-## func [IsUUID](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L372>)
+## func [IsUUID](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L374>)
 
 ```go
 func IsUUID(value string) bool
@@ -484,13 +488,22 @@ func IsUUID(value string) bool
 IsUUID 判断字符串是否符合标准 UUID 格式。
 
 <a name="IsValidAlphanumSpecial"></a>
-## func [IsValidAlphanumSpecial](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L519>)
+## func [IsValidAlphanumSpecial](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L521>)
 
 ```go
 func IsValidAlphanumSpecial(value, specialChars string) bool
 ```
 
 IsValidAlphanumSpecial 判断字符串是否仅由字母数字（含 Unicode）与 指定的特殊字符组成，且至少包含一个字母或数字（不允许仅有特殊符号）。 specialChars 为允许的特殊字符集合（如 "\-\_"）。
+
+<a name="IsValidBPF"></a>
+## func [IsValidBPF](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/bpf.go#L43>)
+
+```go
+func IsValidBPF(value string) bool
+```
+
+IsValidBPF 判断 BPF 过滤表达式能否被 libpcap 编译。 依次尝试以太网 / Linux cooked / loopback / 802.11 等链路类型，任一成功即合法； 含主机名、网络名或服务名的表达式会在编译期触发一次名字解析。
 
 <a name="IsValidCronSpec"></a>
 ## func [IsValidCronSpec](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/cron.go#L20>)
@@ -502,7 +515,7 @@ func IsValidCronSpec(expr string) bool
 IsValidCronSpec 判断 cron 表达式是否合法：去除首尾空白后必须非空，且能被 robfig/cron 的 标准解析器接受（支持 5 段标准 cron 与 @daily 等描述符，不支持带秒的 6 段表达式）。 该函数不依赖校验器实例，是纯函数。
 
 <a name="IsValidDirPath"></a>
-## func [IsValidDirPath](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L299>)
+## func [IsValidDirPath](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L301>)
 
 ```go
 func IsValidDirPath(value string) bool
@@ -511,7 +524,7 @@ func IsValidDirPath(value string) bool
 IsValidDirPath 判断字符串是否为合法目录路径（非空且不含 NUL 字符）。
 
 <a name="IsValidEnum"></a>
-## func [IsValidEnum](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L612>)
+## func [IsValidEnum](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L614>)
 
 ```go
 func IsValidEnum(className, value string) bool
@@ -520,7 +533,7 @@ func IsValidEnum(className, value string) bool
 IsValidEnum 判断 value 是否为指定枚举类（enum 注册表的类名）的合法取值。值空间唯一来源是 internal/pkg/enum 注册表，调用方一律以 \`binding:"enum=\<类名\>"\` 引用，禁止就地书写枚举字面量 或 switch 分支。按条目的 Value 严格匹配，与「数据库字段存储 value、不可存 key」的约定一致： In 结构体的入参语义即即将落库的取值，接受 key 会让展示键被写进数据库。 className 未注册属编程缺陷（标签参数写错），此时 panic 而非返回 false——静默地把所有入参判为 非法会让缺陷伪装成用户的输入问题。
 
 <a name="IsValidFileName"></a>
-## func [IsValidFileName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L247>)
+## func [IsValidFileName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L249>)
 
 ```go
 func IsValidFileName(value string) bool
@@ -529,7 +542,7 @@ func IsValidFileName(value string) bool
 IsValidFileName 判断字符串是否为合法文件名：按当前操作系统选择 Windows 或 Unix 规则。
 
 <a name="IsValidHTTPURL"></a>
-## func [IsValidHTTPURL](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L625>)
+## func [IsValidHTTPURL](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L627>)
 
 ```go
 func IsValidHTTPURL(value string) bool
@@ -538,7 +551,7 @@ func IsValidHTTPURL(value string) bool
 IsValidHTTPURL 判断字符串是否为绝对的 http / https URL（scheme 与 host 均非空）。空字符串、 相对路径、其他 scheme（file / ftp / ws 等）一律不合法；字段可选时以 \`omitempty\` 放行空值。
 
 <a name="IsValidJSONObject"></a>
-## func [IsValidJSONObject](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L639>)
+## func [IsValidJSONObject](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L641>)
 
 ```go
 func IsValidJSONObject(value string) bool
@@ -547,7 +560,7 @@ func IsValidJSONObject(value string) bool
 IsValidJSONObject 判断字符串是否为「所有值均为字符串的 JSON 对象」文本，用于承载嵌套在字符串 字段里的结构化配置（如请求头）。空字符串不合法；字段可选时以 \`omitempty\` 放行空值。 字面量 null 反序列化到 map 不报错但得到 nil map，故须显式排除，否则「null」会被当成合法对象。
 
 <a name="IsValidJSONTypedValue"></a>
-## func [IsValidJSONTypedValue](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L652>)
+## func [IsValidJSONTypedValue](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L654>)
 
 ```go
 func IsValidJSONTypedValue(typeName string, value any) bool
@@ -556,7 +569,7 @@ func IsValidJSONTypedValue(typeName string, value any) bool
 IsValidJSONTypedValue 按声明的类型名校验一个已解码的 JSON 值：value 须来自 encoding/json 对 值的解码（数字为 float64、对象为 map\[string\]any、数组为 \[\]any、布尔为 bool、字符串为 string）。 「动态 schema → 值」的校验无法经结构体 binding 标签表达，故在此提供通用能力，避免调用方就地 堆砌 if\-else：string/int/bool/object/array 五类做基本类型判定，int 额外要求无小数部分；未知 类型名一律判为不合法（fail closed，目录侧已由 fail\-fast 保证只登记已知类型）。
 
 <a name="IsValidStrongPassword"></a>
-## func [IsValidStrongPassword](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L125>)
+## func [IsValidStrongPassword](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L127>)
 
 ```go
 func IsValidStrongPassword(value string) bool
@@ -565,7 +578,7 @@ func IsValidStrongPassword(value string) bool
 IsValidStrongPassword 判断字符串是否符合强密码要求（至少包含一位数字、一个大写字母、 一个小写字母和一个特殊字符，长度不少于 6）。
 
 <a name="IsValidUnixFileName"></a>
-## func [IsValidUnixFileName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L230>)
+## func [IsValidUnixFileName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L232>)
 
 ```go
 func IsValidUnixFileName(value string) bool
@@ -574,7 +587,7 @@ func IsValidUnixFileName(value string) bool
 IsValidUnixFileName 判断字符串是否为合法的 Unix 文件名（排除非法字符并限制长度）。
 
 <a name="IsValidWindowsFileName"></a>
-## func [IsValidWindowsFileName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L201>)
+## func [IsValidWindowsFileName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L203>)
 
 ```go
 func IsValidWindowsFileName(value string) bool
@@ -583,7 +596,7 @@ func IsValidWindowsFileName(value string) bool
 IsValidWindowsFileName 判断字符串是否为合法的 Windows 文件名（排除保留设备名、 非法字符、以空格或点结尾以及超长的情况）。
 
 <a name="IsYearQuarter"></a>
-## func [IsYearQuarter](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L417>)
+## func [IsYearQuarter](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L419>)
 
 ```go
 func IsYearQuarter(value string) bool
@@ -592,7 +605,7 @@ func IsYearQuarter(value string) bool
 IsYearQuarter 判断字符串是否为年季格式（YYYY\-Q\[1\-4\]）。
 
 <a name="IsYearWeek"></a>
-## func [IsYearWeek](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L425>)
+## func [IsYearWeek](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L427>)
 
 ```go
 func IsYearWeek(value string) bool
@@ -671,13 +684,22 @@ func StripJSONFence(content string) string
 StripJSONFence 去除可能包裹的 \`\`\`json / \`\`\` 代码围栏与前后空白，返回裸 JSON 文本； 该函数是 JSON 围栏剥离的唯一实现，供对象解码与任意 JSON 载荷解析复用。
 
 <a name="ValidateAlphanumSpecial"></a>
-## func [ValidateAlphanumSpecial](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L544>)
+## func [ValidateAlphanumSpecial](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L546>)
 
 ```go
 func ValidateAlphanumSpecial(fl validator.FieldLevel) bool
 ```
 
 ValidateAlphanumSpecial 是 alphanumspecial 标签的验证函数，标签参数为允许的特殊字符集合。
+
+<a name="ValidateBPF"></a>
+## func [ValidateBPF](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/bpf.go#L60>)
+
+```go
+func ValidateBPF(fl validator.FieldLevel) bool
+```
+
+ValidateBPF 是 bpf 标签的验证函数：字段值须为可被 libpcap 编译的 BPF 过滤表达式。
 
 <a name="ValidateCronSpec"></a>
 ## func [ValidateCronSpec](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/cron.go#L30>)
@@ -689,7 +711,7 @@ func ValidateCronSpec(fl validator.FieldLevel) bool
 ValidateCronSpec 是 \`cron\` 标签的校验函数：仅接受字符串字段，非法或非字符串均返回 false。
 
 <a name="ValidateDirPath"></a>
-## func [ValidateDirPath](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L598>)
+## func [ValidateDirPath](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L600>)
 
 ```go
 func ValidateDirPath(fl validator.FieldLevel) bool
@@ -698,7 +720,7 @@ func ValidateDirPath(fl validator.FieldLevel) bool
 ValidateDirPath 是 dirpath 标签的验证函数。
 
 <a name="ValidateEnum"></a>
-## func [ValidateEnum](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L701>)
+## func [ValidateEnum](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L703>)
 
 ```go
 func ValidateEnum(fl validator.FieldLevel) bool
@@ -707,7 +729,7 @@ func ValidateEnum(fl validator.FieldLevel) bool
 ValidateEnum 是 enum 标签的验证函数，标签参数为 enum 注册表的类名，例如 \`binding:"enum=mcpTransport"\`。
 
 <a name="ValidateFileName"></a>
-## func [ValidateFileName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L580>)
+## func [ValidateFileName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L582>)
 
 ```go
 func ValidateFileName(fl validator.FieldLevel) bool
@@ -746,7 +768,7 @@ type Event struct {
 ```
 
 <a name="ValidateHTTPURL"></a>
-## func [ValidateHTTPURL](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L710>)
+## func [ValidateHTTPURL](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L712>)
 
 ```go
 func ValidateHTTPURL(fl validator.FieldLevel) bool
@@ -755,7 +777,7 @@ func ValidateHTTPURL(fl validator.FieldLevel) bool
 ValidateHTTPURL 是 httpUrl 标签的验证函数。
 
 <a name="ValidateJSONObject"></a>
-## func [ValidateJSONObject](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L719>)
+## func [ValidateJSONObject](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L721>)
 
 ```go
 func ValidateJSONObject(fl validator.FieldLevel) bool
@@ -794,7 +816,7 @@ type User struct {
 ```
 
 <a name="ValidateNotBlank"></a>
-## func [ValidateNotBlank](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L737>)
+## func [ValidateNotBlank](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L739>)
 
 ```go
 func ValidateNotBlank(fl validator.FieldLevel) bool
@@ -803,7 +825,7 @@ func ValidateNotBlank(fl validator.FieldLevel) bool
 ValidateNotBlank 是 notBlank 标签的验证函数。
 
 <a name="ValidateStrictFileName"></a>
-## func [ValidateStrictFileName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L589>)
+## func [ValidateStrictFileName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L591>)
 
 ```go
 func ValidateStrictFileName(fl validator.FieldLevel) bool
@@ -812,7 +834,7 @@ func ValidateStrictFileName(fl validator.FieldLevel) bool
 ValidateStrictFileName 是 strictFileName 标签的验证函数。
 
 <a name="ValidateStrongPassword"></a>
-## func [ValidateStrongPassword](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L553>)
+## func [ValidateStrongPassword](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L555>)
 
 ```go
 func ValidateStrongPassword(fl validator.FieldLevel) bool
@@ -821,7 +843,7 @@ func ValidateStrongPassword(fl validator.FieldLevel) bool
 ValidateStrongPassword 是 strongPassword 标签的验证函数。
 
 <a name="ValidateTrimmed"></a>
-## func [ValidateTrimmed](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L728>)
+## func [ValidateTrimmed](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L730>)
 
 ```go
 func ValidateTrimmed(fl validator.FieldLevel) bool
@@ -830,7 +852,7 @@ func ValidateTrimmed(fl validator.FieldLevel) bool
 ValidateTrimmed 是 trimmed 标签的验证函数。
 
 <a name="ValidateUnixFileName"></a>
-## func [ValidateUnixFileName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L571>)
+## func [ValidateUnixFileName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L573>)
 
 ```go
 func ValidateUnixFileName(fl validator.FieldLevel) bool
@@ -839,7 +861,7 @@ func ValidateUnixFileName(fl validator.FieldLevel) bool
 ValidateUnixFileName 是 unixFileName 标签的验证函数。
 
 <a name="ValidateWindowsFileName"></a>
-## func [ValidateWindowsFileName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L562>)
+## func [ValidateWindowsFileName](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/validator/string.go#L564>)
 
 ```go
 func ValidateWindowsFileName(fl validator.FieldLevel) bool

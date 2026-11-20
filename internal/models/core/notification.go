@@ -58,7 +58,7 @@ type NotificationChannel struct {
 	// Config 渠道配置（JSON 文本），可能含传输凭据（如 SMTP 账号密码），
 	// 以加密形式持久化（crypto serializer 密文入库，BYTEA 列）；读取明文经
 	// ConfigData() 获取，详情接口仅输出密文，查看明文需经明文权限接口
-	Config *serializer.Crypto `json:"config" gorm:"column:config;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=21001,length=32"`
+	Config *serializer.Crypto `json:"config" gorm:"column:config;type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=21001,length=32"`
 	// Description 渠道描述，说明渠道用途
 	Description string `gorm:"column:description;type:VARCHAR(256)"`
 }
@@ -94,7 +94,7 @@ type NotificationTarget struct {
 	Enabled bool `gorm:"column:enabled;type:BOOLEAN;default:true"`
 	// Config 目标配置（JSON 文本），如收件人邮箱、Webhook URL，结构随渠道类型不同而不同；
 	// 以加密形式持久化（crypto serializer 密文入库，BYTEA 列），读取明文经 ConfigData() 获取
-	Config *serializer.Crypto `json:"config" gorm:"column:config;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=21069,length=32"`
+	Config *serializer.Crypto `json:"config" gorm:"column:config;type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=21069,length=32"`
 	// Language 目标偏好的消息语言（如 en、zh-Hans），空字符串表示使用平台默认语言；
 	// 通知消息按该语言经 locales 模板渲染（i18n）
 	Language string `gorm:"column:language;type:VARCHAR(32)"`

@@ -1,5 +1,7 @@
 import * as yup from "yup";
 
+import { parseBpf } from "@/utils/bpfExpr";
+
 const namespace = yup
   .string()
   .trim()
@@ -39,7 +41,19 @@ const bpfExpr = yup
   .required()
   .min(3)
   .max(512)
-  .label("model.capturer.field.bpfExpr");
+  .label("model.capturer.field.bpfExpr")
+  // 前端语法门禁：与编辑器本地 lint 共用同一 parser，非法时禁用提交。
+  // 后端提交时另有 libpcap 兜底校验。
+  .test("bpfSyntax", "model.capturer.field.bpfExpr", function (value) {
+    if (!value) {
+      return true;
+    }
+    const first = parseBpf(value)[0];
+    if (!first) {
+      return true;
+    }
+    return this.createError({ message: first.message });
+  });
 const snapLen = yup
   .number()
   .nonNullable()

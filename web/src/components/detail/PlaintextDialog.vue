@@ -33,6 +33,24 @@ import i18n from "@/utils/i18n";
 
 const TEXT_PREVIEW_LIMIT = 100000;
 const HEX_PREVIEW_LIMIT = 1024;
+// 控制字符（除 \t \n \r 外）出现即视为二进制内容
+const BINARY_CONTROL_RE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/;
+
+// truncateChars 按字符（码点）截断文本。
+// 先完整解码再截断字符，避免按字节切片把多字节字符/代理对切断，
+// 导致预览尾部出现 U+FFFD 乱码；for...of 按码点迭代，不会拆开 emoji 等代理对。
+const truncateChars = (value: string, limit: number): string => {
+  let result = "";
+  let count = 0;
+  for (const char of value) {
+    if (count >= limit) {
+      break;
+    }
+    result += char;
+    count += 1;
+  }
+  return result;
+};
 
 const appStore = useAppStore();
 
@@ -90,13 +108,24 @@ const open = async (field: DetailField, model: string, label: string): Promise<v
             ciphertext: String(field.value),
           });
     const bytes = new Uint8Array(rsp.data as ArrayBuffer);
-    const previewText = new TextDecoder("utf-8").decode(bytes.slice(0, TEXT_PREVIEW_LIMIT));
-    isText.value =
-      !previewText.includes("\uFFFD") &&
-      !/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(previewText);
-    text.value = previewText;
-    hex.value = toHex(bytes, HEX_PREVIEW_LIMIT);
-    truncated.value = bytes.length > TEXT_PREVIEW_LIMIT || bytes.length > HEX_PREVIEW_LIMIT;
+    // 文本判定用流式解码的样本：stream 模式会暂存样本末尾不完整的多字节序列，
+    // 避免按字节截断处被误判为乱码，把正常文本当成二进制
+    const sample = new TextDecoder("utf-8").decode(bytes.slice(0, TEXT_PREVIEW_LIMIT), {
+      stream: true,
+    });
+    isText.value = !sample.includes("\uFFFD") && !BINARY_CONTROL_RE.test(sample);
+    if (isText.value) {
+      // 文本预览：完整解码后按字符截断
+      const fullText = new TextDecoder("utf-8").decode(bytes);
+      text.value = truncateChars(fullText, TEXT_PREVIEW_LIMIT);
+      hex.value = "";
+      truncated.value = text.value.length !== fullText.length;
+    } else {
+      // 二进制预览：十六进制仅展示前 HEX_PREVIEW_LIMIT 字节
+      text.value = "";
+      hex.value = toHex(bytes, HEX_PREVIEW_LIMIT);
+      truncated.value = bytes.length > HEX_PREVIEW_LIMIT;
+    }
     fieldKey.value = field.key;
     title.value = label;
     if (blobUrl.value) {

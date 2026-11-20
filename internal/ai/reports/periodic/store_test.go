@@ -11,6 +11,7 @@ import (
 	modelsai "zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
 	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
@@ -44,7 +45,7 @@ type fakeRemover struct {
 }
 
 // Remove 删除对象：命中失败集合时返回错误，否则记录到已删除序列。
-func (f *fakeRemover) Remove(_ context.Context, objectKey string) error {
+func (f *fakeRemover) Remove(_ context.Context, objectKey string, _ []byte) error {
 	if f.fail[objectKey] {
 		return errors.New("fake object removal failure")
 	}
@@ -402,7 +403,7 @@ func TestCleanup(t *testing.T) {
 			PlanID:        planA.ID,
 			TriggerAt:     now.Add(time.Duration(i) * time.Minute),
 			Status:        tc.status,
-			ObjectKey:     tc.objectKey,
+			ObjectKey:     serializer.NewS3Crypto(tc.objectKey),
 		}
 		if _, err := store.CreateRunIfAbsent(ctx, run); err != nil {
 			t.Fatalf("CreateRunIfAbsent(%s) error = %v", tc.objectKey, err)

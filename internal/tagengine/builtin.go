@@ -194,6 +194,14 @@ tags contains "redis-match" if {
 	rows[0].value == "yes"
 }`,
 		},
+		{
+			Name:        revealName,
+			Description: "tagengine.custom-functions.crypto.reveal.description",
+			Signature:   "crypto.reveal(field)",
+			Example: `tags contains "bearer-auth" if {
+	startswith(crypto.reveal("reqHdrAuthorization"), "Bearer ")
+}`,
+		},
 	}
 }
 

@@ -184,6 +184,7 @@ notBlank = "The field must not be blank"
 gtCurrentTime = "The field must be a time later than the current time"
 ltCurrentTime = "The field must be a time earlier than the current time"
 cron = "The field must be a valid cron expression (5-field standard cron or descriptors such as @daily)"
+bpf = "Field must be a valid BPF filter expression (e.g. tcp port 80)"
 
 # =============================================================================
 # CLI command descriptions & flag usages
@@ -1875,6 +1876,8 @@ other = "List of supported languages/locales (ref: https://pkg.go.dev/github.com
 rego-invalid = "Rego rule violates the tag rule contract: it must be package zki with a tags rule"
 lint-field-not-exist = "Field %s does not exist in the input document of this model, please check the spelling"
 lint-field-hint = "Please choose a valid field from the input field panel or the completion list"
+lint-sensitive-field = "Sensitive field %s is not exposed in the input document; use crypto.reveal(\"%s\") to get its plaintext"
+lint-sensitive-field-hint = "Call crypto.reveal(\"field\") in the rule; pick the field name from the input field panel"
 
 [tagrule.hint]
 parse-unexpected = "Syntax error: unexpected token or keyword, please check the spelling and paired brackets/quotes"
@@ -2415,6 +2418,13 @@ other = "Client Fingerprint Signature"
 
 [enum.tagEventDimension.fpTcpServerSig]
 other = "Server Fingerprint Signature"
+
+# Decryptable sensitive field kind (enum class sensitiveKind)
+[enum.sensitiveKind.crypto]
+other = "Column-encrypted field"
+
+[enum.sensitiveKind.s3crypto]
+other = "S3 encrypted object field"
 
 # Notification template source (enum class notificationSource)
 [enum.notificationSource.default]
@@ -3292,6 +3302,9 @@ other = "Solve a system of nonlinear equations with the Newton-Raphson method, r
 
 [tagengine.custom-functions.sqlite.query.description]
 other = "Query a third-party datasource: run a SELECT statement against a datasource registered as an sqlite vtable and return an array of row objects.\nArguments: the first argument is the query statement (supporting ? placeholders), the second is the array of parameters bound in order.\nResult: each row is an object keyed by column name, accessed by index plus column name (e.g. rows[0].value); an empty array is returned when nothing matches and indexing it makes the rule body undefined, so guard with count(rows) > 0 first"
+
+[tagengine.custom-functions.crypto.reveal.description]
+other = "Reveal the plaintext of an encrypted field of the current target model: encrypted fields are not exposed in the input document, and field is the target model field name (json name, e.g. reqHdrAuthorization, reqBody). Crypto fields return their plaintext directly; S3Crypto fields are downloaded from S3 with the field key and decrypted to the body text. An empty field value yields an empty string; a non-decryptable field, S3 read failure or body larger than tagengine.s3cryptoMaxBytes returns an error (the rule does not match during production recognition, and dry-run surfaces the error). The same field is decrypted only once per data record"
 
 # Task type (enum class taskType, from the worker handler registry TaskTypes())
 [enum.taskType."network:pcapimport"]

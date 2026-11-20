@@ -88,6 +88,13 @@ func (h *flowClusterHandler[P]) Poll(ctx context.Context, prevWatermark, curWate
 			return nil
 		})
 	if err := query.Error; err != nil {
+		// 仅 ctx 已取消时按关机路径提前返回 nil：返回 nil 会推进水位，非关机场景下的
+		// 取消（如驱动/连接中断）必须按错误上报，避免静默跳过数据。
+		if ctx.Err() != nil {
+			h.logger.Ctx(ctx).Infof("flow handler poll interrupted (context canceled), duration=%s, sent=%d",
+				time.Since(pollStart), totalSent)
+			return nil
+		}
 		h.logger.Ctx(ctx).Errorf("flow handler poll failed, duration=%s, sent=%d, err=%v",
 			time.Since(pollStart), totalSent, err)
 		return errors.WithStack(err)

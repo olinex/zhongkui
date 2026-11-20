@@ -12,13 +12,13 @@
 
 
 <a name="CryptoPlaintextGet"></a>
-## func [CryptoPlaintextGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/plaintext/plaintext.go#L65>)
+## func [CryptoPlaintextGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/plaintext/plaintext.go#L63>)
 
 ```go
 func CryptoPlaintextGet(c *gin.Context)
 ```
 
-CryptoPlaintextGet 处理加密字段明文查看请求（全局通用接口） 请求携带模型注册名 \+ 字段 \+ base64 密文；先按字段构成权限点 object 做 RBAC 静态授权， 再按模型字段的 secure 标签派生密钥解密，以 application/octet\-stream 返回明文。 新增模型的加密字段仅需 RegisterPlaintextModel 注册模型 \+ 补模板种子，无需新增接口。
+CryptoPlaintextGet 处理加密字段明文查看请求（全局通用接口） 请求携带模型注册名 \+ 字段 \+ base64 密文；先按字段构成权限点 object 做 RBAC 静态授权， 再按模型字段的 crypto 标签派生密钥解密，以 application/octet\-stream 返回明文。 新增模型的加密字段仅需 RegisterPlaintextModel 注册模型 \+ 补模板种子，无需新增接口。
 
 <a name="RegisterRoutes"></a>
 ## func [RegisterRoutes](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/plaintext/register.go#L15>)
@@ -30,7 +30,7 @@ func RegisterRoutes(ctx *views.RegisterContext)
 RegisterRoutes 注册 /api/v1/plaintext 通用明文查看接口路由。 全局通用接口：解密加密字段密文 / 读取 S3 body 明文，响应原始字节流。 权限点 object = plaintext:\{crypto|s3\}:\{model\}:\{field\}，action = READ（规范见 internal/pkg/base/consts.go）。 新增模型的加密/S3 字段：RegisterPlaintextModel 注册模型 \+ 补模板种子即可，无需新增接口。
 
 <a name="S3PlaintextGet"></a>
-## func [S3PlaintextGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/plaintext/plaintext.go#L103>)
+## func [S3PlaintextGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/plaintext/plaintext.go#L101>)
 
 ```go
 func S3PlaintextGet(c *gin.Context)
@@ -39,7 +39,7 @@ func S3PlaintextGet(c *gin.Context)
 S3PlaintextGet 处理 S3 body 明文查看请求（全局通用接口） body 内容以 Zkcn（zstd \+ AES\-GCM）加密存储在 S3，请求体 \{object\_key\} 指定对象键； 先按 model \+ field 构成权限点 object 做 RBAC 静态授权，再读取并解密解压后以 application/octet\-stream 返回原始字节流。 新增模型的 S3 字段仅需 RegisterPlaintextModel 注册模型 \+ 补模板种子，无需新增接口。
 
 <a name="CryptoPlaintextIn"></a>
-## type [CryptoPlaintextIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/plaintext/plaintext.go#L41-L48>)
+## type [CryptoPlaintextIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/plaintext/plaintext.go#L39-L46>)
 
 CryptoPlaintextIn 加密字段明文查看请求输入 Model 为模型注册名，Field 为字段 json 名（二者构成权限点 object），Ciphertext 为字段密文的 base64 编码
 
@@ -55,7 +55,7 @@ type CryptoPlaintextIn struct {
 ```
 
 <a name="S3PlaintextIn"></a>
-## type [S3PlaintextIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/plaintext/plaintext.go#L52-L59>)
+## type [S3PlaintextIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/plaintext/plaintext.go#L50-L57>)
 
 S3PlaintextIn S3 body 明文查看请求输入 Model/Field 构成权限点 object，ObjectKey 为 body 内容在 S3 中的对象键
 

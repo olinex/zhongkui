@@ -50,7 +50,7 @@ type AccessKey struct {
 	AccessKeyID string `gorm:"type:VARCHAR(32)"`
 	// AccessKeySecret 是访问键的密钥
 	// 通过 AES-GCM 加密存储，读取时自动解密
-	AccessKeySecret *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=3027,length=32"`
+	AccessKeySecret *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=3027,length=32"`
 	// Description 是访问键的可选描述信息
 	// 用于标识访问键的用途或所有者
 	Description string `gorm:"type:VARCHAR(256)"`
