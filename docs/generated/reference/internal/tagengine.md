@@ -182,7 +182,7 @@ func Dimensions(typeKey string) []string
 Dimensions 返回已注册模型合法标签维度取值列表（snake\_case 列名， 对应 tag\_summings.dimension 的存储值），未注册模型返回 nil。 供接口层作为 dimension 下拉选择的数据源，保证前后端维度配置同步。
 
 <a name="EnsureModelSamples"></a>
-## func [EnsureModelSamples](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/samples.go#L81>)
+## func [EnsureModelSamples](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/samples.go#L82>)
 
 ```go
 func EnsureModelSamples(ctx context.Context, db *database.DB, namespace, typeKey string) ([]*tag.TagRuleSample, error)
@@ -200,7 +200,7 @@ func IsRegistered(typeKey string) bool
 IsRegistered 判断模型类型键是否已注册。 接口层校验 TagRule.Model / TagSumming.Model 等模型字段取值时使用。
 
 <a name="ListModelSamples"></a>
-## func [ListModelSamples](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/samples.go#L66>)
+## func [ListModelSamples](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/samples.go#L67>)
 
 ```go
 func ListModelSamples(ctx context.Context, db *database.DB, namespace, typeKey string) ([]*tag.TagRuleSample, error)

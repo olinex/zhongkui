@@ -42,6 +42,10 @@
               />
             </template>
             <v-list-item-title class="text-body-medium">{{ hdr.title }}</v-list-item-title>
+            <!-- 列补充说明：链路槽位等语义随链路类型变化的列在此给出摘要 -->
+            <v-list-item-subtitle v-if="hdr.description" class="text-body-small on-surface-variant">
+              {{ hdr.description }}
+            </v-list-item-subtitle>
             <template #append>
               <v-icon icon="mdi-drag" size="small" class="on-surface-variant drag-handle" />
             </template>

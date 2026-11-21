@@ -202,6 +202,15 @@ tags contains "redis-match" if {
 	startswith(crypto.reveal("reqHdrAuthorization"), "Bearer ")
 }`,
 		},
+		{
+			Name:        codecParseName,
+			Description: "tagengine.custom-functions.codec.parse.description",
+			Signature:   "codec.parse(contentType, text)",
+			Example: `body := codec.parse(input.reqHdrContentType, crypto.reveal("reqBody"))
+tags contains "admin-login" if {
+	body.username == "admin"
+}`,
+		},
 	}
 }
 

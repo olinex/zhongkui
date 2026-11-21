@@ -239,6 +239,19 @@
 | `streamable_http` | `streamable_http` | 可流式 HTTP |
 | `sse` | `sse` | SSE |
 
+## mediaType
+
+| Key | 存储值 | 展示名 |
+| --- | --- | --- |
+| `application/json` | `application/json` | JSON |
+| `text/json` | `text/json` | JSON 文本 |
+| `application/x-www-form-urlencoded` | `application/x-www-form-urlencoded` | 表单编码 |
+| `text/html` | `text/html` | HTML |
+| `application/xhtml+xml` | `application/xhtml+xml` | XHTML |
+| `application/xml` | `application/xml` | XML |
+| `text/xml` | `text/xml` | XML 文本 |
+| `text/plain` | `text/plain` | 纯文本 |
+
 ## memoryKind
 
 | Key | 存储值 | 展示名 |

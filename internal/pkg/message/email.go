@@ -17,6 +17,7 @@ import (
 	"github.com/creasty/defaults"
 
 	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
@@ -197,7 +198,7 @@ func buildMailBody(from, to string, msg *RenderedMessage) []byte {
 	// 按消息内容类型生成 MIME 头；未显式指定时回退 text/plain（与既有行为一致）
 	ct := msg.ContentType
 	if ct == "" {
-		ct = "text/plain"
+		ct = base.MediaTypeTextPlain
 	}
 	b.WriteString("MIME-Version: 1.0\r\n")
 	fmt.Fprintf(&b, "Content-Type: %s; charset=UTF-8\r\n", ct)

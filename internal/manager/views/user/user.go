@@ -273,7 +273,7 @@ func UserPasswordForgot(c *gin.Context) {
 		To: user.Email,
 		Message: message.Message{
 			Template:    "password.reset",
-			ContentType: "text/html", // 重置密码邮件在消息定义层声明为 HTML 正文
+			ContentType: base.MediaTypeHTML, // 重置密码邮件在消息定义层声明为 HTML 正文
 			Params: map[string]any{
 				"Username": user.Username,
 				"ResetURL": resetURL,

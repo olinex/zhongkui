@@ -72,6 +72,7 @@
 - [auth 参考](internal/pkg/auth.md) — 来源 `zhongkuisec.com/zhongkui/internal/pkg/auth`
 - [base 参考](internal/pkg/base.md) — 来源 `zhongkuisec.com/zhongkui/internal/pkg/base`
 - [cliinput 参考](internal/pkg/cliinput.md) — 来源 `zhongkuisec.com/zhongkui/internal/pkg/cliinput`
+- [codec 参考](internal/pkg/codec.md) — 来源 `zhongkuisec.com/zhongkui/internal/pkg/codec`
 - [codes 参考](internal/pkg/codes.md) — 来源 `zhongkuisec.com/zhongkui/internal/pkg/codes`
 - [config 参考](internal/pkg/config.md) — 来源 `zhongkuisec.com/zhongkui/internal/pkg/config`
 - [crypto 参考](internal/pkg/crypto.md) — 来源 `zhongkuisec.com/zhongkui/internal/pkg/crypto`

@@ -12,6 +12,7 @@ import (
 
 	// 项目内部
 	authpkg "zhongkuisec.com/zhongkui/internal/pkg/auth"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
@@ -68,7 +69,7 @@ func (a *apiInvoker) Invoke(ctx context.Context, method, path string, params jso
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", base.MediaTypeJSON)
 	req.Header.Set(authpkg.AccessKeyHeaderName, token)
 	resp, err := a.client.Do(req)
 	if err != nil {

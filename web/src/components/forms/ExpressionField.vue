@@ -26,7 +26,7 @@
             closable
             @click:close="removeSelection(index)"
           >
-            `{{ asFilterItem(item).field.title }}`&nbsp;{{ asFilterItem(item).action.title }}
+            `{{ fieldTitleOf(asFilterItem(item)) }}`&nbsp;{{ asFilterItem(item).action.title }}
             <span v-show="asFilterItem(item).value.value !== null"
               >&nbsp;`{{ asFilterItem(item).value.title }}`</span
             >
@@ -91,6 +91,12 @@ export interface FilterItem {
 const asFilterItem = (item: unknown): FilterItem => item as FilterItem;
 
 const addMenuOpened = ref(false);
+
+// fieldTitleOf 条件字段名：优先取当前筛选元信息中的标题，使链路槽位等
+// 随上下文变化的字段名在已选条件 chip 中实时刷新；缺失时回退加入条件时的标题
+const fieldTitleOf = (item: FilterItem): string => {
+  return props.headers[item.field.value]?.title ?? item.field.title;
+};
 
 const selectedFieldActions = computed(() => {
   return props.modelValue.map((item) =>
