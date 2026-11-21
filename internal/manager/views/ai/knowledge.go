@@ -937,7 +937,7 @@ func KnowledgeDocumentDownload(c *gin.Context) {
 func knowledgeDocumentContentType(format string) string {
 	switch docconv.Format(format) {
 	case docconv.FormatMarkdown, docconv.FormatTxt:
-		return "text/plain; charset=utf-8"
+		return base.MediaTypeTextPlain + "; charset=utf-8"
 	case docconv.FormatPDF:
 		return "application/pdf"
 	case docconv.FormatDocx:

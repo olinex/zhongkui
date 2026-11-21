@@ -122,7 +122,7 @@ func New(typ string, config json.RawMessage) (Channel, error)
 New 依据渠道类型键与渠道级配置构建渠道实例；类型未注册时返回错误。
 
 <a name="EmailChannelConfig"></a>
-## type [EmailChannelConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/email.go#L57-L68>)
+## type [EmailChannelConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/email.go#L58-L69>)
 
 EmailChannelConfig 邮件渠道级配置，同时是前端配置表单的单一事实来源。 字段的 binding 标签驱动校验，form 标签（kind/default）经反射提取为前端表单 schema； 字段展示文案由前端依据字段名与渠道类型拼接 i18n key 翻译。
 
@@ -142,7 +142,7 @@ type EmailChannelConfig struct {
 ```
 
 <a name="EmailTarget"></a>
-## type [EmailTarget](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/email.go#L71-L74>)
+## type [EmailTarget](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/email.go#L72-L75>)
 
 EmailTarget 邮件目标级配置。
 
@@ -285,7 +285,7 @@ type Target struct {
 ```
 
 <a name="WebhookChannelConfig"></a>
-## type [WebhookChannelConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/webhook.go#L43>)
+## type [WebhookChannelConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/webhook.go#L44>)
 
 WebhookChannelConfig Webhook 渠道级配置：当前为空对象（Webhook 地址在目标级配置中）。 反射产出空字段列表，供前端渲染空渠道级配置表单。
 
@@ -294,7 +294,7 @@ type WebhookChannelConfig struct{}
 ```
 
 <a name="WebhookTarget"></a>
-## type [WebhookTarget](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/webhook.go#L46-L51>)
+## type [WebhookTarget](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/message/webhook.go#L47-L52>)
 
 WebhookTarget Webhook 目标级配置。
 

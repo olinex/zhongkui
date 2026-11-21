@@ -11,6 +11,7 @@ import (
 	"time"
 
 	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
@@ -71,7 +72,7 @@ func (c *webhookChannel) Send(ctx context.Context, target *Target, msg *Rendered
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", base.MediaTypeJSON)
 	for key, value := range cfg.Headers {
 		req.Header.Set(key, value)
 	}

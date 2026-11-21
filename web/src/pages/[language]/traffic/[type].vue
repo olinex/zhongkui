@@ -87,6 +87,7 @@ import {
 } from "@/apis/traffic";
 import type { TrafficType } from "@/apis/@types/traffic";
 import type { DetailField } from "@/components/@types/detail";
+import type { FilterItem } from "@/components/forms/ExpressionField.vue";
 import type {
   FilterByItem,
   FilterByOption,
@@ -100,7 +101,14 @@ import { BackendDataType, SearchAction } from "@/types";
 import { vuetifyCfg } from "@/utils/form";
 import { isEmptyCiphertext } from "@/utils/encrypted";
 import i18n from "@/utils/i18n";
-import { linkSlotIndex, linkSlotName, linkTypeName } from "@/utils/link";
+import {
+  linkSlotDescription,
+  linkSlotIndex,
+  linkSlotName,
+  linkSlotSemanticOf,
+  linkTypeName,
+  linkTypeOptions,
+} from "@/utils/link";
 import { modelFieldTitle } from "@/utils/modelField";
 import { enumFieldTypeOfMeta, enumOptionsOf, ensureEnum } from "@/utils/enums";
 import { fieldKindSetsOfMeta, fieldMetaOfMeta, fieldRenderTypeOfMeta } from "@/utils/meta";
@@ -172,9 +180,21 @@ const openStack = async (item: Record<string, unknown>): Promise<void> => {
 const plaintextDialogRef = useTemplateRef("plaintextDialogRef");
 const plaintextLoading = ref("");
 
-// searchHeaders 高级筛选可选字段元数据（由后端 OPTIONS 返回，已过滤时间窗口与命名空间），
-// 经 filter-headers 传入 SearchTable 供高级条件编辑器（ExpressionField）动态渲染
-const searchHeaders = ref<Record<string, FilterByOption>>({});
+// filterHeaderMeta 高级筛选可选字段的静态元信息（由后端 OPTIONS 返回，已过滤时间窗口与命名空间）；
+// 标题与说明随当前链路类型动态解析，由 searchHeaders 计算属性统一派生
+const filterHeaderMeta = ref<Array<Omit<FilterByOption, "title" | "description">>>([]);
+
+// currentLinkType 当前筛选条件中选定的链路类型（仅等值条件）：
+// 供链路槽位字段名/表头按该类型解释含义；未指定时回退通用名称 + 多类型语义摘要
+const currentLinkType = computed<number | undefined>(() => {
+  const exposed = searchTableRef.value as { filterBy?: FilterItem[] } | undefined;
+  const matched = (exposed?.filterBy ?? []).find((item) => item.field.value === "linkType");
+  if (!matched || matched.action.value !== SearchAction.EQUAL) {
+    return undefined;
+  }
+  const numeric = Number(matched.value.value);
+  return Number.isFinite(numeric) ? numeric : undefined;
+});
 
 // 初始查询范围：近一天（起始 ~ 截止）
 const initialRange = (): [DateTime, DateTime] => {
@@ -460,6 +480,39 @@ const trafficFieldTitle = (key: string): string => {
   return modelFieldTitle(typeKey.value, key);
 };
 
+// fieldTitle 字段标题：链路槽位按当前筛选的链路类型解释含义，其余沿用模型字段翻译
+const fieldTitle = (key: string): string => {
+  const slot = linkSlotIndex(key);
+  return slot ? linkSlotName(currentLinkType.value, slot) : trafficFieldTitle(key);
+};
+
+// linkFieldDescription 链路槽位补充说明：当前链路类型下无该槽位语义时，
+// 列出各类型含义，避免筛选下拉/列设置只看到「链路槽位 N」
+const linkFieldDescription = (key: string): string | undefined => {
+  const slot = linkSlotIndex(key);
+  if (!slot || linkSlotSemanticOf(currentLinkType.value, slot)) {
+    return undefined;
+  }
+  const description = linkSlotDescription(slot);
+  return description === "" ? undefined : description;
+};
+
+// searchHeaders 高级筛选字段元数据：标题/说明按当前链路类型动态派生，
+// 经 filter-headers 传入 SearchTable 供高级条件编辑器（ExpressionField）渲染
+const searchHeaders = computed((): Record<string, FilterByOption> => {
+  return filterHeaderMeta.value.reduce(
+    (prev, cur) => {
+      prev[cur.name] = {
+        ...cur,
+        title: fieldTitle(cur.name),
+        description: linkFieldDescription(cur.name),
+      };
+      return prev;
+    },
+    {} as Record<string, FilterByOption>,
+  );
+});
+
 // linkFieldType 链路字段的渲染类型：linkType 为数值，link1~link16 为字符串；
 // 其余字段返回 undefined，交 OPTIONS 元信息推导
 const linkFieldType = (key: string): BackendDataType | undefined => {
@@ -475,7 +528,8 @@ const h = (key: string, type?: BackendDataType, defaultVisible = true): TableHea
   const fieldMeta = fieldMetaOfMeta(listMeta.value, key);
   return {
     key,
-    title: trafficFieldTitle(key),
+    title: fieldTitle(key),
+    description: linkFieldDescription(key),
     type: type ?? fieldRenderTypeOfMeta(fieldMeta),
     kind: fieldMeta?.kind,
     align: "start",
@@ -675,25 +729,29 @@ const loadSearchOptions = async (): Promise<void> => {
       const kindSets = fieldKindSetsOfMeta(rsp.data.meta);
       cryptoKeys.value = kindSets.crypto ?? new Set<string>();
       s3Keys.value = kindSets.s3 ?? new Set<string>();
-      searchHeaders.value = rsp.data.filterBy
+      filterHeaderMeta.value = rsp.data.filterBy
         .filter((item) => !EXCLUDED_FILTER_FIELDS.has(item.name))
-        .reduce(
-          (prev, cur) => {
-            // 枚举筛选项经统一枚举注册表按类名获取：命中则为枚举下拉，未命中
-            // （非枚举字段）保持后端字段类型（如字符串文本框）
-            const enumType = enumFieldTypeOfMeta(rsp.data.meta, cur.name);
-            prev[cur.name] = {
+        .map((cur) => {
+          // 链路类型改为可读下拉：选项来自前端链路类型表，提交值仍为数值 linkType
+          if (cur.name === "linkType") {
+            return {
               name: cur.name,
-              title: trafficFieldTitle(cur.name),
               actions: cur.actions,
-              type: enumType ? BackendDataType.ENUM : normalizeFilterType(cur.type),
-              options: enumType ? enumOptionsOf(enumType) : cur.options,
-              enumType,
+              type: BackendDataType.ENUM,
+              options: linkTypeOptions(),
             };
-            return prev;
-          },
-          {} as Record<string, FilterByOption>,
-        );
+          }
+          // 枚举筛选项经统一枚举注册表按类名获取：命中则为枚举下拉，未命中
+          // （非枚举字段）保持后端字段类型（如字符串文本框）
+          const enumType = enumFieldTypeOfMeta(rsp.data.meta, cur.name);
+          return {
+            name: cur.name,
+            actions: cur.actions,
+            type: enumType ? BackendDataType.ENUM : normalizeFilterType(cur.type),
+            options: enumType ? enumOptionsOf(enumType) : cur.options,
+            enumType,
+          };
+        });
     },
     async (rsp) => {
       appStore.notify({

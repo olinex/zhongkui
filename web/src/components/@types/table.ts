@@ -15,6 +15,8 @@ export type BatchActions = Record<string, BatchAction>;
 export interface TableHeader {
   key: string;
   title: string;
+  // 列补充说明：在列设置菜单中以副标题展示（如链路槽位随链路类型变化的语义摘要）
+  description?: string;
   type: BackendDataType;
   // 列展示语义类型（取自 OPTIONS 的 kind，如 json）；JSON 不是数据类型，
   // 展示方式经该字段下发，单元格据此选择渲染分支
@@ -56,6 +58,8 @@ export interface SearchOut<Item> {
 export interface FilterByOption {
   name: string;
   title: string;
+  // 字段补充说明：在筛选字段下拉中以副标题展示（如链路槽位的多链路类型语义摘要）
+  description?: string;
   type: BackendDataType;
   actions: SearchAction[];
   // 枚举字段的下拉可选项（title 为 i18n 键，渲染时经翻译展示）

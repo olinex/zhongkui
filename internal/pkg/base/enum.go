@@ -1,6 +1,8 @@
-// 本文件把应用支持语言与 RBAC 策略动作注册为枚举类 language / policyEffect。两者的取值空间在本包
-// 已有唯一来源——语言取自 SupportLanguages、策略动作取自 EffectAllow / EffectDeny 常量——故此处
-// 只按该来源派生条目并在包内 init 注册，不重复声明取值常量。类名须与 search.toml 字段绑定的引用一致。
+// 本文件把应用支持语言、RBAC 策略动作与 MIME 媒体类型注册为枚举类
+// language / policyEffect / mediaType。取值空间在本包已有唯一来源——语言取自
+// SupportLanguages、策略动作取自 EffectAllow / EffectDeny、媒体类型取自 MediaType* 常量——
+// 故此处只按该来源派生条目并在包内 init 注册，不重复声明取值常量。类名须与 search.toml
+// 字段绑定的引用一致。
 package base
 
 import (
@@ -22,8 +24,23 @@ var languageValues = func() []string {
 // （EffectAllow / EffectDeny），声明顺序即枚举类条目顺序与前端下拉的展示顺序。
 var policyEffectValues = []string{EffectAllow, EffectDeny}
 
-// init 注册枚举类 language 与 policyEffect（取值空间固定，条目在注册时快照）。
+// mediaTypeValues 是 mediaType 枚举类的取值空间，取自 MIME 媒体类型常量，声明顺序即
+// 枚举类条目顺序与前端下拉的展示顺序。结构化语法后缀（如 +json / +xml）不是完整媒体类型，
+// 不纳入枚举条目。
+var mediaTypeValues = []string{
+	MediaTypeJSON,
+	MediaTypeTextJSON,
+	MediaTypeForm,
+	MediaTypeHTML,
+	MediaTypeXHTML,
+	MediaTypeXML,
+	MediaTypeTextXML,
+	MediaTypeTextPlain,
+}
+
+// init 注册枚举类 language、policyEffect 与 mediaType（取值空间固定，条目在注册时快照）。
 func init() {
 	enum.Register(enum.Type{Name: "language", Entries: enum.EntriesOf(languageValues)})
 	enum.Register(enum.Type{Name: "policyEffect", Entries: enum.EntriesOf(policyEffectValues)})
+	enum.Register(enum.Type{Name: "mediaType", Entries: enum.EntriesOf(mediaTypeValues)})
 }

@@ -96,6 +96,27 @@ m = (p.obj == "*" || r.obj == p.obj) && \
 	HdrXXssProtection                = "X-XSS-Protection"
 )
 
+// MIME 媒体类型常量：作为全局枚举类 mediaType 的取值来源，供按 Content-Type 解析与
+// 分流的底层逻辑复用，避免各包散落字面量。
+const (
+	// MediaTypeJSON JSON 媒体类型。
+	MediaTypeJSON = "application/json"
+	// MediaTypeTextJSON 兼容的 JSON 文本媒体类型。
+	MediaTypeTextJSON = "text/json"
+	// MediaTypeForm 表单编码媒体类型。
+	MediaTypeForm = "application/x-www-form-urlencoded"
+	// MediaTypeHTML HTML 媒体类型。
+	MediaTypeHTML = "text/html"
+	// MediaTypeXHTML XHTML 媒体类型。
+	MediaTypeXHTML = "application/xhtml+xml"
+	// MediaTypeXML XML 媒体类型。
+	MediaTypeXML = "application/xml"
+	// MediaTypeTextXML 兼容的 XML 文本媒体类型。
+	MediaTypeTextXML = "text/xml"
+	// MediaTypeTextPlain 纯文本媒体类型。
+	MediaTypeTextPlain = "text/plain"
+)
+
 // 数据库名（database 配置节点名 / migration 归属统一标识）：核心库、原始库及其测试库。
 // 作为单一事实来源，供 migrations 与 provider 共同引用，避免重复字面量引发不一致。
 const (

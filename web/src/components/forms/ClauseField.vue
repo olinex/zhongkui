@@ -11,8 +11,14 @@
             item-title="title"
             item-value="value"
             return-object
+            :menu-props="{ minWidth: 360 }"
             @update:model-value="(value) => updateField(proxyModel, value)"
-          />
+          >
+            <!-- 字段下拉副标题：链路槽位等字段的含义随上下文变化，用副标题补充说明 -->
+            <template #item="{ item, props: itemProps }">
+              <v-list-item v-bind="itemProps" :subtitle="descriptionOf(item)" />
+            </template>
+          </v-select>
           <v-select
             :model-value="choiceAction"
             :items="actionOptions"
@@ -67,10 +73,25 @@ const choiceOption = computed((): FilterByOption | null => {
   }
 });
 
+// FieldOption 字段下拉选项：在通用选项之外携带副标题说明
+interface FieldOption extends Option {
+  description?: string;
+}
+
+// descriptionOf 读取字段下拉项的副标题说明：
+// Vuetify 4 的选项槽直接给出原始项，兼容旧版本包一层 raw 的情况
+const descriptionOf = (item: unknown): string | undefined => {
+  if (item === null || typeof item !== "object") {
+    return undefined;
+  }
+  const option = item as { description?: string; raw?: { description?: string } };
+  return option.description ?? option.raw?.description;
+};
+
 // 枚举字段的下拉可选项（title 为 i18n 键，展示时经翻译）
 const choiceOptions = computed<Option[]>(() => choiceOption.value?.options ?? []);
 
-const fieldOptions = computed((): Option[] => {
+const fieldOptions = computed((): FieldOption[] => {
   return Object.entries(props.headers)
     .filter(([key]) => {
       return (
@@ -81,6 +102,7 @@ const fieldOptions = computed((): Option[] => {
     .map(([key, header]) => ({
       title: header.title,
       value: key,
+      description: header.description,
     }));
 });
 
@@ -228,7 +250,10 @@ onMounted(() => {
     return;
   }
   choiceField.value.value = props.modelValue.field.value;
-  choiceField.value.title = props.modelValue.field.title;
+  // 字段名优先取当前筛选元信息中的标题：链路槽位等动态标题随上下文变化，
+  // 避免编辑旧条件时沿用加入条件时捕获的过期文案
+  choiceField.value.title =
+    props.headers[props.modelValue.field.value]?.title ?? props.modelValue.field.title;
   choiceAction.value.value = props.modelValue.action.value;
   choiceAction.value.title = props.modelValue.action.title;
   // 枚举/布尔字段在编辑时回填当前选中值，使下拉框展示已有过滤条件
@@ -277,5 +302,11 @@ const emits = defineEmits(["update:modelValue"]);
 
   /* 统一输入控件高度（compact），保证字段/动作/值三段等高的兜底约束 */
   --v-input-control-height: var(--zk-control-height-compact);
+}
+
+/* 字段下拉副标题可能较长（链路槽位多类型语义摘要），允许换行展示 */
+.zk-clause-card :deep(.v-list-item-subtitle) {
+  white-space: normal;
+  line-height: 1.35;
 }
 </style>

@@ -2407,6 +2407,31 @@ other = "Allow"
 [enum.policyEffect.deny]
 other = "Deny"
 
+# MIME media type (enum class mediaType, from base.MediaType* constants)
+[enum.mediaType."application/json"]
+other = "JSON"
+
+[enum.mediaType."text/json"]
+other = "JSON text"
+
+[enum.mediaType."application/x-www-form-urlencoded"]
+other = "Form URL-encoded"
+
+[enum.mediaType."text/html"]
+other = "HTML"
+
+[enum.mediaType."application/xhtml+xml"]
+other = "XHTML"
+
+[enum.mediaType."application/xml"]
+other = "XML"
+
+[enum.mediaType."text/xml"]
+other = "XML text"
+
+[enum.mediaType."text/plain"]
+other = "Plain text"
+
 # Tag rule target model (enum class tagRuleModel, key is the tagengine.ModelKey short key)
 [enum.tagRuleModel.httpTransport]
 other = "HTTP Transport"
@@ -3305,6 +3330,9 @@ other = "Query a third-party datasource: run a SELECT statement against a dataso
 
 [tagengine.custom-functions.crypto.reveal.description]
 other = "Reveal the plaintext of an encrypted field of the current target model: encrypted fields are not exposed in the input document, and field is the target model field name (json name, e.g. reqHdrAuthorization, reqBody). Crypto fields return their plaintext directly; S3Crypto fields are downloaded from S3 with the field key and decrypted to the body text. An empty field value yields an empty string; a non-decryptable field, S3 read failure or body larger than tagengine.s3cryptoMaxBytes returns an error (the rule does not match during production recognition, and dry-run surfaces the error). The same field is decrypted only once per data record"
+
+[tagengine.custom-functions.codec.parse.description]
+other = "Parse text according to its Content-Type: supports application/json (including +json), application/x-www-form-urlencoded, application/xml and text/xml (including +xml), text/html, and returns text/plain unchanged.\nArguments: the first argument is the Content-Type header (charset allowed), the second is the text to parse (usually the plaintext returned by crypto.reveal).\nResult: JSON yields native objects/arrays; forms yield a key/value object (repeated parameters become arrays); XML yields the root node tree and HTML yields a #document root node tree, where each node is {name, attrs, text, children}. An unsupported type or parse failure returns an error (the rule does not match during production recognition, and dry-run surfaces the error)"
 
 # Task type (enum class taskType, from the worker handler registry TaskTypes())
 [enum.taskType."network:pcapimport"]

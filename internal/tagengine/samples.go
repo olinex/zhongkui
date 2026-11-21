@@ -15,6 +15,7 @@ import (
 	// 项目内部
 	"zhongkuisec.com/zhongkui/internal/models/network"
 	"zhongkuisec.com/zhongkui/internal/models/tag"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
@@ -51,11 +52,11 @@ var httpTransportExample = map[string]any{
 	"reqBodyHash":         "4a2e3f9c1b8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f",
 	"reqBodyLength":       86,
 	"reqHdrUserAgent":     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-	"reqHdrContentType":   "application/json",
-	"reqHdrAccept":        "application/json",
+	"reqHdrContentType":   base.MediaTypeJSON,
+	"reqHdrAccept":        base.MediaTypeJSON,
 	"reqHdrAuthorization": "",
 	"reqHdrHost":          "api.example.com",
-	"rspHdrContentType":   "application/json",
+	"rspHdrContentType":   base.MediaTypeJSON,
 	"rspHdrServer":        "nginx",
 	"rspHdrContentLength": 2048,
 	"tags":                []string{"http", "login"},
