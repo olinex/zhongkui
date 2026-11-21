@@ -30,6 +30,11 @@ const (
 	lintFieldNotExistKey = "tagrule.lint-field-not-exist"
 	// lintFieldHintKey 字段 lint 告警的提示消息键
 	lintFieldHintKey = "tagrule.lint-field-hint"
+	// lintSensitiveFieldKey 直接引用敏感字段（不出现在 input 中）的告警消息键，
+	// 翻译模板含两个 %s（均填字段名），由 Args 提供
+	lintSensitiveFieldKey = "tagrule.lint-sensitive-field"
+	// lintSensitiveFieldHintKey 敏感字段引用的提示消息键（引导改用 crypto.reveal）
+	lintSensitiveFieldHintKey = "tagrule.lint-sensitive-field-hint"
 )
 
 type unwrapper interface{ Unwrap() error }

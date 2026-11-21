@@ -299,7 +299,7 @@ model:
       device: Device
       bpfExpr: BPF Expression
       snapLen: Snap Length
-      timeout: Timeout
+      timeout: Timeout (seconds)
       promisc: Promiscuous Mode
       enabled: Enabled
       sessionID: Session ID
@@ -1477,6 +1477,7 @@ action:
   regoSqlUnmatchedParen: Unbalanced parentheses in SQL
   regoSqlUnknownTable: "Unregistered datasource table: {table} (connect it under third-party datasources first)"
   tagExprFieldHint: Type "/" to open the tag list, "//" to insert a literal "/"
+  bpfExprFieldHint: Enter a BPF filter expression, e.g. tcp port 80
   addCondition: Add Condition
   removeCondition: Remove Condition
   beautifyJson: Beautify JSON
@@ -2181,3 +2182,64 @@ notify:
       field:
         url: Webhook URL
         headers: Headers
+# BPF filter expression editor: syntax reference, keyword docs and local validation messages
+bpf:
+  title: BPF syntax reference
+  examplesTitle: Examples
+  group:
+    logical: Logical operators
+    protocol: Protocols
+    direction: Direction
+    qualifier: Qualifiers
+  kw:
+    and: Logical AND, also written &&
+    or: Logical OR, also written as a double pipe
+    not: Logical NOT, also written !
+    ip: IPv4 traffic only
+    ip6: IPv6 traffic only
+    arp: ARP traffic
+    rarp: RARP traffic
+    tcp: TCP traffic
+    udp: UDP traffic
+    icmp: ICMP traffic
+    icmp6: ICMPv6 traffic
+    igmp: IGMP traffic
+    sctp: SCTP traffic
+    vlan: VLAN-tagged traffic, optionally followed by a VLAN ID
+    mpls: MPLS-tagged traffic
+    src: Source direction qualifier
+    dst: Destination direction qualifier
+    host: Host address or hostname
+    net: Network, CIDR supported
+    port: Port number or service name
+    portrange: Port range such as 8000-9000
+    proto: Protocol number or name
+    protochain: IPv6 protocol chain
+    ether: Ethernet-layer qualifier, followed by host/src/dst/proto
+    gateway: Gateway host
+    broadcast: Broadcast traffic
+    multicast: Multicast traffic
+    less: Packet length less than the given byte count
+    greater: Packet length greater than the given byte count
+  examples:
+    http: Capture HTTP traffic
+    dns: Capture DNS traffic
+    host: Capture traffic for a specific host
+    directional: Filter by source/destination direction
+    excludeSsh: TCP/UDP traffic excluding SSH
+    portrange: Capture a port range
+    cidr: Capture traffic for a CIDR network
+  error:
+    unexpectedChar: 'Unexpected character "{char}"'
+    unexpectedToken: 'Unexpected token "{token}"'
+    unexpectedEnd: Expression ended unexpectedly
+    missingValue: 'Missing value after "{keyword}"'
+    expectedQualifier: 'Expected a qualifier such as host/net/port or a logical operator after the protocol, not "{token}"'
+    missingClose: Unclosed parenthesis
+    unexpectedClose: 'Unexpected closing parenthesis "{char}"'
+    emptyGroup: Parentheses cannot be empty
+    invalidPort: 'Invalid port "{value}", expected 0-65535 or a service name'
+    invalidPortRange: 'Invalid port range "{value}", expected a form like 8000-9000'
+    invalidPrefix: 'Invalid network prefix "{value}"'
+    invalidIp: 'Invalid IP address "{value}"'
+    invalidNumber: 'Invalid number "{value}"'

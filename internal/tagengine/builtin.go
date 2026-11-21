@@ -194,6 +194,23 @@ tags contains "redis-match" if {
 	rows[0].value == "yes"
 }`,
 		},
+		{
+			Name:        revealName,
+			Description: "tagengine.custom-functions.crypto.reveal.description",
+			Signature:   "crypto.reveal(field)",
+			Example: `tags contains "bearer-auth" if {
+	startswith(crypto.reveal("reqHdrAuthorization"), "Bearer ")
+}`,
+		},
+		{
+			Name:        codecParseName,
+			Description: "tagengine.custom-functions.codec.parse.description",
+			Signature:   "codec.parse(contentType, text)",
+			Example: `body := codec.parse(input.reqHdrContentType, crypto.reveal("reqBody"))
+tags contains "admin-login" if {
+	body.username == "admin"
+}`,
+		},
 	}
 }
 

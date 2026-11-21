@@ -40,7 +40,7 @@ type AgentSession struct {
 	ReviewValve ReviewValve `gorm:"type:VARCHAR(16);default:each"`
 	// Summary 会话滚动摘要，压缩已折叠进其中的历史消息，无摘要时为空
 	// （正文含用户原文，经 crypto 序列化器加密落库）
-	Summary *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12810,length=32"`
+	Summary *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12810,length=32"`
 	// MessageSeq 会话内已分配的最大消息序号（seq），供消息 seq 原子分配
 	MessageSeq uint `gorm:"type:BIGINT;not null"`
 	// SummaryUptoSeq 滚动摘要已覆盖的最后一条消息的会话内序号（seq），0 表示尚未摘要任何消息
@@ -78,14 +78,14 @@ type AgentMessage struct {
 	MessageKind llm.APIMode `gorm:"type:VARCHAR(16);not null;default:chat"`
 	// Payload eino 原生消息 JSON（chat 或 responses 表示，含用户原文与模型输出），经 crypto
 	// 序列化器加密落库，是会话消息的事实来源
-	Payload *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12821,length=32"`
+	Payload *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12821,length=32"`
 	// Content 消息正文内容（含用户原文与模型输出，经 crypto 序列化器加密落库；追加原生消息时
 	// 由 Payload 解码回填，供滚动摘要与消息列表读取）
-	Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12811,length=32"`
+	Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12811,length=32"`
 	// DraftJSON 助手回复的草稿载荷（JSON，如工具调用的中间状态），可空，经 crypto 序列化器加密落库
-	DraftJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12812,length=32"`
+	DraftJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12812,length=32"`
 	// CitationsJSON 引用来源列表（JSON），可空，经 crypto 序列化器加密落库（引用携带知识库正文）
-	CitationsJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12813,length=32"`
+	CitationsJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12813,length=32"`
 	// PromptTokens 本轮助手回答全部模型调用的输入 token 累加（明文数值，用户消息恒为 0）
 	PromptTokens int `gorm:"type:INT"`
 	// CompletionTokens 本轮助手回答全部模型调用的输出 token 累加（明文数值，用户消息恒为 0）
@@ -142,7 +142,7 @@ type AgentSessionCompaction struct {
 	// UptoSeq 本次推进后的上下文起点（即当时的 summary_upto_seq 快照），同一会话内随推进单调递增
 	UptoSeq uint64 `gorm:"type:BIGINT"`
 	// Summary 本次推进后的会话摘要全文（对应 AgentSession.Summary，经 crypto 序列化器加密落库）
-	Summary *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12818,length=32"`
+	Summary *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12818,length=32"`
 	// Reason 触发本次推进的原因：rolling（静默滚动）/ auto（自动压缩）/ manual（手动压缩）
 	Reason string `gorm:"type:VARCHAR(16)"`
 	// TokensBefore 本次推进时（推进动作发生前）的会话上下文占用 token，三种原因均赋予该时刻的

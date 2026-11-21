@@ -13,15 +13,24 @@ import (
 // 使用 HashMap 实现 O(1) 节点查找，同时使用独立双向链表维护 LRU 顺序。
 type groupEntry[P TCPPacket] struct {
 	nodes map[string]*ReassemblerNode[P] // streamID → 节点映射
-	oop   map[string][]P                 // streamID → 未序数据包队列
+	oop   map[string]*oopEntry[P]        // streamID → 未建流前的暂存数据包队列
 	head  *ReassemblerNode[P]            // LRU 链表头（最近使用）
 	tail  *ReassemblerNode[P]            // LRU 链表尾（最久未使用）
+}
+
+// oopEntry 表示一条尚未观测到 SYN 的流的暂存数据包队列。
+// 重组器只能由 SYN 触发创建，先于 SYN 到达的包需要暂存等待；
+// firstSeen 记录该流首个暂存包的到达时间，供 cleanup 按 noticeTimeout
+// 丢弃永远等不到 SYN 的流，避免其无限堆积。
+type oopEntry[P TCPPacket] struct {
+	packets   []P       // 按到达顺序暂存的数据包，flush 时按 SeqNum 排序
+	firstSeen time.Time // 首个暂存包的到达时间
 }
 
 func newGroupEntry[P TCPPacket]() *groupEntry[P] {
 	return &groupEntry[P]{
 		nodes: make(map[string]*ReassemblerNode[P]),
-		oop:   make(map[string][]P),
+		oop:   make(map[string]*oopEntry[P]),
 	}
 }
 
@@ -29,18 +38,25 @@ func (g *groupEntry[P]) len() int {
 	return len(g.nodes)
 }
 
-func (g *groupEntry[P]) addOOP(streamID string, packet P) {
-	packets, ok := g.oop[streamID]
+// addOOP 暂存一条尚未创建重组器的流的数据包，等待其 SYN 到达后按序注入。
+// maxSize 限制单条流的暂存包数量（<=0 表示不限制）：达到上限后丢弃新包，
+// 保留已暂存的前序包，避免无 SYN 的流无限占用内存。
+// now 作为该流首个暂存包的到达时间，供 cleanup 判定是否超时。
+func (g *groupEntry[P]) addOOP(streamID string, packet P, maxSize int, now time.Time) {
+	entry, ok := g.oop[streamID]
 	if !ok {
-		packets = []P{packet}
-	} else {
-		packets = append(packets, packet)
+		entry = &oopEntry[P]{firstSeen: now}
+		g.oop[streamID] = entry
 	}
-	g.oop[streamID] = packets
+	if maxSize > 0 && len(entry.packets) >= maxSize {
+		return
+	}
+	entry.packets = append(entry.packets, packet)
 }
 
 func (g *groupEntry[P]) flushOOP(n *ReassemblerNode[P]) error {
-	if packets, ok := g.oop[n.ID]; ok {
+	if entry, ok := g.oop[n.ID]; ok {
+		packets := entry.packets
 		slices.SortFunc(packets, func(a, b P) int {
 			aSeq, bSeq := a.SeqNum(), b.SeqNum()
 			if aSeq < bSeq {
@@ -104,7 +120,16 @@ func (g *groupEntry[P]) remove(n *ReassemblerNode[P], kill bool) {
 	delete(g.oop, n.ID)
 }
 
-func (g *groupEntry[P]) cleanup(noticeTimeout time.Duration, maxReassemblerSize int, kill bool) (removed, evicted, living int) {
+func (g *groupEntry[P]) cleanup(noticeTimeout time.Duration, maxReassemblerSize int, kill bool) (removed, evicted, living, oopDropped int) {
+	now := time.Now()
+	// 清理永远等不到 SYN 的暂存流：自首个包到达起超过 noticeTimeout 仍未建流，
+	// 说明该流的握手不在采集窗口内，继续保留只会无限占用内存。
+	for streamID, entry := range g.oop {
+		if kill || now.Sub(entry.firstSeen) >= noticeTimeout {
+			delete(g.oop, streamID)
+			oopDropped++
+		}
+	}
 	current := g.head
 	// 清理已完成的或明显异常的 tcp 流
 	for current != nil {

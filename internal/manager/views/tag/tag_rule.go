@@ -783,6 +783,14 @@ func withTagRuleSQLitePool(c *gin.Context) context.Context {
 	return tagengine.WithDatasourcePool(c, middlewares.GetSQLiteVTabPools(c).Pool(namespace))
 }
 
+// withTagRuleEvalContext 构建 dry-run 的规则求值上下文：数据源池 + 敏感字段运行时
+// （S3 读取器与正文上限）+ 由输入文档反序列化出的目标实例秘密表；同时返回剔除
+// 敏感字段后的规则输入副本（规则看不到密文 / 对象键，明文只经 crypto.reveal 获取）。
+func withTagRuleEvalContext(c *gin.Context, model string, input map[string]any) (context.Context, map[string]any) {
+	ctx := middlewares.GetTagRuleEngine(c).RuntimeContext(withTagRuleSQLitePool(c))
+	return tagengine.BindSensitiveInput(ctx, model, input)
+}
+
 // TagRuleDryRun 处理单规则 dry-run 的请求。
 // 仅针对一条候选规则（rego），先经公共 Rego 校验（语法 + 契约 + 组级编译），
 // 校验通过后再经 CompileRule 编译并评估输入文档。
@@ -809,12 +817,12 @@ func TagRuleDryRun(c *gin.Context) {
 		invalidTagRuleError(c, errs).AbortWithGinH(c)
 		return
 	}
-	ctx := withTagRuleSQLitePool(c)
-	if _, cr, err := tagengine.CompileRule(ctx, rule); err != nil {
+	ctx, evalInput := withTagRuleEvalContext(c, in.Model, in.Input)
+	if _, cr, err := tagengine.CompileRule(ctx, rule, rego.StrictBuiltinErrors(true)); err != nil {
 		invalidTagRuleError(c, tagengine.ExtractRegoErrors(err)).AbortWithGinH(c)
 		return
 	} else {
-		res := cr.RecognizeWithDetail(ctx, rego.EvalInput(in.Input))
+		res := cr.RecognizeWithDetail(ctx, rego.EvalInput(evalInput))
 		response.SimpleOK.AbortWithGinW(c, &TagRuleDryRunOut{
 			Tags:  res.Tags,
 			Rules: map[string]*TagRuleDryRunRuleOut{in.Name: newTagRuleDryRunRuleOut(res)},
@@ -847,13 +855,13 @@ func TagRuleDryRunGroup(c *gin.Context) {
 		invalidTagRuleError(c, errs).AbortWithGinH(c)
 		return
 	}
-	ctx := withTagRuleSQLitePool(c)
-	group, err := tagengine.CompileGroup(ctx, rules)
+	ctx, evalInput := withTagRuleEvalContext(c, in.Model, in.Input)
+	group, err := tagengine.CompileGroup(ctx, rules, rego.StrictBuiltinErrors(true))
 	if err != nil {
 		invalidTagRuleError(c, tagengine.ExtractRegoErrors(err)).AbortWithGinH(c)
 		return
 	}
-	result := group.RecognizeWithDetail(ctx, rego.EvalInput(in.Input))
+	result := group.RecognizeWithDetail(ctx, rego.EvalInput(evalInput))
 	response.SimpleOK.AbortWithGinW(c, newTagRuleDryRunOut(result))
 }
 
@@ -1037,9 +1045,10 @@ func validateTagRuleCandidateBatch(c *gin.Context, candidate *tag.TagRule) error
 		return invalidTagRuleError(c, errs)
 	}
 	// 第二层校验：基于验证样例做运行期评估，任一样例评估报错即判定运行期不合法。
-	// 评估前按命名空间绑定第三方数据源池，使含 sqlite.query 的规则在样例校验时可查询
-	// 该命名空间的裸名 vtable。
-	if issues, err := tagengine.ValidateGroupRuntime(withTagRuleSQLitePool(c), db, group); err != nil {
+	// 评估前绑定第三方数据源池与敏感字段运行时（S3 读取器 / 正文上限），
+	// 使含 sqlite.query / crypto.reveal 的规则在样例校验时可用（样例内部再绑定输入）。
+	evalCtx := middlewares.GetTagRuleEngine(c).RuntimeContext(withTagRuleSQLitePool(c))
+	if issues, err := tagengine.ValidateGroupRuntime(evalCtx, db, group); err != nil {
 		if errors.Is(err, tagengine.ErrSampleNotProvisioned) {
 			// 该模型尚未预置验证样例：运行期校验降级跳过，记录告警后放行
 			// （规则仍受第一层语法/契约校验保障，样例补充后即恢复运行期保障）

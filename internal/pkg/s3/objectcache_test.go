@@ -26,7 +26,7 @@ type fakeBackend struct {
 }
 
 // Store 转调注入的 store 函数，未注入时直接返回 nil。
-func (b fakeBackend) Store(ctx context.Context, objectKey string, r io.Reader) error {
+func (b fakeBackend) Store(ctx context.Context, objectKey string, r io.Reader, _ []byte) error {
 	if b.store == nil {
 		return nil
 	}
@@ -34,7 +34,7 @@ func (b fakeBackend) Store(ctx context.Context, objectKey string, r io.Reader) e
 }
 
 // Fetch 转调注入的 fetch 函数，未注入时返回错误。
-func (b fakeBackend) Fetch(ctx context.Context, objectKey string) (io.ReadCloser, error) {
+func (b fakeBackend) Fetch(ctx context.Context, objectKey string, _ []byte) (io.ReadCloser, error) {
 	if b.fetch == nil {
 		return nil, errors.New("fetch not stubbed")
 	}
@@ -42,7 +42,7 @@ func (b fakeBackend) Fetch(ctx context.Context, objectKey string) (io.ReadCloser
 }
 
 // Remove 转调注入的 remove 函数，未注入时直接返回 nil。
-func (b fakeBackend) Remove(ctx context.Context, objectKey string) error {
+func (b fakeBackend) Remove(ctx context.Context, objectKey string, _ []byte) error {
 	if b.remove == nil {
 		return nil
 	}
@@ -71,11 +71,11 @@ func TestObjectCacheMaterialize(t *testing.T) {
 		})
 
 		Convey("小文件（<= 阈值）落入内存目录，大文件超阈落盘且内容完整", func() {
-			small, err := cache.Materialize(context.Background(), "datasource/ns/small")
+			small, err := cache.Materialize(context.Background(), "datasource/ns/small", nil)
 			So(err, ShouldBeNil)
 			So(filepath.Dir(small), ShouldEqual, cache.memDir)
 
-			big, err := cache.Materialize(context.Background(), "datasource/ns/big")
+			big, err := cache.Materialize(context.Background(), "datasource/ns/big", nil)
 			So(err, ShouldBeNil)
 			So(filepath.Dir(big), ShouldEqual, cache.diskDir)
 			// 流式分路：已缓冲前缀与剩余流拼接后不得丢失或错位。
@@ -85,9 +85,9 @@ func TestObjectCacheMaterialize(t *testing.T) {
 		})
 
 		Convey("进程内缓存复用：未过期不重复拉取", func() {
-			p1, err := cache.Materialize(context.Background(), "datasource/ns/small")
+			p1, err := cache.Materialize(context.Background(), "datasource/ns/small", nil)
 			So(err, ShouldBeNil)
-			p2, err := cache.Materialize(context.Background(), "datasource/ns/small")
+			p2, err := cache.Materialize(context.Background(), "datasource/ns/small", nil)
 			So(err, ShouldBeNil)
 			So(p1, ShouldEqual, p2) // 同一对象键复用同一缓存文件
 		})
@@ -106,10 +106,10 @@ func TestObjectCacheMaterialize(t *testing.T) {
 				ObjectCacheMemoryThresholdMB: 1024, // 大阈值保证测试文件落内存目录
 			})
 			ctx := context.Background()
-			_, err := cache.Materialize(ctx, "datasource/ns/cache")
+			_, err := cache.Materialize(ctx, "datasource/ns/cache", nil)
 			So(err, ShouldBeNil)
 			cache.Invalidate("datasource/ns/cache")
-			_, err = cache.Materialize(ctx, "datasource/ns/cache")
+			_, err = cache.Materialize(ctx, "datasource/ns/cache", nil)
 			So(err, ShouldBeNil)
 			So(fetches, ShouldEqual, 2)
 		})
@@ -125,10 +125,10 @@ func TestObjectCacheMaterialize(t *testing.T) {
 				ObjectCacheTTL:               time.Nanosecond, // 极短 TTL：第二次调用必然过期
 			})
 			ctx := context.Background()
-			_, err := cache.Materialize(ctx, "datasource/ns/ttl")
+			_, err := cache.Materialize(ctx, "datasource/ns/ttl", nil)
 			So(err, ShouldBeNil)
 			time.Sleep(time.Millisecond)
-			_, err = cache.Materialize(ctx, "datasource/ns/ttl")
+			_, err = cache.Materialize(ctx, "datasource/ns/ttl", nil)
 			So(err, ShouldBeNil)
 			So(fetches, ShouldEqual, 2)
 		})
@@ -140,11 +140,11 @@ func TestObjectCacheMaterialize(t *testing.T) {
 			ObjectCacheDir: filepath.Join(base, "mem"),
 		})
 		ctx := context.Background()
-		_, err := cache.Materialize(ctx, "datasource/ns/x")
+		_, err := cache.Materialize(ctx, "datasource/ns/x", nil)
 		So(err, ShouldNotBeNil)
 		So(err.Error(), ShouldContainSubstring, "S3 not configured")
-		So(cache.Store(ctx, "datasource/ns/x", strings.NewReader("p")), ShouldNotBeNil)
-		So(cache.Remove(ctx, "datasource/ns/x"), ShouldNotBeNil)
+		So(cache.Store(ctx, "datasource/ns/x", strings.NewReader("p"), nil), ShouldNotBeNil)
+		So(cache.Remove(ctx, "datasource/ns/x", nil), ShouldNotBeNil)
 	})
 }
 
@@ -157,7 +157,7 @@ func TestObjectCacheOpen(t *testing.T) {
 				So(objectKey, ShouldEqual, "datasource/ns/file")
 				return io.NopCloser(strings.NewReader("plaintext")), nil
 			}, Config{ObjectCacheDir: filepath.Join(base, "mem")})
-			rc, err := cache.Open(context.Background(), "datasource/ns/file")
+			rc, err := cache.Open(context.Background(), "datasource/ns/file", nil)
 			So(err, ShouldBeNil)
 			defer rc.Close()
 			data, err := io.ReadAll(rc)
@@ -170,7 +170,7 @@ func TestObjectCacheOpen(t *testing.T) {
 			cache := newObjectCacheForTest(func(_ context.Context, _ string) (io.ReadCloser, error) {
 				return nil, errors.New("boom")
 			}, Config{ObjectCacheDir: filepath.Join(base, "mem2")})
-			rc, err := cache.Open(context.Background(), "datasource/ns/file")
+			rc, err := cache.Open(context.Background(), "datasource/ns/file", nil)
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "boom")
 			So(rc, ShouldBeNil)
@@ -180,13 +180,13 @@ func TestObjectCacheOpen(t *testing.T) {
 	Convey("nil 缓存或未配置 S3（client nil）时 Open 明确报错", t, func() {
 		base, _ := os.MkdirTemp("", "zk-objcache-")
 		cache := NewObjectCache(nil, Config{ObjectCacheDir: filepath.Join(base, "mem")})
-		rc, err := cache.Open(context.Background(), "datasource/ns/x")
+		rc, err := cache.Open(context.Background(), "datasource/ns/x", nil)
 		So(err, ShouldNotBeNil)
 		So(rc, ShouldBeNil)
 		So(err.Error(), ShouldContainSubstring, "S3 not configured")
 
 		var nilCache *ObjectCache
-		_, err = nilCache.Open(context.Background(), "datasource/ns/x")
+		_, err = nilCache.Open(context.Background(), "datasource/ns/x", nil)
 		So(err, ShouldNotBeNil)
 	})
 }
@@ -200,7 +200,7 @@ func TestObjectCleanupOrphans(t *testing.T) {
 			ObjectCacheDir:               filepath.Join(base, "mem"),
 			ObjectCacheMemoryThresholdMB: 1024,
 		})
-		path, err := cache.Materialize(context.Background(), "datasource/ns/keep")
+		path, err := cache.Materialize(context.Background(), "datasource/ns/keep", nil)
 		So(err, ShouldBeNil)
 
 		// 缓存目录为本模块专属，目录内文件（含并存文件）都会被整体清理。

@@ -163,6 +163,15 @@
   - [func \(m MacAddr\) String\(\) string](<#MacAddr.String>)
   - [func \(m \*MacAddr\) UnmarshalJSON\(data \[\]byte\) error](<#MacAddr.UnmarshalJSON>)
   - [func \(m MacAddr\) Value\(\) \(driver.Value, error\)](<#MacAddr.Value>)
+- [type S3Crypto](<#S3Crypto>)
+  - [func NewS3Crypto\(key string\) S3Crypto](<#NewS3Crypto>)
+  - [func \(s S3Crypto\) Key\(\) string](<#S3Crypto.Key>)
+  - [func \(s S3Crypto\) MarshalJSON\(\) \(\[\]byte, error\)](<#S3Crypto.MarshalJSON>)
+  - [func \(s S3Crypto\) String\(\) string](<#S3Crypto.String>)
+  - [func \(s \*S3Crypto\) UnmarshalJSON\(data \[\]byte\) error](<#S3Crypto.UnmarshalJSON>)
+- [type S3CryptoSerializer](<#S3CryptoSerializer>)
+  - [func \(ss S3CryptoSerializer\) Scan\(ctx context.Context, field \*schema.Field, dst reflect.Value, dbValue any\) error](<#S3CryptoSerializer.Scan>)
+  - [func \(ss S3CryptoSerializer\) Value\(ctx context.Context, field \*schema.Field, dst reflect.Value, fieldValue any\) \(any, error\)](<#S3CryptoSerializer.Value>)
 - [type TimeOnly](<#TimeOnly>)
   - [func NowTimeOnly\(\) TimeOnly](<#NowTimeOnly>)
   - [func ParseTimeOnly\(s string\) \(TimeOnly, error\)](<#ParseTimeOnly>)
@@ -580,7 +589,7 @@ func (c CIDR) Value() (driver.Value, error)
 Value 实现 driver.Valuer 接口，返回写入数据库的值（网段文本）；零值返回 nil。
 
 <a name="Crypto"></a>
-## type [Crypto](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L19-L24>)
+## type [Crypto](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L22-L27>)
 
 Crypto 持有加密字段的明文与密文
 
@@ -594,7 +603,7 @@ type Crypto struct {
 ```
 
 <a name="NewCrypto"></a>
-### func [NewCrypto](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L27>)
+### func [NewCrypto](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L30>)
 
 ```go
 func NewCrypto(value []byte) *Crypto
@@ -603,7 +612,7 @@ func NewCrypto(value []byte) *Crypto
 NewCrypto 以明文构造 Crypto 实例，供写库侧使用。
 
 <a name="Crypto.Cipher"></a>
-### func \(\*Crypto\) [Cipher](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L41>)
+### func \(\*Crypto\) [Cipher](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L44>)
 
 ```go
 func (c *Crypto) Cipher() []byte
@@ -612,7 +621,7 @@ func (c *Crypto) Cipher() []byte
 Cipher 返回原始密文字节（Scan 读库时保留），供详情输出编码为 base64 密文文本； 写库侧构造或未读库的 Crypto（cipher 为空）返回 nil，避免泄露明文。
 
 <a name="Crypto.MarshalJSON"></a>
-### func \(\*Crypto\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L61>)
+### func \(\*Crypto\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L64>)
 
 ```go
 func (c *Crypto) MarshalJSON() ([]byte, error)
@@ -621,7 +630,7 @@ func (c *Crypto) MarshalJSON() ([]byte, error)
 MarshalJSON 将 Crypto 序列化为 base64 密文 读库场景（详情接口）经 Scan 保留密文后输出密文，前端可回传明文接口解密； 密文为空（如空数据或写库侧构造的 Crypto）时输出空字符串，避免泄露明文。
 
 <a name="Crypto.UnmarshalJSON"></a>
-### func \(\*Crypto\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L74>)
+### func \(\*Crypto\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L77>)
 
 ```go
 func (c *Crypto) UnmarshalJSON(data []byte) error
@@ -635,7 +644,7 @@ UnmarshalJSON 从 JSON 恢复 Crypto 实例，支持两种取值形式：
 该能力使标签规则样例等持久化 JSON 文档可反序列化回目标模型 （如 \*network.HttpTransport 的加密字段），与规则运行期样例校验的反序列化路径保持一致。
 
 <a name="Crypto.Value"></a>
-### func \(\*Crypto\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L32>)
+### func \(\*Crypto\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L35>)
 
 ```go
 func (c *Crypto) Value() []byte
@@ -644,7 +653,7 @@ func (c *Crypto) Value() []byte
 Value 返回明文字节；未设置值（空数据或 nil 指针）时返回 nil。
 
 <a name="CryptoSerializer"></a>
-## type [CryptoSerializer](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L100>)
+## type [CryptoSerializer](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L103>)
 
 CryptoSerializer 实现 GORM 加密字段的加解密序列化器。
 
@@ -653,7 +662,7 @@ type CryptoSerializer struct{}
 ```
 
 <a name="CryptoSerializer.Scan"></a>
-### func \(CryptoSerializer\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L108>)
+### func \(CryptoSerializer\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L114>)
 
 ```go
 func (cs CryptoSerializer) Scan(ctx context.Context, field *schema.Field, dst reflect.Value, dbValue any) error
@@ -662,7 +671,7 @@ func (cs CryptoSerializer) Scan(ctx context.Context, field *schema.Field, dst re
 Scan 从数据库读取字段值，解密得到明文并保留原始密文。
 
 <a name="CryptoSerializer.Value"></a>
-### func \(CryptoSerializer\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L159>)
+### func \(CryptoSerializer\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/crypto.go#L165>)
 
 ```go
 func (cs CryptoSerializer) Value(ctx context.Context, field *schema.Field, dst reflect.Value, fieldValue any) (any, error)
@@ -1094,7 +1103,7 @@ func (d DurationNS) Value() (driver.Value, error)
 Value 实现 driver.Valuer，数据库以整数纳秒（BIGINT）存储。
 
 <a name="Hash"></a>
-## type [Hash](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L17-L20>)
+## type [Hash](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L20-L23>)
 
 Hash 是数据库摘要字段的类型化封装：字段持有由 crypto 层预计算的十六进制 HMAC\-SHA256 摘要，序列化器只负责 string/\[\]byte 互转、nil 安全与 JSON，不做 加解密。摘要单向且确定性（同一密钥与内容恒得同一摘要，可等值匹配与建唯一索引）， 与可逆且随机的 Crypto 语义相反，故不能复用 Crypto 承载。
 
@@ -1105,7 +1114,7 @@ type Hash struct {
 ```
 
 <a name="NewHashDigest"></a>
-### func [NewHashDigest](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L23>)
+### func [NewHashDigest](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L26>)
 
 ```go
 func NewHashDigest(digest string) Hash
@@ -1114,7 +1123,7 @@ func NewHashDigest(digest string) Hash
 NewHashDigest 以十六进制摘要构造 Hash 实例，供写库侧使用。
 
 <a name="Hash.Digest"></a>
-### func \(Hash\) [Digest](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L28>)
+### func \(Hash\) [Digest](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L31>)
 
 ```go
 func (h Hash) Digest() string
@@ -1123,7 +1132,7 @@ func (h Hash) Digest() string
 Digest 返回十六进制摘要；未设置值（零值 Hash）时返回空字符串。
 
 <a name="Hash.MarshalJSON"></a>
-### func \(Hash\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L38>)
+### func \(Hash\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L41>)
 
 ```go
 func (h Hash) MarshalJSON() ([]byte, error)
@@ -1132,7 +1141,7 @@ func (h Hash) MarshalJSON() ([]byte, error)
 MarshalJSON 将 Hash 序列化为 JSON 字符串（零值输出空字符串）。
 
 <a name="Hash.String"></a>
-### func \(Hash\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L33>)
+### func \(Hash\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L36>)
 
 ```go
 func (h Hash) String() string
@@ -1141,7 +1150,7 @@ func (h Hash) String() string
 String 返回十六进制摘要，便于日志输出与字符串拼接。
 
 <a name="Hash.UnmarshalJSON"></a>
-### func \(\*Hash\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L45>)
+### func \(\*Hash\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L48>)
 
 ```go
 func (h *Hash) UnmarshalJSON(data []byte) error
@@ -1153,16 +1162,16 @@ UnmarshalJSON 从 JSON 恢复 Hash 实例，支持两种取值形式：
 - null 或空串：视为未设置，恢复零值 Hash。
 
 <a name="HashSerializer"></a>
-## type [HashSerializer](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L60>)
+## type [HashSerializer](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L64>)
 
-HashSerializer 实现 GORM 摘要字段的序列化器：仅做类型包装与标签模式校验， 摘要本身由 crypto 层在写库前预计算（见 crypto.DigestForField / crypto.HashKeyForField）。
+HashSerializer 实现 GORM 摘要字段的序列化器：仅做类型包装与标签绑定校验， 摘要算法固定为 HMAC\-SHA256，摘要本身由 crypto 层在写库前预计算 （见 crypto.DigestForField / crypto.HashKeyForField）。
 
 ```go
 type HashSerializer struct{}
 ```
 
 <a name="HashSerializer.Scan"></a>
-### func \(HashSerializer\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L76>)
+### func \(HashSerializer\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L80>)
 
 ```go
 func (hs HashSerializer) Scan(ctx context.Context, field *schema.Field, dst reflect.Value, dbValue any) error
@@ -1171,7 +1180,7 @@ func (hs HashSerializer) Scan(ctx context.Context, field *schema.Field, dst refl
 Scan 从数据库读取字段值，包装为 Hash；空值与空字符串置零值。
 
 <a name="HashSerializer.Value"></a>
-### func \(HashSerializer\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L94>)
+### func \(HashSerializer\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/hash.go#L101>)
 
 ```go
 func (hs HashSerializer) Value(ctx context.Context, field *schema.Field, dst reflect.Value, fieldValue any) (any, error)
@@ -1637,6 +1646,96 @@ func (m MacAddr) Value() (driver.Value, error)
 ```
 
 Value 实现 driver.Valuer 接口，返回写入数据库的值；空地址返回 nil。
+
+<a name="S3Crypto"></a>
+## type [S3Crypto](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/s3crypto.go#L23-L26>)
+
+S3Crypto 是 S3 对象键的类型化封装：数据库列只保存对象键，对象内容以 zstd \+ AES\-GCM 加密后存于 S3。字段类型须为 serializer.S3Crypto 并携带 s3crypto 标签，密钥由标签中的 offset/length 派生，每个字段使用独立密钥。
+
+与 Crypto 的区别：Crypto 的密文随列值落库，读库即完成解密；S3Crypto 只持有 对象键，实际加解密与上传下载由业务层显式执行（storeBody、Zkcn、ObjectCache）， 避免序列化器在读库（含列表查询）时触发远程 I/O。
+
+```go
+type S3Crypto struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewS3Crypto"></a>
+### func [NewS3Crypto](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/s3crypto.go#L29>)
+
+```go
+func NewS3Crypto(key string) S3Crypto
+```
+
+NewS3Crypto 以对象键构造 S3Crypto，供写库侧与扫描侧使用。
+
+<a name="S3Crypto.Key"></a>
+### func \(S3Crypto\) [Key](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/s3crypto.go#L34>)
+
+```go
+func (s S3Crypto) Key() string
+```
+
+Key 返回 S3 对象键；零值返回空字符串。
+
+<a name="S3Crypto.MarshalJSON"></a>
+### func \(S3Crypto\) [MarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/s3crypto.go#L45>)
+
+```go
+func (s S3Crypto) MarshalJSON() ([]byte, error)
+```
+
+MarshalJSON 将 S3Crypto 序列化为对象键字符串；零值输出空字符串， 与改造前「字段直接存对象键字符串」的 JSON 契约保持一致。
+
+<a name="S3Crypto.String"></a>
+### func \(S3Crypto\) [String](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/s3crypto.go#L39>)
+
+```go
+func (s S3Crypto) String() string
+```
+
+String 返回 S3 对象键，便于日志输出与字符串拼接。
+
+<a name="S3Crypto.UnmarshalJSON"></a>
+### func \(\*S3Crypto\) [UnmarshalJSON](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/s3crypto.go#L55>)
+
+```go
+func (s *S3Crypto) UnmarshalJSON(data []byte) error
+```
+
+UnmarshalJSON 从 JSON 恢复 S3Crypto 实例，支持两种取值形式：
+
+- 字符串：S3 对象键（与 MarshalJSON 输出一致）；
+- 其他取值（如 \{\}、null 占位）：视为无对象，恢复零值。
+
+该能力使标签规则样例等持久化 JSON 文档可反序列化回目标模型 （如 \*network.HttpTransport 的正文对象键字段）。
+
+<a name="S3CryptoSerializer"></a>
+## type [S3CryptoSerializer](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/s3crypto.go#L71>)
+
+S3CryptoSerializer 实现 GORM S3 对象键字段的序列化器：只做对象键的 string/\[\]byte 互转、空值归一与标签绑定校验，不做任何 S3 网络 I/O。
+
+```go
+type S3CryptoSerializer struct{}
+```
+
+<a name="S3CryptoSerializer.Scan"></a>
+### func \(S3CryptoSerializer\) [Scan](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/s3crypto.go#L87>)
+
+```go
+func (ss S3CryptoSerializer) Scan(ctx context.Context, field *schema.Field, dst reflect.Value, dbValue any) error
+```
+
+Scan 从数据库读取对象键，包装为 S3Crypto；nil、空字节与空字符串均置零值。
+
+<a name="S3CryptoSerializer.Value"></a>
+### func \(S3CryptoSerializer\) [Value](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/s3crypto.go#L108>)
+
+```go
+func (ss S3CryptoSerializer) Value(ctx context.Context, field *schema.Field, dst reflect.Value, fieldValue any) (any, error)
+```
+
+Value 校验字段标签后返回对象键字符串；零值返回空字符串 （匹配 VARCHAR\(512\) NOT NULL DEFAULT ” 与 ClickHouse String 列定义，不写 NULL）。
 
 <a name="TimeOnly"></a>
 ## type [TimeOnly](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/serializer/time_only.go#L39>)

@@ -17,6 +17,7 @@ var lintFields = []tagengine.InputFieldMeta{
 	{Field: "method", Type: "string"},
 	{Field: "clientIp", Type: "string"},
 	{Field: "tags", Type: "array"},
+	{Field: "auth", Type: "string", Sensitive: true},
 }
 
 // TestLintInputRefs 验证 LintInputRefs 对 input.<field> 引用的字段感知告警。
@@ -41,6 +42,16 @@ func TestLintInputRefs(t *testing.T) {
 			source := "package zki\n\ntags contains x if { input.method == \"GET\" }"
 			warnings := tagengine.LintInputRefs(source, lintFields)
 			So(warnings, ShouldBeEmpty)
+		})
+
+		Convey("直接引用敏感字段产出 crypto.reveal 引导告警", func() {
+			source := "package zki\n\ntags contains x if { input.auth == \"Bearer x\" }"
+			warnings := tagengine.LintInputRefs(source, lintFields)
+			So(len(warnings), ShouldEqual, 1)
+			So(warnings[0].Type, ShouldEqual, "warning")
+			So(warnings[0].Message, ShouldEqual, "tagrule.lint-sensitive-field")
+			So(warnings[0].Hint, ShouldEqual, "tagrule.lint-sensitive-field-hint")
+			So(warnings[0].Args, ShouldResemble, []any{"auth", "auth"})
 		})
 
 		Convey("input[\"x\"] 方括号形式产出告警且字段名进入 Args", func() {

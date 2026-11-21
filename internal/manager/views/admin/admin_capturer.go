@@ -48,9 +48,11 @@ type CapturerConfigIn struct {
 	// Promisc 是否启用混杂模式，启用后可捕获非本机的流量。
 	Promisc bool `json:"promisc" viper:"promisc" prompt:"是否启用混杂模式？"`
 	// Timeout 读超时时间（毫秒），支持可读时长字符串（如 5s、1m30s）或整数毫秒。
-	Timeout serializer.DurationMS `json:"timeout" viper:"read-timeout" prompt:"请输入读超时时间（如 5s、1m30s）" binding:"required"`
-	// BpfExpr BPF 过滤表达式（如 "tcp port 80"），长度限制 3~1024 字符。
-	BpfExpr string `json:"bpfExpr" viper:"bpf-expr" prompt:"请输入 BPF 过滤表达式（如 tcp port 80）" binding:"required,min=3,max=1024"`
+	// 取值范围与前端表单一致：1 秒（1000 ms）~ 24 小时（86400000 ms）。
+	Timeout serializer.DurationMS `json:"timeout" viper:"read-timeout" prompt:"请输入读超时时间（如 5s、1m30s）" binding:"required,min=1000,max=86400000"`
+	// BpfExpr BPF 过滤表达式（如 "tcp port 80"），长度限制 3~1024 字符；
+	// 提交时由 bpf 校验规则经 libpcap 编译做兜底语法校验。
+	BpfExpr string `json:"bpfExpr" viper:"bpf-expr" prompt:"请输入 BPF 过滤表达式（如 tcp port 80）" binding:"required,min=3,max=1024,bpf"`
 	// Enabled 是否启用该抓包器配置。
 	Enabled bool `json:"enabled" viper:"enabled" prompt:"是否启用该抓包器？"`
 }

@@ -298,7 +298,7 @@ model:
       device: 设备
       bpfExpr: BPF 表达式
       snapLen: 捕获长度
-      timeout: 超时时长
+      timeout: 超时时长（秒）
       promisc: 混杂模式
       enabled: 启用
       sessionID: 会话ID
@@ -1468,6 +1468,7 @@ action:
   regoSqlUnmatchedParen: SQL 括号不配对
   regoSqlUnknownTable: 未注册的数据源表：{table}（请先在第三方数据源中接入）
   tagExprFieldHint: 输入 / 打开标签列表，输入 // 输入字面量 /
+  bpfExprFieldHint: 输入 BPF 过滤表达式，例如 tcp port 80
   addCondition: 添加条件
   removeCondition: 移除条件
   beautifyJson: 美化
@@ -2176,3 +2177,64 @@ notify:
       field:
         url: Webhook URL
         headers: 请求头
+# BPF 过滤表达式编辑器：语法速查、关键字说明与本地校验文案
+bpf:
+  title: BPF 语法速查
+  examplesTitle: 常用示例
+  group:
+    logical: 逻辑运算
+    protocol: 协议
+    direction: 方向
+    qualifier: 限定词
+  kw:
+    and: 逻辑与，可写作 &&
+    or: 逻辑或，可写作双竖线
+    not: 逻辑非，可写作 !
+    ip: 仅 IPv4 流量
+    ip6: 仅 IPv6 流量
+    arp: ARP 流量
+    rarp: RARP 流量
+    tcp: TCP 流量
+    udp: UDP 流量
+    icmp: ICMP 流量
+    icmp6: ICMPv6 流量
+    igmp: IGMP 流量
+    sctp: SCTP 流量
+    vlan: 带 VLAN 标记的流量，可跟 VLAN ID
+    mpls: 带 MPLS 标记的流量
+    src: 源方向限定
+    dst: 目的方向限定
+    host: 主机地址或主机名
+    net: 网段，支持 CIDR
+    port: 端口号或端口名
+    portrange: 端口范围，如 8000-9000
+    proto: 协议号或协议名
+    protochain: IPv6 协议链
+    ether: 以太网层限定，后接 host/src/dst/proto
+    gateway: 网关主机
+    broadcast: 广播流量
+    multicast: 组播流量
+    less: 报文长度小于指定字节数
+    greater: 报文长度大于指定字节数
+  examples:
+    http: 抓取 HTTP 流量
+    dns: 抓取 DNS 流量
+    host: 抓取指定主机流量
+    directional: 按源/目的方向过滤
+    excludeSsh: 排除 SSH 的 TCP/UDP 流量
+    portrange: 抓取端口范围流量
+    cidr: 抓取指定网段流量
+  error:
+    unexpectedChar: '非法字符 "{char}"'
+    unexpectedToken: '非法词元 "{token}"'
+    unexpectedEnd: 表达式意外结束
+    missingValue: '"{keyword}" 之后缺少取值'
+    expectedQualifier: '协议之后应为 host/net/port 等限定词或逻辑运算符，不能直接跟 "{token}"'
+    missingClose: 括号未闭合
+    unexpectedClose: '多余的右括号 "{char}"'
+    emptyGroup: 括号内不能为空
+    invalidPort: '端口取值 "{value}" 无效，应为 0-65535 或端口名'
+    invalidPortRange: '端口范围 "{value}" 无效，应形如 8000-9000'
+    invalidPrefix: '网段前缀 "{value}" 无效'
+    invalidIp: 'IP 地址 "{value}" 无效'
+    invalidNumber: '数值 "{value}" 无效'

@@ -39,7 +39,7 @@ type AgentSkill struct {
 	// Description 技能描述（明文存储），便于在技能列表中识别技能用途
 	Description string `gorm:"type:VARCHAR(256)"`
 	// Content 技能正文内容，经 crypto 序列化器加密存储；内置技能不落库（nil），正文取自代码注册表
-	Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12823,length=32"`
+	Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=12823,length=32"`
 	// Enabled 技能是否启用，默认 true；停用的技能不参与运行时装配
 	Enabled bool `gorm:"type:BOOLEAN;not null;default:true"`
 	// PeriodicCapable 技能是否可周期执行（由用户声明）：为 true 时应按固定周期、固定时间窗口

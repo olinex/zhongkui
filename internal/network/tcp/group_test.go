@@ -2,6 +2,7 @@ package tcp
 
 import (
 	"testing"
+	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -231,6 +232,88 @@ func TestGroupEntry_Remove(t *testing.T) {
 			So(g.len(), ShouldEqual, 0)
 			So(g.head, ShouldBeNil)
 			So(g.tail, ShouldBeNil)
+		})
+
+	})
+}
+
+// TestGroupEntry_OOPCapacityLimit 验证无 SYN 流的暂存队列容量上限：
+// 超过 maxSize 的新包被丢弃，已暂存的前序包保留；maxSize<=0 表示不限制。
+func TestGroupEntry_OOPCapacityLimit(t *testing.T) {
+	Convey("Test groupEntry oop capacity limit", t, func() {
+
+		Convey("addOOP drops packets beyond max size", func() {
+			g := newGroupEntry[*mockTCPPacket]()
+			now := time.Now()
+			for i := 0; i < 5; i++ {
+				g.addOOP("flow-1", &mockTCPPacket{seqNum: uint32(i)}, 2, now)
+			}
+			So(len(g.oop["flow-1"].packets), ShouldEqual, 2)
+			So(g.oop["flow-1"].packets[0].seqNum, ShouldEqual, 0)
+			So(g.oop["flow-1"].packets[1].seqNum, ShouldEqual, 1)
+		})
+
+		Convey("addOOP with non-positive max size does not limit", func() {
+			g := newGroupEntry[*mockTCPPacket]()
+			now := time.Now()
+			for i := 0; i < 5; i++ {
+				g.addOOP("flow-1", &mockTCPPacket{seqNum: uint32(i)}, 0, now)
+			}
+			So(len(g.oop["flow-1"].packets), ShouldEqual, 5)
+		})
+
+		Convey("multiple streams are capped independently", func() {
+			g := newGroupEntry[*mockTCPPacket]()
+			now := time.Now()
+			for i := 0; i < 3; i++ {
+				g.addOOP("flow-1", &mockTCPPacket{seqNum: uint32(i)}, 1, now)
+				g.addOOP("flow-2", &mockTCPPacket{seqNum: uint32(i)}, 1, now)
+			}
+			So(len(g.oop["flow-1"].packets), ShouldEqual, 1)
+			So(len(g.oop["flow-2"].packets), ShouldEqual, 1)
+		})
+
+	})
+}
+
+// TestGroupEntry_CleanupOOP 验证无 SYN 的暂存流按 noticeTimeout 清理：
+// 超过超时仍未建流的条目被丢弃，未超时的保留；kill 模式清空全部暂存。
+func TestGroupEntry_CleanupOOP(t *testing.T) {
+	Convey("Test groupEntry cleanup oop", t, func() {
+
+		Convey("cleanup drops entries older than noticeTimeout", func() {
+			g := newGroupEntry[*mockTCPPacket]()
+			timeout := 30 * time.Second
+			g.addOOP("stale", &mockTCPPacket{seqNum: 1}, 0, time.Now().Add(-2*timeout))
+			g.addOOP("fresh", &mockTCPPacket{seqNum: 1}, 0, time.Now())
+
+			_, _, _, oopDropped := g.cleanup(timeout, 1024, false)
+			So(oopDropped, ShouldEqual, 1)
+			_, staleExists := g.oop["stale"]
+			So(staleExists, ShouldBeFalse)
+			_, freshExists := g.oop["fresh"]
+			So(freshExists, ShouldBeTrue)
+		})
+
+		Convey("kill cleanup drops every oop entry", func() {
+			g := newGroupEntry[*mockTCPPacket]()
+			g.addOOP("flow-1", &mockTCPPacket{seqNum: 1}, 0, time.Now())
+			g.addOOP("flow-2", &mockTCPPacket{seqNum: 1}, 0, time.Now())
+
+			_, _, _, oopDropped := g.cleanup(time.Minute, 1024, true)
+			So(oopDropped, ShouldEqual, 2)
+			So(len(g.oop), ShouldEqual, 0)
+		})
+
+		Convey("cleanup does not touch completed node lifecycle counts", func() {
+			g := newGroupEntry[*mockTCPPacket]()
+			g.addOOP("fresh", &mockTCPPacket{seqNum: 1}, 0, time.Now())
+
+			removed, evicted, living, oopDropped := g.cleanup(time.Minute, 1024, false)
+			So(removed, ShouldEqual, 0)
+			So(evicted, ShouldEqual, 0)
+			So(living, ShouldEqual, 0)
+			So(oopDropped, ShouldEqual, 0)
 		})
 
 	})

@@ -199,7 +199,7 @@ func compareHttpTransport(c C, app *network.HttpTransport, request, response []b
 	}
 	// 请求体可能为空，所以不检查是否为空
 	if len(reqBody) > 0 {
-		c.SoMsg("请求体内容不匹配", string(app.ReqBody), ShouldEqual, string(reqBody))
+		c.SoMsg("请求体内容不匹配", app.ReqBody.Key(), ShouldEqual, string(reqBody))
 	}
 
 	// 读取响应体，如果响应使用gzip压缩，需要先解压
@@ -225,7 +225,7 @@ func compareHttpTransport(c C, app *network.HttpTransport, request, response []b
 	}
 	// 响应体可能为空，所以不检查是否为空
 	if len(body) > 0 {
-		c.SoMsg("响应体内容不匹配", string(app.RspBody), ShouldEqual, string(body))
+		c.SoMsg("响应体内容不匹配", app.RspBody.Key(), ShouldEqual, string(body))
 	}
 }
 

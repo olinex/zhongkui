@@ -402,7 +402,7 @@ func KnowledgeDocumentBatchDelete(c *gin.Context)
 KnowledgeDocumentBatchDelete 批量删除知识库文档。 逐条按 \(id, namespace\) 确认文档存在（不存在记录失败明细），再经知识库索引删除 文档及其分块；AI 功能未启用时直接删除文档行（无索引可清理）。导入文档（含 ObjectKey） 在删除行/索引后同步清理 S3 原件，失败计入批量失败明细（不静默忽略），保证「DB 行 ↔ S3 原件」共存亡。
 
 <a name="KnowledgeDocumentChunksGet"></a>
-## func [KnowledgeDocumentChunksGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L597>)
+## func [KnowledgeDocumentChunksGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L601>)
 
 ```go
 func KnowledgeDocumentChunksGet(c *gin.Context)
@@ -429,7 +429,7 @@ func KnowledgeDocumentDetailGet(c *gin.Context)
 KnowledgeDocumentDetailGet 处理获取知识库文档详情的请求。 仅允许访问当前命名空间内的文档，不存在时返回 404。
 
 <a name="KnowledgeDocumentDownload"></a>
-## func [KnowledgeDocumentDownload](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L866>)
+## func [KnowledgeDocumentDownload](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L881>)
 
 ```go
 func KnowledgeDocumentDownload(c *gin.Context)
@@ -447,7 +447,7 @@ func KnowledgeDocumentListGet(c *gin.Context)
 KnowledgeDocumentListGet 处理获取知识库文档列表的请求。 基于统一搜索基座 BuildSearchCountQuery 支持分页、排序与过滤（标题/创建/更新时间）， 仅返回当前命名空间内的文档。
 
 <a name="KnowledgeDocumentReindex"></a>
-## func [KnowledgeDocumentReindex](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L463>)
+## func [KnowledgeDocumentReindex](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L467>)
 
 ```go
 func KnowledgeDocumentReindex(c *gin.Context)
@@ -471,7 +471,7 @@ KnowledgeDocumentUpdate 处理更新知识库文档的请求。 按 \(id, namesp
 - 手动录入文档：标题/正文均可改，正文变更后同步重建索引（AI 未启用时仅更新文档）。
 
 <a name="KnowledgeDocumentUpload"></a>
-## func [KnowledgeDocumentUpload](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L755>)
+## func [KnowledgeDocumentUpload](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L759>)
 
 ```go
 func KnowledgeDocumentUpload(c *gin.Context)
@@ -480,7 +480,7 @@ func KnowledgeDocumentUpload(c *gin.Context)
 KnowledgeDocumentUpload 处理导入知识库文档（multipart/form\-data）的请求。 字段：title（可选，缺省取文件名去扩展名）、file（必填，必须为最后一个表单部分）。 处理顺序：请求体限流 → 流式解析表单 → docconv.Detect 做唯一权威格式校验 → AI 启用校验 → 插入 pending 文档行 → 流式加密上传原件并统计字节数 → 回填 size\_bytes/object\_key → 投递解析任务。任一步失败按「DB 行 ↔ S3 原件共存亡」回滚已产生的副作用，并返回按请求语言本地化的错误。
 
 <a name="KnowledgeSystemDocumentChunksGet"></a>
-## func [KnowledgeSystemDocumentChunksGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L669>)
+## func [KnowledgeSystemDocumentChunksGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L673>)
 
 ```go
 func KnowledgeSystemDocumentChunksGet(c *gin.Context)
@@ -507,7 +507,7 @@ func KnowledgeSystemDocumentListGet(c *gin.Context)
 KnowledgeSystemDocumentListGet 处理获取系统命名空间知识库文档列表的请求。 与 KnowledgeDocumentListGet 同构，唯一区别是数据范围恒为内置系统命名空间 （base.SystemNamespace），不取自客户端命名空间，故为纯只读接口。
 
 <a name="PeriodicReportFeedListGet"></a>
-## func [PeriodicReportFeedListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L922>)
+## func [PeriodicReportFeedListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L932>)
 
 ```go
 func PeriodicReportFeedListGet(c *gin.Context)
@@ -570,7 +570,7 @@ func PeriodicReportPlanUpdate(c *gin.Context)
 PeriodicReportPlanUpdate 处理更新报告计划的请求。 按 \(id, namespace\) 定位计划，不存在返回 404；更新会清空下次执行时间，交由分发器重新计算。
 
 <a name="PeriodicReportRunDelete"></a>
-## func [PeriodicReportRunDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L774>)
+## func [PeriodicReportRunDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L779>)
 
 ```go
 func PeriodicReportRunDelete(c *gin.Context)
@@ -606,7 +606,7 @@ func PeriodicReportSkillOptionsGet(c *gin.Context)
 PeriodicReportSkillOptionsGet 处理报告技能选项查询的请求。 只返回当前命名空间内可周期执行的自定义技能（含时间窗口字段），供前端渲染计划创建表单。
 
 <a name="PeriodicReportWatchListGet"></a>
-## func [PeriodicReportWatchListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L812>)
+## func [PeriodicReportWatchListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L822>)
 
 ```go
 func PeriodicReportWatchListGet(c *gin.Context)
@@ -615,7 +615,7 @@ func PeriodicReportWatchListGet(c *gin.Context)
 PeriodicReportWatchListGet 处理关注计划候选列表查询的请求。 仅返回当前命名空间内的报告计划，支持 keyword / enabled 过滤、排序、分页与字段投影； 查询构建与总数统计统一委托 utils.BuildSearchCountQuery。watched 不落库，按当前用户的 关注关系第二趟回填。
 
 <a name="PeriodicReportWatchSet"></a>
-## func [PeriodicReportWatchSet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L891>)
+## func [PeriodicReportWatchSet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/periodicreport.go#L901>)
 
 ```go
 func PeriodicReportWatchSet(c *gin.Context)
@@ -1376,7 +1376,7 @@ type KnowledgeDocumentBatchIn struct {
 ```
 
 <a name="KnowledgeDocumentChunkOut"></a>
-## type [KnowledgeDocumentChunkOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L570-L583>)
+## type [KnowledgeDocumentChunkOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L574-L587>)
 
 KnowledgeDocumentChunkOut 定义单个知识分块的输出结构。
 
@@ -1398,7 +1398,7 @@ type KnowledgeDocumentChunkOut struct {
 ```
 
 <a name="KnowledgeDocumentChunksOut"></a>
-## type [KnowledgeDocumentChunksOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L586-L591>)
+## type [KnowledgeDocumentChunksOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L590-L595>)
 
 KnowledgeDocumentChunksOut 定义知识库文档分块明细的输出结构（文档级摘要 \+ 逐块明细）。
 
@@ -1464,7 +1464,7 @@ type KnowledgeDocumentDetailOut struct {
 ```
 
 <a name="KnowledgeDocumentIndexSummaryOut"></a>
-## type [KnowledgeDocumentIndexSummaryOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L534-L567>)
+## type [KnowledgeDocumentIndexSummaryOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/ai/knowledge.go#L538-L571>)
 
 KnowledgeDocumentIndexSummaryOut 定义知识库文档索引摘要的输出结构： 全部字段在读取时从文档与其分块聚合派生（含 overlap 造成的重复计数），不落库。
 

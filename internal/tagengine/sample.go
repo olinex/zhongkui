@@ -110,7 +110,10 @@ func ValidateGroupRuntime(ctx context.Context, db *database.DB, rules []*tag.Tag
 			})
 			continue
 		}
-		if _, err := group.Recognize(ctx, rego.EvalInput(input)); err != nil {
+		// 为样例绑定敏感字段秘密表（含独立解密缓存），使含 crypto.reveal 的规则
+		// 在样例校验时可解密；运行时（S3 读取器与上限）由调用方 ctx 提供。
+		evalCtx := WithSensitiveTarget(ctx, rules[0].Model, instance)
+		if _, err := group.Recognize(evalCtx, rego.EvalInput(input)); err != nil {
 			issues = append(issues, SampleRuntimeError{
 				SampleName: sample.Name,
 				Error:      err.Error(),

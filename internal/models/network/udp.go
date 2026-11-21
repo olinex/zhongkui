@@ -62,7 +62,7 @@ type PacketIPv4UDP struct {
 	// UDPStreamID UDP 流唯一标识，由四元组哈希生成的 16 字符十六进制串
 	UDPStreamID string `gorm:"column:udp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"udpStreamID"`
 	// Payload UDP 载荷，加密存储
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=65045,length=32"`
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" crypto:"mode=\"aes-gcm\",offset=65045,length=32"`
 }
 
 // StreamID 返回TCP流ID
@@ -89,7 +89,7 @@ type PacketIPv6UDP struct {
 	// UDPStreamID UDP 流唯一标识，由四元组哈希生成的 16 字符十六进制串
 	UDPStreamID string `gorm:"column:udp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"udpStreamID"`
 	// Payload UDP 载荷，加密存储
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=40914,length=32"`
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" crypto:"mode=\"aes-gcm\",offset=40914,length=32"`
 }
 
 // StreamID 返回TCP流ID

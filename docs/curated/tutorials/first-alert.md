@@ -10,7 +10,7 @@
 
 ## 1. 理解规则输入
 
-规则看到的是目标模型的"输入文档"（input）。BuildInput 优先使用模型实现的 Inputer 接口 （自定义投影/脱敏），否则把结构体按 json tag 序列化为 map；加密字段序列化为空串，规则读不到明文。 当前唯一注册的目标模型是 network.HttpTransport，其输入文档的键即其 json tag， 例如 clientIp、serverPort、method、url、httpVersion、reqHdrUserAgent、fpTcpClientSig、fpTcpServerSig 等。
+规则看到的是目标模型的"输入文档"（input）。BuildInput 优先使用模型实现的 Inputer 接口 （自定义投影/脱敏），否则把结构体按 json tag 序列化为 map。加密字段不出现在输入文档中： 规则只能调用 `crypto.reveal("<json字段名>")` 获取明文（Crypto 直接返回明文，S3Crypto 会按字段密钥下载并解密正文，同一数据内同一字段只解密一次）。 当前唯一注册的目标模型是 network.HttpTransport，其输入文档的键即其 json tag， 例如 clientIp、serverPort、method、url、httpVersion、reqHdrUserAgent、fpTcpClientSig、fpTcpServerSig 等。
 
 ## 2. 认识目标模型注册表与内置函数
 

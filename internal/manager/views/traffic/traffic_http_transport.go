@@ -610,7 +610,7 @@ func NewHttpTransportListGetListItemOut(p *network.HttpTransport) *HttpTransport
 		Fragment: p.Fragment,
 		// HttpRequestBody
 		Method:  p.Method,
-		ReqBody: p.ReqBody,
+		ReqBody: p.ReqBody.Key(),
 		// ReqBodyHash 请求主体 HMAC-SHA256 摘要（hex，带密钥防离线爆破）
 		ReqBodyHash:   p.ReqBodyHash.Digest(),
 		ReqBodyLength: p.ReqBodyLength,
@@ -681,7 +681,7 @@ func NewHttpTransportListGetListItemOut(p *network.HttpTransport) *HttpTransport
 		ReqHdrPriority:                        p.ReqHdrPriority,
 		ReqHdrAltUsed:                         p.ReqHdrAltUsed,
 		// HttpResponseBody
-		RspBody: p.RspBody,
+		RspBody: p.RspBody.Key(),
 		// RspBodyHash 响应主体 HMAC-SHA256 摘要（hex，带密钥防离线爆破）
 		RspBodyHash:   p.RspBodyHash.Digest(),
 		RspBodyLength: p.RspBodyLength,

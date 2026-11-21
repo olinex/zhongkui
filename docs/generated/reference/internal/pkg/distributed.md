@@ -151,7 +151,7 @@ func (o *Orchestrator[Handler, Item]) GetMemberID() string
 GetMemberID 返回当前编排器实例在 etcd 集群中的唯一成员标识。 成员 ID 由 etcd.Cluster 在实例创建时分配，用于标识该实例在集群中的身份。
 
 <a name="Orchestrator[Handler, Item].Shutdown"></a>
-### func \(\*Orchestrator\[Handler, Item\]\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/distributed/orchestrator.go#L324>)
+### func \(\*Orchestrator\[Handler, Item\]\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/distributed/orchestrator.go#L348>)
 
 ```go
 func (o *Orchestrator[Handler, Item]) Shutdown()

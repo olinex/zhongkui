@@ -51,9 +51,19 @@
         />
       </div>
       <div class="rego-body">
-        <!-- minHeight 为公开 prop（tag-rule.vue / tag-event-rule.vue / notification/template.vue
-             等调用方按场景传入自定义最小高度），属运行时计算值，故保留 :style 绑定 -->
-        <div ref="hostRef" class="rego-editor zk-editor" :style="{ minHeight }" />
+        <!-- minHeight 为公开 prop（tag-rule.vue / notification/template.vue 等调用方
+             按场景传入自定义最小高度），由 Vuetify 字段外壳承载 -->
+        <code-mirror-field
+          class="rego-field"
+          :label="label"
+          :value="modelValue"
+          :error-messages="shellErrors"
+          :disabled="disabled"
+          :min-height="minHeight"
+          @focus="focusEditor"
+        >
+          <div ref="hostRef" class="rego-editor" />
+        </code-mirror-field>
         <transition name="guide">
           <div v-if="fullscreen && guideOpen" class="fullscreen-guide zk-panel">
             <datasource-guide-panel
@@ -119,6 +129,8 @@ import { findSlashPos, slashKeyBinding, withSlashApply } from "@/utils/slashTrig
 const props = withDefaults(
   defineProps<{
     modelValue: string;
+    /** 浮动标签文案 */
+    label?: string;
     errors?: RegoValidationError[];
     /** 额外的 `input.<field>` 补全项，如既有规则引用到的字段 */
     extraCompletions?: string[];
@@ -135,6 +147,7 @@ const props = withDefaults(
     minHeight?: string;
   }>(),
   {
+    label: "",
     errors: () => [],
     extraCompletions: () => [],
     fields: () => [],
@@ -156,6 +169,16 @@ const appStore = useAppStore();
 
 const hostRef = useTemplateRef<HTMLDivElement>("hostRef");
 const view = shallowRef<EditorView>();
+
+/** 点击字段任意区域时把焦点交给 CodeMirror。 */
+function focusEditor(): void {
+  view.value?.focus();
+}
+
+/** 空规则交给表单必填校验，不向字段外壳暴露 preflight 错误，避免首次打开即报错。 */
+const shellErrors = computed(() =>
+  props.modelValue.trim() ? props.errors.map((error) => error.message) : [],
+);
 
 // ---- 全屏编辑模式 与 参考侧边栏（数据源速查 + 场景样例）----
 // 第三方数据源参考栏仅在全屏模式下以右侧并排分栏呈现（充足宽度，与编辑器同框）；
@@ -940,18 +963,21 @@ function updateDiagnostics(): void {
   }
   const state = editorView.state;
   const doc = state.doc;
-  const diagnostics: Diagnostic[] = (props.errors ?? []).map((err) => {
-    const lineNo = Math.max(1, Math.min(err.line, doc.lines));
-    const line = doc.line(lineNo);
-    const from = line.from + Math.max(0, Math.min(err.column - 1, line.length));
-    const hint = err.hint ? `\n${err.hint}` : "";
-    return {
-      from,
-      to: line.to,
-      severity: err.type === "warning" ? "warning" : "error",
-      message: err.message + hint,
-    };
-  });
+  // 空规则交给表单必填校验，避免首次打开就出现 preflight 红色诊断
+  const diagnostics: Diagnostic[] = doc.toString().trim()
+    ? (props.errors ?? []).map((err) => {
+        const lineNo = Math.max(1, Math.min(err.line, doc.lines));
+        const line = doc.line(lineNo);
+        const from = line.from + Math.max(0, Math.min(err.column - 1, line.length));
+        const hint = err.hint ? `\n${err.hint}` : "";
+        return {
+          from,
+          to: line.to,
+          severity: err.type === "warning" ? "warning" : "error",
+          message: err.message + hint,
+        };
+      })
+    : [];
   diagnostics.push(...sqliteSqlDiagnostics(state));
   editorView.dispatch(setDiagnostics(state, diagnostics));
 }
@@ -1111,9 +1137,17 @@ defineExpose({
   flex: 1;
 }
 
-.rego-editor {
+.rego-field {
   flex: 1 1 0%;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.rego-editor {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
 }
 
 /* 全屏模式：编辑器整屏覆盖（fixed 铺满视口），主体占据剩余高度，
@@ -1123,6 +1157,10 @@ defineExpose({
   inset: 0;
   z-index: var(--zk-z-fullscreen);
   padding: var(--zk-space-4);
+}
+
+.is-fullscreen .rego-field {
+  block-size: 100%;
 }
 
 .is-fullscreen .rego-editor {

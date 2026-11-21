@@ -4,26 +4,27 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 	"zhongkuisec.com/zhongkui/internal/pkg/status"
 )
 
 // probeOK 写入 200 响应，正文为给定文本。
 func probeOK(w http.ResponseWriter, body string) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Type", base.MediaTypeTextPlain+"; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(body))
 }
 
 // probeBody 写入 503 响应，正文为给定文本。
 func probeBody(w http.ResponseWriter, body string) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Type", base.MediaTypeTextPlain+"; charset=utf-8")
 	w.WriteHeader(http.StatusServiceUnavailable)
 	_, _ = w.Write([]byte(body))
 }
 
 // probeBodyDeps 写入 503 响应，正文为依赖状态列表的 JSON。
 func probeBodyDeps(w http.ResponseWriter, deps []status.Status) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Content-Type", base.MediaTypeJSON+"; charset=utf-8")
 	w.WriteHeader(http.StatusServiceUnavailable)
 	_ = json.NewEncoder(w).Encode(deps)
 }

@@ -54,6 +54,8 @@ const (
 	TagTrimmed = "trimmed"
 	// TagNotBlank 非空白字符串标签（去首尾空白后非空）
 	TagNotBlank = "notBlank"
+	// TagBPF BPF 过滤表达式标签（经 libpcap 编译校验）
+	TagBPF = "bpf"
 )
 
 // JSONType* 是 JSON 值类型名常量：供 validator 的 jsonObject 等校验能力与调用方复用，

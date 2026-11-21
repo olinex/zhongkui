@@ -110,7 +110,7 @@ type fakeReportObjects struct {
 }
 
 // Store 记录一次对象写入并返回预设错误（可为 nil）。
-func (f *fakeReportObjects) Store(_ context.Context, objectKey string, r io.Reader) error {
+func (f *fakeReportObjects) Store(_ context.Context, objectKey string, r io.Reader, _ []byte) error {
 	f.calls++
 	if f.err != nil {
 		return f.err
@@ -125,7 +125,7 @@ func (f *fakeReportObjects) Store(_ context.Context, objectKey string, r io.Read
 }
 
 // Remove 记录一次对象删除并返回预设错误（可为 nil）。
-func (f *fakeReportObjects) Remove(_ context.Context, objectKey string) error {
+func (f *fakeReportObjects) Remove(_ context.Context, objectKey string, _ []byte) error {
 	if f.removeErr != nil {
 		return f.removeErr
 	}
@@ -313,7 +313,7 @@ func TestRunHandler_Success(t *testing.T) {
 	}
 	run := runs[0]
 	wantObjectKey := fmt.Sprintf("periodic-report/%s/%d/%s.md", periodicReportHandlerTestNamespace, planID, triggerAt.Format("20060102T150405Z"))
-	if run.Status != modelsai.PeriodicReportRunStatusSuccess || run.ObjectKey != wantObjectKey ||
+	if run.Status != modelsai.PeriodicReportRunStatusSuccess || run.ObjectKey.Key() != wantObjectKey ||
 		run.Title != "安全周报" || run.SizeBytes != int64(len(content)) {
 		t.Fatalf("run = %+v, want success with objectKey=%q title=%q size=%d",
 			run, wantObjectKey, "安全周报", len(content))

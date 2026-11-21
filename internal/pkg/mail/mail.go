@@ -98,7 +98,7 @@ func (s *Sender) Send(ctx context.Context, to string, msg message.Message, lang 
 	// 未声明（空值）时按系统邮件直发默认回退 text/html。
 	contentType := msg.ContentType
 	if contentType == "" {
-		contentType = "text/html"
+		contentType = base.MediaTypeHTML
 	}
 
 	// 最终调用注入的消息渠道连接池 Send 投递，返回的已是项目 errors 链，直接透传。

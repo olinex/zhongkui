@@ -13,6 +13,9 @@ import (
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
+// cryptoFieldType 加密字段绑定的序列化类型。
+var cryptoFieldType = reflect.TypeOf(Crypto{})
+
 // Crypto 持有加密字段的明文与密文
 //   - value: 明文，读写库时由 crypto serializer 加解密，GetPayload 等业务读取明文
 //   - cipher: 密文，Scan 读库时保留，供 MarshalJSON 输出 base64 密文（详情展示），避免明文泄露
@@ -100,8 +103,11 @@ func (c *Crypto) UnmarshalJSON(data []byte) error {
 type CryptoSerializer struct{}
 
 func (cs CryptoSerializer) getTagMode(field *schema.Field) (mode.Mode, error) {
+	if err := validateFieldBinding(field, crypto.CryptoTagKey, cryptoFieldType); err != nil {
+		return nil, errors.WithStack(err)
+	}
 	// 标签解析、密钥派生与模式构造统一走 crypto 层，与视图层明文查看链路一致
-	return crypto.ModeFromTag(field.StructField.Tag.Get(crypto.SecurityTagKey))
+	return crypto.ModeFromTag(field.StructField.Tag.Get(crypto.CryptoTagKey))
 }
 
 // Scan 从数据库读取字段值，解密得到明文并保留原始密文。

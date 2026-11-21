@@ -4,10 +4,13 @@
 
 ## Index
 
+- [Constants](<#constants>)
 - [Variables](<#variables>)
 - [func AllDimensions\(\) \[\]string](<#AllDimensions>)
+- [func BindSensitiveInput\(ctx context.Context, typeKey string, input map\[string\]any\) \(context.Context, map\[string\]any\)](<#BindSensitiveInput>)
 - [func BuildDetectionQuery\(db \*gorm.DB, conds \[\]DetectionCondition, now time.Time\) \(string, \[\]any, error\)](<#BuildDetectionQuery>)
 - [func BuildInput\(target any\) \(map\[string\]any, error\)](<#BuildInput>)
+- [func DescribeConfig\(\) config.ConfigDescriptions](<#DescribeConfig>)
 - [func Dimensions\(typeKey string\) \[\]string](<#Dimensions>)
 - [func EnsureModelSamples\(ctx context.Context, db \*database.DB, namespace, typeKey string\) \(\[\]\*tag.TagRuleSample, error\)](<#EnsureModelSamples>)
 - [func IsRegistered\(typeKey string\) bool](<#IsRegistered>)
@@ -22,6 +25,11 @@
 - [func ValidateGroup\(ctx context.Context, rules \[\]\*tag.TagRule\) error](<#ValidateGroup>)
 - [func ValidateRego\(source string\) error](<#ValidateRego>)
 - [func WithDatasourcePool\(ctx context.Context, pool \*sqlitevtab.SQLitePool\) context.Context](<#WithDatasourcePool>)
+- [func WithSensitiveRuntimeContext\(ctx context.Context, loader S3ObjectLoader, maxBytes int64\) context.Context](<#WithSensitiveRuntimeContext>)
+- [func WithSensitiveTarget\(ctx context.Context, typeKey string, target any\) context.Context](<#WithSensitiveTarget>)
+- [func WithoutSensitiveFields\(typeKey string, input map\[string\]any\) map\[string\]any](<#WithoutSensitiveFields>)
+- [type Config](<#Config>)
+  - [func ExtractConfig\(viper \*viper.Viper, validate \*validator.Validate\) \(\*Config, error\)](<#ExtractConfig>)
 - [type CustomFunction](<#CustomFunction>)
   - [func CustomFunctions\(\) \[\]CustomFunction](<#CustomFunctions>)
 - [type DetectionCondition](<#DetectionCondition>)
@@ -33,10 +41,12 @@
   - [func \(e \*Engine\) InvalidateAll\(\)](<#Engine.InvalidateAll>)
   - [func \(e \*Engine\) Recognize\(ctx context.Context, target any\) \(\[\]string, error\)](<#Engine.Recognize>)
   - [func \(e \*Engine\) RecognizeWithDetail\(ctx context.Context, target any\) \(\*GroupDetailResult, error\)](<#Engine.RecognizeWithDetail>)
+  - [func \(e \*Engine\) RuntimeContext\(ctx context.Context\) context.Context](<#Engine.RuntimeContext>)
   - [func \(e \*Engine\) Shutdown\(ctx context.Context\) error](<#Engine.Shutdown>)
   - [func \(e \*Engine\) Start\(ctx context.Context\) error](<#Engine.Start>)
 - [type EngineOption](<#EngineOption>)
   - [func WithDatasourcePools\(pools \*vtab.Pools\) EngineOption](<#WithDatasourcePools>)
+  - [func WithSensitiveRuntime\(loader S3ObjectLoader, maxBytes int64\) EngineOption](<#WithSensitiveRuntime>)
 - [type GroupDetailResult](<#GroupDetailResult>)
 - [type InputFieldMeta](<#InputFieldMeta>)
   - [func InputMetadata\(typeKey string\) \(\[\]InputFieldMeta, error\)](<#InputMetadata>)
@@ -51,6 +61,7 @@
   - [func ValidateRegoRules\(ctx context.Context, rules \[\]\*tag.TagRule\) \(\[\]RegoError, bool\)](<#ValidateRegoRules>)
 - [type RuleChangeEvent](<#RuleChangeEvent>)
 - [type RuleDetailResult](<#RuleDetailResult>)
+- [type S3ObjectLoader](<#S3ObjectLoader>)
 - [type SampleRuntimeError](<#SampleRuntimeError>)
   - [func ValidateGroupRuntime\(ctx context.Context, db \*database.DB, rules \[\]\*tag.TagRule\) \(\[\]SampleRuntimeError, error\)](<#ValidateGroupRuntime>)
 - [type TagEventRecord](<#TagEventRecord>)
@@ -61,7 +72,27 @@
   - [func TargetInfo\(typeKey string\) \(\*Target, bool\)](<#TargetInfo>)
 
 
+## Constants
+
+<a name="Prefix"></a>Prefix 是标签引擎配置在配置文件中的前缀。
+
+```go
+const Prefix = "tagengine"
+```
+
 ## Variables
+
+<a name="ErrRevealNotActivated"></a>
+
+```go
+var (
+    // ErrRevealNotActivated 表示求值上下文未绑定敏感字段秘密表，crypto.reveal 不可用。
+    ErrRevealNotActivated = errors.New("tagengine: crypto.reveal not activated")
+    // ErrRevealRuntimeNotActivated 表示求值上下文未绑定 S3 读取运行时，
+    // 无法解密 S3Crypto 字段（Crypto 字段不依赖该运行时）。
+    ErrRevealRuntimeNotActivated = errors.New("tagengine: crypto.reveal s3 runtime not activated")
+)
+```
 
 <a name="ErrInvalidRego"></a>
 
@@ -101,6 +132,15 @@ func AllDimensions() []string
 
 AllDimensions 返回全部已注册目标模型的合法标签维度取值（snake\_case 列名）的 跨模型去重并集，按取值升序排序。供本包注册 tagEventDimension 枚举类条目 （见 enum.go，Key/Value 均取维度取值，数据库存储语义）与参数校验使用；维度展示 label 不在 此输出，统一经 tagEventDimension 枚举类按 enum.tagEventDimension.\<取值\> 本地化。
 
+<a name="BindSensitiveInput"></a>
+## func [BindSensitiveInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/sensitive_builtin.go#L147>)
+
+```go
+func BindSensitiveInput(ctx context.Context, typeKey string, input map[string]any) (context.Context, map[string]any)
+```
+
+BindSensitiveInput 供 dry\-run 使用：输入文档即目标模型 JSON，反序列化为实例后 绑定敏感字段秘密表，并返回剔除敏感字段后的规则输入副本（规则看不到密文 / 对象键）。 未注册模型或输入无法反序列化为目标模型时不绑定秘密表（crypto.reveal 将报未激活）， 仍返回剔除敏感字段后的输入，保证其余字段照常参与评估。
+
 <a name="BuildDetectionQuery"></a>
 ## func [BuildDetectionQuery](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/event.go#L166>)
 
@@ -111,13 +151,26 @@ func BuildDetectionQuery(db *gorm.DB, conds []DetectionCondition, now time.Time)
 BuildDetectionQuery 将全部启用条件组装为单条 UNION ALL SQL，一次查询返回所有命中分组。 每个条件一个 SELECT 分支：按 \(namespace, model, dimension, item\) 分组，SUM\(cnt\) \> threshold 视为命中； 每个分组额外以 arrayDistinct\(arrayFlatten\(groupArray\(ids\)\)\) 去重聚合窗口内各分组的原始记录 ID（ids 列）， 供命中明细回溯到原始记录；时间窗口为 minute \>= now\-window AND minute \<= now， 边界用 database.ToUTCDatetime64 格式化为 UTC 微秒精度字符串。 各分支由 GORM 链式 API 构造（Select/Where/Group/Having），表达式谓词以 clause 表达式树传入， 再通过 db.Raw\("? UNION ALL ?", ...\) 将子查询展开合并为单条 SQL，避免手工拼接整条查询字符串。 条件 model/dimension/item 非空时附加等值过滤；表达式翻译失败的条件跳过。 返回 SQL 与按占位符顺序排列的参数；conds 为空或全部无效时返回错误。
 
 <a name="BuildInput"></a>
-## func [BuildInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/input.go#L42>)
+## func [BuildInput](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/input.go#L46>)
 
 ```go
 func BuildInput(target any) (map[string]any, error)
 ```
 
-BuildInput 构建规则评估的输入文档。 目标模型实现 Inputer 接口时使用其自定义文档；否则将结构体 JSON 序列化 后反序列化为 map 作为输入文档（字段名即 json tag，Crypto 加密字段序列化为 空字符串，不向规则暴露明文）。
+BuildInput 构建规则评估的输入文档。 目标模型实现 Inputer 接口时使用其自定义文档；否则将结构体 JSON 序列化 后反序列化为 map 作为输入文档（字段名即 json tag）。 敏感字段不出现在规则可见的输入文档中（从 map 中剔除），明文只能经内置函数 crypto.reveal\(field\) 获取：
+
+- serializer.Crypto（crypto tag）：密文 / 明文均不暴露；
+- serializer.S3Crypto（s3crypto tag）：S3 对象键不暴露；
+- serializer.Hash 保持不可解密的 HMAC 摘要（不属于敏感明文）。
+
+<a name="DescribeConfig"></a>
+## func [DescribeConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/config.go#L30>)
+
+```go
+func DescribeConfig() config.ConfigDescriptions
+```
+
+DescribeConfig 返回标签引擎配置的结构化描述信息。
 
 <a name="Dimensions"></a>
 ## func [Dimensions](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/registry.go#L142>)
@@ -129,7 +182,7 @@ func Dimensions(typeKey string) []string
 Dimensions 返回已注册模型合法标签维度取值列表（snake\_case 列名， 对应 tag\_summings.dimension 的存储值），未注册模型返回 nil。 供接口层作为 dimension 下拉选择的数据源，保证前后端维度配置同步。
 
 <a name="EnsureModelSamples"></a>
-## func [EnsureModelSamples](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/samples.go#L81>)
+## func [EnsureModelSamples](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/samples.go#L82>)
 
 ```go
 func EnsureModelSamples(ctx context.Context, db *database.DB, namespace, typeKey string) ([]*tag.TagRuleSample, error)
@@ -147,7 +200,7 @@ func IsRegistered(typeKey string) bool
 IsRegistered 判断模型类型键是否已注册。 接口层校验 TagRule.Model / TagSumming.Model 等模型字段取值时使用。
 
 <a name="ListModelSamples"></a>
-## func [ListModelSamples](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/samples.go#L66>)
+## func [ListModelSamples](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/samples.go#L67>)
 
 ```go
 func ListModelSamples(ctx context.Context, db *database.DB, namespace, typeKey string) ([]*tag.TagRuleSample, error)
@@ -219,7 +272,7 @@ func TypeKeys() []string
 TypeKeys 返回全部已注册目标模型的类型键列表，按类型键升序排序。 供本包注册 tagRuleModel 枚举类条目（见 enum.go，Key 取 ModelKey\(typeKey\)、Value 取完整 类型键）与参数校验使用；模型展示 label 不在此输出，统一经 tagRuleModel 枚举类 按 enum.tagRuleModel.\<ModelKey\> 经统一枚举接口本地化。
 
 <a name="ValidateGroup"></a>
-## func [ValidateGroup](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/validate.go#L246>)
+## func [ValidateGroup](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/validate.go#L251>)
 
 ```go
 func ValidateGroup(ctx context.Context, rules []*tag.TagRule) error
@@ -228,7 +281,7 @@ func ValidateGroup(ctx context.Context, rules []*tag.TagRule) error
 ValidateGroup 校验一组规则能否作为一个整体语义编译通过。 用于拦截跨规则冲突（如两条规则同时对 tags 整体赋值，或 一条规则 tags := 与另一条 tags contains 并存）， 在规则增删改/启停/回滚前基于"变更后的组"调用。
 
 <a name="ValidateRego"></a>
-## func [ValidateRego](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/validate.go#L48>)
+## func [ValidateRego](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/validate.go#L53>)
 
 ```go
 func ValidateRego(source string) error
@@ -253,6 +306,55 @@ func WithDatasourcePool(ctx context.Context, pool *sqlitevtab.SQLitePool) contex
 ```
 
 WithDatasourcePool 返回一个绑定了 sqlite 连接池的 ctx，供求值路径（引擎 Recognize、 视图 dry\-run/样例校验）在调用 sqlite.query 前关联正确的命名空间池。
+
+<a name="WithSensitiveRuntimeContext"></a>
+## func [WithSensitiveRuntimeContext](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/sensitive_builtin.go#L109>)
+
+```go
+func WithSensitiveRuntimeContext(ctx context.Context, loader S3ObjectLoader, maxBytes int64) context.Context
+```
+
+WithSensitiveRuntimeContext 返回绑定了 S3 读取器与正文大小上限的 ctx。 引擎在每次识别前绑定；视图 dry\-run / 样例校验复用同一运行时。
+
+<a name="WithSensitiveTarget"></a>
+## func [WithSensitiveTarget](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/sensitive_builtin.go#L124>)
+
+```go
+func WithSensitiveTarget(ctx context.Context, typeKey string, target any) context.Context
+```
+
+WithSensitiveTarget 绑定目标模型的字段计划、从实例提取的秘密表与全新解密缓存。 敏感字段不出现在 input 文档中，crypto.reveal 只从此处取值；同一 ctx 被组级 合并查询与逐规则明细评估复用时共享缓存，保证同一字段只解密一次。
+
+<a name="WithoutSensitiveFields"></a>
+## func [WithoutSensitiveFields](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/sensitive.go#L195>)
+
+```go
+func WithoutSensitiveFields(typeKey string, input map[string]any) map[string]any
+```
+
+WithoutSensitiveFields 返回剔除敏感字段后的输入文档副本。 敏感字段只经 crypto.reveal 暴露明文，不出现在规则可见的 input 文档中； 无敏感字段时原样返回（避免无谓拷贝）。
+
+<a name="Config"></a>
+## type [Config](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/config.go#L18-L22>)
+
+Config 标签识别引擎（Rego）配置。
+
+```go
+type Config struct {
+    // S3CryptoMaxBytes crypto.reveal 读取 S3Crypto 字段正文的最大字节数，
+    // 超出时内置函数报错（生产识别中该规则体不满足，dry-run 中返回错误）。
+    S3CryptoMaxBytes int64 `mapstructure:"s3cryptoMaxBytes" default:"8388608" validate:"gt=0" comment:"rego 规则解密 S3 加密正文（crypto.reveal 的 s3crypto 字段）的最大字节数，超出时报错"`
+}
+```
+
+<a name="ExtractConfig"></a>
+### func [ExtractConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/config.go#L25>)
+
+```go
+func ExtractConfig(viper *viper.Viper, validate *validator.Validate) (*Config, error)
+```
+
+ExtractConfig 从 Viper 配置管理器中提取标签引擎配置。
 
 <a name="CustomFunction"></a>
 ## type [CustomFunction](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/builtin.go#L172-L181>)
@@ -330,7 +432,7 @@ type DetectionHit struct {
 ```
 
 <a name="Engine"></a>
-## type [Engine](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L27-L39>)
+## type [Engine](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L27-L44>)
 
 Engine 基于 OPA 的标签识别引擎。 规则按（Namespace, Model）分组加载并编译缓存，对结构体实例评估产出标签。 引擎可选绑定 etcd 客户端：未绑定时仅提供本地识别与缓存失效能力； 绑定时实现 runtime.Service，可启动协程监听规则变更并对外广播变更事件。 Engine 并发安全，rego.PreparedEvalQuery 可并发评估。
 
@@ -343,7 +445,7 @@ type Engine struct {
 ```
 
 <a name="NewEngine"></a>
-### func [NewEngine](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L52>)
+### func [NewEngine](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L57>)
 
 ```go
 func NewEngine(db *database.DB, logger *logging.Logger, client *etcd.EtcdClient, opts ...EngineOption) *Engine
@@ -361,7 +463,7 @@ func (e *Engine) BroadcastChange(ctx context.Context, namespace, model string) e
 BroadcastChange 广播规则变更事件。 每次规则写路径（增删改/启停/回滚）在 DB 事务提交后调用， 通知所有进程的引擎失效对应分组缓存并按 DB 最新规则懒重编译。 发布带超时上限，失败返回错误但不影响调用方；未绑定 etcd 客户端时 返回 etcd.ErrChangeUnavailable。 注意：DB 提交先于 etcd 发布，保证收到通知的引擎读到的必是新规则。
 
 <a name="Engine.Invalidate"></a>
-### func \(\*Engine\) [Invalidate](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L162>)
+### func \(\*Engine\) [Invalidate](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L187>)
 
 ```go
 func (e *Engine) Invalidate(namespace, model string)
@@ -370,7 +472,7 @@ func (e *Engine) Invalidate(namespace, model string)
 Invalidate 失效指定命名空间下分组的已编译查询缓存。 规则写入路径（创建/更新/删除/启用切换）后必须调用以保证一致性。
 
 <a name="Engine.InvalidateAll"></a>
-### func \(\*Engine\) [InvalidateAll](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L167>)
+### func \(\*Engine\) [InvalidateAll](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L192>)
 
 ```go
 func (e *Engine) InvalidateAll()
@@ -379,7 +481,7 @@ func (e *Engine) InvalidateAll()
 InvalidateAll 失效全部分组的已编译查询缓存。
 
 <a name="Engine.Recognize"></a>
-### func \(\*Engine\) [Recognize](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L108>)
+### func \(\*Engine\) [Recognize](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L131>)
 
 ```go
 func (e *Engine) Recognize(ctx context.Context, target any) ([]string, error)
@@ -388,13 +490,22 @@ func (e *Engine) Recognize(ctx context.Context, target any) ([]string, error)
 Recognize 对目标结构体实例执行标签识别，返回命中的标签集合（去重排序）。 规则组按目标实例的命名空间隔离加载；无命名空间字段时回退到未归属命名空间规则。 使用组级合并查询进行单次评估，适合高吞吐热路径；不返回命中的规则名。 求值前按目标实例命名空间解析第三方数据源池并绑定到求值 ctx（若引擎已注入 pools）。
 
 <a name="Engine.RecognizeWithDetail"></a>
-### func \(\*Engine\) [RecognizeWithDetail](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L132>)
+### func \(\*Engine\) [RecognizeWithDetail](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L156>)
 
 ```go
 func (e *Engine) RecognizeWithDetail(ctx context.Context, target any) (*GroupDetailResult, error)
 ```
 
 RecognizeWithDetail 对目标结构体实例执行标签识别，并返回命中的规则名。 规则组按目标实例的命名空间隔离加载；逐规则评估，用于审计与调试场景。 求值前同样按命名空间解析并绑定第三方数据源池。
+
+<a name="Engine.RuntimeContext"></a>
+### func \(\*Engine\) [RuntimeContext](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L91>)
+
+```go
+func (e *Engine) RuntimeContext(ctx context.Context) context.Context
+```
+
+RuntimeContext 返回绑定了敏感字段解密运行时的 ctx。 未注入 S3 读取器时原样返回；供引擎识别、视图 dry\-run 与样例校验复用同一运行时。
 
 <a name="Engine.Shutdown"></a>
 ### func \(\*Engine\) [Shutdown](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/notify.go#L72>)
@@ -415,7 +526,7 @@ func (e *Engine) Start(ctx context.Context) error
 Start 阻塞运行规则变更监听，直到 ctx 取消。实现 runtime.Service 生命周期。 未构造 watcher 时记录跳过信息并直接返回；否则委托通用 etcd watcher 监听 规则变更，watch 中断自动重连，事件处理由 ruleChangeHandler 完成。
 
 <a name="EngineOption"></a>
-## type [EngineOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L48>)
+## type [EngineOption](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L53>)
 
 EngineOption 是 Engine 的函数式配置选项。
 
@@ -424,13 +535,22 @@ type EngineOption func(*Engine)
 ```
 
 <a name="WithDatasourcePools"></a>
-### func [WithDatasourcePools](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L69>)
+### func [WithDatasourcePools](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L74>)
 
 ```go
 func WithDatasourcePools(pools *vtab.Pools) EngineOption
 ```
 
 WithDatasourcePools 注入按命名空间隔离的第三方数据源池，供求值路径将各命名空间池 绑定到求值 ctx 以供 sqlite.query 查询裸名 vtable。
+
+<a name="WithSensitiveRuntime"></a>
+### func [WithSensitiveRuntime](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/engine.go#L82>)
+
+```go
+func WithSensitiveRuntime(loader S3ObjectLoader, maxBytes int64) EngineOption
+```
+
+WithSensitiveRuntime 注入敏感字段解密运行时：S3 对象读取器与正文大小上限。 loader 为 nil 时不支持 crypto.reveal 读取 S3Crypto 字段，Crypto 字段不受影响。
 
 <a name="GroupDetailResult"></a>
 ## type [GroupDetailResult](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/group.go#L16-L25>)
@@ -453,7 +573,7 @@ type GroupDetailResult struct {
 <a name="InputFieldMeta"></a>
 ## type [InputFieldMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/inputmeta.go#L26-L42>)
 
-InputFieldMeta 输入文档单个字段的元信息。 供前端 Rego 编辑器自动补全与字段面板使用：Field 为输入文档中的扁平化字段名 （规则中以 input.\<field\> 引用），Type 为 JSON 类型，GoType 为 Go 类型名， Description 为字段含义（由接口层按请求语言翻译 DescriptionKey 后填充，可为空）， Sensitive 标记敏感字段（secure tag 或 serializer.Crypto 类型）， Items 在 Type 为 array 时给出元素类型。
+InputFieldMeta 输入文档单个字段的元信息。 供前端 Rego 编辑器自动补全与字段面板使用：Field 为输入文档中的扁平化字段名 （规则中以 input.\<field\> 引用），Type 为 JSON 类型，GoType 为 Go 类型名， Description 为字段含义（由接口层按请求语言翻译 DescriptionKey 后填充，可为空）， Sensitive 标记敏感字段（crypto / s3crypto tag 或 serializer.Crypto / S3Crypto 类型）， Items 在 Type 为 array 时给出元素类型。
 
 ```go
 type InputFieldMeta struct {
@@ -468,7 +588,7 @@ type InputFieldMeta struct {
     // DescriptionKey 字段描述的 i18n 消息键（input.<typeKey>.<field>），
     // 翻译文案维护在 internal/pkg/translate/locales 下，注册模型须为每个字段提供翻译
     DescriptionKey string `json:"-"`
-    // Sensitive 是否敏感字段（secure tag 或 serializer.Crypto 类型）
+    // Sensitive 是否敏感字段（crypto / s3crypto tag 或 serializer.Crypto / S3Crypto 类型）
     Sensitive bool `json:"sensitive"`
     // Items Type==array 时的元素类型信息
     Items *InputItemMeta `json:"items,omitempty"`
@@ -476,13 +596,13 @@ type InputFieldMeta struct {
 ```
 
 <a name="InputMetadata"></a>
-### func [InputMetadata](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/inputmeta.go#L55>)
+### func [InputMetadata](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/inputmeta.go#L57>)
 
 ```go
 func InputMetadata(typeKey string) ([]InputFieldMeta, error)
 ```
 
-InputMetadata 返回已注册模型输入文档的扁平化字段元信息列表（按字段名排序）。 字段集合与 BuildInput 零值实例文档键一致；未注册模型返回 ErrModelNotRegistered。 Description 字段不在此处填充，由接口层按 DescriptionKey 按请求语言翻译后输出。
+InputMetadata 返回已注册模型输入文档的扁平化字段元信息列表（按字段名排序）。 字段集合由类型反射推导（与 JSON 序列化字段一致）；其中敏感字段虽然被 BuildInput 从规则 input 文档中剔除，但仍作为 crypto.reveal\(field\) 的合法字段名 出现在元信息中（Sensitive=true）。未注册模型返回 ErrModelNotRegistered。 Description 字段不在此处填充，由接口层按 DescriptionKey 按请求语言翻译后输出。
 
 <a name="InputItemMeta"></a>
 ## type [InputItemMeta](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/inputmeta.go#L45-L50>)
@@ -540,7 +660,7 @@ type RecognizeResult struct {
 ```
 
 <a name="RegoError"></a>
-## type [RegoError](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/validate.go#L80-L96>)
+## type [RegoError](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/validate.go#L85-L101>)
 
 RegoError 描述 Rego 规则源码中的一处校验错误，带行号/列号定位。 tagengine 生成的条目 Message/Hint 为 i18n 消息键（如 tagrule.lint\-field\-not\-exist）， 文案维护在 internal/pkg/translate/locales/ 下，由接口层按请求语言统一翻译； OPA 原生消息（如解析/编译错误原文）不是消息键，翻译不命中时原样保留。
 
@@ -565,7 +685,7 @@ type RegoError struct {
 ```
 
 <a name="ExtractRegoErrors"></a>
-### func [ExtractRegoErrors](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/validate.go#L255>)
+### func [ExtractRegoErrors](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/validate.go#L260>)
 
 ```go
 func ExtractRegoErrors(err error) []RegoError
@@ -574,7 +694,7 @@ func ExtractRegoErrors(err error) []RegoError
 ExtractRegoErrors 从 OPA 解析/编译错误中提取结构化校验错误列表（带行列号）。 供路由层在组级校验（ValidateGroup）失败后输出带行列号的错误详情。
 
 <a name="InspectRego"></a>
-### func [InspectRego](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/validate.go#L100>)
+### func [InspectRego](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/validate.go#L105>)
 
 ```go
 func InspectRego(source string) ([]RegoError, bool)
@@ -592,7 +712,7 @@ func LintInputRefs(source string, fields []InputFieldMeta) []RegoError
 LintInputRefs 对 Rego 源码做输入文档字段感知 lint。 解析 Rego 模块 AST，遍历 input.\<field\>（含 input\["field"\]）引用， 引用字段不在 fields 元信息中时产出 warning 级 RegoError（行列定位到该字段）。 按字段名去重；解析失败返回空列表（语法错误由既有校验负责）。
 
 <a name="ValidateRegoRules"></a>
-### func [ValidateRegoRules](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/validate.go#L230>)
+### func [ValidateRegoRules](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/validate.go#L235>)
 
 ```go
 func ValidateRegoRules(ctx context.Context, rules []*tag.TagRule) ([]RegoError, bool)
@@ -628,6 +748,15 @@ type RuleDetailResult struct {
     // Error 规则评估错误
     Error error `json:"error"`
 }
+```
+
+<a name="S3ObjectLoader"></a>
+## type [S3ObjectLoader](<https://gitee.com/olinex/zhongkui/blob/master/internal/tagengine/sensitive_builtin.go#L41>)
+
+S3ObjectLoader 读取并解密 S3 加密对象，返回明文数据流。 生产环境由 s3.NewZkcn\(client, key, cryptoKey, 0\).Load 实现；测试可注入假实现。
+
+```go
+type S3ObjectLoader func(ctx context.Context, objectKey string, cryptoKey []byte) (io.ReadCloser, error)
 ```
 
 <a name="SampleRuntimeError"></a>

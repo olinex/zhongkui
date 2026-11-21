@@ -14,7 +14,9 @@ import (
 
 	// 项目内部
 	coremodel "zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
 	"zhongkuisec.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // PeriodicReportRunStatus 是报告运行记录状态的标识：运行中（running）、成功（success）与失败（failed）。
@@ -75,8 +77,8 @@ type PeriodicReportRun struct {
 	TriggerAt time.Time `gorm:"type:TIMESTAMPTZ;not null;uniqueIndex:uq_periodic_report_runs_plan_id_trigger_at,priority:2,where:deleted_at IS NULL"`
 	// Status 运行状态，取值来自枚举类 periodicReportRunStatus（running/success/failed）
 	Status PeriodicReportRunStatus `gorm:"type:VARCHAR(16);not null;index:idx_periodic_report_runs_status"`
-	// ObjectKey 生成的报告对象在对象存储中的键，无产出时为空
-	ObjectKey string `gorm:"type:VARCHAR(512)"`
+	// ObjectKey 生成的报告在对象存储中的键（经 s3crypto 序列化器封装），无产出时为空
+	ObjectKey serializer.S3Crypto `gorm:"type:VARCHAR(512);serializer:s3crypto" s3crypto:"offset=38549,length=32"`
 	// Title 生成报告的标题
 	Title string `gorm:"type:VARCHAR(256)"`
 	// SizeBytes 生成的报告字节大小
@@ -90,6 +92,12 @@ type PeriodicReportRun struct {
 	StartedAt *time.Time `gorm:"type:TIMESTAMPTZ"`
 	// FinishedAt 执行结束时间，null 表示尚未结束
 	FinishedAt *time.Time `gorm:"type:TIMESTAMPTZ"`
+}
+
+// ObjectCryptoKey 派生 object_key 字段的 S3 加密子密钥。
+// 模型无 json 标签，故按 Go 字段名匹配 s3crypto 标签。
+func (r *PeriodicReportRun) ObjectCryptoKey() ([]byte, error) {
+	return crypto.S3CryptoKeyForField(r, "ObjectKey", "")
 }
 
 // PeriodicReportPlanWatch 表示用户对某个报告计划的关注关系：关注后该用户的报告中心展示该计划的运行

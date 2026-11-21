@@ -36,14 +36,12 @@ func GetScope(ctx context.Context) *do.Scope {
 }
 
 func initDetectors(i do.Injector) error {
-	if kd, err := InvokeKeyDerivation(i); err != nil {
-		return errors.WithStack(err)
-	} else if client, err := InvokeS3(i); err != nil {
+	if client, err := InvokeS3(i); err != nil {
 		return errors.WithStack(err)
 	} else {
 		detectors.RegisterAppProtocolDetector(
 			detectors.AppHttp,
-			detectors.NewHttpDetector(client, kd),
+			detectors.NewHttpDetector(client),
 		)
 		return nil
 	}

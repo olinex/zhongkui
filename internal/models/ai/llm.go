@@ -40,7 +40,7 @@ type LlmModel struct {
 	BaseURL string `gorm:"type:VARCHAR(512)"`
 	// APIKey 访问模型端点的凭据，以加密形式持久化（crypto serializer 密文入库，BYTEA 列）；
 	// 明文经 APIKeyData() 获取
-	APIKey *serializer.Crypto `json:"apiKey" gorm:"column:api_key;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=7001,length=32"`
+	APIKey *serializer.Crypto `json:"apiKey" gorm:"column:api_key;type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=7001,length=32"`
 	// ModelName 供应商侧的模型名，如 gpt-4o-mini、text-embedding-3-small；
 	// 列名保持 model，Go 字段名取 ModelName 是因为内嵌的 gorm.Model 已占用 Model 标识符
 	ModelName string `gorm:"column:model;type:VARCHAR(128)"`
@@ -132,7 +132,7 @@ type McpServer struct {
 	URL string `gorm:"column:url;type:VARCHAR(512)"`
 	// Headers 请求头（JSON 对象字符串，承载 Authorization 等凭据），以加密形式持久化
 	// （crypto serializer 密文入库，BYTEA 列）；明文经 HeadersData() 获取
-	Headers *serializer.Crypto `json:"headers" gorm:"column:headers;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=7002,length=32"`
+	Headers *serializer.Crypto `json:"headers" gorm:"column:headers;type:BYTEA;serializer:crypto" crypto:"mode=\"aes-gcm\",offset=7002,length=32"`
 	// TimeoutSeconds 单次请求的超时秒数，0 表示使用调用方默认值
 	TimeoutSeconds int `gorm:"type:INTEGER"`
 	// Enabled 是否启用，禁用的服务器及其全部工具不参与装配

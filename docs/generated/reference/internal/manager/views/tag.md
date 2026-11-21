@@ -309,7 +309,7 @@ func TagRuleDetailGet(c *gin.Context)
 TagRuleDetailGet 处理获取标签规则详情的请求。 返回规则的完整内容与最新历史版本号、版本总数；仅允许访问当前命名空间内的规则。
 
 <a name="TagRuleDryRun"></a>
-## func [TagRuleDryRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L791>)
+## func [TagRuleDryRun](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L799>)
 
 ```go
 func TagRuleDryRun(c *gin.Context)
@@ -318,7 +318,7 @@ func TagRuleDryRun(c *gin.Context)
 TagRuleDryRun 处理单规则 dry\-run 的请求。 仅针对一条候选规则（rego），先经公共 Rego 校验（语法 \+ 契约 \+ 组级编译）， 校验通过后再经 CompileRule 编译并评估输入文档。 评估前按请求命名空间绑定第三方数据源池，规则内的 sqlite.query 可查询裸名 vtable。 输出仅含错误消息文本，不返回错误对象，避免错误堆栈等实现细节泄露。
 
 <a name="TagRuleDryRunGroup"></a>
-## func [TagRuleDryRunGroup](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L831>)
+## func [TagRuleDryRunGroup](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L839>)
 
 ```go
 func TagRuleDryRunGroup(c *gin.Context)
@@ -435,7 +435,7 @@ func TagRuleValidate(c *gin.Context)
 TagRuleValidate 处理标签规则语法校验的请求。 仅校验传入的 Rego 源码，返回结构化错误（带行列号）；HTTP 200 表达业务结果。 复用公共 Rego 校验（ValidateRegoRules），与写路径/dry\-run 校验语义一致。 请求携带已注册的目标模型（model）时，追加字段感知 lint（LintInputRefs）： 引用不存在的 input 字段产出 warning 级告警进入 Warnings，不阻断合法结果； model 为空或未注册时 Warnings 为空数组。
 
 <a name="TagRuleVersionList"></a>
-## func [TagRuleVersionList](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L889>)
+## func [TagRuleVersionList](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L897>)
 
 ```go
 func TagRuleVersionList(c *gin.Context)
@@ -444,7 +444,7 @@ func TagRuleVersionList(c *gin.Context)
 TagRuleVersionList 处理获取标签规则历史版本列表的请求。 返回该规则的全部历史版本，按版本号倒序；仅允许访问当前命名空间内的规则版本。
 
 <a name="TagRuleVersionRollback"></a>
-## func [TagRuleVersionRollback](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L925>)
+## func [TagRuleVersionRollback](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/tag/tag_rule.go#L933>)
 
 ```go
 func TagRuleVersionRollback(c *gin.Context)

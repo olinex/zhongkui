@@ -223,10 +223,10 @@ type HttpRequestHeaders struct {
 
 	// ReqHdrAuthorization 认证信息，包含用于向服务器验证用户代理身份的凭据，如 Bearer token、Basic 认证等
 	// 使用 Crypto 加密存储，防止涉敏信息泄露后被逆向破解
-	ReqHdrAuthorization *serializer.Crypto `gorm:"column:req_hdr_authorization;type:String CODEC(ZSTD(3));serializer:crypto" json:"reqHdrAuthorization" secure:"mode=\"aes-gcm\",offset=5123,length=32"`
+	ReqHdrAuthorization *serializer.Crypto `gorm:"column:req_hdr_authorization;type:String CODEC(ZSTD(3));serializer:crypto" json:"reqHdrAuthorization" crypto:"mode=\"aes-gcm\",offset=5123,length=32"`
 	// ReqHdrProxyAuthorization 代理认证信息，包含用于向代理服务器验证用户代理的凭据
 	// 使用 Crypto 加密存储，防止涉敏信息泄露后被逆向破解
-	ReqHdrProxyAuthorization *serializer.Crypto `gorm:"column:req_hdr_proxy_authorization;type:String CODEC(ZSTD(3));serializer:crypto" json:"reqHdrProxyAuthorization" secure:"mode=\"aes-gcm\",offset=18456,length=32"`
+	ReqHdrProxyAuthorization *serializer.Crypto `gorm:"column:req_hdr_proxy_authorization;type:String CODEC(ZSTD(3));serializer:crypto" json:"reqHdrProxyAuthorization" crypto:"mode=\"aes-gcm\",offset=18456,length=32"`
 
 	// ======================== 缓存 (Caching) ========================
 
@@ -273,7 +273,7 @@ type HttpRequestHeaders struct {
 
 	// ReqHdrCookie 客户端发送的 HTTP Cookie，包含先前由服务器通过 Set-Cookie 标头设置并存储的 cookie
 	// 使用 Crypto 加密存储，Cookie 常包含会话令牌等涉敏信息
-	ReqHdrCookie *serializer.Crypto `gorm:"column:req_hdr_cookie;type:String CODEC(ZSTD(3));serializer:crypto" json:"reqHdrCookie" secure:"mode=\"aes-gcm\",offset=27901,length=32"`
+	ReqHdrCookie *serializer.Crypto `gorm:"column:req_hdr_cookie;type:String CODEC(ZSTD(3));serializer:crypto" json:"reqHdrCookie" crypto:"mode=\"aes-gcm\",offset=27901,length=32"`
 
 	// ======================== CORS ========================
 
@@ -333,7 +333,7 @@ type HttpRequestHeaders struct {
 
 	// ReqHdrSecWebSocketKey WebSocket 握手密钥，包含一个密钥用于验证客户端确实意图打开 WebSocket 连接
 	// 使用 Crypto 加密存储，WebSocket 握手密钥涉及连接安全
-	ReqHdrSecWebSocketKey *serializer.Crypto `gorm:"column:req_hdr_sec_websocket_key;type:String CODEC(ZSTD(3));serializer:crypto" json:"reqHdrSecWebsocketKey" secure:"mode=\"aes-gcm\",offset=36234,length=32"`
+	ReqHdrSecWebSocketKey *serializer.Crypto `gorm:"column:req_hdr_sec_websocket_key;type:String CODEC(ZSTD(3));serializer:crypto" json:"reqHdrSecWebsocketKey" crypto:"mode=\"aes-gcm\",offset=36234,length=32"`
 	// ReqHdrSecWebSocketVersion WebSocket 协议版本，指示客户端使用的 WebSocket 协议版本号
 	ReqHdrSecWebSocketVersion string `gorm:"column:req_hdr_sec_websocket_version;type:String CODEC(ZSTD(3))" json:"reqHdrSecWebsocketVersion"`
 	// ReqHdrSecWebSocketProtocol WebSocket 子协议，指示客户端支持的子协议列表，按优先顺序排列
@@ -542,10 +542,10 @@ type HttpResponseHeaders struct {
 
 	// RspHdrWWWAuthenticate 认证质询，定义应该用于访问资源的身份验证方法和参数
 	// 使用 Crypto 加密存储，防止涉敏信息泄露后被逆向破解
-	RspHdrWWWAuthenticate *serializer.Crypto `gorm:"column:rsp_hdr_www_authenticate;type:String CODEC(ZSTD(3));serializer:crypto" json:"rspHdrWwwAuthenticate" secure:"mode=\"aes-gcm\",offset=44789,length=32"`
+	RspHdrWWWAuthenticate *serializer.Crypto `gorm:"column:rsp_hdr_www_authenticate;type:String CODEC(ZSTD(3));serializer:crypto" json:"rspHdrWwwAuthenticate" crypto:"mode=\"aes-gcm\",offset=44789,length=32"`
 	// RspHdrProxyAuthenticate 代理认证质询，定义应用于访问代理服务器后面资源的身份验证方法
 	// 使用 Crypto 加密存储，防止涉敏信息泄露后被逆向破解
-	RspHdrProxyAuthenticate *serializer.Crypto `gorm:"column:rsp_hdr_proxy_authenticate;type:String CODEC(ZSTD(3));serializer:crypto" json:"rspHdrProxyAuthenticate" secure:"mode=\"aes-gcm\",offset=53123,length=32"`
+	RspHdrProxyAuthenticate *serializer.Crypto `gorm:"column:rsp_hdr_proxy_authenticate;type:String CODEC(ZSTD(3));serializer:crypto" json:"rspHdrProxyAuthenticate" crypto:"mode=\"aes-gcm\",offset=53123,length=32"`
 
 	// ======================== 缓存 (Caching) ========================
 
@@ -587,7 +587,7 @@ type HttpResponseHeaders struct {
 
 	// RspHdrSetCookie 设置 Cookie，将 cookie 从服务器发送到用户代理，以便后续请求中回传
 	// 使用 Crypto 加密存储，Set-Cookie 常包含会话令牌等涉敏信息
-	RspHdrSetCookie *serializer.Crypto `gorm:"column:rsp_hdr_set_cookie;type:String CODEC(ZSTD(3));serializer:crypto" json:"rspHdrSetCookie" secure:"mode=\"aes-gcm\",offset=61234,length=32"`
+	RspHdrSetCookie *serializer.Crypto `gorm:"column:rsp_hdr_set_cookie;type:String CODEC(ZSTD(3));serializer:crypto" json:"rspHdrSetCookie" crypto:"mode=\"aes-gcm\",offset=61234,length=32"`
 
 	// ======================== CORS ========================
 
@@ -706,7 +706,7 @@ type HttpResponseHeaders struct {
 
 	// RspHdrSecWebSocketAccept WebSocket 握手接受，指示服务器愿意升级到 WebSocket 连接
 	// 使用 Crypto 加密存储，WebSocket 握手响应涉及连接安全
-	RspHdrSecWebSocketAccept *serializer.Crypto `gorm:"column:rsp_hdr_sec_websocket_accept;type:String CODEC(ZSTD(3));serializer:crypto" json:"rspHdrSecWebsocketAccept" secure:"mode=\"aes-gcm\",offset=12807,length=32"`
+	RspHdrSecWebSocketAccept *serializer.Crypto `gorm:"column:rsp_hdr_sec_websocket_accept;type:String CODEC(ZSTD(3));serializer:crypto" json:"rspHdrSecWebsocketAccept" crypto:"mode=\"aes-gcm\",offset=12807,length=32"`
 	// RspHdrSecWebSocketProtocol WebSocket 子协议，指示服务器从客户端的偏好中选择的子协议
 	RspHdrSecWebSocketProtocol string `gorm:"column:rsp_hdr_sec_websocket_protocol;type:String CODEC(ZSTD(3))" json:"rspHdrSecWebsocketProtocol"`
 	// RspHdrSecWebSocketExtensions WebSocket 扩展，指示服务器从客户端的偏好中选择的扩展
@@ -857,11 +857,11 @@ func NewHttpResponseHeaders(resp *http.Response) *HttpResponseHeaders {
 type HttpRequestBody struct {
 	// Method HTTP请求方法，如GET、POST、PUT、DELETE等
 	Method string `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"method"`
-	// ReqBody 请求主体内容，保存至 oss，若为空字符串，则表示内容为空，避免在 oss 内存储大量无效空文件
-	ReqBody string `gorm:"type:String CODEC(ZSTD(3))" json:"reqBody"`
+	// ReqBody 请求主体在 S3 中的对象键（经 s3crypto 序列化器封装），空值表示内容为空
+	ReqBody serializer.S3Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:s3crypto" json:"reqBody" s3crypto:"offset=45928,length=32"`
 	// ReqBodyHash 请求主体内容的 HMAC-SHA256 摘要（hex 编码，带密钥防离线爆破），
 	// 经 hash 序列化器封装，空内容时为空内容的摘要
-	ReqBodyHash serializer.Hash `gorm:"type:String CODEC(ZSTD(3));serializer:hash" json:"reqBodyHash" secure:"mode=\"hmac-sha256\",offset=12808,length=32"`
+	ReqBodyHash serializer.Hash `gorm:"type:String CODEC(ZSTD(3));serializer:hash" json:"reqBodyHash" hash:"offset=12808,length=32"`
 	// ReqBodyLength 请求主体内容的字节长度，空内容时为 0
 	ReqBodyLength int64 `gorm:"type:Int64 CODEC(ZSTD(3))" json:"reqBodyLength"`
 }
@@ -923,8 +923,8 @@ func storeBody(ctx context.Context, client *s3.S3Client, reader io.Reader, req b
 
 // NewHttpRequestBody 构建HTTP请求正文信息
 // 将解压后的请求体上传至 S3，并以内容摘要作为对象键实现去重存储。
-// 摘要密钥由请求正文字段的 secure 标签就地派生，与落库序列化器同源。
-func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Request, cryptoKey []byte) (*HttpRequestBody, error) {
+// 摘要密钥与 S3 加密密钥均由请求正文字段的标签就地派生，与落库序列化器同源。
+func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Request) (*HttpRequestBody, error) {
 	defer req.Body.Close()
 	body, err := decompressRequestBody(req)
 	if err != nil {
@@ -935,13 +935,17 @@ func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Requ
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	cryptoKey, err := crypto.S3CryptoKeyForField(&HttpRequestBody{}, "reqBody", "json")
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 	result, err := storeBody(ctx, client, body, true, cryptoKey, hashKey)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &HttpRequestBody{
 		Method:        req.Method,
-		ReqBody:       result.Key,
+		ReqBody:       serializer.NewS3Crypto(result.Key),
 		ReqBodyHash:   serializer.NewHashDigest(result.Hash),
 		ReqBodyLength: result.Length,
 	}, nil
@@ -950,19 +954,19 @@ func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Requ
 // HttpResponseBody 表示HTTP响应正文信息
 // 包含HTTP响应的主体内容和时间信息，头部字段已迁移至 HttpResponseHeaders
 type HttpResponseBody struct {
-	// RspBody 响应主体内容，保存至 oss，若为空字符串，则表示内容为空，避免在 oss 内存储大量无效空文件
-	RspBody string `gorm:"type:String CODEC(ZSTD(3))" json:"rspBody"`
+	// RspBody 响应主体在 S3 中的对象键（经 s3crypto 序列化器封装），空值表示内容为空
+	RspBody serializer.S3Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:s3crypto" json:"rspBody" s3crypto:"offset=61087,length=32"`
 	// RspBodyHash 响应主体内容的 HMAC-SHA256 摘要（hex 编码，带密钥防离线爆破），
 	// 经 hash 序列化器封装，空内容时为空内容的摘要
-	RspBodyHash serializer.Hash `gorm:"type:String CODEC(ZSTD(3));serializer:hash" json:"rspBodyHash" secure:"mode=\"hmac-sha256\",offset=12809,length=32"`
+	RspBodyHash serializer.Hash `gorm:"type:String CODEC(ZSTD(3));serializer:hash" json:"rspBodyHash" hash:"offset=12809,length=32"`
 	// RspBodyLength 响应主体内容的字节长度，空内容时为 0
 	RspBodyLength int64 `gorm:"type:Int64 CODEC(ZSTD(3))" json:"rspBodyLength"`
 }
 
 // NewHttpResponseBody 构建HTTP响应正文信息
 // 将解压后的响应体上传至 S3，并以内容摘要作为对象键实现去重存储。
-// 摘要密钥由响应正文字段的 secure 标签就地派生，与落库序列化器同源。
-func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Response, cryptoKey []byte) (*HttpResponseBody, error) {
+// 摘要密钥与 S3 加密密钥均由响应正文字段的标签就地派生，与落库序列化器同源。
+func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Response) (*HttpResponseBody, error) {
 	defer resp.Body.Close()
 	body, err := decompressResponseBody(resp)
 	if err != nil {
@@ -973,12 +977,16 @@ func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Re
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	cryptoKey, err := crypto.S3CryptoKeyForField(&HttpResponseBody{}, "rspBody", "json")
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 	result, err := storeBody(ctx, client, body, false, cryptoKey, hashKey)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &HttpResponseBody{
-		RspBody:       result.Key,
+		RspBody:       serializer.NewS3Crypto(result.Key),
 		RspBodyHash:   serializer.NewHashDigest(result.Hash),
 		RspBodyLength: result.Length,
 	}, nil

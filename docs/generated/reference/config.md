@@ -191,6 +191,7 @@
 | `smtp.password` | `string` | `-` | SMTP 认证密码 |
 | `smtp.port` | `int` | `465` | SMTP 端口（465 隐式 TLS，587/25 STARTTLS） |
 | `smtp.username` | `string` | `-` | SMTP 认证用户名 |
+| `tagengine.s3cryptoMaxBytes` | `int64` | `8388608` | rego 规则解密 S3 加密正文（crypto.reveal 的 s3crypto 字段）的最大字节数，超出时报错 |
 | `zap.{api,database,etcd,grpc,pipeline}.development` | `bool` | `false` | 启用开发模式，使用控制台编码器并为警告和错误日志添加堆栈跟踪 (ref: https://pkg.go.dev/go.uber.org/zap#NewDevelopmentEncoderConfig) |
 | `zap.{api,database,etcd,grpc,pipeline}.disableCaller` | `bool` | `false` | 禁用日志输出中的调用者信息，为 false 时输出文件名和行号 (ref: https://pkg.go.dev/go.uber.org/zap#Config-DisableCaller) |
 | `zap.{api,database,etcd,grpc,pipeline}.disableStacktrace` | `bool` | `false` | 禁用 ErrorLevel 和 DPanicLevel 日志的堆栈跟踪，为 false 时为错误日志添加堆栈 (ref: https://pkg.go.dev/go.uber.org/zap#Config-DisableStacktrace) |

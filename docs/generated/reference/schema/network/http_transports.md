@@ -67,7 +67,7 @@ HttpTransport 表示HTTP传输层信息
 | queries | String CODEC(ZSTD(3)) | 否 | - | Queries 查询参数，URL中问号（?）后面的参数部分，以JSON格式存储 |
 | fragment | String CODEC(ZSTD(3)) | 否 | - | Fragment 片段标识符，URL中井号（#）后面的部分 |
 | method | LowCardinality(String) CODEC(ZSTD(3)) | 否 | - | Method HTTP请求方法，如GET、POST、PUT、DELETE等 |
-| req_body | String CODEC(ZSTD(3)) | 否 | - | ReqBody 请求主体内容，保存至 oss，若为空字符串，则表示内容为空，避免在 oss 内存储大量无效空文件 |
+| req_body | String CODEC(ZSTD(3)) | 否 | - | ReqBody 请求主体在 S3 中的对象键（经 s3crypto 序列化器封装），空值表示内容为空 |
 | req_body_hash | String CODEC(ZSTD(3)) | 否 | - | ReqBodyHash 请求主体内容的 HMAC-SHA256 摘要（hex 编码，带密钥防离线爆破）， 经 hash 序列化器封装，空内容时为空内容的摘要 |
 | req_body_length | Int64 CODEC(ZSTD(3)) | 否 | - | ReqBodyLength 请求主体内容的字节长度，空内容时为 0 |
 | req_hdr_authorization | String CODEC(ZSTD(3)) | 否 | - | ReqHdrAuthorization 认证信息，包含用于向服务器验证用户代理身份的凭据，如 Bearer token、Basic 认证等 使用 Crypto 加密存储，防止涉敏信息泄露后被逆向破解 |
@@ -135,7 +135,7 @@ HttpTransport 表示HTTP传输层信息
 | req_hdr_upgrade | String CODEC(ZSTD(3)) | 否 | - | ReqHdrUpgrade 协议升级，可用于将已建立的连接升级为不同的协议（如 HTTP/1.1 → HTTP/2 或 WebSocket） |
 | req_hdr_priority | String CODEC(ZSTD(3)) | 否 | - | ReqHdrPriority 资源优先级，提示特定资源请求在连接上的优先级 |
 | req_hdr_alt_used | String CODEC(ZSTD(3)) | 否 | - | ReqHdrAltUsed 使用的替代服务，用于标识当前正在使用的替代服务 |
-| rsp_body | String CODEC(ZSTD(3)) | 否 | - | RspBody 响应主体内容，保存至 oss，若为空字符串，则表示内容为空，避免在 oss 内存储大量无效空文件 |
+| rsp_body | String CODEC(ZSTD(3)) | 否 | - | RspBody 响应主体在 S3 中的对象键（经 s3crypto 序列化器封装），空值表示内容为空 |
 | rsp_body_hash | String CODEC(ZSTD(3)) | 否 | - | RspBodyHash 响应主体内容的 HMAC-SHA256 摘要（hex 编码，带密钥防离线爆破）， 经 hash 序列化器封装，空内容时为空内容的摘要 |
 | rsp_body_length | Int64 CODEC(ZSTD(3)) | 否 | - | RspBodyLength 响应主体内容的字节长度，空内容时为 0 |
 | rsp_hdr_www_authenticate | String CODEC(ZSTD(3)) | 否 | - | RspHdrWWWAuthenticate 认证质询，定义应该用于访问资源的身份验证方法和参数 使用 Crypto 加密存储，防止涉敏信息泄露后被逆向破解 |

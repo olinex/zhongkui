@@ -26,7 +26,7 @@ func seedImportedDocument(t *testing.T, db *database.DB, status string) uint {
 		Format:        string(docconv.FormatMarkdown),
 		Status:        status,
 		OriginalName:  "notes.md",
-		ObjectKey:     "knowledge/" + knowledgeTestNamespace + "/1.markdown",
+		ObjectKey:     serializer.NewS3Crypto("knowledge/" + knowledgeTestNamespace + "/1.markdown"),
 		SizeBytes:     11,
 	}
 	if err := db.Create(doc).Error; err != nil {

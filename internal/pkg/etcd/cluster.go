@@ -253,6 +253,10 @@ func (c *Cluster) watchPeers(ctx context.Context) {
 			}
 			// 任何成员变化都触发重建
 			if err := c.rebuildRing(ctx); err != nil {
+				// 关机时 ctx 已取消，重建失败属于正常退出路径，不能 panic。
+				if ctx.Err() != nil {
+					return
+				}
 				panic(err)
 			}
 		}

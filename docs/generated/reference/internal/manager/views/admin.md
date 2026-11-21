@@ -75,7 +75,7 @@
 
 
 <a name="CapturerBatchDelete"></a>
-## func [CapturerBatchDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L331>)
+## func [CapturerBatchDelete](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L333>)
 
 ```go
 func CapturerBatchDelete(c *gin.Context)
@@ -92,7 +92,7 @@ CapturerBatchDelete 批量删除抓包器。 逐条复用原 capturerDelete 的 
 - 单条删除失败（数据库或 etcd 错误）→ 记入失败明细，不中断其他条目
 
 <a name="CapturerCreate"></a>
-## func [CapturerCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L243>)
+## func [CapturerCreate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L245>)
 
 ```go
 func CapturerCreate(c *gin.Context)
@@ -120,7 +120,7 @@ CapturerCreate 处理创建抓包器的请求。
 - 创建失败（如唯一索引冲突） → 500 意外错误
 
 <a name="CapturerDetailGet"></a>
-## func [CapturerDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L185>)
+## func [CapturerDetailGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L187>)
 
 ```go
 func CapturerDetailGet(c *gin.Context)
@@ -144,7 +144,7 @@ CapturerDetailGet 处理获取抓包器详情的请求。
 - etcd 配置获取失败 → 500 意外错误
 
 <a name="CapturerListGet"></a>
-## func [CapturerListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L140>)
+## func [CapturerListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L142>)
 
 ```go
 func CapturerListGet(c *gin.Context)
@@ -169,7 +169,7 @@ CapturerListGet 处理获取抓包器列表的请求。
 - 查询构建或执行失败 → 500 意外错误
 
 <a name="CapturerStatusListGet"></a>
-## func [CapturerStatusListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L429>)
+## func [CapturerStatusListGet](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L431>)
 
 ```go
 func CapturerStatusListGet(i do.Injector) gin.HandlerFunc
@@ -180,7 +180,7 @@ CapturerStatusListGet 处理采集器运行状态列表请求：读取 etcd 中 
 键格式：\{GlobalPrefix\}/reporter/\{namespace\}/\{name\}/\{version\}/sts/\{sessionID\}， 值为 proto 序列化的 reporter\_v1.FeedbackRequest（带租约，离线即过期消失）。 仅保留每个资源（namespace/name/version）中 timestamp 最大的一条会话。
 
 <a name="CapturerUpdate"></a>
-## func [CapturerUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L289>)
+## func [CapturerUpdate](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L291>)
 
 ```go
 func CapturerUpdate(c *gin.Context)
@@ -880,7 +880,7 @@ type AdminUserPasswordResetOut struct {
 ```
 
 <a name="CapturerBaseDetailOut"></a>
-## type [CapturerBaseDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L97-L105>)
+## type [CapturerBaseDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L99-L107>)
 
 CapturerBaseDetailOut 定义抓包器的基础详情输出结构。 包含抓包器的标识信息和审计字段，用于列表和详情场景的公共部分。
 
@@ -904,7 +904,7 @@ type CapturerBaseDetailOut struct {
 ```
 
 <a name="CapturerBatchDeleteIn"></a>
-## type [CapturerBatchDeleteIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L315-L318>)
+## type [CapturerBatchDeleteIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L317-L320>)
 
 CapturerBatchDeleteIn 批量删除抓包器的请求输入结构。 Ids 接受标量（单个 ID）或数组（多个 ID）。
 
@@ -916,7 +916,7 @@ type CapturerBatchDeleteIn struct {
 ```
 
 <a name="CapturerConfigIn"></a>
-## type [CapturerConfigIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L43-L56>)
+## type [CapturerConfigIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L43-L58>)
 
 CapturerConfigIn 定义抓包器配置的请求输入结构。 该结构对应 reporter 进程的实际抓包参数，在创建和更新抓包器时使用。 配置数据序列化后存储在 etcd 中，供 reporter 进程读取。
 
@@ -929,16 +929,18 @@ type CapturerConfigIn struct {
     // Promisc 是否启用混杂模式，启用后可捕获非本机的流量。
     Promisc bool `json:"promisc" viper:"promisc" prompt:"是否启用混杂模式？"`
     // Timeout 读超时时间（毫秒），支持可读时长字符串（如 5s、1m30s）或整数毫秒。
-    Timeout serializer.DurationMS `json:"timeout" viper:"read-timeout" prompt:"请输入读超时时间（如 5s、1m30s）" binding:"required"`
-    // BpfExpr BPF 过滤表达式（如 "tcp port 80"），长度限制 3~1024 字符。
-    BpfExpr string `json:"bpfExpr" viper:"bpf-expr" prompt:"请输入 BPF 过滤表达式（如 tcp port 80）" binding:"required,min=3,max=1024"`
+    // 取值范围与前端表单一致：1 秒（1000 ms）~ 24 小时（86400000 ms）。
+    Timeout serializer.DurationMS `json:"timeout" viper:"read-timeout" prompt:"请输入读超时时间（如 5s、1m30s）" binding:"required,min=1000,max=86400000"`
+    // BpfExpr BPF 过滤表达式（如 "tcp port 80"），长度限制 3~1024 字符；
+    // 提交时由 bpf 校验规则经 libpcap 编译做兜底语法校验。
+    BpfExpr string `json:"bpfExpr" viper:"bpf-expr" prompt:"请输入 BPF 过滤表达式（如 tcp port 80）" binding:"required,min=3,max=1024,bpf"`
     // Enabled 是否启用该抓包器配置。
     Enabled bool `json:"enabled" viper:"enabled" prompt:"是否启用该抓包器？"`
 }
 ```
 
 <a name="CapturerConfigIn.ToGRPC"></a>
-### func \(\*CapturerConfigIn\) [ToGRPC](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L64>)
+### func \(\*CapturerConfigIn\) [ToGRPC](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L66>)
 
 ```go
 func (cc *CapturerConfigIn) ToGRPC() *reporter_v1.Config
@@ -951,7 +953,7 @@ ToGRPC 将 CapturerConfigIn 转换为 gRPC 协议层定义的 Config 结构。 �
 - \*reporter\_v1.Config: 与 CapturerConfigIn 字段一一对应的 gRPC 配置对象
 
 <a name="CapturerCreateIn"></a>
-## type [CapturerCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L78-L87>)
+## type [CapturerCreateIn](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L80-L89>)
 
 CapturerCreateIn 定义创建抓包器的请求输入结构。 包含抓包器的标识信息（命名空间、名称、版本）和配置参数。 三个标识字段联合组成唯一索引，确保同一命名空间下不存在重复的抓包器。
 
@@ -969,7 +971,7 @@ type CapturerCreateIn struct {
 ```
 
 <a name="CapturerDetailOut"></a>
-## type [CapturerDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L110-L114>)
+## type [CapturerDetailOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L112-L116>)
 
 CapturerDetailOut 定义抓包器的完整详情输出结构。 在基础详情之上增加了从 etcd 获取的运行配置信息。 用于 CapturerDetailGet 接口的响应体。
 
@@ -982,7 +984,7 @@ type CapturerDetailOut struct {
 ```
 
 <a name="CapturerListOut"></a>
-## type [CapturerListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L119-L122>)
+## type [CapturerListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L121-L124>)
 
 CapturerListOut 定义抓包器列表的输出项结构。 在基础详情之上嵌入 BaseTotalOut 以支持分页总数统计。 用于 CapturerListGet 接口的响应体列表项。
 
@@ -994,7 +996,7 @@ type CapturerListOut struct {
 ```
 
 <a name="CapturerStatusItemOut"></a>
-## type [CapturerStatusItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L373-L390>)
+## type [CapturerStatusItemOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L375-L392>)
 
 CapturerStatusItemOut 单个采集器资源运行状态输出项。 字段为基本类型，逐字段映射自 etcd 中解析出的会话状态，不引用模型层结构体。
 
@@ -1020,7 +1022,7 @@ type CapturerStatusItemOut struct {
 ```
 
 <a name="CapturerStatusListOut"></a>
-## type [CapturerStatusListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L393-L396>)
+## type [CapturerStatusListOut](<https://gitee.com/olinex/zhongkui/blob/master/internal/manager/views/admin/admin_capturer.go#L395-L398>)
 
 CapturerStatusListOut 采集器运行状态列表输出。
 

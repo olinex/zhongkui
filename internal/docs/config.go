@@ -25,6 +25,7 @@ func configReferenceProjection() Projection {
 	descs.Join(provider.DescribePipelineConfig())
 	descs.Join(provider.DescribeMailConfig())
 	descs.Join(provider.DescribeHealthConfig())
+	descs.Join(provider.DescribeTagEngineConfig())
 	return Projection{
 		Title:       "配置参考",
 		Summary:     "列出全部配置项、类型、默认值与说明，数据源与 `zki describe config` 一致。",
