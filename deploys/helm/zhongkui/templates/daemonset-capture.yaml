@@ -1,0 +1,80 @@
+{{- if .Values.capture.enabled }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "zhongkui.fullname" . }}-capture
+  labels:
+    {{- include "zhongkui.labels" (dict "root" . "component" "capture") | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "zhongkui.selectorLabels" (dict "root" . "component" "capture") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "zhongkui.selectorLabels" (dict "root" . "component" "capture") | nindent 8 }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: {{ include "zhongkui.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: capture
+          image: {{ include "zhongkui.coreImage" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["run", "capture", "--config", "/etc/zhongkui/config.toml"]
+          securityContext:
+            {{- if .Values.capture.privileged }}
+            privileged: true
+            {{- else }}
+            capabilities:
+              add: ["NET_RAW", "NET_ADMIN"]
+            {{- end }}
+          env:
+            {{- include "zhongkui.coreEnv" . | nindent 12 }}
+            {{- include "zhongkui.otelEnv" (dict "root" . "service" "capture") | nindent 12 }}
+            - name: ZKI_GRPC_CLIENT_REPORTER_AUTH_ACCESSKEYID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "zhongkui.secretName" . }}
+                  key: grpc-access-key-id
+            - name: ZKI_GRPC_CLIENT_REPORTER_AUTH_ACCESSKEYSECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "zhongkui.secretName" . }}
+                  key: grpc-access-key-secret
+          volumeMounts:
+            {{- include "zhongkui.configVolumeMount" . | nindent 12 }}
+            {{- include "zhongkui.cryptoVolumeMount" . | nindent 12 }}
+            - name: bpf
+              mountPath: /sys/fs/bpf
+          resources:
+            {{- toYaml .Values.capture.resources | nindent 12 }}
+      volumes:
+        {{- include "zhongkui.configVolume" . | nindent 8 }}
+        {{- include "zhongkui.cryptoVolume" . | nindent 8 }}
+        - name: bpf
+          hostPath:
+            path: {{ .Values.capture.hostPath }}
+            type: DirectoryOrCreate
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

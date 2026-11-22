@@ -331,4 +331,11 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["run", "web", "--config", "/app/default-config.toml"]
 
+# ============================================================
+# binary-export：仅导出目标架构 zki，供 scripts/dist.sh 打包 Release。
+# 必须放在 final-normal 之前，保证默认构建目标仍是 final-normal。
+# ============================================================
+FROM scratch AS binary-export
+COPY --from=build /out/zki /zki
+
 FROM app AS final-normal

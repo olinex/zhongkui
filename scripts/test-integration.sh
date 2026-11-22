@@ -24,7 +24,7 @@ case "${1:-}" in
 -h | --help) usage && exit 0 ;;
 esac
 
-scripts/dev-deps.sh start || exit 1
-scripts/dev-deps.sh create-dbs || exit 1
+scripts/dev-containers.sh start || exit 1
+scripts/dev-containers.sh create-dbs || exit 1
 
 ZKI_TEST_INTEGRATION=1 go test ./... "$@"

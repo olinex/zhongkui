@@ -6,9 +6,42 @@
       "label": "开始使用",
       "items": [
         {
-          "title": "快速开始：从零运行 zhongkui",
-          "summary": "从安装、配置到启动服务，完成一次最小可运行的部署。",
-          "output": "curated/tutorials/quick-start.md",
+          "title": "Linux 开发环境部署",
+          "summary": "安装工具链、启动本地依赖容器，并用源码运行 web/worker，用于开发与调试。",
+          "output": "curated/tutorials/linux-dev.md",
+          "category": "教程",
+          "source": "策展",
+          "roles": [
+            "研发"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "Linux 二进制部署",
+          "summary": "下载 Release 包，在 Linux 上用二进制、systemd 与 nginx 完成可长期运行的部署。",
+          "output": "curated/tutorials/deploy-binary.md",
+          "category": "教程",
+          "source": "策展",
+          "roles": [
+            "运维"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "Docker Compose 部署",
+          "summary": "用 Docker Compose 在单机拉起 zhongkui 与全部依赖，并完成首次登录。",
+          "output": "curated/tutorials/deploy-docker-compose.md",
+          "category": "教程",
+          "source": "策展",
+          "roles": [
+            "运维"
+          ],
+          "owner": "@olinex"
+        },
+        {
+          "title": "Kubernetes Helm 部署",
+          "summary": "用 Helm 在 Kubernetes 部署 zhongkui，并连接外部数据库、缓存与对象存储。",
+          "output": "curated/tutorials/deploy-helm.md",
           "category": "教程",
           "source": "策展",
           "roles": [

@@ -1,0 +1,15 @@
+apiVersion: v2
+name: zhongkui
+description: 网络流量采集、标签计算与风险告警平台
+type: application
+version: 0.1.0
+appVersion: "latest"
+kubeVersion: ">=1.25.0-0"
+home: https://gitee.com/olinex/zhongkui
+sources:
+  - https://gitee.com/olinex/zhongkui
+keywords:
+  - security
+  - network
+  - traffic
+  - rego

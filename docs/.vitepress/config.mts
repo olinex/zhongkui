@@ -93,7 +93,7 @@ export default defineConfig({
   themeConfig: {
     nav: [
       ...consoleNav,
-      { text: "开始使用", link: "/curated/tutorials/quick-start" },
+      { text: "开始使用", link: "/curated/tutorials/linux-dev" },
       { text: "核心概念", link: "/curated/explanation/system-overview" },
       { text: "参考", link: "/generated/reference/" },
     ],

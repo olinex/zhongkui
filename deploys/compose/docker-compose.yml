@@ -1,0 +1,311 @@
+# zhongkui 单机一键部署（Docker Compose）
+#
+# 依赖：Docker 24+ / Docker Compose v2
+# 使用：
+#   cp config.example.toml config.toml      # config.toml 已被 .gitignore 忽略
+#   cp .env.example .env && vi .env         # 替换 <CHANGE_ME> 与镜像版本
+#   docker compose up -d
+#   docker compose ps
+#
+# 可选：
+#   docker compose --profile otel up -d    # 启动内置 OTel Collector（配合 .env 中 OTEL_ENABLED=true）
+#   docker compose --profile capture up -d # 启动采集端（仅 Linux，主机网络 + 抓包权限）
+
+name: zhongkui
+
+x-zhongkui-env: &zhongkui-env
+  ZKI_CRYPTO_PARENT_SECRET_KEY: "${ZKI_PARENT_SECRET_KEY:?请在 .env 中设置 ZKI_PARENT_SECRET_KEY}"
+  ZKI_DATABASE_CORE_DSN: "host=postgres port=5432 user=postgres password=${POSTGRES_PASSWORD} dbname=zhongkui sslmode=disable TimeZone=Asia/Shanghai"
+  ZKI_DATABASE_RAW_DSN: "clickhouse://default:${CLICKHOUSE_PASSWORD}@clickhouse:9000/zhongkui"
+  ZKI_REDIS_CACHE_ADDR: "redis:6379"
+  ZKI_REDIS_CACHE_PASSWORD: "${REDIS_PASSWORD}"
+  ZKI_REDIS_PIPELINE_ADDR: "redis:6379"
+  ZKI_REDIS_PIPELINE_PASSWORD: "${REDIS_PASSWORD}"
+  ZKI_ETCD_ENDPOINTS: "etcd:2379"
+  ZKI_S3_ENDPOINT: "rustfs:9000"
+  ZKI_S3_ACCESSKEY: "${S3_ACCESS_KEY}"
+  ZKI_S3_SECRETKEY: "${S3_SECRET_KEY}"
+  ZKI_S3_BUCKET: "capture"
+  ZKI_S3_USESSL: "false"
+  ZKI_API_SECURE_CORS_ALLOWORIGINS: "http://localhost"
+  # OpenTelemetry（独立于 ZKI_*，默认关闭）
+  OTEL_ENABLED: "${OTEL_ENABLED:-false}"
+  OTEL_PROVIDER: "otlp"
+  OTEL_OTLP_PROTOCOL: "grpc"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}"
+  OTEL_EXPORTER_OTLP_HEADERS: "${OTEL_EXPORTER_OTLP_HEADERS:-}"
+  OTEL_EXPORTER_OTLP_COMPRESSION: "gzip"
+  OTEL_SAMPLER_TYPE: "always_on"
+  OTEL_SAMPLER_RATIO: "1.0"
+  OTEL_TAIL_ON_ERROR: "true"
+  OTEL_RESOURCE_ATTRIBUTES: "service.namespace=zhongkui"
+
+x-zhongkui-volumes: &zhongkui-volumes
+  - ./config.toml:/app/config.toml:ro
+  - zhongkui-data:/data
+
+x-zhongkui-service: &zhongkui-service
+  image: "${ZKI_CORE_IMAGE}:${ZKI_VERSION}"
+  restart: unless-stopped
+  volumes: *zhongkui-volumes
+
+services:
+  # ---------------------------------------------------------------- 依赖
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: zhongkui
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d zhongkui"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  clickhouse:
+    image: clickhouse:25.3.3
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_DB: zhongkui
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: "${CLICKHOUSE_PASSWORD}"
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:8123:8123"
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --password \"$$CLICKHOUSE_PASSWORD\" -q \"SELECT 1\" >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  redis:
+    image: redis:8.2.1
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    volumes:
+      - redis-data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.6.5
+    restart: unless-stopped
+    command:
+      - etcd
+      - --name=zhongkui
+      - --data-dir=/etcd-data
+      - --advertise-client-urls=http://127.0.0.1:2379
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --listen-peer-urls=http://0.0.0.0:2380
+      - --initial-advertise-peer-urls=http://127.0.0.1:2380
+      - --initial-cluster=zhongkui=http://127.0.0.1:2380
+    volumes:
+      - etcd-data:/etcd-data
+    ports:
+      - "127.0.0.1:2379:2379"
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  rustfs:
+    image: rustfs/rustfs:latest
+    restart: unless-stopped
+    command: ["/data"]
+    environment:
+      RUSTFS_ACCESS_KEY: "${S3_ACCESS_KEY}"
+      RUSTFS_SECRET_KEY: "${S3_SECRET_KEY}"
+      RUSTFS_ADDRESS: ":9000"
+      RUSTFS_CONSOLE_ADDRESS: ":9001"
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_OBS_LOGGER_LEVEL: error
+    volumes:
+      - rustfs-data:/data
+    ports:
+      - "127.0.0.1:9002:9000"
+      - "127.0.0.1:9001:9001"
+    depends_on:
+      rustfs-perms:
+        condition: service_completed_successfully
+
+  rustfs-perms:
+    image: alpine:3.20
+    user: "0:0"
+    command: ["chown", "-R", "10001:10001", "/data"]
+    volumes:
+      - rustfs-data:/data
+    restart: "no"
+
+  # 等待 RustFS 就绪并创建默认桶（代码不会自动建桶）
+  s3-init:
+    image: amazon/aws-cli:2.17.0
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        until aws --endpoint-url http://rustfs:9000 s3api list-buckets >/dev/null 2>&1; do
+          echo "waiting for rustfs..."
+          sleep 2
+        done
+        aws --endpoint-url http://rustfs:9000 s3api head-bucket --bucket capture >/dev/null 2>&1 \
+          || aws --endpoint-url http://rustfs:9000 s3 mb s3://capture
+        echo "bucket capture ready"
+    environment:
+      AWS_ACCESS_KEY_ID: "${S3_ACCESS_KEY}"
+      AWS_SECRET_ACCESS_KEY: "${S3_SECRET_KEY}"
+      AWS_DEFAULT_REGION: us-east-1
+    depends_on:
+      - rustfs
+
+  # 一次性生成密码本与 Reporter TLS 证书，并修正数据卷属主
+  zhongkui-init:
+    image: "${ZKI_CORE_IMAGE}:${ZKI_VERSION}"
+    user: "0:0"
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        if [ ! -s /data/password-book.bin ]; then
+          /usr/local/bin/zki --config /app/config.toml create password-book -o /data/password-book.bin
+        fi
+        if [ ! -s /data/certs/reporter-cert.pem ]; then
+          /usr/local/bin/zki --config /app/config.toml create tls \
+            --name reporter --dir-path /data/certs --ttl 8760h \
+            --dns-names zhongkui-grpc --dns-names localhost
+        fi
+        chown -R 1000:1000 /data
+        chmod 600 /data/password-book.bin
+        echo "init artifacts ready"
+    volumes: *zhongkui-volumes
+    healthcheck:
+      disable: true
+
+  zhongkui-migrate:
+    <<: *zhongkui-service
+    command: ["migrate", "up", "--config", "/app/config.toml"]
+    environment:
+      <<: *zhongkui-env
+      OTEL_ENABLED: "false"
+    restart: "no"
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      etcd:
+        condition: service_healthy
+      s3-init:
+        condition: service_completed_successfully
+      zhongkui-init:
+        condition: service_completed_successfully
+
+  # ---------------------------------------------------------------- zhongkui
+  zhongkui-api:
+    <<: *zhongkui-service
+    command: ["run", "web", "--config", "/app/config.toml"]
+    environment:
+      <<: *zhongkui-env
+      OTEL_SERVICE_NAME: zhongkui-api
+    ports:
+      - "127.0.0.1:${ZKI_API_PORT:-8080}:8080"
+      - "127.0.0.1:19090:19090"
+    depends_on:
+      zhongkui-migrate:
+        condition: service_completed_successfully
+
+  zhongkui-worker:
+    <<: *zhongkui-service
+    command: ["run", "worker", "--config", "/app/config.toml"]
+    environment:
+      <<: *zhongkui-env
+      OTEL_SERVICE_NAME: zhongkui-worker
+    depends_on:
+      zhongkui-migrate:
+        condition: service_completed_successfully
+
+  zhongkui-grpc:
+    <<: *zhongkui-service
+    command: ["run", "grpc", "--config", "/app/config.toml"]
+    environment:
+      <<: *zhongkui-env
+      OTEL_SERVICE_NAME: zhongkui-grpc
+    ports:
+      - "127.0.0.1:${ZKI_GRPC_PORT:-8081}:8081"
+    depends_on:
+      zhongkui-migrate:
+        condition: service_completed_successfully
+
+  zhongkui-web:
+    image: "${ZKI_WEB_IMAGE}:${ZKI_VERSION}"
+    restart: unless-stopped
+    environment:
+      ZKI_API_UPSTREAM: "http://zhongkui-api:8080"
+    ports:
+      - "${ZKI_WEB_PORT:-80}:80"
+    depends_on:
+      zhongkui-api:
+        condition: service_healthy
+
+  # 可选：采集端（仅 Linux；主机网络 + CAP_NET_RAW/CAP_NET_ADMIN）
+  zhongkui-capture:
+    profiles: ["capture"]
+    image: "${ZKI_CORE_IMAGE}:${ZKI_VERSION}"
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    command: ["run", "capture", "--config", "/app/config.toml"]
+    environment:
+      <<: *zhongkui-env
+      OTEL_SERVICE_NAME: zhongkui-capture
+      # 主机网络下无法解析 Compose 服务名，改为本机端口
+      ZKI_GRPC_CLIENT_REPORTER_HOST: "127.0.0.1"
+    volumes: *zhongkui-volumes
+    depends_on:
+      zhongkui-grpc:
+        condition: service_started
+
+  # 可选：本地 OTel Collector（debug 导出，日志即数据）
+  otel-collector:
+    profiles: ["otel"]
+    image: otel/opentelemetry-collector-contrib:latest
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+
+volumes:
+  postgres-data:
+  clickhouse-data:
+  redis-data:
+  etcd-data:
+  rustfs-data:
+  zhongkui-data:

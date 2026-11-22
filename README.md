@@ -68,13 +68,38 @@ Reporter（gRPC） ──► ClickHouse（raw 库）
 
 各组件职责、数据流与代码地图见[系统总览](docs/curated/explanation/system-overview.md)。
 
-## 快速开始
+## 部署
 
-前置：Go 1.27.3+、Docker（用于本地依赖容器）。
+三种方式都可以从零完成部署与首次登录，按环境选择：
+
+| 方式 | 适用场景 | 文档 |
+| --- | --- | --- |
+| Linux 二进制部署 | Linux 物理机、云主机、单机长期运行 | [Linux 二进制部署](docs/curated/tutorials/deploy-binary.md) |
+| Docker Compose 部署 | 单机快速试用、演示、内置全部依赖 | [Docker Compose 部署](docs/curated/tutorials/deploy-docker-compose.md) |
+| Kubernetes Helm 部署 | 生产集群，连接外部数据库/缓存/对象存储 | [Kubernetes Helm 部署](docs/curated/tutorials/deploy-helm.md) |
+
+二进制 Release 包内含 `core/`（amd64/arm64）、`web/html`（管理端 + 文档站）、`deploys/binary/`（配置与 systemd 示例）与许可证文件。
+
+官方镜像：
+
+- core（web/worker/grpc/capture 共用）：`zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core`
+- web（nginx 静态站点）：`zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web`
+
+镜像为公有，默认无需登录；如使用私有镜像代理，请先 `docker login <registry>`。
+
+三篇部署文档都包含：pgvector 扩展安装、Reporter gRPC 默认启动、OpenTelemetry 接入、管理员创建、验证与常见问题。
+
+## Linux 开发环境
+
+前置：Git 与 curl。克隆仓库后执行一条命令安装其余依赖（Docker、Go 1.27.3、protoc、Node 26 + pnpm 10、libpcap 与 Go 辅助工具）：
 
 ```bash
+git clone https://gitee.com/olinex/zhongkui.git && cd zhongkui
+scripts/install-tools.sh all
+
 # 1. 启动依赖（PostgreSQL / ClickHouse / Redis / etcd / S3）
-scripts/dev-deps.sh start
+scripts/dev-containers.sh start
+scripts/dev-doctor.sh                # 检查工具链、容器与依赖端口是否就绪
 
 # 2. 执行数据库迁移并创建管理员
 go run cmd/zki/main.go migrate up
@@ -85,14 +110,14 @@ go run cmd/zki/main.go run web
 go run cmd/zki/main.go run worker
 ```
 
-打开 `[api]` 配置的地址即可登录。完整步骤、验证方式与常见问题见[快速开始教程](docs/curated/tutorials/quick-start.md)。
+打开 `[api]` 配置的地址即可登录。完整步骤、验证方式与常见问题见[Linux 开发环境部署](docs/curated/tutorials/linux-dev.md)。
 
 采集真实流量需要额外启动 `run capture`，并具备抓包权限；原理见[采集架构](docs/generated/explanation/capture-architecture.md)。
 
 ## 文档
 
 - 文档总目录：[docs/index.md](docs/index.md)
-- 开始使用：[快速开始](docs/curated/tutorials/quick-start.md) · [第一条风险告警](docs/curated/tutorials/first-alert.md)
+- 开始使用：[Linux 开发环境部署](docs/curated/tutorials/linux-dev.md) · [Linux 二进制部署](docs/curated/tutorials/deploy-binary.md) · [Docker Compose 部署](docs/curated/tutorials/deploy-docker-compose.md) · [Kubernetes Helm 部署](docs/curated/tutorials/deploy-helm.md) · [教程：第一条风险告警](docs/curated/tutorials/first-alert.md)
 - 核心概念：[系统总览](docs/curated/explanation/system-overview.md) · [领域模型](docs/curated/explanation/domain-model.md) · [术语表](docs/curated/explanation/glossary.md)
 - 操作指南：[故障排查](docs/curated/how-to/troubleshooting.md) · [数据源插件](docs/curated/how-to/add-datasource-plugin.md) · [通知渠道](docs/curated/how-to/add-notify-channel.md)
 - 参考：[参考索引](docs/generated/reference/index.md)
@@ -107,6 +132,8 @@ make lint        # 注释完备性检查
 make test        # 单元测试
 make docs-check  # 校验生成文档与代码声明是否一致
 make ci          # 以上检查的合集
+
+scripts/dist.sh v1.2.3   # 打包 Release：两架构二进制 + 管理端 + 文档站
 ```
 
 ## 目录结构

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "zhongkui.fullname" . }}-web
+  labels:
+    {{- include "zhongkui.labels" (dict "root" . "component" "web") | nindent 4 }}
+spec:
+  type: {{ .Values.web.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.web.service.port }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "zhongkui.selectorLabels" (dict "root" . "component" "web") | nindent 4 }}

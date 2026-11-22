@@ -2,7 +2,7 @@
 
 ## 提问前
 
-- 先读[快速开始](docs/curated/tutorials/quick-start.md)与[故障排查](docs/curated/how-to/troubleshooting.md)。
+- 先读[Linux 开发环境部署](docs/curated/tutorials/linux-dev.md)与[故障排查](docs/curated/how-to/troubleshooting.md)。
 - 用 `zki version`、`zki describe config`、`zki describe deps` 收集环境信息。
 - 搜索已有 Issue，避免重复提问。
 

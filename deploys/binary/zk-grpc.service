@@ -1,0 +1,24 @@
+[Unit]
+Description=zhongkui Reporter gRPC server
+Documentation=https://gitee.com/olinex/zhongkui
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=zki
+Group=zki
+ExecStart=/usr/local/bin/zki run grpc --config /etc/zhongkui/config.toml
+Environment=ZKI_LANG=zh-Hans
+# 同机部署时与 web/worker 错开健康端口
+Environment=ZKI_HEALTH_PORT=19092
+Environment=OTEL_SERVICE_NAME=zhongkui-grpc
+EnvironmentFile=-/etc/zhongkui/zk.env
+EnvironmentFile=-/etc/zhongkui/otel.env
+Restart=on-failure
+RestartSec=5s
+LimitNOFILE=65536
+WorkingDirectory=/var/lib/zhongkui
+
+[Install]
+WantedBy=multi-user.target

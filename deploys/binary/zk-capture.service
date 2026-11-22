@@ -1,0 +1,30 @@
+# 可选：采集端（run capture），默认不启用。
+# 抓包需要主机网络与抓包权限：优先使用 root + AmbientCapabilities；
+# 若内核/XDP 仍报权限不足，可改用 User=root 并去掉 AmbientCapabilities。
+#
+# 采集端不要求与 Reporter gRPC 同机部署：通过 [grpc.client.reporter] 的
+# host / port / tls.domain 指向远端 gRPC，并把服务端证书（或 CA）放到本机，
+# 由 [grpc.client.reporter.tls].certFilePath 引用。
+[Unit]
+Description=zhongkui packet capture agent
+Documentation=https://gitee.com/olinex/zhongkui
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/local/bin/zki run capture --config /etc/zhongkui/config.toml
+Environment=ZKI_LANG=zh-Hans
+Environment=OTEL_SERVICE_NAME=zhongkui-capture
+EnvironmentFile=-/etc/zhongkui/zk.env
+EnvironmentFile=-/etc/zhongkui/otel.env
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+Restart=on-failure
+RestartSec=5s
+LimitNOFILE=1048576
+WorkingDirectory=/var/lib/zhongkui
+
+[Install]
+WantedBy=multi-user.target

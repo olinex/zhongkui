@@ -1,0 +1,59 @@
+{{- if .Values.migration.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "zhongkui.fullname" . }}-migrate
+  labels:
+    {{- include "zhongkui.labels" (dict "root" . "component" "migrate") | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: {{ .Values.migration.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.migration.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "zhongkui.selectorLabels" (dict "root" . "component" "migrate") | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: migrate
+          image: {{ include "zhongkui.coreImage" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - |
+              i=0
+              until /usr/local/bin/zki --config /etc/zhongkui/config.toml migrate up; do
+                i=$((i+1))
+                if [ "$i" -ge 10 ]; then
+                  echo "migrate failed after $i attempts" >&2
+                  exit 1
+                fi
+                echo "migrate failed, retrying in 5s ($i/10)"
+                sleep 5
+              done
+          env:
+            {{- include "zhongkui.migrationEnv" . | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/zhongkui/config.toml
+              subPath: config.toml
+              readOnly: true
+            {{- include "zhongkui.cryptoVolumeMount" . | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "zhongkui.fullname" . }}-config-hook
+        {{- include "zhongkui.cryptoVolume" . | nindent 8 }}
+{{- end }}

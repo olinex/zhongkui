@@ -235,7 +235,7 @@ type Entry struct {
     AiIngest AiIngest
     // Package 是内容来源的 Go 导入路径；仅 SourceComment 条目使用。
     Package string
-    // Output 是相对于 docs/ 的输出路径，例如 curated/tutorials/quick-start.md。
+    // Output 是相对于 docs/ 的输出路径，例如 curated/tutorials/linux-dev.md。
     Output string
     // NarrativeOnly 为 true 时按叙述档渲染（仅包注释）；为 false 时按参考档渲染。
     NarrativeOnly bool
@@ -243,7 +243,7 @@ type Entry struct {
 ```
 
 <a name="Curated"></a>
-### func [Curated](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L553>)
+### func [Curated](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L595>)
 
 ```go
 func Curated() []Entry
@@ -252,7 +252,7 @@ func Curated() []Entry
 Curated 返回所有策展条目（SourceCurated）。
 
 <a name="Generated"></a>
-### func [Generated](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L541>)
+### func [Generated](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L583>)
 
 ```go
 func Generated() []Entry

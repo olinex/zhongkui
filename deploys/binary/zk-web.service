@@ -1,0 +1,23 @@
+[Unit]
+Description=zhongkui API server (web)
+Documentation=https://gitee.com/olinex/zhongkui
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=zki
+Group=zki
+ExecStart=/usr/local/bin/zki run web --config /etc/zhongkui/config.toml
+Environment=ZKI_LANG=zh-Hans
+Environment=ZKI_HEALTH_PORT=19090
+Environment=OTEL_SERVICE_NAME=zhongkui-web
+EnvironmentFile=-/etc/zhongkui/zk.env
+EnvironmentFile=-/etc/zhongkui/otel.env
+Restart=on-failure
+RestartSec=5s
+LimitNOFILE=65536
+WorkingDirectory=/var/lib/zhongkui
+
+[Install]
+WantedBy=multi-user.target

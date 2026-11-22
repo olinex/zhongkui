@@ -151,7 +151,7 @@ func TestWriteProjections_Empty(t *testing.T) {
 func TestWriteGenerated_RejectsOutsideRoot(t *testing.T) {
 	dir := t.TempDir()
 	for _, output := range []string{
-		"curated/tutorials/quick-start.md",
+		"curated/tutorials/linux-dev.md",
 		"../outside.md",
 		"generated/../curated/x.md",
 		"/abs.md",
@@ -193,7 +193,7 @@ func TestIndexDocument_LinksRelativeToDocsRoot(t *testing.T) {
 	}
 	for _, want := range []string{
 		"# zhongkui 文档",
-		"(curated/tutorials/quick-start.md)",
+		"(curated/tutorials/linux-dev.md)",
 		"(curated/how-to/troubleshooting.md)",
 		"(generated/reference/index.md)",
 		"## 按角色找文档",

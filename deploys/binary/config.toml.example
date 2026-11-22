@@ -1,0 +1,471 @@
+# zhongkui 单机二进制部署配置示例
+#
+# 字段与 `zki create default-config` 保持一致；标记 <CHANGE_ME> 的值必须替换。
+# 敏感值建议通过环境变量覆盖（ZKI_ 前缀，点号替换为下划线），例如：
+#   ZKI_CRYPTO_PARENT_SECRET_KEY / ZKI_DATABASE_CORE_DSN / ZKI_S3_SECRETKEY
+# 启用 OpenTelemetry 请参考同目录 otel.env.example（OTEL_ 前缀，独立于本文件）。
+
+[crypto]
+# 主密钥来源：config（配置文件）或 kms（密钥管理服务）
+source = 'config'
+# 主密钥明文值（仅当 source 为 config 时使用）；务必替换并妥善备份
+parent_secret_key = '<CHANGE_ME>'
+# 密码本文件路径（zki create password-book 生成，权限 0600）
+password_book_path = '/etc/zhongkui/password-book.bin'
+
+[api]
+host = '0.0.0.0'
+port = 8080
+# 浏览器访问站点地址；通过 nginx 暴露时填实际访问地址
+frontendBaseURL = 'http://127.0.0.1'
+# worker 调用 Web API 的内部地址
+internalBaseURL = 'http://127.0.0.1:8080'
+# 反向代理网段；经 nginx 转发时按需填写，例如 ['127.0.0.1/32']
+trustedProxies = []
+
+[api.namespace]
+headerName = 'X-Namespace'
+queryName = 'namespace'
+namespace = 'namespace'
+
+[api.auth]
+issuer = 'zhongkui'
+subject = 'api'
+audience = ['web']
+tokenPrefix = 'Bearer:'
+tokenTimeout = '1h0m0s'
+tokenRefreshTimeout = '24h0m0s'
+headerName = 'X-Jwtoken'
+accessKeyCount = 3
+
+[api.auth.cookie]
+name = 'jwtoken'
+# 浏览器访问的域名；使用 IP 访问时填该 IP
+domain = '127.0.0.1'
+path = '/'
+# 仅 HTTPS 时设为 true
+secure = false
+httpOnly = false
+
+[api.secure]
+frameOptions = 'DENY'
+contentSecurityPolicy = "default-src 'self'; connect-src *; font-src *; script-src-elem * 'unsafe-inline'; img-src * data:; style-src * 'unsafe-inline';"
+xssProtection = '1; mode=block'
+strictTransportSecurity = 'max-age=31536000; includeSubDomains; preload'
+referrerPolicy = 'strict-origin'
+contentTypeOptions = 'nosniff'
+permissionsPolicy = 'geolocation=(),midi=(),sync-xhr=(),microphone=(),camera=(),magnetometer=(),gyroscope=(),fullscreen=(self),payment=()'
+
+[api.secure.cors]
+allowOrigins = ['http://127.0.0.1']
+allowCredentials = true
+allowHeaders = ['Content-Type', 'Content-Length', 'Accept', 'Accept-Encoding', 'X-CSRF-Token', 'Authorization', 'Cache-Control', 'X-Jwtoken', 'X-Namespace']
+allowMethods = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+
+[api.passwordReset]
+tokenTTL = '30m0s'
+rateLimit = 5
+rateLimitWindow = '1h0m0s'
+
+# 采集端资源标识；仅在 run capture 时使用，需与 create capturer 创建的记录一致
+[capture.resource]
+namespace = 'default'
+name = 'test'
+version = 'v1d'
+
+[capture.watch]
+intervalTimeout = '1m0s'
+tolerateRatio = 0.5
+maxRetries = 5
+
+[capture.feedback]
+intervalTimeout = '5s'
+tolerateRatio = 0.5
+maxRetries = 5
+
+[capture.upload]
+dumpDir = '/var/lib/zhongkui/tmp'
+encoderLevel = 2
+intervalTimeout = '1m0s'
+packetBufferSize = '95 MiB'
+packetCount = 1000000
+maxRetries = 5
+
+[pipeline]
+concurrency = -1
+taskCheckInterval = '1s'
+healthCheckInterval = '15s'
+delayedTaskCheckInterval = '5s'
+shutdownTimeout = '10s'
+queues = { critical = 6, default = 3, low = 1 }
+strictPriority = false
+
+[pipeline.scheduler]
+location = 'Asia/Shanghai'
+syncInterval = '1m0s'
+cursorCheckInterval = '1m0s'
+heartbeatInterval = '10s'
+forceFlush = true
+
+[pipeline.scheduler.tasks.'periodic-report:plan:dispatch']
+cronSpec = ''
+interval = '1m0s'
+queue = 'default'
+timeout = '1m0s'
+maxRetry = 1
+enabled = true
+backlogEnabled = false
+backlogWindow = '0s'
+backlogLimit = 1
+retention = '1h0m0s'
+lookback = '5m0s'
+payload = {}
+
+[pipeline.scheduler.tasks.'periodic-report:run:cleanup']
+cronSpec = '0 3 * * *'
+interval = '0s'
+queue = 'default'
+timeout = '30m0s'
+maxRetry = 1
+enabled = true
+backlogEnabled = false
+backlogWindow = '0s'
+backlogLimit = 100
+retention = '168h0m0s'
+lookback = '5m0s'
+payload = {}
+
+[pipeline.scheduler.tasks.'tag:event:cleanup']
+cronSpec = '0 * * * *'
+interval = '0s'
+queue = 'default'
+timeout = '5m0s'
+maxRetry = 3
+enabled = true
+backlogEnabled = false
+backlogWindow = '0s'
+backlogLimit = 1
+retention = '1h0m0s'
+lookback = '5m0s'
+payload = { retention = '168h' }
+
+[pipeline.scheduler.tasks.'tag:event:detect']
+cronSpec = ''
+interval = '1m0s'
+queue = 'default'
+timeout = '5m0s'
+maxRetry = 3
+enabled = true
+backlogEnabled = true
+backlogWindow = '1h0m0s'
+backlogLimit = 60
+retention = '1h0m0s'
+lookback = '5m0s'
+payload = {}
+
+[pipeline.scheduler.tasks.'tag:event:suppress']
+cronSpec = ''
+interval = '1m0s'
+queue = 'default'
+timeout = '5m0s'
+maxRetry = 3
+enabled = true
+backlogEnabled = true
+backlogWindow = '1h0m0s'
+backlogLimit = 60
+retention = '1h0m0s'
+lookback = '5m0s'
+payload = {}
+
+[pipeline.custom]
+tasks = {}
+
+[pipeline.custom.processors.ipv4-tcp]
+batchSize = 1000
+flushInterval = '5s'
+maxOutOrderPacketSize = 256
+maxReassemblerSize = 1024
+noticeTimeout = '10s'
+pollInterval = '1m'
+pollOffset = '1m'
+replayWindow = '1h'
+saveInterval = '30s'
+vNodeCount = 128
+
+[pipeline.custom.processors.ipv6-tcp]
+batchSize = 1000
+flushInterval = '5s'
+maxOutOrderPacketSize = 256
+maxReassemblerSize = 1024
+noticeTimeout = '10s'
+pollInterval = '1m'
+pollOffset = '1m'
+replayWindow = '1h'
+saveInterval = '30s'
+vNodeCount = 128
+
+[zap.default]
+level = 'info'
+development = false
+disableCaller = false
+disableStacktrace = false
+encoding = 'console'
+outputPaths = ['stdout']
+errorOutputPaths = ['stderr']
+
+[zap.capture]
+level = 'info'
+development = false
+disableCaller = false
+disableStacktrace = false
+encoding = 'console'
+outputPaths = ['stdout']
+errorOutputPaths = ['stderr']
+
+[zap.api]
+level = 'info'
+development = false
+disableCaller = false
+disableStacktrace = false
+encoding = 'console'
+outputPaths = ['stdout']
+errorOutputPaths = ['stderr']
+
+[zap.database]
+level = 'info'
+development = false
+disableCaller = false
+disableStacktrace = false
+encoding = 'console'
+outputPaths = ['stdout']
+errorOutputPaths = ['stderr']
+
+[zap.etcd]
+level = 'info'
+development = false
+disableCaller = false
+disableStacktrace = false
+encoding = 'console'
+outputPaths = ['stdout']
+errorOutputPaths = ['stderr']
+
+[zap.grpc]
+level = 'info'
+development = false
+disableCaller = false
+disableStacktrace = false
+encoding = 'console'
+outputPaths = ['stdout']
+errorOutputPaths = ['stderr']
+
+[zap.pipeline]
+level = 'info'
+development = false
+disableCaller = false
+disableStacktrace = false
+encoding = 'console'
+outputPaths = ['stdout']
+errorOutputPaths = ['stderr']
+
+[database.core]
+driver = 'postgres'
+# PostgreSQL 需已安装 pgvector 扩展；dbname 需提前创建
+dsn = 'host=127.0.0.1 port=5432 user=postgres password=<CHANGE_ME> dbname=zhongkui sslmode=disable TimeZone=Asia/Shanghai'
+
+[database.core.meta]
+skipDefaultTransaction = false
+fullSaveAssociations = false
+dryRun = false
+prepareStmt = false
+disableAutomaticPing = false
+disableForeignKeyConstraintWhenMigrating = false
+ignoreRelationshipsWhenMigrating = false
+disableNestedTransaction = false
+allowGlobalUpdate = false
+queryFields = false
+createBatchSize = 0
+translateError = true
+propagateUnscoped = false
+
+[database.raw]
+driver = 'clickhouse'
+# ClickHouse 数据库需提前创建
+dsn = 'clickhouse://default:<CHANGE_ME>@127.0.0.1:9000/zhongkui'
+
+[database.raw.meta]
+skipDefaultTransaction = false
+fullSaveAssociations = false
+dryRun = false
+prepareStmt = false
+disableAutomaticPing = false
+disableForeignKeyConstraintWhenMigrating = false
+ignoreRelationshipsWhenMigrating = false
+disableNestedTransaction = false
+allowGlobalUpdate = false
+queryFields = false
+createBatchSize = 0
+translateError = true
+propagateUnscoped = false
+
+[redis.cache]
+type = 'normal'
+masterName = ''
+sentinelAddrs = []
+sentinelUsername = ''
+sentinelPassword = ''
+routeByLatency = false
+routeRandomly = true
+replicaOnly = true
+useDisconnectedReplicas = false
+network = 'tcp'
+addr = '127.0.0.1:6379'
+username = ''
+password = '<CHANGE_ME>'
+clientName = ''
+db = 0
+poolSize = 10
+minIdleConns = 3
+maxIdleConns = 5
+maxActiveConns = 10
+maxRetries = 5
+minRetryBackoff = '8ms'
+maxRetryBackoff = '512ms'
+dialTimeout = '5s'
+readTimeout = '3s'
+writeTimeout = '3s'
+contextTimeoutEnabled = true
+
+[redis.pipeline]
+type = 'normal'
+masterName = ''
+sentinelAddrs = []
+sentinelUsername = ''
+sentinelPassword = ''
+routeByLatency = false
+routeRandomly = true
+replicaOnly = true
+useDisconnectedReplicas = false
+network = 'tcp'
+addr = '127.0.0.1:6379'
+username = ''
+password = '<CHANGE_ME>'
+clientName = ''
+db = 1
+poolSize = 10
+minIdleConns = 3
+maxIdleConns = 5
+maxActiveConns = 10
+maxRetries = 5
+minRetryBackoff = '8ms'
+maxRetryBackoff = '512ms'
+dialTimeout = '5s'
+readTimeout = '3s'
+writeTimeout = '3s'
+contextTimeoutEnabled = true
+
+[etcd]
+endpoints = ['127.0.0.1:2379']
+username = ''
+password = ''
+autoSyncInterval = '0s'
+dialTimeout = '30s'
+dialKeepAliveTime = '1m0s'
+dialKeepAliveTimeout = '30s'
+maxCallSendMsgSize = 2097152
+maxCallRecvMsgSize = 4294967296
+rejectOldCluster = true
+
+[etcd.tls]
+enabled = false
+domain = ''
+cert = ''
+certFilePath = ''
+
+[grpc.server.reporter]
+host = '0.0.0.0'
+port = 8081
+
+[grpc.server.reporter.tls]
+# 证书由 zki create tls 生成；如关闭 TLS，需同时调整采集端配置
+enabled = true
+cert = ''
+key = ''
+certFilePath = '/etc/zhongkui/certs/reporter-cert.pem'
+keyFilePath = '/etc/zhongkui/certs/reporter-key.pem'
+
+[grpc.server.reporter.auth]
+accessKeyEnabled = true
+
+[grpc.server.reporter.keepalive]
+time = '30s'
+timeout = '5s'
+minTime = '5s'
+maxConnectionAge = '0s'
+maxConnectionAgeGrace = '5s'
+maxConnectionIdle = '5m0s'
+permitWithoutStream = true
+
+[grpc.server.reporter.health]
+enabled = true
+serviceName = 'healthcheck'
+
+[grpc.client.reporter]
+host = '127.0.0.1'
+port = 8081
+serviceConfig = {}
+
+[grpc.client.reporter.tls]
+enabled = true
+# 必须与证书 DNS 名一致
+domain = 'reporter'
+cert = ''
+certFilePath = '/etc/zhongkui/certs/reporter-cert.pem'
+
+[grpc.client.reporter.auth]
+enabled = true
+authorize = 'accesskeySecret'
+# 通过 zki create access-key 创建后填入
+accessKeyID = '<CHANGE_ME>'
+accessKeySecret = '<CHANGE_ME>'
+
+[grpc.client.reporter.keepalive]
+time = '1m0s'
+timeout = '20s'
+permitWithoutStream = true
+
+[s3]
+# S3 兼容对象存储端点（host:port，不含协议）
+endpoint = '127.0.0.1:9002'
+accessKey = '<CHANGE_ME>'
+secretKey = '<CHANGE_ME>'
+bucket = 'capture'
+region = ''
+useSSL = false
+# RustFS 等 multipart 支持不完整的实现保持 false
+streamingUpload = false
+objectCacheDir = ''
+objectCacheMemoryThresholdMB = 8
+objectCacheTTL = '1h0m0s'
+
+[smtp]
+# 系统层邮件直发默认关闭；需要密码重置/通知时再启用
+enabled = false
+host = ''
+port = 465
+username = ''
+password = ''
+from = ''
+
+[health]
+enabled = true
+host = '0.0.0.0'
+port = 19090
+readyTimeout = '3s'
+
+[health.registry]
+enabled = true
+keyPrefix = 'services/'
+ttl = '15s'
+
+[tagengine]
+s3cryptoMaxBytes = 8388608

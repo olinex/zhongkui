@@ -68,7 +68,7 @@ zhongkui 是一个多租户的网络流量采集与分析平台：采集端抓�
 | S3 兼容存储 | 抓包快照与大字段 | `[s3]` |
 | gRPC Reporter | 采集端与 Reporter 通信 | `[grpc.server.reporter]`、`[grpc.client.reporter]` |
 
-本地开发可用 `scripts/dev-deps.sh start` 启动同名容器；`zki describe config` 打印全部配置项，`zki describe deps` 探测连通性。
+本地开发可用 `scripts/dev-containers.sh start` 启动同名容器，用 `scripts/dev-doctor.sh` 检查工具链、容器与端口是否就绪；`zki describe config` 打印全部配置项，`zki describe deps` 探测连通性。
 
 ## 5. 多租户与边界
 

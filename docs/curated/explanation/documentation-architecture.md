@@ -47,7 +47,7 @@
 
 | 目标 | 可验证结果 |
 | --- | --- |
-| G1 人类可读 | 新访客 10 分钟内完成 quick-start；任意事实最多 2 次点击可达；每页都有上一级与延伸阅读 |
+| G1 人类可读 | 新访客 10 分钟内完成 Linux 开发环境部署或任一部署教程；任意事实最多 2 次点击可达；每页都有上一级与延伸阅读 |
 | G2 AI 可用 | AI 能回答「该调哪个接口、参数是什么、返回哪个实体、字段什么意思」，并能以用户身份执行只读查询 |
 | G3 可维护 | 同一事实只有一个来源；生成物漂移在 CI 被拦截；新增页面必须挂到大纲上 |
 | G4 开源可用 | 具备 LICENSE、README 门面、贡献指南、安全策略、变更日志、CI 与文档站点 |
@@ -168,9 +168,11 @@ docs/
 ```text
 首页（README）
 ├── 开始使用
-│   ├── 快速开始：从零运行
-│   ├── 第一条风险告警
-│   └── 典型使用路径
+│   ├── Linux 开发环境部署
+│   ├── Linux 二进制部署
+│   ├── Docker Compose 部署
+│   ├── Kubernetes Helm 部署
+│   └── 教程：看到你的第一条风险告警
 ├── 核心概念
 │   ├── 系统总览：组件、数据流、部署拓扑
 │   ├── 领域模型：实体、关系、生命周期、多租户
@@ -441,7 +443,7 @@ type Entry struct {
 
 | 现有条目 | 现位置 | 目标位置 |
 | --- | --- | --- |
-| `tutorials/quick-start`（`internal/cmd` 包注释） | `docs/tutorials/` | `docs/curated/tutorials/`（策展重写） |
+| `tutorials/linux-dev`（原 `internal/cmd` 包注释） | `docs/tutorials/` | `docs/curated/tutorials/`（策展重写） |
 | `tutorials/first-alert`（`internal/tagengine` 包注释） | `docs/tutorials/` | `docs/curated/tutorials/`（策展重写） |
 | `how-to/add-datasource-plugin` | `docs/how-to/` | `docs/curated/how-to/` |
 | `how-to/add-notify-channel` | `docs/how-to/` | `docs/curated/how-to/` |

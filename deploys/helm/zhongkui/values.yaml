@@ -1,0 +1,189 @@
+# zhongkui Helm Chart 默认值
+#
+# 生产部署示例：
+#   helm upgrade --install zhongkui deploys/helm/zhongkui -n zhongkui --create-namespace \
+#     -f values-prod.yaml
+#
+# 安装前必须创建加密 Secret（Chart 不管理密码本）：
+#   openssl rand 65536 > password-book.bin
+#   kubectl -n zhongkui create secret generic zhongkui-crypto \
+#     --from-file=password-book.bin \
+#     --from-literal=parent-secret-key="$(openssl rand -hex 32)"
+#
+# 外部依赖（PostgreSQL + pgvector、ClickHouse、Redis、etcd、S3）需提前准备。
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core
+  tag: latest
+  pullPolicy: IfNotPresent
+
+webImage:
+  repository: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# 写入 ZKI_ENVIRONMENT，并作为 OTel 的 deployment.environment
+environment: production
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+api:
+  replicas: 1
+  resources: {}
+  service:
+    type: ClusterIP
+    port: 8080
+
+worker:
+  replicas: 1
+  resources: {}
+
+grpc:
+  enabled: true
+  replicas: 1
+  resources: {}
+  service:
+    type: ClusterIP
+    port: 8081
+  tls:
+    enabled: false
+    # 为空时使用 {{fullname}}-grpc
+    domain: ""
+
+web:
+  replicas: 1
+  resources: {}
+  service:
+    type: ClusterIP
+    port: 80
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: zhongkui.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+# 可选采集端 DaemonSet（需要主机网络与抓包权限，仅 Linux）
+capture:
+  enabled: false
+  privileged: false
+  hostPath: /sys/fs/bpf
+  resources: {}
+
+# 密码本与可选 TLS 证书所在的 Secret（必须安装前存在，Chart 不创建）
+crypto:
+  existingSecret: zhongkui-crypto
+  passwordBookFile: password-book.bin
+  parentSecretKeyKey: parent-secret-key
+  mountPath: /var/lib/zhongkui/crypto
+
+config:
+  api:
+    frontendBaseURL: "http://zhongkui.example.com"
+    cookieDomain: "zhongkui.example.com"
+    cookieSecure: false
+    corsAllowOrigins:
+      - "http://zhongkui.example.com"
+    trustedProxies: []
+  capture:
+    namespace: default
+    name: test
+    version: v1d
+  database:
+    # PostgreSQL 需已安装 pgvector；dbname 需提前创建
+    coreDSN: "host=postgresql port=5432 user=postgres password=<CHANGE_ME> dbname=zhongkui sslmode=disable TimeZone=Asia/Shanghai"
+    # ClickHouse 数据库需提前创建
+    rawDSN: "clickhouse://default:<CHANGE_ME>@clickhouse:9000/zhongkui"
+  redis:
+    cacheAddr: "redis:6379"
+    cachePassword: ""
+    pipelineAddr: "redis:6379"
+    pipelinePassword: ""
+  etcd:
+    endpoints:
+      - "etcd:2379"
+  s3:
+    # S3 兼容对象存储端点（host:port，不含协议）；桶需提前创建
+    endpoint: "s3.example.com"
+    bucket: capture
+    region: ""
+    useSSL: true
+    # RustFS 等 multipart 支持不完整的实现设为 false
+    streamingUpload: true
+    accessKey: ""
+    secretKey: ""
+  grpcClient:
+    # 仅采集端使用；通过 zki create access-key 创建
+    accessKeyID: ""
+    accessKeySecret: ""
+  smtp:
+    enabled: false
+    host: ""
+    port: 465
+    username: ""
+    password: ""
+    from: ""
+  health:
+    enabled: true
+    port: 19090
+  logLevel: info
+  logEncoding: console
+
+# Chart 渲染的应用 Secret（DSN、S3、Redis、SMTP、OTel 认证头、采集端 access-key）
+secrets:
+  create: true
+  # 为空时使用 {{fullname}}-secret
+  name: ""
+
+migration:
+  enabled: true
+  backoffLimit: 3
+  activeDeadlineSeconds: 600
+
+# OpenTelemetry（默认关闭）
+otel:
+  enabled: false
+  provider: otlp
+  protocol: grpc
+  # provider=otlp 时必须填写
+  endpoint: ""
+  headers: ""
+  insecure: false
+  compression: gzip
+  samplerType: always_on
+  samplerRatio: 1.0
+  tailOnError: true
+  resourceAttributes: "service.namespace=zhongkui"
+  serviceNames:
+    api: ""
+    worker: ""
+    grpc: ""
+
+# 可选内置 OTel Collector（debug 导出，日志即数据）
+otelCollector:
+  enabled: false
+  image:
+    repository: otel/opentelemetry-collector-contrib
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources: {}
+  # 为空时使用 Chart 内置的最小配置（OTLP + debug）
+  config: ""

@@ -1,0 +1,21 @@
+{{- if .Values.otelCollector.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "zhongkui.fullname" . }}-otel-collector
+  labels:
+    {{- include "zhongkui.labels" (dict "root" . "component" "otel-collector") | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: otlp-grpc
+      protocol: TCP
+    - name: otlp-http
+      port: 4318
+      targetPort: otlp-http
+      protocol: TCP
+  selector:
+    {{- include "zhongkui.selectorLabels" (dict "root" . "component" "otel-collector") | nindent 4 }}
+{{- end }}

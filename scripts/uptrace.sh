@@ -2,7 +2,7 @@
 # uptrace.sh - OpenTelemetry 后端 (uptrace/uptrace) 工具集
 #
 # uptrace 是一个开源 APM 平台，支持 traces / metrics / logs 全链路监控。
-# 依赖 ClickHouse + PostgreSQL + Redis（通过 scripts/dev-deps.sh start 启动）。
+# 依赖 ClickHouse + PostgreSQL + Redis（通过 scripts/dev-containers.sh start 启动）。
 #   - Web UI:      http://localhost:14318
 #   - OTLP gRPC:   localhost:4317
 #   - OTLP HTTP:   http://localhost:4318
@@ -31,8 +31,10 @@ UPTRACE_BIN="$GOBIN/uptrace"
 UPTRACE_CONFIG="config/uptrace.yml"
 UPTRACE_PID="/tmp/uptrace.pid"
 
-# Linux 用 nerdctl，其他平台用 docker
-if [ "$(uname -s)" = "Linux" ]; then
+# 优先 docker，未安装时回退 nerdctl
+if command -v docker >/dev/null 2>&1; then
+	UPTRACE_DOCKER_CMD="docker"
+elif command -v nerdctl >/dev/null 2>&1; then
 	UPTRACE_DOCKER_CMD="nerdctl"
 else
 	UPTRACE_DOCKER_CMD="docker"
@@ -122,7 +124,7 @@ cmd_init() {
 
 	echo "=== 创建 ClickHouse 数据库 ==="
 	if ! $UPTRACE_DOCKER_CMD exec clickhouse-server clickhouse-client -q "CREATE DATABASE IF NOT EXISTS uptrace" 2>/dev/null; then
-		echo "  ClickHouse 不可用，请先运行 scripts/dev-deps.sh start" >&2
+		echo "  ClickHouse 不可用，请先运行 scripts/dev-containers.sh start" >&2
 		exit 1
 	fi
 	echo "  数据库已就绪"

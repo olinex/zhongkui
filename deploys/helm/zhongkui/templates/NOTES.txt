@@ -1,0 +1,35 @@
+zhongkui 已安装。
+
+1. 查看工作负载：
+   kubectl -n {{ .Release.Namespace }} get pods
+
+2. 查看迁移日志（pre-install/pre-upgrade Job）：
+   kubectl -n {{ .Release.Namespace }} logs job/{{ include "zhongkui.fullname" . }}-migrate
+
+3. 访问 Web 控制台（未启用 Ingress 时）：
+   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "zhongkui.fullname" . }}-web 8080:{{ .Values.web.service.port }}
+   然后打开 http://127.0.0.1:8080
+
+4. 创建超级管理员：
+   kubectl -n {{ .Release.Namespace }} exec -it deploy/{{ include "zhongkui.fullname" . }}-api -- \
+     env ZKI_SUPERUSER=true zki --config /etc/zhongkui/config.toml create user \
+       -u zkadmin -p "ZkAdmin2026!" -n 系统管理员账号 -e admin@example.com
+
+5. Reporter gRPC 服务：
+   {{- if .Values.grpc.enabled }}
+   kubectl -n {{ .Release.Namespace }} get svc {{ include "zhongkui.fullname" . }}-grpc
+   {{- else }}
+   grpc.enabled=false，当前未部署 Reporter gRPC。
+   {{- end }}
+
+6. OpenTelemetry：
+   {{- if .Values.otel.enabled }}
+   OTEL 已启用，端点：{{ .Values.otel.endpoint }}
+   {{- if .Values.otelCollector.enabled }}
+   内置 Collector：kubectl -n {{ .Release.Namespace }} logs deploy/{{ include "zhongkui.fullname" . }}-otel-collector
+   {{- end }}
+   {{- else }}
+   OTEL 未启用（otel.enabled=false）。
+   {{- end }}
+
+更多说明：docs/curated/tutorials/deploy-helm.md

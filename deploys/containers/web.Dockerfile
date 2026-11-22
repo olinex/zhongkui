@@ -155,6 +155,6 @@ FROM runtime AS final
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD wget -qO- http://localhost/ >/dev/null || exit 1
 
-COPY web/nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY deploys/binary/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /src/web/dist /usr/share/nginx/html
 COPY --from=build /src/docs/.vitepress/dist /usr/share/nginx/html/docs

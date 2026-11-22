@@ -1,0 +1,453 @@
+# zhongkui Docker Compose 部署配置
+#
+# 与 `zki create default-config` 字段保持一致；<CHANGE_ME> 由 docker-compose.yml
+# 通过 ZKI_* 环境变量覆盖，请勿在此处填写真实口令。
+# 注意：OpenTelemetry 使用独立的 OTEL_* 环境变量，不在本文件中配置。
+
+[crypto]
+source = 'config'
+parent_secret_key = '<CHANGE_ME>'
+password_book_path = '/data/password-book.bin'
+
+[api]
+host = '0.0.0.0'
+port = 8080
+frontendBaseURL = 'http://localhost'
+internalBaseURL = 'http://127.0.0.1:8080'
+trustedProxies = ['172.16.0.0/12']
+
+[api.namespace]
+headerName = 'X-Namespace'
+queryName = 'namespace'
+namespace = 'namespace'
+
+[api.auth]
+issuer = 'zhongkui'
+subject = 'api'
+audience = ['web']
+tokenPrefix = 'Bearer:'
+tokenTimeout = '1h0m0s'
+tokenRefreshTimeout = '24h0m0s'
+headerName = 'X-Jwtoken'
+accessKeyCount = 3
+
+[api.auth.cookie]
+name = 'jwtoken'
+domain = 'localhost'
+path = '/'
+secure = false
+httpOnly = false
+
+[api.secure]
+frameOptions = 'DENY'
+contentSecurityPolicy = "default-src 'self'; connect-src *; font-src *; script-src-elem * 'unsafe-inline'; img-src * data:; style-src * 'unsafe-inline';"
+xssProtection = '1; mode=block'
+strictTransportSecurity = 'max-age=31536000; includeSubDomains; preload'
+referrerPolicy = 'strict-origin'
+contentTypeOptions = 'nosniff'
+permissionsPolicy = 'geolocation=(),midi=(),sync-xhr=(),microphone=(),camera=(),magnetometer=(),gyroscope=(),fullscreen=(self),payment=()'
+
+[api.secure.cors]
+allowOrigins = ['http://localhost']
+allowCredentials = true
+allowHeaders = ['Content-Type', 'Content-Length', 'Accept', 'Accept-Encoding', 'X-CSRF-Token', 'Authorization', 'Cache-Control', 'X-Jwtoken', 'X-Namespace']
+allowMethods = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+
+[api.passwordReset]
+tokenTTL = '30m0s'
+rateLimit = 5
+rateLimitWindow = '1h0m0s'
+
+[capture.resource]
+namespace = 'default'
+name = 'test'
+version = 'v1d'
+
+[capture.watch]
+intervalTimeout = '1m0s'
+tolerateRatio = 0.5
+maxRetries = 5
+
+[capture.feedback]
+intervalTimeout = '5s'
+tolerateRatio = 0.5
+maxRetries = 5
+
+[capture.upload]
+dumpDir = '/data/tmp'
+encoderLevel = 2
+intervalTimeout = '1m0s'
+packetBufferSize = '95 MiB'
+packetCount = 1000000
+maxRetries = 5
+
+[pipeline]
+concurrency = -1
+taskCheckInterval = '1s'
+healthCheckInterval = '15s'
+delayedTaskCheckInterval = '5s'
+shutdownTimeout = '10s'
+queues = { critical = 6, default = 3, low = 1 }
+strictPriority = false
+
+[pipeline.scheduler]
+location = 'Asia/Shanghai'
+syncInterval = '1m0s'
+cursorCheckInterval = '1m0s'
+heartbeatInterval = '10s'
+forceFlush = true
+
+[pipeline.scheduler.tasks.'periodic-report:plan:dispatch']
+cronSpec = ''
+interval = '1m0s'
+queue = 'default'
+timeout = '1m0s'
+maxRetry = 1
+enabled = true
+backlogEnabled = false
+backlogWindow = '0s'
+backlogLimit = 1
+retention = '1h0m0s'
+lookback = '5m0s'
+payload = {}
+
+[pipeline.scheduler.tasks.'periodic-report:run:cleanup']
+cronSpec = '0 3 * * *'
+interval = '0s'
+queue = 'default'
+timeout = '30m0s'
+maxRetry = 1
+enabled = true
+backlogEnabled = false
+backlogWindow = '0s'
+backlogLimit = 100
+retention = '168h0m0s'
+lookback = '5m0s'
+payload = {}
+
+[pipeline.scheduler.tasks.'tag:event:cleanup']
+cronSpec = '0 * * * *'
+interval = '0s'
+queue = 'default'
+timeout = '5m0s'
+maxRetry = 3
+enabled = true
+backlogEnabled = false
+backlogWindow = '0s'
+backlogLimit = 1
+retention = '1h0m0s'
+lookback = '5m0s'
+payload = { retention = '168h' }
+
+[pipeline.scheduler.tasks.'tag:event:detect']
+cronSpec = ''
+interval = '1m0s'
+queue = 'default'
+timeout = '5m0s'
+maxRetry = 3
+enabled = true
+backlogEnabled = true
+backlogWindow = '1h0m0s'
+backlogLimit = 60
+retention = '1h0m0s'
+lookback = '5m0s'
+payload = {}
+
+[pipeline.scheduler.tasks.'tag:event:suppress']
+cronSpec = ''
+interval = '1m0s'
+queue = 'default'
+timeout = '5m0s'
+maxRetry = 3
+enabled = true
+backlogEnabled = true
+backlogWindow = '1h0m0s'
+backlogLimit = 60
+retention = '1h0m0s'
+lookback = '5m0s'
+payload = {}
+
+[pipeline.custom]
+tasks = {}
+
+[pipeline.custom.processors.ipv4-tcp]
+batchSize = 1000
+flushInterval = '5s'
+maxOutOrderPacketSize = 256
+maxReassemblerSize = 1024
+noticeTimeout = '10s'
+pollInterval = '1m'
+pollOffset = '1m'
+replayWindow = '1h'
+saveInterval = '30s'
+vNodeCount = 128
+
+[pipeline.custom.processors.ipv6-tcp]
+batchSize = 1000
+flushInterval = '5s'
+maxOutOrderPacketSize = 256
+maxReassemblerSize = 1024
+noticeTimeout = '10s'
+pollInterval = '1m'
+pollOffset = '1m'
+replayWindow = '1h'
+saveInterval = '30s'
+vNodeCount = 128
+
+[zap.default]
+level = 'info'
+development = false
+disableCaller = false
+disableStacktrace = false
+encoding = 'console'
+outputPaths = ['stdout']
+errorOutputPaths = ['stderr']
+
+[zap.capture]
+level = 'info'
+development = false
+disableCaller = false
+disableStacktrace = false
+encoding = 'console'
+outputPaths = ['stdout']
+errorOutputPaths = ['stderr']
+
+[zap.api]
+level = 'info'
+development = false
+disableCaller = false
+disableStacktrace = false
+encoding = 'console'
+outputPaths = ['stdout']
+errorOutputPaths = ['stderr']
+
+[zap.database]
+level = 'info'
+development = false
+disableCaller = false
+disableStacktrace = false
+encoding = 'console'
+outputPaths = ['stdout']
+errorOutputPaths = ['stderr']
+
+[zap.etcd]
+level = 'info'
+development = false
+disableCaller = false
+disableStacktrace = false
+encoding = 'console'
+outputPaths = ['stdout']
+errorOutputPaths = ['stderr']
+
+[zap.grpc]
+level = 'info'
+development = false
+disableCaller = false
+disableStacktrace = false
+encoding = 'console'
+outputPaths = ['stdout']
+errorOutputPaths = ['stderr']
+
+[zap.pipeline]
+level = 'info'
+development = false
+disableCaller = false
+disableStacktrace = false
+encoding = 'console'
+outputPaths = ['stdout']
+errorOutputPaths = ['stderr']
+
+[database.core]
+driver = 'postgres'
+dsn = 'host=postgres port=5432 user=postgres password=<CHANGE_ME> dbname=zhongkui sslmode=disable TimeZone=Asia/Shanghai'
+
+[database.core.meta]
+skipDefaultTransaction = false
+fullSaveAssociations = false
+dryRun = false
+prepareStmt = false
+disableAutomaticPing = false
+disableForeignKeyConstraintWhenMigrating = false
+ignoreRelationshipsWhenMigrating = false
+disableNestedTransaction = false
+allowGlobalUpdate = false
+queryFields = false
+createBatchSize = 0
+translateError = true
+propagateUnscoped = false
+
+[database.raw]
+driver = 'clickhouse'
+dsn = 'clickhouse://default:<CHANGE_ME>@clickhouse:9000/zhongkui'
+
+[database.raw.meta]
+skipDefaultTransaction = false
+fullSaveAssociations = false
+dryRun = false
+prepareStmt = false
+disableAutomaticPing = false
+disableForeignKeyConstraintWhenMigrating = false
+ignoreRelationshipsWhenMigrating = false
+disableNestedTransaction = false
+allowGlobalUpdate = false
+queryFields = false
+createBatchSize = 0
+translateError = true
+propagateUnscoped = false
+
+[redis.cache]
+type = 'normal'
+masterName = ''
+sentinelAddrs = []
+sentinelUsername = ''
+sentinelPassword = ''
+routeByLatency = false
+routeRandomly = true
+replicaOnly = true
+useDisconnectedReplicas = false
+network = 'tcp'
+addr = 'redis:6379'
+username = ''
+password = '<CHANGE_ME>'
+clientName = ''
+db = 0
+poolSize = 10
+minIdleConns = 3
+maxIdleConns = 5
+maxActiveConns = 10
+maxRetries = 5
+minRetryBackoff = '8ms'
+maxRetryBackoff = '512ms'
+dialTimeout = '5s'
+readTimeout = '3s'
+writeTimeout = '3s'
+contextTimeoutEnabled = true
+
+[redis.pipeline]
+type = 'normal'
+masterName = ''
+sentinelAddrs = []
+sentinelUsername = ''
+sentinelPassword = ''
+routeByLatency = false
+routeRandomly = true
+replicaOnly = true
+useDisconnectedReplicas = false
+network = 'tcp'
+addr = 'redis:6379'
+username = ''
+password = '<CHANGE_ME>'
+clientName = ''
+db = 1
+poolSize = 10
+minIdleConns = 3
+maxIdleConns = 5
+maxActiveConns = 10
+maxRetries = 5
+minRetryBackoff = '8ms'
+maxRetryBackoff = '512ms'
+dialTimeout = '5s'
+readTimeout = '3s'
+writeTimeout = '3s'
+contextTimeoutEnabled = true
+
+[etcd]
+endpoints = ['etcd:2379']
+username = ''
+password = ''
+autoSyncInterval = '0s'
+dialTimeout = '30s'
+dialKeepAliveTime = '1m0s'
+dialKeepAliveTimeout = '30s'
+maxCallSendMsgSize = 2097152
+maxCallRecvMsgSize = 4294967296
+rejectOldCluster = true
+
+[etcd.tls]
+enabled = false
+domain = ''
+cert = ''
+certFilePath = ''
+
+[grpc.server.reporter]
+host = '0.0.0.0'
+port = 8081
+
+[grpc.server.reporter.tls]
+enabled = true
+cert = ''
+key = ''
+certFilePath = '/data/certs/reporter-cert.pem'
+keyFilePath = '/data/certs/reporter-key.pem'
+
+[grpc.server.reporter.auth]
+accessKeyEnabled = true
+
+[grpc.server.reporter.keepalive]
+time = '30s'
+timeout = '5s'
+minTime = '5s'
+maxConnectionAge = '0s'
+maxConnectionAgeGrace = '5s'
+maxConnectionIdle = '5m0s'
+permitWithoutStream = true
+
+[grpc.server.reporter.health]
+enabled = true
+serviceName = 'healthcheck'
+
+[grpc.client.reporter]
+host = 'zhongkui-grpc'
+port = 8081
+serviceConfig = {}
+
+[grpc.client.reporter.tls]
+enabled = true
+domain = 'zhongkui-grpc'
+cert = ''
+certFilePath = '/data/certs/reporter-cert.pem'
+
+[grpc.client.reporter.auth]
+enabled = true
+authorize = 'accesskeySecret'
+accessKeyID = '<CHANGE_ME>'
+accessKeySecret = '<CHANGE_ME>'
+
+[grpc.client.reporter.keepalive]
+time = '1m0s'
+timeout = '20s'
+permitWithoutStream = true
+
+[s3]
+endpoint = 'rustfs:9000'
+accessKey = '<CHANGE_ME>'
+secretKey = '<CHANGE_ME>'
+bucket = 'capture'
+region = ''
+useSSL = false
+streamingUpload = false
+objectCacheDir = ''
+objectCacheMemoryThresholdMB = 8
+objectCacheTTL = '1h0m0s'
+
+[smtp]
+enabled = false
+host = ''
+port = 465
+username = ''
+password = ''
+from = ''
+
+[health]
+enabled = true
+host = '0.0.0.0'
+port = 19090
+readyTimeout = '3s'
+
+[health.registry]
+enabled = true
+keyPrefix = 'services/'
+ttl = '15s'
+
+[tagengine]
+s3cryptoMaxBytes = 8388608

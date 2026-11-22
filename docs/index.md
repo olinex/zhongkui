@@ -9,8 +9,11 @@
 
 | 你的目的 | 建议阅读 |
 | --- | --- |
-| 第一次把系统跑起来 | [快速开始：从零运行](curated/tutorials/quick-start.md) |
-| 想把第一条告警跑通 | [看到你的第一条风险告警](curated/tutorials/first-alert.md) |
+| 在 Linux 上开发调试 | [Linux 开发环境部署](curated/tutorials/linux-dev.md) |
+| 用二进制部署到 Linux | [Linux 二进制部署](curated/tutorials/deploy-binary.md) |
+| 用 Docker Compose 部署 | [Docker Compose 部署](curated/tutorials/deploy-docker-compose.md) |
+| 部署到 Kubernetes | [Kubernetes Helm 部署](curated/tutorials/deploy-helm.md) |
+| 想把第一条告警跑通 | [教程：看到你的第一条风险告警](curated/tutorials/first-alert.md) |
 | 理解系统如何组成 | [系统总览](curated/explanation/system-overview.md) |
 | 查某个字段或实体 | [领域模型](curated/explanation/domain-model.md) / [术语表](curated/explanation/glossary.md) |
 | 查接口、表、枚举、配置 | [参考索引](generated/reference/index.md) |
@@ -18,7 +21,10 @@
 
 ## 开始使用
 
-- [快速开始：从零运行 zhongkui](curated/tutorials/quick-start.md) — 从安装、配置到启动服务，完成一次最小可运行的部署。（教程；策展）
+- [Linux 开发环境部署](curated/tutorials/linux-dev.md) — 安装工具链、启动本地依赖容器，并用源码运行 web/worker，用于开发与调试。（教程；策展）
+- [Linux 二进制部署](curated/tutorials/deploy-binary.md) — 下载 Release 包，在 Linux 上用二进制、systemd 与 nginx 完成可长期运行的部署。（教程；策展）
+- [Docker Compose 部署](curated/tutorials/deploy-docker-compose.md) — 用 Docker Compose 在单机拉起 zhongkui 与全部依赖，并完成首次登录。（教程；策展）
+- [Kubernetes Helm 部署](curated/tutorials/deploy-helm.md) — 用 Helm 在 Kubernetes 部署 zhongkui，并连接外部数据库、缓存与对象存储。（教程；策展）
 - [教程：看到你的第一条风险告警](curated/tutorials/first-alert.md) — 编写一条 rego 规则、触发标签窗口统计，收到第一封风险告警。（教程；策展）
 
 ## 核心概念
@@ -83,7 +89,9 @@
 - [术语表](curated/explanation/glossary.md) — 统一项目术语、英文名、代码位置与常见误解。
 - [采集架构：wire/XDP、快照与上报](generated/explanation/capture-architecture.md) — 说明采集侧的 wire/XDP 抓包、快照生成与上报链路。
 - [异步任务与队列](generated/explanation/async-worker.md) — 说明基于队列的异步任务调度与执行模型。
-- [快速开始：从零运行 zhongkui](curated/tutorials/quick-start.md) — 从安装、配置到启动服务，完成一次最小可运行的部署。
+- [Linux 二进制部署](curated/tutorials/deploy-binary.md) — 下载 Release 包，在 Linux 上用二进制、systemd 与 nginx 完成可长期运行的部署。
+- [Docker Compose 部署](curated/tutorials/deploy-docker-compose.md) — 用 Docker Compose 在单机拉起 zhongkui 与全部依赖，并完成首次登录。
+- [Kubernetes Helm 部署](curated/tutorials/deploy-helm.md) — 用 Helm 在 Kubernetes 部署 zhongkui，并连接外部数据库、缓存与对象存储。
 - [故障排查：启动、采集、标签、通知与检索](curated/how-to/troubleshooting.md) — 按症状定位常见故障，并给出验证与恢复步骤。
 - [如何接入新的数据源插件](curated/how-to/add-datasource-plugin.md) — 实现数据源接口并注册一个新的数据源插件。
 - [如何新增通知渠道与模板](curated/how-to/add-notify-channel.md) — 扩展通知渠道类型并维护对应的多语言模板。
@@ -109,6 +117,7 @@
 - [前端功能开关与不可用态](curated/explanation/frontend-feature-flags.md) — 说明前端功能开关的接入方式与不可用态呈现约定。
 - [XDP/BPF 设计说明](curated/kernel/xdp_bpf_design.md) — 说明内核侧 XDP/BPF 程序的设计与数据交互方式。
 - [文档体系架构与执行规划](curated/explanation/documentation-architecture.md) — 说明文档大纲、生成与策展的来源隔离、事实投影、AI 上下文分层与开源治理。
+- [Linux 开发环境部署](curated/tutorials/linux-dev.md) — 安装工具链、启动本地依赖容器，并用源码运行 web/worker，用于开发与调试。
 - [故障排查：启动、采集、标签、通知与检索](curated/how-to/troubleshooting.md) — 按症状定位常见故障，并给出验证与恢复步骤。
 - [如何接入新的数据源插件](curated/how-to/add-datasource-plugin.md) — 实现数据源接口并注册一个新的数据源插件。
 - [如何新增通知渠道与模板](curated/how-to/add-notify-channel.md) — 扩展通知渠道类型并维护对应的多语言模板。

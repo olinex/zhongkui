@@ -1,0 +1,45 @@
+{{- if .Values.otelCollector.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "zhongkui.fullname" . }}-otel-collector
+  labels:
+    {{- include "zhongkui.labels" (dict "root" . "component" "otel-collector") | nindent 4 }}
+spec:
+  replicas: {{ .Values.otelCollector.replicas }}
+  selector:
+    matchLabels:
+      {{- include "zhongkui.selectorLabels" (dict "root" . "component" "otel-collector") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "zhongkui.selectorLabels" (dict "root" . "component" "otel-collector") | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: otel-collector
+          image: {{ printf "%s:%s" .Values.otelCollector.image.repository .Values.otelCollector.image.tag }}
+          imagePullPolicy: {{ .Values.otelCollector.image.pullPolicy }}
+          args: ["--config=/etc/otelcol-contrib/config.yaml"]
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+              protocol: TCP
+            - name: otlp-http
+              containerPort: 4318
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otelcol-contrib/config.yaml
+              subPath: config.yaml
+              readOnly: true
+          resources:
+            {{- toYaml .Values.otelCollector.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "zhongkui.fullname" . }}-otel-collector
+{{- end }}

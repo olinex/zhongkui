@@ -10,13 +10,14 @@
 
 ## 2. 开发环境
 
-前置：Go 1.27.3+、Node.js 26+ 与 pnpm、Docker（本地依赖容器）。
+前置：Git 与 curl。克隆仓库后执行一条命令安装其余依赖（Docker、Go 1.27.3、protoc、Node 26 + pnpm 10、libpcap 与 Go 辅助工具），需要提权的步骤会自动调用 sudo：
 
 ```bash
-scripts/install-tools.sh dev    # 安装 asynq / pkgsite / goconvey
-scripts/install-tools.sh ts     # 安装前端工具链（如需改 web/）
-scripts/install-tools.sh pcap   # 安装 libpcap 开发库（首次编译）
-scripts/dev-deps.sh start       # 启动 PostgreSQL / ClickHouse / Redis / etcd / S3
+git clone https://gitee.com/olinex/zhongkui.git
+cd zhongkui
+scripts/install-tools.sh all        # 完整开发环境；只补装单项时用 base|docker|go|protobuf|ts|pcap|dev
+scripts/dev-containers.sh start     # 启动 PostgreSQL / ClickHouse / Redis / etcd / S3
+scripts/dev-doctor.sh               # 检查工具链、容器与依赖端口是否就绪
 go run cmd/zki/main.go migrate up   # 执行数据库迁移
 ```
 
@@ -79,7 +80,7 @@ scripts/gitflow.sh commit -t feat -s gitflow -m "新增提交助手" -y
 | **scripts/** | 操作与编排 | 安装依赖、启动/停止服务、CI/测试报告、打包发布、部署 | 反向被 Makefile 调用 |
 | **deploys/** | 镜像与二进制构建 | `containers/` 下的前后端 Dockerfile（后端 `normal.Dockerfile`/`slim.Dockerfile`、前端 `web.Dockerfile`），镜像构建由 `scripts/image.sh` 统一驱动；后端在 `normal.Dockerfile` 构建阶段内完成编译（交叉编译环境 → 运行期依赖 → 依赖环境 → 制品 → 装配），`slim.Dockerfile` 从 normal 镜像提取 zki 免编译，前端产出控制台/文档站静态产物 | 直接调用 `make build` / `make build-release`、重复实现 `dist/build.env` 生成 |
 
-依赖方向单向：`scripts/` → `Makefile`，`deploys/containers` 的 Dockerfile → `Makefile`（`normal.Dockerfile` 的构建阶段只调用 `make version-env` 与 `make build-release`，`slim.Dockerfile` 从已构建的 normal 镜像提取制品）；后端在 normal 镜像构建阶段内编译 zki，前端 Dockerfile 在构建阶段内编译 `web/dist` 与 `docs/.vitepress/dist`，不依赖宿主机预编译产物。
+依赖方向单向：`scripts/` → `Makefile`，`deploys/containers` 的 Dockerfile → `Makefile`（`normal.Dockerfile` 的构建阶段只调用 `make version-env` 与 `make build-release`，`slim.Dockerfile` 从已构建的 normal 镜像提取制品）；后端在 normal 镜像构建阶段内编译 zki，前端 Dockerfile 在构建阶段内编译 `web/dist` 与 `docs/.vitepress/dist`，不依赖宿主机预编译产物。`scripts/dist.sh` 复用 `normal.Dockerfile` 的 `binary-export` 阶段导出两个架构的 zki，再与本机构建的 `web/dist`、`docs/.vitepress/dist` 组装成 Release 包。
 
 ## 6. 版本与发布
 
@@ -122,16 +123,24 @@ v1.2.3-alpha.1 → v1.2.3-alpha.2 → v1.2.3-beta.1 → v1.2.3-rc.1 → v1.2.3
 ### 发布命令（Gitee 为主仓）
 
 ```bash
-# 编译 release 二进制（支持正式版和预发布版）
-make build-release VERSION=v1.2.3            # 正式版
-make build-release VERSION=v1.2.3-alpha.1    # 预发布版
-
 # 创建 annotated tag（PR 合入 master 后执行，会校验版本号、CHANGELOG、web/package.json 并跑 make ci）
 scripts/gitflow.sh release finish v1.2.3
 scripts/gitflow.sh release finish v1.2.3-rc.1
 
-# 打包制品
+# 打包 Release：两个架构的 zki + 管理端 + 文档站
+# 自动构建二进制需要 Go 1.27.3+ 与 Docker（buildx）；前端需要 pnpm 10
 scripts/dist.sh v1.2.3
+
+# 基础镜像无法直接从 Docker Hub 拉取时，调用时注入可访问的镜像地址（不要写进脚本）
+GOLANG_IMAGE=<registry>/library/golang:1.27.3-bookworm \
+RUNTIME_IMAGE=<registry>/library/debian:bookworm-slim \
+scripts/dist.sh v1.2.3
+
+# 已有两个 Linux 二进制时可直接复用
+BIN_AMD64=/path/zki_linux_amd64 BIN_ARM64=/path/zki_linux_arm64 scripts/dist.sh v1.2.3
+
+# 仅本机调试：编译当前平台二进制到 dist/zki，不生成发布包
+make build-release VERSION=v1.2.3
 
 # 构建镜像（scripts/image.sh：normal core / slim core / web 三种目标）
 scripts/image.sh normal v1.2.3    # 后端完整镜像：zhongkui:v1.2.3（debian 基底，便于排障）
@@ -147,7 +156,9 @@ PLATFORMS=linux/amd64,linux/arm64 scripts/image.sh normal v1.2.3 --push  # 多�
 git push origin master --follow-tags
 ```
 
-推送 tag 后在 Gitee 创建 Release，并上传 `dist/` 下的制品与校验和。GitHub 为只读镜像，不发布 Release。
+`scripts/dist.sh` 生成的 `dist/zki-<version>.tar.gz` 包含 `core/zki_linux_amd64`、`core/zki_linux_arm64`、`web/html`（管理端与 `/docs` 文档站）、`deploys/binary/`（配置、systemd unit 与 nginx 模板）以及许可证文件。
+
+推送 tag 后在 Gitee 创建 Release，并上传 `dist/zki-<version>.tar.gz`；`scripts/dist.sh` 会在终端打印该制品的 sha256，可一并附在 Release 说明中。GitHub 为只读镜像，不发布 Release。
 
 ## 7. 测试与检查
 
