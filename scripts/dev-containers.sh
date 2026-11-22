@@ -11,6 +11,11 @@
 #   scripts/dev-containers.sh stop         # 停止开发依赖容器（保留数据）
 #   scripts/dev-containers.sh remove       # 停止并删除开发依赖容器（数据丢失）
 #
+# 镜像源与镜像覆盖：
+#   DEV_IMAGE_REGISTRY=<镜像源>          统一替换五个镜像的来源（保留原仓库路径）
+#   REDIS_IMAGE / ETCD_IMAGE / CLICKHOUSE_IMAGE / POSTGRES_IMAGE / RUSTFS_IMAGE
+#                                        精确覆盖单个镜像，优先级高于 DEV_IMAGE_REGISTRY
+#
 # 退出码：0 成功；1 失败。
 set -uo pipefail
 
@@ -36,6 +41,43 @@ detect_runtime() {
 }
 
 CONTAINERS=(redis etcd clickhouse-server postgres rustfs)
+
+# 统一镜像源：设置后所有镜像改为从该地址拉取（保留原仓库路径，
+# Docker Hub 官方镜像自动补 library/）；五个 *_IMAGE 变量优先级更高
+DEV_IMAGE_REGISTRY="${DEV_IMAGE_REGISTRY:-}"
+
+mirror_image() {
+	if [ -z "$DEV_IMAGE_REGISTRY" ]; then
+		echo "$1"
+		return
+	fi
+	local path=$1
+	case "$path" in
+	quay.io/*) path=${path#quay.io/} ;;
+	docker.io/*) path=${path#docker.io/} ;;
+	*/*) ;;
+	*) path="library/$path" ;;
+	esac
+	echo "${DEV_IMAGE_REGISTRY%/}/$path"
+}
+
+# 依赖镜像：网络受限时可统一改 DEV_IMAGE_REGISTRY，或单独覆盖某个镜像
+REDIS_IMAGE="${REDIS_IMAGE:-$(mirror_image redis:8.2.1)}"
+ETCD_IMAGE="${ETCD_IMAGE:-$(mirror_image quay.io/coreos/etcd:v3.6.5)}"
+CLICKHOUSE_IMAGE="${CLICKHOUSE_IMAGE:-$(mirror_image clickhouse:25.3.3)}"
+POSTGRES_IMAGE="${POSTGRES_IMAGE:-$(mirror_image pgvector/pgvector:pg17)}"
+RUSTFS_IMAGE="${RUSTFS_IMAGE:-$(mirror_image rustfs/rustfs:latest)}"
+
+# 返回镜像对应的环境变量名，用于拉取失败时提示覆盖方式
+image_var() {
+	case "$1" in
+	redis) echo REDIS_IMAGE ;;
+	etcd) echo ETCD_IMAGE ;;
+	clickhouse) echo CLICKHOUSE_IMAGE ;;
+	postgres) echo POSTGRES_IMAGE ;;
+	rustfs) echo RUSTFS_IMAGE ;;
+	esac
+}
 
 cmd_create_dbs() {
 	local cmd psql_cli clickhouse_cli
@@ -65,22 +107,28 @@ cmd_pull() {
 		platform=linux/amd64
 		;;
 	esac
-	echo "检测到宿主架构: $arch，拉取平台: $platform"
+	echo "检测到宿主架构: ${arch}，拉取平台: $platform"
 
 	local images=(
-		"redis redis:8.2.1"
-		"etcd quay.io/coreos/etcd:v3.6.5"
-		"clickhouse clickhouse:25.3.3"
-		"postgres pgvector/pgvector:pg17"
-		"rustfs rustfs/rustfs:latest"
+		"redis $REDIS_IMAGE"
+		"etcd $ETCD_IMAGE"
+		"clickhouse $CLICKHOUSE_IMAGE"
+		"postgres $POSTGRES_IMAGE"
+		"rustfs $RUSTFS_IMAGE"
 	)
-	local item name img
+	local item name img failed=0
 	for item in "${images[@]}"; do
 		read -r name img <<<"$item"
-		echo "=== 拉取 $name ($platform) ==="
-		$cmd pull --platform "$platform" "$img" ||
-			echo "  !! 拉取 $name 失败，镜像可能不提供 $platform 架构"
+		echo "=== 拉取 $name ($platform): $img ==="
+		if ! $cmd pull --platform "$platform" "$img"; then
+			echo "  !! 拉取 $name 失败；可用环境变量 $(image_var "$name") 指定加速地址或私有仓库中的同名镜像后重试" >&2
+			failed=1
+		fi
 	done
+	if [ "$failed" -ne 0 ]; then
+		echo "存在拉取失败的镜像：请配置镜像加速器，或通过 *_IMAGE 环境变量指定可达地址。" >&2
+		return 1
+	fi
 }
 
 # 所有依赖容器都在运行时返回 0，供重复执行 start 时跳过
@@ -102,50 +150,50 @@ cmd_start() {
 	Darwin | MINGW* | MSYS* | CYGWIN*)
 		echo "使用 docker 启动依赖容器..."
 		docker run -itd --restart unless-stopped --name redis --network host \
-			redis:8.2.1
+			"$REDIS_IMAGE"
 		docker run -itd --restart unless-stopped --name etcd --network host \
-			quay.io/coreos/etcd:v3.6.5
+			"$ETCD_IMAGE"
 		docker run -itd --restart unless-stopped --name clickhouse-server --network host \
 			--ulimit nofile=262144:262144 \
 			-v "$ROOT_DIR/config/clickhouse/config.d:/etc/clickhouse-server/config.d:ro" \
 			-e CLICKHOUSE_PASSWORD=root_password \
-			clickhouse:25.3.3
+			"$CLICKHOUSE_IMAGE"
 		docker run -itd --restart unless-stopped --name postgres --network host \
 			-e POSTGRES_PASSWORD=root_password \
 			-e POSTGRES_USER=postgres \
 			-e POSTGRES_DB=default \
-			pgvector/pgvector:pg17
+			"$POSTGRES_IMAGE"
 		docker run -itd --restart unless-stopped --name rustfs --network host \
 			-e RUSTFS_ADDRESS=localhost:9002 \
 			-e RUSTFS_CONSOLE_ENABLE=true \
 			-e RUSTFS_ACCESS_KEY=rustfsadmin \
 			-e RUSTFS_SECRET_KEY=rustfsadmin \
-			rustfs/rustfs:latest
+			"$RUSTFS_IMAGE"
 		;;
 	Linux)
 		local cmd
 		cmd=$(detect_runtime)
 		echo "使用 $cmd 启动依赖容器..."
 		$cmd run -td --restart=always --name redis --net=host \
-			redis:8.2.1
+			"$REDIS_IMAGE"
 		$cmd run -td --restart=always --name etcd --net=host \
-			quay.io/coreos/etcd:v3.6.5
+			"$ETCD_IMAGE"
 		$cmd run -td --restart=always --name clickhouse-server --net=host \
 			--ulimit nofile=262144:262144 \
 			-v "$ROOT_DIR/config/clickhouse/config.d:/etc/clickhouse-server/config.d:ro" \
 			-e CLICKHOUSE_PASSWORD=root_password \
-			clickhouse:25.3.3
+			"$CLICKHOUSE_IMAGE"
 		$cmd run -td --restart=always --name postgres --net=host \
 			-e POSTGRES_PASSWORD=root_password \
 			-e POSTGRES_USER=postgres \
 			-e POSTGRES_DB=default \
-			pgvector/pgvector:pg17
+			"$POSTGRES_IMAGE"
 		$cmd run -td --restart=always --name rustfs --net=host \
 			-e RUSTFS_ADDRESS=localhost:9002 \
 			-e RUSTFS_CONSOLE_ENABLE=true \
 			-e RUSTFS_ACCESS_KEY=rustfsadmin \
 			-e RUSTFS_SECRET_KEY=rustfsadmin \
-			rustfs/rustfs:latest
+			"$RUSTFS_IMAGE"
 		;;
 	*)
 		echo "警告: 不支持的操作系统 '$(uname -s)'，请手动启动依赖服务。" >&2
@@ -185,7 +233,7 @@ cmd_remove() {
 }
 
 usage() {
-	sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
+	sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 case "${1:-}" in

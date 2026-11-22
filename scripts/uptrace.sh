@@ -94,7 +94,7 @@ cmd_config() {
 	fi
 
 	if [ -f "$UPTRACE_CONFIG" ]; then
-		echo "配置文件已存在: $UPTRACE_CONFIG，跳过生成"
+		echo "配置文件已存在: ${UPTRACE_CONFIG}，跳过生成"
 		return 0
 	fi
 

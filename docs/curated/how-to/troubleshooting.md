@@ -34,6 +34,7 @@ go run cmd/zki/main.go describe deps    # 探测数据库、Redis、etcd、S3 �
 - 未迁移：`go run cmd/zki/main.go migrate up`。
 - 配置缺项：对照 `describe config` 的输出补齐，不要凭记忆手写。
 - 依赖容器未启动：`scripts/dev-containers.sh start`；不确定哪一项异常时先运行 `scripts/dev-doctor.sh` 定位失败项，再启动服务。
+- 依赖镜像拉取失败：用 `DEV_IMAGE_REGISTRY` 统一替换镜像源（镜像源不代理 quay.io 时再单独设置 `ETCD_IMAGE`），详见[Linux 开发环境部署](../tutorials/linux-dev.md)第 3 节。
 
 ## 3. 数据库迁移失败
 

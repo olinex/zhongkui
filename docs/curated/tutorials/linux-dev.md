@@ -65,6 +65,18 @@ zhongkui 依赖 PostgreSQL（core 库）、ClickHouse（raw 库）、Redis、etc
 - `scripts/dev-containers.sh start`：以 host 网络启动同名容器（PostgreSQL 口令为 `root_password`）。
 - 调试结束后用 `scripts/dev-containers.sh stop` 停止，`scripts/dev-containers.sh remove` 一并删除容器。
 
+网络受限导致拉取失败时，用一个变量统一替换镜像源即可（保留原镜像路径，Docker Hub 官方镜像自动补 `library/`）：
+
+```bash
+export DEV_IMAGE_REGISTRY=registry.example.com
+scripts/dev-containers.sh pull
+scripts/dev-containers.sh start
+```
+
+`DEV_IMAGE_REGISTRY` 可带路径前缀（如 `registry.example.com/mirror`）。若镜像源不代理 `quay.io`（etcd），再单独设置 `ETCD_IMAGE`。需要精确覆盖单个镜像时仍可用 `REDIS_IMAGE`、`ETCD_IMAGE`、`CLICKHOUSE_IMAGE`、`POSTGRES_IMAGE`、`RUSTFS_IMAGE`，其优先级高于 `DEV_IMAGE_REGISTRY`。
+
+也可以不改脚本、直接给容器运行时配置 registry mirror（Docker：`/etc/docker/daemon.json` 的 `registry-mirrors`；nerdctl/containerd：`hosts.toml`）后拉取。任一镜像拉取失败时脚本以非零退出码结束。
+
 容器启动后执行全量检查：
 
 ```bash
