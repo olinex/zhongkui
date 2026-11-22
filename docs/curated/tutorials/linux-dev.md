@@ -39,6 +39,8 @@ scripts/install-tools.sh all
 | `pcap` | libpcap 开发库（采集端） |
 | `dev` | asynq、pkgsite、goconvey 等辅助工具 |
 
+> 受限网络下，Go 工具安装可能因 `sum.golang.org` 不可达而失败。脚本默认使用与镜像构建一致的模块代理，也可用 `GOPROXY` / `GOSUMDB` 环境变量覆盖后重试，例如 `GOPROXY=https://goproxy.cn,direct GOSUMDB=sum.golang.google.cn scripts/install-tools.sh protobuf`。
+
 只补装某一项时执行对应子命令，例如 `scripts/install-tools.sh ts`。安装完成后重新登录（或执行 `. /etc/profile.d/go.sh`），使 Go 的 PATH 与 docker 组生效，然后检查工具链：
 
 ```bash

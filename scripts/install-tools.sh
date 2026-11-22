@@ -17,6 +17,11 @@ set -uo pipefail
 
 GO_VERSION="${GO_VERSION:-1.27.3}"
 
+# Go 模块代理与校验库：与 deploys/containers/normal.Dockerfile 保持一致；
+# 网络受限时默认走可达镜像，可用同名环境变量覆盖。
+export GOPROXY="${GOPROXY:-https://goproxy.cn,https://mirrors.aliyun.com/goproxy/,direct}"
+export GOSUMDB="${GOSUMDB:-sum.golang.google.cn}"
+
 # 提权命令前缀；TARGET_USER 为实际使用开发环境的用户（sudo 场景下取 SUDO_USER）
 if [ "$(id -u)" -eq 0 ]; then
 	SUDO=""
@@ -57,7 +62,15 @@ run_go() {
 	local bin path
 	bin=$(go_bin)
 	path="$(dirname "$bin"):/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-	as_user env PATH="$path" "$bin" "$@"
+	as_user env PATH="$path" GOPROXY="$GOPROXY" GOSUMDB="$GOSUMDB" "$bin" "$@"
+}
+
+# go_install 执行 go install；失败时提示可覆盖的模块代理
+go_install() {
+	run_go install "$@" && return 0
+	echo "ERROR: go install $* 失败；网络受限时可用环境变量覆盖代理后重试，例如：" >&2
+	echo "  GOPROXY=https://goproxy.cn,direct GOSUMDB=sum.golang.google.cn scripts/install-tools.sh <子命令>" >&2
+	return 1
 }
 
 # 把 Go 的 bin 目录写入目标用户的 shell 配置（幂等）
@@ -178,8 +191,8 @@ cmd_protobuf() {
 		return 1
 		;;
 	esac
-	run_go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest || return 1
-	run_go install google.golang.org/protobuf/cmd/protoc-gen-go@latest || return 1
+	go_install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest || return 1
+	go_install google.golang.org/protobuf/cmd/protoc-gen-go@latest || return 1
 	ensure_gobin_path
 }
 
@@ -221,9 +234,9 @@ cmd_pcap() {
 cmd_dev() {
 	require_go || return 1
 	echo "安装 Go 开发辅助工具 (asynq / pkgsite / goconvey)..."
-	run_go install github.com/hibiken/asynq/tools/asynq@latest || return 1
-	run_go install golang.org/x/pkgsite/cmd/pkgsite@latest || return 1
-	run_go install github.com/smartystreets/goconvey@v1.8.1 || return 1
+	go_install github.com/hibiken/asynq/tools/asynq@latest || return 1
+	go_install golang.org/x/pkgsite/cmd/pkgsite@latest || return 1
+	go_install github.com/smartystreets/goconvey@v1.8.1 || return 1
 	ensure_gobin_path
 	echo "安装完成，可执行文件位于 $(run_go env GOPATH)/bin"
 }
