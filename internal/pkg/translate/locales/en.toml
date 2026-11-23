@@ -237,7 +237,7 @@ other = "Generate the autocompletion script for PowerShell.\n\nTo load completio
 other = "Show version information"
 
 [cmd.version.long]
-other = "Show version information, default prints the semantic version, use --verbose for full details"
+other = "Show version information, including Version, Commit, Build Time, and Builder"
 
 [cmd.describe.short]
 other = "Show configuration details"
@@ -443,9 +443,6 @@ other = "config file path (e.g. /etc/zhongkui/config.toml)"
 
 [flag.help]
 other = "show help information"
-
-[flag.version.verbose]
-other = "print verbose build information"
 
 [flag.describe.scheduler.name]
 other = "task type name to print (repeatable)"

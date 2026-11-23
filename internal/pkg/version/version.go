@@ -110,11 +110,7 @@ func Short() string {
 	return Get().Version()
 }
 
-// PrintVersion 以格式化方式输出版本信息
-func PrintVersion(verbose bool) string {
-	info := Get()
-	if verbose {
-		return info.Verbose()
-	}
-	return info.Version()
+// PrintVersion 以格式化的详细形式输出版本信息
+func PrintVersion() string {
+	return Get().Verbose()
 }

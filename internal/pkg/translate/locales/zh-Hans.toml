@@ -1455,7 +1455,7 @@ other = "生成 PowerShell 的自动补全脚本。\n\n要在当前 shell 会话
 other = "显示版本信息"
 
 [cmd.version.long]
-other = "显示版本信息，默认输出语义化版本号，使用 --verbose 输出完整信息"
+other = "显示版本信息，包括 Version、Commit、Build Time 与 Builder"
 
 [cmd.describe.short]
 other = "显示配置详情"
@@ -1657,9 +1657,6 @@ other = "配置文件路径（如 /etc/zhongkui/config.toml）"
 
 [flag.help]
 other = "显示帮助信息"
-
-[flag.version.verbose]
-other = "输出详细的构建信息"
 
 [flag.describe.scheduler.name]
 other = "要打印的任务类型名称（可多次指定）"

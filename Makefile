@@ -42,9 +42,8 @@ endif
 #   - Release 构建必须显式指定 VERSION，如 make build-release VERSION=v1.2.3-rc.1
 #
 # 编译时版本信息通过 -ldflags 注入到二进制，运行时可通过以下命令查看:
-#   ./bin/zki version          # 精简输出，如 c2d4d21 或 v1.2.3
-#   ./bin/zki version -v       # 详细输出，包含 Commit / BuildTime / Builder
-#   go run cmd/zki/main.go version  # 开发时无需预编译，直接查看 commit hash
+#   ./bin/zki version          # 详细输出，包含 Version / Commit / BuildTime / Builder
+#   go run cmd/zki/main.go version  # 开发时无需预编译，直接查看
 #
 # 版本变量说明:
 #   VERSION     - 语义化版本号，仅 release 构建使用

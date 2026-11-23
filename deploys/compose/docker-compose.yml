@@ -52,7 +52,7 @@ x-zhongkui-service: &zhongkui-service
 services:
   # ---------------------------------------------------------------- 依赖
   postgres:
-    image: pgvector/pgvector:pg17
+    image: "${IMAGE_REGISTRY:-docker.io}/pgvector/pgvector:pg17"
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -61,7 +61,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d zhongkui"]
       interval: 5s
@@ -69,7 +69,7 @@ services:
       retries: 30
 
   clickhouse:
-    image: clickhouse:25.3.3
+    image: "${IMAGE_REGISTRY:-docker.io}/library/clickhouse:25.3.3"
     restart: unless-stopped
     environment:
       CLICKHOUSE_DB: zhongkui
@@ -82,8 +82,8 @@ services:
     volumes:
       - clickhouse-data:/var/lib/clickhouse
     ports:
-      - "127.0.0.1:9000:9000"
-      - "127.0.0.1:8123:8123"
+      - "127.0.0.1:${CLICKHOUSE_HOST_PORT:-9000}:9000"
+      - "127.0.0.1:${CLICKHOUSE_HTTP_HOST_PORT:-8123}:8123"
     healthcheck:
       test: ["CMD-SHELL", "clickhouse-client --password \"$$CLICKHOUSE_PASSWORD\" -q \"SELECT 1\" >/dev/null 2>&1"]
       interval: 5s
@@ -91,13 +91,15 @@ services:
       retries: 30
 
   redis:
-    image: redis:8.2.1
+    image: "${IMAGE_REGISTRY:-docker.io}/library/redis:8.2.1"
     restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
     volumes:
       - redis-data:/data
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
       interval: 5s
@@ -105,7 +107,7 @@ services:
       retries: 30
 
   etcd:
-    image: quay.io/coreos/etcd:v3.6.5
+    image: "${ETCD_IMAGE:-quay.io/coreos/etcd:v3.6.5}"
     restart: unless-stopped
     command:
       - etcd
@@ -119,7 +121,7 @@ services:
     volumes:
       - etcd-data:/etcd-data
     ports:
-      - "127.0.0.1:2379:2379"
+      - "127.0.0.1:${ETCD_HOST_PORT:-2379}:2379"
     healthcheck:
       test: ["CMD", "etcdctl", "endpoint", "health"]
       interval: 5s
@@ -127,7 +129,7 @@ services:
       retries: 30
 
   rustfs:
-    image: rustfs/rustfs:latest
+    image: "${IMAGE_REGISTRY:-docker.io}/rustfs/rustfs:latest"
     restart: unless-stopped
     command: ["/data"]
     environment:
@@ -140,14 +142,14 @@ services:
     volumes:
       - rustfs-data:/data
     ports:
-      - "127.0.0.1:9002:9000"
-      - "127.0.0.1:9001:9001"
+      - "127.0.0.1:${RUSTFS_HOST_PORT:-9002}:9000"
+      - "127.0.0.1:${RUSTFS_CONSOLE_HOST_PORT:-9001}:9001"
     depends_on:
       rustfs-perms:
         condition: service_completed_successfully
 
   rustfs-perms:
-    image: alpine:3.20
+    image: "${IMAGE_REGISTRY:-docker.io}/library/alpine:3.20"
     user: "0:0"
     command: ["chown", "-R", "10001:10001", "/data"]
     volumes:
@@ -156,7 +158,7 @@ services:
 
   # 等待 RustFS 就绪并创建默认桶（代码不会自动建桶）
   s3-init:
-    image: amazon/aws-cli:2.17.0
+    image: "${IMAGE_REGISTRY:-docker.io}/amazon/aws-cli:2.17.0"
     restart: "no"
     entrypoint: ["/bin/sh", "-c"]
     command:
@@ -185,6 +187,9 @@ services:
     command:
       - |
         set -eu
+        # 本服务覆盖了镜像 entrypoint，跳过其 file capability 兼容性处理；
+        # 先清除 zki 的抓包 capability，避免运行时 exec 返回 Operation not permitted
+        command -v setcap >/dev/null 2>&1 && setcap -r /usr/local/bin/zki || true
         if [ ! -s /data/password-book.bin ]; then
           /usr/local/bin/zki --config /app/config.toml create password-book -o /data/password-book.bin
         fi
@@ -232,7 +237,7 @@ services:
       OTEL_SERVICE_NAME: zhongkui-api
     ports:
       - "127.0.0.1:${ZKI_API_PORT:-8080}:8080"
-      - "127.0.0.1:19090:19090"
+      - "127.0.0.1:${ZKI_API_HEALTH_PORT:-19090}:19090"
     depends_on:
       zhongkui-migrate:
         condition: service_completed_successfully
@@ -293,14 +298,14 @@ services:
   # 可选：本地 OTel Collector（debug 导出，日志即数据）
   otel-collector:
     profiles: ["otel"]
-    image: otel/opentelemetry-collector-contrib:latest
+    image: "${IMAGE_REGISTRY:-docker.io}/otel/opentelemetry-collector-contrib:latest"
     restart: unless-stopped
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
     volumes:
       - ./otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
     ports:
-      - "127.0.0.1:4317:4317"
-      - "127.0.0.1:4318:4318"
+      - "127.0.0.1:${OTEL_GRPC_HOST_PORT:-4317}:4317"
+      - "127.0.0.1:${OTEL_HTTP_HOST_PORT:-4318}:4318"
 
 volumes:
   postgres-data:

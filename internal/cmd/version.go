@@ -4,21 +4,17 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"zhongkuisec.com/zhongkui/internal/pkg/version"
-	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "cmd.version.short",
 	Long:  "cmd.version.long",
-	Run: func(cmd *cobra.Command, args []string) {
-		_, i := cmdToolBox(cmd)
-		v := provider.MustInvokeViper(i)
-		verbose := v.GetBool("verbose")
-		pterm.Println(version.PrintVersion(verbose))
+	// version 只读取编译期注入的版本信息，不依赖 config.toml
+	Annotations: map[string]string{
+		annotationSkipInjectorInit: "",
 	},
-}
-
-func init() {
-	versionCmd.Flags().BoolP("verbose", "v", false, "flag.version.verbose")
+	Run: func(cmd *cobra.Command, args []string) {
+		pterm.Println(version.PrintVersion())
+	},
 }

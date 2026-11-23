@@ -18,6 +18,10 @@ var completionCmd = &cobra.Command{
 	Long:              "cmd.completion.long",
 	Args:              cobra.NoArgs,
 	ValidArgsFunction: cobra.NoFileCompletions,
+	// 补全脚本只读取命令树，不依赖 config.toml
+	Annotations: map[string]string{
+		annotationSkipInjectorInit: "",
+	},
 }
 
 // completionBashCmd 生成 bash shell 的自动补全脚本

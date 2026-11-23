@@ -82,13 +82,33 @@ aws --version
 
 迁移脚本会执行 `CREATE EXTENSION IF NOT EXISTS vector` 并创建 `vector(1536)` 列。如果 PostgreSQL 没有 pgvector，`migrate up` 会失败。任选一种方式：
 
-1. **Debian / Ubuntu（PGDG 源）**：
+1. **Debian / Ubuntu（PGDG 源）**：`postgresql-*-pgvector` 不在发行版默认源中，直接安装会报 `Unable to locate package`。先启用 PostgreSQL 官方 PGDG 源：
+
    ```bash
+   sudo apt install -y postgresql-common
+   sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
+   sudo apt update
+   # 包名中的版本号必须与已安装的 PostgreSQL 主版本一致（此处以 17 为例）
    sudo apt install -y postgresql-17-pgvector
    ```
-   PostgreSQL 主版本不是 17 时替换包名，可先 `apt-cache search pgvector` 确认。
+
+   没有 `postgresql-common` 自带脚本，或脚本无法使用时，可手动写入源：
+
+   ```bash
+   sudo install -d /usr/share/postgresql-common/pgdg
+   sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+     https://www.postgresql.org/media/keys/ACCC4CF8.asc
+   . /etc/os-release
+   echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+     | sudo tee /etc/apt/sources.list.d/pgdg.list
+   sudo apt update
+   sudo apt install -y postgresql-17-pgvector
+   ```
+
+   PostgreSQL 主版本不是 17 时替换包名（如 `postgresql-16-pgvector`）；仍可用 `apt-cache search pgvector` 确认。若源添加后仍搜不到包，说明当前系统代号不在 PGDG 支持范围，改用下面的源码编译方式。
 2. **源码编译（发行版没有包）**：
    ```bash
+   # 同样需要 PGDG 源提供 postgresql-server-dev-17；也可换成发行版自带的 postgresql-server-dev-all
    sudo apt install -y build-essential postgresql-server-dev-17 git
    git clone --branch v0.8.0 https://github.com/pgvector/pgvector.git
    cd pgvector && make && sudo make install
@@ -98,11 +118,41 @@ aws --version
    CREATE EXTENSION IF NOT EXISTS vector;
    ```
 
-验证（库必须已创建）：
+验证（库必须已创建；尚未建库时可先用默认的 `postgres` 库验证）：
 
-```sql
-SELECT extversion FROM pg_extension WHERE extname = 'vector';
+**登录 PostgreSQL**
+
+```bash
+# 本机安装的 PostgreSQL：默认 peer/socket 认证，无需口令
+sudo -u postgres psql
+
+# 远程或密码认证（托管实例、非本机部署）：按提示输入口令
+psql -h 127.0.0.1 -p 5432 -U postgres -d postgres
+
+# 非交互执行单条 SQL
+PGPASSWORD='<POSTGRES_PASSWORD>' psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -c '<SQL>'
 ```
+
+**检查扩展包与启用状态**
+
+```bash
+# 1) 扩展包是否已安装到 PostgreSQL：有行表示已安装
+sudo -u postgres psql -d postgres -c \
+  "SELECT name, default_version, installed_version FROM pg_available_extensions WHERE name = 'vector';"
+
+# 2) 当前库是否已启用：有行表示已启用，extversion 为版本号（如 0.8.0）
+sudo -u postgres psql -d postgres -c \
+  "SELECT extversion FROM pg_extension WHERE extname = 'vector';"
+```
+
+远程实例把 `sudo -u postgres psql -d postgres` 换成上面的 `psql -h ...` 连接方式即可。结果判读：
+
+| 查询 | 有结果 | 无结果 |
+| --- | --- | --- |
+| `pg_available_extensions` | 扩展包已安装 | 回到 2.1 安装 pgvector |
+| `pg_extension` | 当前库已启用，输出如 `0.8.0` | 在目标库执行 `CREATE EXTENSION IF NOT EXISTS vector;` |
+
+切换目标库：psql 内执行 `\c zhongkui`，或连接时用 `-d zhongkui`。创建扩展需要数据库超级用户权限，权限不足时用管理员账号执行。
 
 ### 2.2 托管依赖：建库与建桶
 
@@ -121,12 +171,17 @@ clickhouse-client --host 127.0.0.1 --password '<CLICKHOUSE_PASSWORD>' \
   --query "CREATE DATABASE IF NOT EXISTS zhongkui"
 
 # S3（以 RustFS/MinIO 为例；云对象存储可在控制台建桶）
-# 先配置 AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY（或使用控制台）
-aws --endpoint-url http://127.0.0.1:9002 \
+# 若 S3 是本仓库用 Docker 启动的 RustFS（scripts/dev-containers.sh 或 Compose），
+# 账号与口令均为 rustfsadmin；其他服务用控制台或初始化时生成的凭据
+export AWS_ACCESS_KEY_ID=rustfsadmin
+export AWS_SECRET_ACCESS_KEY=rustfsadmin
+# --region 必须与服务端一致：RustFS/MinIO 默认 us-east-1；
+# 不指定时 AWS CLI 会带上本机配置的区域，可能报 InvalidLocationConstraint
+aws --endpoint-url http://127.0.0.1:9002 --region us-east-1 \
   s3 mb s3://capture
 ```
 
-> 代码不会自动创建 S3 桶，桶不存在会导致快照与大字段写入失败。未安装 AWS CLI 时，可直接在云对象存储控制台创建桶，或按 1.1 安装 AWS CLI v2。未安装 `clickhouse-client` 时，可在 ClickHouse 控制台执行建库语句，或改用其 HTTP 接口。
+> 建桶用的凭据必须与 `config.toml` 的 `[s3].accessKey` / `secretKey` 一致。代码不会自动创建 S3 桶，桶不存在会导致快照与大字段写入失败。未安装 AWS CLI 时，可直接在云对象存储控制台创建桶，或按 1.1 安装 AWS CLI v2。未安装 `clickhouse-client` 时，可在 ClickHouse 控制台执行建库语句，或改用其 HTTP 接口。若指定 `--region` 后仍报 `InvalidLocationConstraint`，检查环境变量 `AWS_REGION` / `AWS_DEFAULT_REGION` 与 `~/.aws/config` 中的 region 是否被覆盖。
 
 ## 3. 安装二进制
 
@@ -206,7 +261,7 @@ sudo useradd --system --home-dir /var/lib/zhongkui --shell /usr/sbin/nologin zki
 sudo mkdir -p /etc/zhongkui/certs /var/lib/zhongkui/tmp
 sudo chown -R zki:zki /etc/zhongkui /var/lib/zhongkui
 sudo chmod 750 /etc/zhongkui
-zki version -v
+zki version
 ```
 
 ## 4. 编写配置
@@ -227,7 +282,7 @@ sudo vi /etc/zhongkui/config.toml
 | `[database.raw]` | `dsn` | ClickHouse 地址、口令、库名 |
 | `[redis.cache]` / `[redis.pipeline]` | `addr` / `password` | Redis 地址与口令 |
 | `[etcd]` | `endpoints` | etcd 地址列表 |
-| `[s3]` | `endpoint` / `accessKey` / `secretKey` / `bucket` | 对象存储 |
+| `[s3]` | `endpoint` / `accessKey` / `secretKey` / `bucket` | 对象存储；仓库 Docker 启动的 RustFS 用 `rustfsadmin` / `rustfsadmin` |
 | `[grpc.client.reporter.tls]` | `domain` | 与下一步生成的证书 DNS 名一致 |
 | `[grpc.client.reporter.auth]` | `accessKeyID` / `accessKeySecret` | 采集端上报凭证，后续创建 |
 | `[api]` | `frontendBaseURL` / `[api.auth.cookie].domain` | 浏览器实际访问地址 |
@@ -478,6 +533,7 @@ sudo systemctl start zk-web zk-worker zk-grpc
 | 启动即退出 | `journalctl -u zk-web -n 100`；先跑 `describe deps`，确认配置与依赖 |
 | `migrate up` 报 vector 相关错误 | PostgreSQL 未安装 pgvector；按 2.1 安装后在目标库执行 `CREATE EXTENSION IF NOT EXISTS vector` |
 | 大字段/快照写入失败 | S3 桶不存在或凭据错误；确认 `bucket` 已创建、`endpoint` 不含 `http://` |
+| `aws s3 mb` 报 `InvalidLocationConstraint` | AWS CLI 带了与服务端不一致的 region；命令加 `--region us-east-1`（RustFS/MinIO），并检查 `AWS_REGION` / `AWS_DEFAULT_REGION` |
 | 登录后立即掉线 | `[api.auth.cookie].domain` 与浏览器地址不一致；改为实际域名或 IP |
 | 只有 web 健康检查可用 | worker/grpc 健康端口冲突；确认 19090/19091/19092 各不相同 |
 | 浏览器页面正常但接口 502 | 检查 `/etc/nginx/conf.d/zhongkui.conf` 是否由 `deploys/binary/nginx.conf.template` 生成，且 `/api/` 已反代到 `127.0.0.1:8080` |

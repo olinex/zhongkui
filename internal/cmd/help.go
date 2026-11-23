@@ -14,6 +14,10 @@ var helpCmd = &cobra.Command{
 	Use:   "help [command]",
 	Short: "cmd.help.short",
 	Long:  "cmd.help.long",
+	// help 只读取命令树与本地化文案，不依赖 config.toml
+	Annotations: map[string]string{
+		annotationSkipInjectorInit: "",
+	},
 	ValidArgsFunction: func(c *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
 		var completions []cobra.Completion
 		cmd, _, e := c.Root().Find(args)

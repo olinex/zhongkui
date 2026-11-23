@@ -50,7 +50,11 @@ clickhouse-client --host <ch-host> --password '<password>' \
   --query "CREATE DATABASE IF NOT EXISTS zhongkui"
 
 # S3（以 S3 兼容服务为例；云对象存储可用控制台）
-aws --endpoint-url https://<s3-endpoint> s3 mb s3://capture
+# 若使用本仓库 Docker 启动的 RustFS，账号与口令均为 rustfsadmin
+export AWS_ACCESS_KEY_ID=rustfsadmin
+export AWS_SECRET_ACCESS_KEY=rustfsadmin
+# --region 必须与服务端一致：RustFS/MinIO 默认 us-east-1，云对象存储填对应区域
+aws --endpoint-url https://<s3-endpoint> --region <s3-region> s3 mb s3://capture
 ```
 
 Redis 使用两个逻辑库：cache 用 DB 0，pipeline 用 DB 1；若启用了密码，需要同时提供。
@@ -60,13 +64,14 @@ Redis 使用两个逻辑库：cache 用 DB 0，pipeline 用 DB 1；若启用了�
 迁移脚本会创建 `vector(1536)` 列并执行 `CREATE EXTENSION IF NOT EXISTS vector`。任选一种方式：
 
 1. **Docker**：使用 `pgvector/pgvector:pg17` 作为数据库镜像。
-2. **Debian / Ubuntu**：
+2. **Debian / Ubuntu（需 PGDG 源）**：`postgresql-*-pgvector` 不在发行版默认源中，先按 [Linux 二进制部署](deploy-binary.md) 2.1 节启用 PGDG 源，再安装：
    ```bash
    sudo apt install -y postgresql-17-pgvector
    ```
    PostgreSQL 主版本不是 17 时替换包名。
 3. **源码编译**：
    ```bash
+   # postgresql-server-dev-17 同样来自 PGDG；也可改用发行版自带的 postgresql-server-dev-all
    sudo apt install -y build-essential postgresql-server-dev-17 git
    git clone --branch v0.8.0 https://github.com/pgvector/pgvector.git
    cd pgvector && make && sudo make install

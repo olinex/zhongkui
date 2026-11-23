@@ -5,7 +5,7 @@
 ## Index
 
 - [Variables](<#variables>)
-- [func PrintVersion\(verbose bool\) string](<#PrintVersion>)
+- [func PrintVersion\(\) string](<#PrintVersion>)
 - [func Short\(\) string](<#Short>)
 
 
@@ -30,10 +30,10 @@ var (
 ## func [PrintVersion](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/version/version.go#L114>)
 
 ```go
-func PrintVersion(verbose bool) string
+func PrintVersion() string
 ```
 
-PrintVersion 以格式化方式输出版本信息
+PrintVersion 以格式化的详细形式输出版本信息
 
 <a name="Short"></a>
 ## func [Short](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/version/version.go#L109>)
