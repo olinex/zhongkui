@@ -738,6 +738,7 @@ finalize_release() {
 		git push "$REMOTE" "$tag_ref"
 	fi
 	print_backmerge_pr
+	printf '  发布 Helm Chart: scripts/chart-publish.sh %s --push\n' "$version"
 	printf '  回合并 PR 通过后，可删除对应的 release / hotfix 分支并执行 clean\n'
 }
 

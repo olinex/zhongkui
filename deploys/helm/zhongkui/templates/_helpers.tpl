@@ -60,14 +60,14 @@ app.kubernetes.io/component: {{ .component }}
 {{- end -}}
 
 {{/*
-镜像
+镜像：tag 为空时取 Chart.appVersion，保证 OCI 安装锁定到对应发布版本
 */}}
 {{- define "zhongkui.coreImage" -}}
-{{- printf "%s:%s" .Values.image.repository .Values.image.tag -}}
+{{- printf "%s:%s" .Values.image.repository (default .Chart.AppVersion .Values.image.tag) -}}
 {{- end -}}
 
 {{- define "zhongkui.webImage" -}}
-{{- printf "%s:%s" .Values.webImage.repository .Values.webImage.tag -}}
+{{- printf "%s:%s" .Values.webImage.repository (default .Chart.AppVersion .Values.webImage.tag) -}}
 {{- end -}}
 
 {{/*

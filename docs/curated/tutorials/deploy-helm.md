@@ -6,6 +6,12 @@
 
 本文用仓库自带的 Helm Chart 把 zhongkui 部署到 Kubernetes，并连接外部 PostgreSQL、ClickHouse、Redis、etcd 与 S3。Chart 不内置这些依赖，避免生产环境被单机依赖绑定。
 
+Chart 随每个版本发布到 OCI 仓库，部署时**无需 clone 源码**：
+
+```
+oci://zhongkui-cn-beijing.cr.volces.com/open-source/charts/zhongkui
+```
+
 ## 1. 适用场景与前置条件
 
 - Kubernetes 1.25+
@@ -204,11 +210,31 @@ grpc:
 
 ## 6. 安装
 
+Chart 已发布到 OCI 仓库，无需 clone 源码。仓库公开可读时可直接拉取；私有仓库需先登录一次：
+
 ```bash
-helm upgrade --install zhongkui deploys/helm/zhongkui \
+helm registry login zhongkui-cn-beijing.cr.volces.com
+```
+
+查看当前 Chart 的默认 values：
+
+```bash
+helm show values oci://zhongkui-cn-beijing.cr.volces.com/open-source/charts/zhongkui --version 1.2.3
+```
+
+安装（`--version` 必填，用于锁定版本；Chart 的 `appVersion` 即镜像 tag）：
+
+```bash
+helm upgrade --install zhongkui \
+  oci://zhongkui-cn-beijing.cr.volces.com/open-source/charts/zhongkui \
+  --version 1.2.3 \
   -n zhongkui --create-namespace \
   -f values-prod.yaml
 ```
+
+> 需要固定镜像 tag 时显式传 `--set image.tag=v1.2.3 --set webImage.tag=v1.2.3`；为空时默认使用 Chart 的 `appVersion`。
+>
+> 开发调试可改用源码目录：`helm upgrade --install zhongkui deploys/helm/zhongkui -n zhongkui --create-namespace -f values-prod.yaml`。
 
 安装顺序：
 
@@ -338,7 +364,10 @@ kubectl -n zhongkui logs deploy/zhongkui-otel-collector -f
 
 ```bash
 # 升级（迁移由 pre-upgrade hook 自动执行）
-helm upgrade zhongkui deploys/helm/zhongkui -n zhongkui -f values-prod.yaml
+helm upgrade zhongkui \
+  oci://zhongkui-cn-beijing.cr.volces.com/open-source/charts/zhongkui \
+  --version 1.2.4 \
+  -n zhongkui -f values-prod.yaml
 
 # 查看历史与回滚应用版本
 helm history zhongkui -n zhongkui

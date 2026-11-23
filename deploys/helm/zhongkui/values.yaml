@@ -17,12 +17,13 @@ fullnameOverride: ""
 
 image:
   repository: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-core
-  tag: latest
+  # 为空时取 Chart.appVersion（OCI 安装即发布版本；源码安装默认 latest）
+  tag: ""
   pullPolicy: IfNotPresent
 
 webImage:
   repository: zhongkui-cn-beijing.cr.volces.com/open-source/zhongkui-web
-  tag: latest
+  tag: ""
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
