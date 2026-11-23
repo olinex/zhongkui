@@ -92,7 +92,7 @@ type UserClaims struct {
 }
 ```
 
-- **强制手段**：注释完备性由自建 analyzer 检查，入口为 `make lint`（`cmd/commentlint` 驱动 `internal/lint/commentlint` 的 `analysis.Analyzer`，标准 `go/analysis` 驱动，诊断输出 `文件:行:列: 说明`，发现缺口时退出码 3），提交前与 CI 必跑，禁止只靠人工检查。
+- **强制手段**：注释完备性由自建 analyzer 检查，入口为 `scripts/check.sh lint`（`cmd/commentlint` 驱动 `internal/lint/commentlint` 的 `analysis.Analyzer`，标准 `go/analysis` 驱动，诊断输出 `文件:行:列: 说明`，发现缺口时退出码 3），提交前与 CI 必跑，禁止只靠人工检查。
 - **检查范围**：导出类型 / 函数 / 方法 / 常量 / 变量、导出结构体的字段（**含非导出字段**，字段带 `comment:"` tag 或行尾注释均视为已有注释）、导出接口的方法，以及包注释。
 - **包注释按目录聚合**：同目录任一文件带包注释即视为该包已有包注释；被构建约束排除的同目录源文件同样计入（包注释允许落在 `//go:build linux` 这类实现文件中），外部测试包 `xxx_test` 的包注释由主包承载、不单独检查。
 - **豁免规则**：包子句前的注释带生成标记（标准 `// Code generated <id> DO NOT EDIT.` 及 `DO NOT EDIT!!!` 等非标准生成头）的文件整体跳过，正文里提到标记不算生成文件；`_test.go` 中 `Test` / `Benchmark` / `Example` / `Fuzz` 前缀函数跳过（测试替身的导出方法与导出类型仍须注释）；内嵌字段、内嵌接口与多名字声明中「部分导出」的字段（如 `A, b string`）不检查。
@@ -200,6 +200,7 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - Viper 绑定用 `mapstructure` tag；默认值用 `default` tag（`github.com/creasty/defaults`）
 - `comment` tag 必须用中文书写，作为 `describe config`（`DescribeConfig`）渲染的唯一事实来源；可选英文翻译加在 `internal/pkg/translate/locales/en.toml` 的 `config.<path>`（如 `[config.i18n.rootPath]`），未命中回退中文
 - 类型安全提取：`config.ExtractConfig[T]()`；配置前缀常量 `Prefix = "capture"`（`internal/capture/config.go`）
+- **部署配置样例单一事实源**：`deploys/binary/config.example.toml`、`deploys/compose/config.example.toml` 与 Helm Chart 的 `templates/_helpers.tpl` 必须与 `zki create default-config` 的字段集合、层级和标量类型保持一致（取值可随部署形态不同）；新增或重命名配置字段时必须同步三处，并由 `scripts/check.sh config` 校验（缺失、多余、类型不一致及无法映射的 `ZKI_*` 覆盖键都会失败）
 
 ### CLI (Cobra)
 
@@ -470,7 +471,7 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - **单一事实来源**：概念与任务正文不再由 package 注释承载。package 注释只写「包职责 / 文件分工 / 边界 / 不变量」，任务步骤写入 `docs/curated/`；生成条目由注册表声明并在 `docs/generated/explanation/` 落盘，禁止手改。
 - **投影页（Projection）**：正文由调用方按单一事实来源渲染，导出器只落盘并套用统一页头（分类固定为参考），输出必须位于 `generated/` 下；投影页不入 RAG；`Options.Projections` 为空时导出行为与不传时一致。
 - **每个包至多一条叙述条目**：同一包的 package 注释只对应一篇叙述页，避免同包多页内容重复、被 RAG 重复索引。
-- **导出与漂移检查**：`zki create docs`（`internal/cmd/docs.go`）一次导出叙述页、参考页、参考索引、`docs/index.md` 与 `docs/nav.json`；`zki create docs --check` 导出到临时目录并逐文件比对生成域，任何缺失、多余或内容不同都以非零退出（`make docs-check`）。**抽取或生成失败不得静默**：出错必须经 `pterm.Error` 报错并返回错误使命令非零退出。
+- **导出与漂移检查**：`zki create docs`（`internal/cmd/docs.go`）一次导出叙述页、参考页、参考索引、`docs/index.md` 与 `docs/nav.json`；`zki create docs --check` 导出到临时目录并逐文件比对生成域，任何缺失、多余或内容不同都以非零退出（`scripts/check.sh docs`）。**抽取或生成失败不得静默**：出错必须经 `pterm.Error` 报错并返回错误使命令非零退出。
 - **叙述档渲染约束（重要）**：叙述档在 `internal/docs/render.go` 中额外覆盖 `text` 模板（`narrativeTextTemplate`）关闭纯文本转义，因此叙述来源的 package 注释必须写成「原样 Markdown 且安全」——命令 / 路径 / 配置键 / 标识符一律用反引号包裹（否则 `_`、`*` 等会被 Markdown 解析成斜体 / 加粗）；禁止 `# ` 单井号标题（Go 文档注释只识别单井号为 heading，会渲染成固定层级并与注册表注入的 H1 标题重复、层级倒挂），顶层小节用 `## `、嵌套用 `### `；避免会被当作 HTML 标签吞掉的裸尖括号占位符。
 - **参考档保持内置转义**：参考档不覆盖 `text` 模板，沿用 gomarkdoc 内置转义——这对符号文档里的字面量 `#`、尖括号是正确行为，不得关闭。
 - **守卫测试**：`internal/docs/registry_test.go` 校验分类与分区合法、分区内顺序唯一、来源与根目录一致、责任人非空、来源包存在、孤儿页（生成与策展分别检查）、生成文件带标记、策展页元信息头与依据路径、叙述条目元信息完整；改注册表或文档后必须过此测试。
@@ -1245,7 +1246,7 @@ meta:
 ├── cmd/
 │   ├── zki/          # 主程序入口 (main.go)
 │   ├── template/     # 代码生成器 (生成 manager/views/search.go 等)
-│   ├── commentlint/  # 注释检查器入口 (make lint 驱动 internal/lint/commentlint)
+│   ├── commentlint/  # 注释检查器入口 (scripts/check.sh lint 驱动 internal/lint/commentlint)
 │   └── nic_probe/    # 网卡 XDP 支持探测工具
 ├── internal/
 │   ├── benchmark/    # Benchmarking utilities
@@ -1278,6 +1279,7 @@ meta:
 9. 代码与注释中禁止 emoji，除非显式要求
 10. 提交前运行 `scripts/web.sh lint`（web 前端 ESLint）、`scripts/web.sh lint:style`（Stylelint）与 `scripts/web.sh type-check`（vue-tsc），三者全部通过
 11. 分层边界：`internal/pkg/llm` 只承载 AI 能力薄封装——OpenAI 兼容客户端、端点配置快照（`ModelConfig`）、embedding 探针与 Markdown 分块器，以及客户端入参契约所需的 `ModelKind` 取值与解析（模型档位 `Slot` 及其取值空间 `AllSlots` / 解析 helper 归 `internal/models/ai`，与该取值空间的定义处同包，并因被持久化模型 `agent_sessions.slot` 用作 GORM 字段类型）；LLM 行为参数注册表（`Specs` / `Params`）与内置工具元信息（`ToolSpecs`）归 `internal/ai/config`，pgvector 列校准（`ReconcileEmbeddingColumn` 等）与 embedding 兼容性判定（`VerifyEmbeddingCompat`）归 `internal/ai/llminfra`，业务数据清洗（`SanitizeBusinessData`）归 `agentkit`；业务枚举按取值空间归 `internal/models/ai`（`ToolSource` / `llmToolSource`、`Slot` / `llmSlot`、`AgentKind` / `AgentRunStatus` / `SessionStatus` / `MessageRole` / `MemoryKind` / `MemoryStatus`），禁止再上移进 `internal/pkg/llm`
-12. 提交前运行 `make lint`（Go 注释完备性检查，见「Comments」），并保证 `gofmt`、`go build ./...`、`go vet ./...` 通过
-13. 第三方依赖许可证门禁：新增 Go 运行时依赖或 Web 生产依赖前必须通过 `make license-check`；GPL/AGPL/LGPL/SSPL/非商业与未知许可证一律拒绝，例外只允许以「组件@版本 → 已核对 SPDX」登记在 `internal/lint/licensecheck`，并同步更新 `THIRD_PARTY_LICENSES.md`
-14. 构建与脚本边界：Makefile 只负责项目文件构建（编译、生成码、静态检查、单元测试、构建依赖管理）；安装、服务启停、测试报告、发布等操作统一封装在 `scripts/` 中；`scripts/` 可以调用 `make`，但 `Makefile` 不得调用 `scripts/*.sh`；镜像构建的 Dockerfile（后端 `normal.Dockerfile` / `slim.Dockerfile`、前端 `web.Dockerfile`）统一放在 `deploys/containers/`，镜像构建统一由 `scripts/image.sh` 驱动（normal / slim / web 三种目标）；后端在 `normal.Dockerfile` 构建阶段内交叉编译 zki（只允许调用 `make version-env` 与 `make build-release`，版本元数据不得在 Dockerfile 内重复实现），`slim.Dockerfile` 从已构建的 normal 镜像提取 zki、不再编译，前端 `web.Dockerfile` 编译 `web/dist` 与 `docs/.vitepress/dist`；任何 Dockerfile 不得直接调用 `make build`
+12. 提交前运行 `scripts/check.sh lint`（Go 注释完备性检查，见「Comments」），并保证 `scripts/check.sh fmt`、`scripts/check.sh build`、`scripts/check.sh vet` 通过
+13. 第三方依赖许可证门禁：新增 Go 运行时依赖或 Web 生产依赖前必须通过 `scripts/check.sh license`；GPL/AGPL/LGPL/SSPL/非商业与未知许可证一律拒绝，例外只允许以「组件@版本 → 已核对 SPDX」登记在 `internal/lint/licensecheck`，并同步更新 `THIRD_PARTY_LICENSES.md`
+14. 构建与脚本边界：Makefile 只负责项目文件构建（编译、生成码、构建依赖管理）；所有检查（gofmt / build / vet / test / lint / license / docs / config）统一收敛在 `scripts/check.sh`，安装、服务启停、测试报告、发布等操作统一封装在 `scripts/` 中；`scripts/` 可以调用 `make`，但 `Makefile` 不得调用 `scripts/*.sh`；CI 编排统一在 `scripts/ci.sh`，Makefile 不再提供 `ci` 目标；镜像构建的 Dockerfile（后端 `normal.Dockerfile` / `slim.Dockerfile`、前端 `web.Dockerfile`）统一放在 `deploys/containers/`，镜像构建统一由 `scripts/image.sh` 驱动（normal / slim / web 三种目标）；后端在 `normal.Dockerfile` 构建阶段内交叉编译 zki（只允许调用 `make version-env` 与 `make build-release`，版本元数据不得在 Dockerfile 内重复实现），`slim.Dockerfile` 从已构建的 normal 镜像提取 zki、不再编译，前端 `web.Dockerfile` 编译 `web/dist` 与 `docs/.vitepress/dist`；任何 Dockerfile 不得直接调用 `make build`
+15. 部署配置漂移：涉及配置结构体变更时运行 `scripts/check.sh config`（依赖 helm，可用 `HELM_BIN` 指定），确保二进制 / Compose / Helm 样例与 `zki create default-config` 的字段集合与类型一致

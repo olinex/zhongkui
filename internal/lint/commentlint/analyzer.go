@@ -1,4 +1,4 @@
-// Package commentlint 实现注释完备性检查的 go/analysis Analyzer，供 make lint 与 CI 调用。
+// Package commentlint 实现注释完备性检查的 go/analysis Analyzer，供 scripts/check.sh lint 与 CI 调用。
 //
 // 检查范围与 AGENTS.md「Comments」条目一致：
 //

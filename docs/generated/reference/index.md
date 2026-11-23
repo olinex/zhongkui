@@ -4,6 +4,7 @@
 > 分类：参考 · 说明：后端全部包自动导出的符号参考，按导入路径排序。
 
 - [main 参考](cmd/commentlint.md) — 来源 `zhongkuisec.com/zhongkui/cmd/commentlint`
+- [main 参考](cmd/configcheck.md) — 来源 `zhongkuisec.com/zhongkui/cmd/configcheck`
 - [main 参考](cmd/docsnap.md) — 来源 `zhongkuisec.com/zhongkui/cmd/docsnap`
 - [main 参考](cmd/licensecheck.md) — 来源 `zhongkuisec.com/zhongkui/cmd/licensecheck`
 - [main 参考](cmd/nic_probe.md) — 来源 `zhongkuisec.com/zhongkui/cmd/nic_probe`
@@ -41,6 +42,7 @@
 - [datasource 参考](internal/datasource.md) — 来源 `zhongkuisec.com/zhongkui/internal/datasource`
 - [docs 参考](internal/docs.md) — 来源 `zhongkuisec.com/zhongkui/internal/docs`
 - [commentlint 参考](internal/lint/commentlint.md) — 来源 `zhongkuisec.com/zhongkui/internal/lint/commentlint`
+- [configcheck 参考](internal/lint/configcheck.md) — 来源 `zhongkuisec.com/zhongkui/internal/lint/configcheck`
 - [licensecheck 参考](internal/lint/licensecheck.md) — 来源 `zhongkuisec.com/zhongkui/internal/lint/licensecheck`
 - [manager 参考](internal/manager.md) — 来源 `zhongkuisec.com/zhongkui/internal/manager`
 - [config 参考](internal/manager/config.md) — 来源 `zhongkuisec.com/zhongkui/internal/manager/config`

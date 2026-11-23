@@ -7,13 +7,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // DefaultGoPackage 是被检查的 Go 入口包，其依赖闭包即随二进制分发的模块集合。
@@ -224,7 +226,7 @@ func goRuntimeModules(ctx context.Context, root, goPkg string) ([]string, error)
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("go list -deps %s: %w", goPkg, err)
+		return nil, errors.Wrapf(err, "go list -deps %s", goPkg)
 	}
 	seen := make(map[string]bool)
 	var paths []string
@@ -246,7 +248,7 @@ func goModuleInfo(ctx context.Context, root string) (map[string]goModule, error)
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("go list -m all: %w", err)
+		return nil, errors.Wrapf(err, "go list -m all")
 	}
 	modules := make(map[string]goModule)
 	decoder := json.NewDecoder(bytes.NewReader(out))
@@ -256,7 +258,7 @@ func goModuleInfo(ctx context.Context, root string) (map[string]goModule, error)
 			if err == io.EOF {
 				break
 			}
-			return nil, fmt.Errorf("parse go list -m output: %w", err)
+			return nil, errors.Wrapf(err, "parse go list -m output")
 		}
 		modules[m.Path] = m
 	}
@@ -358,7 +360,7 @@ func checkWeb(ctx context.Context, root, webDir string, requireWeb bool) ([]Viol
 	pnpmPath, err := exec.LookPath("pnpm")
 	if err != nil {
 		if requireWeb {
-			return nil, 0, false, fmt.Errorf("pnpm not found; cannot check Web production dependencies. Install pnpm or set LICENSE_CHECK_REQUIRE_WEB=0")
+			return nil, 0, false, errors.New("pnpm not found; cannot check Web production dependencies. Install pnpm or set LICENSE_CHECK_REQUIRE_WEB=0")
 		}
 		return nil, 0, true, nil
 	}
@@ -366,12 +368,12 @@ func checkWeb(ctx context.Context, root, webDir string, requireWeb bool) ([]Viol
 	cmd.Dir = filepath.Join(root, webDir)
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, 0, false, fmt.Errorf("pnpm licenses list: %w", err)
+		return nil, 0, false, errors.Wrapf(err, "pnpm licenses list")
 	}
 
 	var groups map[string][]pnpmPackage
 	if err := json.Unmarshal(out, &groups); err != nil {
-		return nil, 0, false, fmt.Errorf("parse pnpm licenses output: %w", err)
+		return nil, 0, false, errors.Wrapf(err, "parse pnpm licenses output")
 	}
 
 	var violations []Violation

@@ -2,7 +2,7 @@
 
 > 状态：草稿（AI 起草）
 > 责任人：@olinex
-> 依据：`deploys/binary/config.toml.example`、`deploys/binary/zk-web.service`、`deploys/binary/zk-worker.service`、`deploys/binary/zk-grpc.service`、`deploys/binary/otel.env.example`、`deploys/binary/nginx.conf.template`、`scripts/dist.sh`、`internal/cmd/user.go`、`internal/cmd/migrate.go`
+> 依据：`deploys/binary/config.example.toml`、`deploys/binary/zk-web.service`、`deploys/binary/zk-worker.service`、`deploys/binary/zk-grpc.service`、`deploys/binary/otel.env.example`、`deploys/binary/nginx.conf.template`、`scripts/dist.sh`、`internal/cmd/user.go`、`internal/cmd/migrate.go`
 
 本文面向第一次接触 zhongkui 的工程师：在一台 Linux 机器上，用二进制 + systemd 跑起管理端（web）、后台任务（worker）与 Reporter gRPC，再配 nginx 提供浏览器访问。所有命令都可以直接复制执行，`<...>` 需要替换。
 
@@ -214,7 +214,7 @@ web/
     docs/              # 文档站静态产物
 deploys/
   binary/
-    config.toml.example
+    config.example.toml
     nginx.conf.template
     zk-web.service
     zk-worker.service
@@ -267,7 +267,7 @@ zki version
 ## 4. 编写配置
 
 ```bash
-sudo cp deploys/binary/config.toml.example /etc/zhongkui/config.toml
+sudo cp deploys/binary/config.example.toml /etc/zhongkui/config.toml
 sudo chown root:zki /etc/zhongkui/config.toml
 sudo chmod 640 /etc/zhongkui/config.toml
 sudo vi /etc/zhongkui/config.toml

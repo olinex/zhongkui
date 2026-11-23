@@ -13,6 +13,11 @@ parent_secret_key = '<CHANGE_ME>'
 # 密码本文件路径（zki create password-book 生成，权限 0600）
 password_book_path = '/etc/zhongkui/password-book.bin'
 
+[crypto.kms]
+# 获取主密钥的外部命令（仅当 source 为 kms 时使用）
+command = []
+timeout = '10s'
+
 [api]
 host = '0.0.0.0'
 port = 8080

@@ -37,7 +37,7 @@ scripts/web.sh dev
 ## 3. 代码规范
 
 - 后端与前端约定统一沉淀在 [AGENTS.md](AGENTS.md)，提交前请先阅读对应章节。
-- 注释一律中文；导出声明必须有注释，由 `make lint` 强制检查。
+- 注释一律中文；导出声明必须有注释，由 `scripts/check.sh lint` 强制检查。
 - 错误使用 `internal/pkg/errors` 包裹；面向用户的错误详情走 i18n。
 - 前端禁止内联样式，样式分层与设计令牌见 AGENTS.md「Vue Frontend Conventions」。
 - 不允许引入第二份设计文档或第二份事实来源。
@@ -46,7 +46,7 @@ scripts/web.sh dev
 
 - 使用 Conventional Commits（Angular 规范）：`build`、`ci`、`docs`、`feat`、`fix`、`perf`、`refactor`、`revert`、`style`、`test`、`chore`。
 - 一个提交只做一件事；格式化与重命名尽量独立提交。
-- 功能开发使用特性分支，合并前保持 `make ci` 通过。
+- 功能开发使用特性分支，合并前保持 `scripts/ci.sh` 通过。
 - 不要提交生成的二进制、覆盖率文件或本地配置。
 
 ### 分支与提交脚本
@@ -72,8 +72,8 @@ scripts/gitflow.sh commit -t feat -s gitflow -m "新增提交助手" -y
 - `--dry-run` 只预览 message；`-a` 暂存已跟踪文件，`-- <文件>` 指定待提交文件。
 - `master`、`develop` 上禁止提交，需先切到特性分支。
 - PR 描述仍在 Gitee 页面填写，脚本只负责推送分支并打开对比页；`--no-open` 只打印链接。
-- `--ci` 在推送前执行 `make ci`，`--force` 使用 `--force-with-lease`。
-- 标签由 `release finish`（PR 合入 `master` 后）统一创建：先校验 CHANGELOG 与 `web/package.json` 对齐、执行 `make ci`，再打 annotated tag；只推送 tag，不推送受保护分支。
+- `--ci` 在推送前执行 `scripts/ci.sh`，`--force` 使用 `--force-with-lease`。
+- 标签由 `release finish`（PR 合入 `master` 后）统一创建：先校验 CHANGELOG 与 `web/package.json` 对齐、执行 `scripts/ci.sh`，再打 annotated tag；只推送 tag，不推送受保护分支。
 - `release/*` 同样禁止直接推送，推送被拒绝时脚本会提示由有权限的维护者推送或在 Gitee 页面创建分支。
 
 ## 5. 构建与脚本边界
@@ -129,7 +129,7 @@ v1.2.3-alpha.1 → v1.2.3-alpha.2 → v1.2.3-beta.1 → v1.2.3-rc.1 → v1.2.3
 ### 发布命令（Gitee 为主仓）
 
 ```bash
-# 创建 annotated tag（PR 合入 master 后执行，会校验版本号、CHANGELOG、web/package.json 并跑 make ci）
+# 创建 annotated tag（PR 合入 master 后执行，会校验版本号、CHANGELOG、web/package.json 并跑 scripts/ci.sh）
 scripts/gitflow.sh release finish v1.2.3
 scripts/gitflow.sh release finish v1.2.3-rc.1
 
@@ -171,24 +171,27 @@ git push origin master --follow-tags
 提交前必须执行：
 
 ```bash
-make ci
+scripts/ci.sh
 ```
 
 等价于：
 
-| 目标 | 内容 |
+| 命令 | 内容 |
 | --- | --- |
-| `make fmt-check` | gofmt 格式检查 |
-| `make build-check` | `go build ./...` |
-| `make vet` | `go vet ./...` |
-| `make test` | `go test ./...` |
-| `make lint` | 注释完备性检查 |
-| `make license-check` | 第三方依赖许可证门禁（Go + Web 生产依赖） |
-| `make docs-check` | 文档生成物与代码声明一致性 |
+| `scripts/check.sh fmt` | gofmt 格式检查 |
+| `scripts/check.sh build` | `go build ./...` |
+| `scripts/check.sh vet` | `go vet ./...` |
+| `scripts/check.sh test` | `go test ./...` |
+| `scripts/check.sh lint` | 注释完备性检查 |
+| `scripts/check.sh license` | 第三方依赖许可证门禁（Go + Web 生产依赖） |
+| `scripts/check.sh docs` | 文档生成物与 RAG 快照一致性 |
+| `scripts/check.sh config` | 部署配置样例与 Helm 渲染结果漂移检查 |
+
+`scripts/check.sh config` 需要 helm（可用 `HELM_BIN` 指定可执行文件）；它还可以在配置结构体变更后单独执行。
 
 ### 测试分层
 
-- `make test` 与 `make ci` 默认不需要 PostgreSQL、ClickHouse、Redis、S3；依赖外部服务的用例会自动跳过（SKIP）。
+- `scripts/check.sh test` 与 `scripts/ci.sh` 默认不需要 PostgreSQL、ClickHouse、Redis、S3；依赖外部服务的用例会自动跳过（SKIP）。
 - 运行集成测试：执行 `scripts/test-integration.sh`，脚本会自动启动开发依赖容器、创建测试库，并以 `ZKI_TEST_INTEGRATION=1` 运行全部测试；额外参数原样传给 `go test`（如 `scripts/test-integration.sh -v -run TestFoo`）。
 - 也可自行提供 DSN：设置 `ZKI_TEST_INTEGRATION=1`，并配置 `ZKI_DATABASE_CORE_TEST_DSN`（PostgreSQL）/ `ZKI_DATABASE_RAW_TEST_DSN`（ClickHouse）；DSN 也可写在 `config.toml` 的 `[database.core_test]` / `[database.raw_test]` 中。
 - 开关取值为 `1` 才启用；未设置或为 `0` 时跳过。开启后若 DSN 缺失或连接失败，测试会直接失败而不是跳过。
@@ -202,7 +205,7 @@ make ci
 - npm 元数据缺失但已核对的包：加入 `knownUnknown`（键为 `name@version`）；
 - 同步更新 `THIRD_PARTY_LICENSES.md` 中的组件、版本与许可证全文。
 
-`make license-check` 的 Web 侧需要 `pnpm`；只读 `web/pnpm-lock.yaml`，无需安装 `node_modules`。CI 通过 `LICENSE_CHECK_REQUIRE_WEB=1` 强制要求 Web 检查。
+`scripts/check.sh license` 的 Web 侧需要 `pnpm`；只读 `web/pnpm-lock.yaml`，无需安装 `node_modules`。CI 通过 `LICENSE_CHECK_REQUIRE_WEB=1` 强制要求 Web 检查。
 
 ## 8. 文档要求
 
@@ -218,7 +221,7 @@ make ci
 1. 事实类内容（接口、字段、枚举、配置、CLI）只改声明源，然后运行 `make docs`。
 2. 意图类内容（教程、指南、概念、能力剧本）放在 `docs/curated/`，使用 `docs/templates/` 中的模板。
 3. 在 `internal/docs/registry.go` 登记条目（分区、顺序、责任人、来源、AI 摄入）。
-4. 运行 `make docs-check`，确保没有孤儿页、死链或元信息缺失。
+4. 运行 `scripts/check.sh docs`，确保没有孤儿页、死链或元信息缺失。
 5. 策展文档只有在「状态：已校对」且责任人明确后才可合并。
 
 文档站点（VitePress，源码即 `docs/` 下的 Markdown）：
@@ -239,7 +242,7 @@ DOCS_BASE=/zhongkui/ scripts/docs.sh build
 
 ## 9. Pull Request 检查清单
 
-- [ ] `make ci` 通过
+- [ ] `scripts/ci.sh` 通过
 - [ ] 前端改动已通过 `scripts/web.sh lint`
 - [ ] 新增/修改接口已在 `RegisterApi` / `RegisterListApi` 声明用途与入参出参
 - [ ] 新增模型字段已带中文注释与 gorm tag

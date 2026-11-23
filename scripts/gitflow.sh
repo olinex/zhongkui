@@ -4,7 +4,7 @@
 #
 # 在分支保护（master / develop / release/* 仅允许 PR）前提下，把常见的
 # 分支创建、远程同步、推送与 Gitee 对比页跳转组合成一条命令。
-# 发布前检查（CHANGELOG / web/package.json 对齐 + make ci）与打标签由 finalize_release 统一负责。
+# 发布前检查（CHANGELOG / web/package.json 对齐 + scripts/ci.sh）与打标签由 finalize_release 统一负责。
 #
 # 用法: scripts/gitflow.sh help
 
@@ -98,7 +98,7 @@ zhongkui gitflow 辅助脚本
                                     -r 同时删除对应远程分支
 
 通用参数:
-  --ci                              推送前执行 make ci
+  --ci                              推送前执行 scripts/ci.sh
   --force                           推送时使用 --force-with-lease
   --no-open                         只打印 PR 链接，不打开浏览器
   -h, --help                        查看帮助
@@ -196,8 +196,8 @@ default_base() {
 
 maybe_ci() {
 	[ "$RUN_CI" -eq 1 ] || return 0
-	info "执行 make ci"
-	make ci
+	info "执行 scripts/ci.sh"
+	scripts/ci.sh
 }
 
 push_branch() {
@@ -576,7 +576,7 @@ feature_finish() {
 	push_branch "$branch"
 	print_pr "$base" "$branch"
 	cleanup_feature_branch "$branch"
-	printf '  合并前确认 make ci 通过、PR 模板检查项已勾选\n'
+	printf '  合并前确认 scripts/ci.sh 通过、PR 模板检查项已勾选\n'
 }
 
 feature_cmd() {
@@ -686,7 +686,7 @@ release_start() {
 	printf '  发布准备清单:\n'
 	printf '    1. 更新 CHANGELOG.md 的 ## [%s] - YYYY-MM-DD 段\n' "${version#v}"
 	printf '    2. 对齐 web/package.json 的 version 为 %s\n' "${version#v}"
-	printf '    3. make ci 通过后执行: scripts/gitflow.sh release finish %s\n' "$version"
+	printf '    3. scripts/ci.sh 通过后执行: scripts/gitflow.sh release finish %s\n' "$version"
 }
 
 # print_backmerge_pr 在 master 尚未合入 develop 时打印回合并 PR，避免重复提示
@@ -700,7 +700,7 @@ print_backmerge_pr() {
 }
 
 # create_release_tag 在 master 上完成发布前检查并创建 annotated tag：
-# 校验完整 SemVer、CHANGELOG 版本段与 web/package.json 对齐，执行 make ci 后打标签。
+# 校验完整 SemVer、CHANGELOG 版本段与 web/package.json 对齐，执行 scripts/ci.sh 后打标签。
 create_release_tag() {
 	local version="$1" number="${1#v}"
 	[ "$(current_branch)" = "$MASTER" ] ||
@@ -711,8 +711,8 @@ create_release_tag() {
 		die "CHANGELOG.md 缺少 '## [$number] - YYYY-MM-DD' 版本段"
 	grep -Fq "\"version\": \"$number\"" web/package.json ||
 		die "web/package.json 的 version 未对齐 $number"
-	info "执行 make ci"
-	make ci
+	info "执行 scripts/ci.sh"
+	scripts/ci.sh
 	git tag -a "$version" -m "zhongkui $version"
 	info "已创建标签 $version；推送: git push $REMOTE $version"
 }

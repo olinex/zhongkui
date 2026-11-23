@@ -20,7 +20,7 @@
 | 参考文档 | 自动导出 102 篇包符号参考 | 占文档总量 83%，人类不可顺读 |
 | 接口目录 | 约 209 处 `RegisterApi/RegisterListApi` 声明，含入参/出参/字段/枚举 | 已是高质量结构化事实源 |
 | AI 知识同步 | `zki sync docs`（叙述页）、`zki sync apis`（接口知识） | 只覆盖概念与接口，缺数据结构与场景 |
-| 注释门禁 | `make lint`（commentlint） | 只保证「有注释」，不保证「注释有用」 |
+| 注释门禁 | `scripts/check.sh lint`（commentlint） | 只保证「有注释」，不保证「注释有用」 |
 | 文档导出 | `zki create docs` 幂等生成叙述页、参考页与根 `README.md` | 缺 `--check`，CI 无法发现漂移 |
 | 手写文档 | 前端设计体系、功能开关、Agent 架构、XDP 等 5 篇 | 质量高，但未成体系 |
 
@@ -74,7 +74,7 @@
 | 决策 | 结论 | 落地约束 |
 | --- | --- | --- |
 | 许可证 | Apache-2.0 | 根目录 `LICENSE`；README 标注；第三方依赖与 `third_party/` 补丁副本做许可证合规清单 |
-| 托管与 CI | Gitee 为主仓，GitHub 为只读镜像 | 内容不依赖平台；`make ci` 是唯一检查入口；GitHub 工作流只做薄封装；镜像同步由定时任务完成 |
+| 托管与 CI | Gitee 为主仓，GitHub 为只读镜像 | 内容不依赖平台；`scripts/ci.sh` 是唯一检查入口；GitHub 工作流只做薄封装；镜像同步由定时任务完成 |
 | `api_invoke` 执行侧 | 前端持用户凭据执行 | 后端不代理请求，只做白名单校验、参数校验、审核分级与审计；安全边界仍是接口自身的鉴权中间件 |
 | 文档站点 | VitePress | `docs/.vitepress/`；侧边栏由 `nav.json` 生成；本地搜索；编辑链接 |
 | 文档形态 | Markdown | 源文件与生成物均为 `.md`；站点只渲染；不产出 HTML/PDF 文档交付物 |
@@ -318,7 +318,7 @@ type Entry struct {
 2. **AI 取证**：读取相关声明源（包注释、`ApiCatalog()`、模型结构体、枚举、配置、CLI 树）与既有生成页，先列「依据清单」，再动笔。
 3. **AI 起草**：按模板骨架输出到 `docs/curated/<分类>/`，并填写元信息头；不确定处写 `<!-- TODO(owner): 待确认 -->`，不得臆造。
 4. **人审校**：核对事实、删除 TODO、补充判断与权衡，把状态改为「已校对」，填写 `Owner`。
-5. **登记与校验**：注册条目（`Source: curated`），运行 `make docs-check` 与链接检查。
+5. **登记与校验**：注册条目（`Source: curated`），运行 `scripts/check.sh docs` 与链接检查。
 6. **评审**：PR 检查清单确认「事实均为链接、无复制表格、依据可解析」。
 
 **元信息头（所有 `docs/curated/**` 页面必须携带）**
@@ -355,9 +355,9 @@ type Entry struct {
 | `.gitee/` 与 `.github/` | Issue/PR 模板、CODEOWNERS；`.github/` 另有 CI 薄封装 |
 | `docs/.vitepress/` | VitePress：侧边栏由 `nav.json` 生成、本地搜索、编辑链接、版本快照 |
 
-**许可证合规**：Apache-2.0 不覆盖第三方代码。`THIRD_PARTY_LICENSES.md` 按 Go 运行时依赖与 Web 生产依赖逐组件登记版本、许可证与全文；`make license-check` 在 CI 中拒绝 GPL/AGPL/LGPL/SSPL/非商业与未知许可证，例外必须以「组件@版本 → 已核对 SPDX」显式登记。依赖变更后必须重新核对，新增许可证类型需补充对应文本。
+**许可证合规**：Apache-2.0 不覆盖第三方代码。`THIRD_PARTY_LICENSES.md` 按 Go 运行时依赖与 Web 生产依赖逐组件登记版本、许可证与全文；`scripts/check.sh license` 在 CI 中拒绝 GPL/AGPL/LGPL/SSPL/非商业与未知许可证，例外必须以「组件@版本 → 已核对 SPDX」显式登记。依赖变更后必须重新核对，新增许可证类型需补充对应文本。
 
-**双平台策略**：Gitee 为主仓，GitHub 为只读镜像（关闭 Issue/PR，导航到 Gitee）。仓库内只保留 `make ci`，GitHub 工作流仅转调它，避免两套逻辑漂移。
+**双平台策略**：Gitee 为主仓，GitHub 为只读镜像（关闭 Issue/PR，导航到 Gitee）。仓库内只保留 `scripts/ci.sh`，GitHub 工作流仅转调它，避免两套逻辑漂移。
 
 **语言与版本**：中文为唯一文档语言，不维护英文版本。SemVer；文档随 minor 版本打快照。
 
@@ -373,7 +373,7 @@ type Entry struct {
 6. **教程/指南迁移**：6 篇由包注释改为策展页（AI 起草 + 审校）；对应包注释改写为包职责/边界/不变量；新增 `troubleshooting.md`。
 7. **AI 起草基建**：落地 `docs/templates/` 七类模板（含起草须知）、元信息头守卫、`AGENTS.md` 增补「策展文档起草与审校」规则。
 8. **社区门面**：`LICENSE`（Apache-2.0）、`NOTICE`、`CONTRIBUTING`、`SECURITY`、`CODE_OF_CONDUCT`、`SUPPORT`、`CHANGELOG`、Issue/PR 模板、CODEOWNERS。
-9. **统一 CI**：`make ci` 串联 gofmt、`go vet`、`go build`、`go test`、`make lint`、`docs-check`；GitHub 工作流只做薄封装。
+9. **统一 CI**：`scripts/ci.sh` 串联 `scripts/check.sh` 的 gofmt、`go vet`、`go build`、`go test`、注释、许可证、文档检查与配置漂移检查；GitHub 工作流只做薄封装。
 
 完成标志：`docs-check` 通过、`docs/curated` 零写入、无孤儿页、新访客按 README 可跑通。
 
@@ -418,7 +418,7 @@ type Entry struct {
 
 | 阶段 | 验收 |
 | --- | --- |
-| P0 | 目录按来源隔离；生成器根白名单生效；`docs/curated` 生成后零 diff；`docs/index.md`、`nav.json` 幂等；`--check` 可拦截漂移；三篇脊柱文档与 6 篇策展教程/指南到位；模板与元信息头守卫生效；社区文件齐备；`make ci` 通过 |
+| P0 | 目录按来源隔离；生成器根白名单生效；`docs/curated` 生成后零 diff；`docs/index.md`、`nav.json` 幂等；`--check` 可拦截漂移；三篇脊柱文档与 6 篇策展教程/指南到位；模板与元信息头守卫生效；社区文件齐备；`scripts/ci.sh` 通过 |
 | P1 | 接口/表/枚举/配置/CLI 参考全覆盖且参与 `--check`；站点可构建、可搜索；0 死链；参考区折叠；策展页无复制事实 |
 | P2 | 视图层能力声明与派生地图通过守卫；接口详情经 `knowledge_search` + `format=native_api` 与接口知识同源；`api_invoke` 白名单/只读/审计/超限全部生效；各分区可独立幂等同步 |
 | P3 | 发布流程可重复；CODEOWNERS 与 PR 模板生效；四项指标有基线 |
@@ -437,7 +437,7 @@ type Entry struct {
 | 生成物噪音（102 篇包参考） | 导航折叠；按域索引；不灌入 RAG |
 | 站点增加维护成本 | Markdown 为唯一源；`nav.json` 自动生成；站点只做构建 |
 | `--check` 误报 | 生成必须确定性排序、无时间戳、无随机 map 遍历 |
-| 双平台 CI 漂移 | `make ci` 为唯一入口；工作流只转调，不写检查逻辑 |
+| 双平台 CI 漂移 | `scripts/ci.sh` 为唯一入口；工作流只转调，不写检查逻辑 |
 
 ## 9. 迁移映射
 

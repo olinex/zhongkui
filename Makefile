@@ -15,20 +15,12 @@ LAN_IP := localhost
 endif
 
 .PHONY: build
-.PHONY: build-check
 .PHONY: build-release
-.PHONY: ci
 .PHONY: clean
 .PHONY: docs
-.PHONY: docs-check
-.PHONY: fmt-check
-.PHONY: license-check
-.PHONY: lint
 .PHONY: p0f-update
 .PHONY: rag-snapshot
-.PHONY: test
 .PHONY: version-env
-.PHONY: vet
 
 # ============================================================
 # 构建与版本管理
@@ -100,7 +92,7 @@ p0f-update:
 
 # RAG 知识快照（编译期嵌入二进制）：
 # 发布二进制不含源码树与 Go 工具链，zki sync docs / sync schema 在运行期回退到该快照；
-# 任一 Go 源文件、迁移 SQL 或 go.mod 变化都会触发重新烘焙，漂移校验见 make docs-check。
+# 任一 Go 源文件、迁移 SQL 或 go.mod 变化都会触发重新烘焙，漂移校验见 scripts/check.sh docs。
 # 生成代码（protobuf / views）带独立生成规则且不影响快照内容，排除在快照依赖外，
 # 避免在未安装 protoc 的镜像构建环境中被间接触发。
 RAG_SNAPSHOT := internal/docs/ragdata/snapshot.json
@@ -184,36 +176,8 @@ clean:
 	rm -f internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go
 
 # ============================================================
-# 代码检查与构建验证
+# 文档生成
 # ============================================================
-
-# lint - 运行自建注释检查 analyzer (cmd/commentlint)，校验包注释与导出声明的注释完备性
-# 检查范围、豁免规则与口径见 AGENTS.md「Comments」，实现见 internal/lint/commentlint
-# 诊断输出到 stderr，发现缺口时退出码为 3 (make 因此失败)，可直接作为 CI/提交前检查
-# 用法: make lint
-lint:
-	go run cmd/commentlint/main.go ./...
-
-# fmt-check - 检查已跟踪的 Go 文件是否符合 gofmt
-# 用法: make fmt-check
-fmt-check:
-	@scripts/fmt-check.sh
-
-# vet - 运行 go vet
-# 用法: make vet
-vet:
-	go vet ./...
-
-# test - 运行全部单元测试（终端友好，失败即停）
-# 默认不依赖外部服务：PostgreSQL / ClickHouse 相关用例在未设置 ZKI_TEST_INTEGRATION=1 时自动 SKIP
-# 用法: make test
-test:
-	go test ./...
-
-# build-check - 编译全部包但不产出二进制，作为 CI 的构建门禁
-# 用法: make build-check
-build-check:
-	go build ./...
 
 # docs - 生成文档：叙述页、参考页、总目录与导航文件，并烘焙 RAG 知识快照
 # 产物提交进 git，属于构建输入维护
@@ -221,22 +185,3 @@ build-check:
 docs:
 	go run cmd/zki/main.go create docs
 	go run cmd/docsnap/main.go -root .
-
-# docs-check - 校验生成文档与 RAG 快照均与代码声明一致，不写盘；CI 用它拦截漂移
-# 用法: make docs-check
-docs-check:
-	go run cmd/zki/main.go create docs --check
-	go run cmd/docsnap/main.go -root . -check
-
-# license-check - 第三方依赖许可证门禁：拒绝 GPL/AGPL/LGPL/SSPL/非商业与未知许可证
-# Go 侧检查链接进 cmd/zki 的模块；Web 侧检查 pnpm 生产依赖（需要 pnpm）
-# CI 设置 LICENSE_CHECK_REQUIRE_WEB=1 强制要求 Web 检查
-# 用法: make license-check
-license-check:
-	go run cmd/licensecheck/main.go --root .
-
-# ci - 提交与 CI 的统一入口：格式、构建、vet、测试、注释检查、许可证与文档漂移检查
-# 失败即停，适合本地提交前快速自查
-# 用法: make ci
-ci: fmt-check build-check vet test lint license-check docs-check
-	@echo "CI 检查全部通过"

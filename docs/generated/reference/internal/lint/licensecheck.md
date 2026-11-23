@@ -50,7 +50,7 @@ var AllowedLicenses = map[string]bool{
 ```
 
 <a name="Options"></a>
-## type [Options](<https://gitee.com/olinex/zhongkui/blob/master/internal/lint/licensecheck/licensecheck.go#L26-L35>)
+## type [Options](<https://gitee.com/olinex/zhongkui/blob/master/internal/lint/licensecheck/licensecheck.go#L28-L37>)
 
 Options 控制许可证检查的范围与严格程度。
 
@@ -68,7 +68,7 @@ type Options struct {
 ```
 
 <a name="Report"></a>
-## type [Report](<https://gitee.com/olinex/zhongkui/blob/master/internal/lint/licensecheck/licensecheck.go#L50-L59>)
+## type [Report](<https://gitee.com/olinex/zhongkui/blob/master/internal/lint/licensecheck/licensecheck.go#L52-L61>)
 
 Report 是一次许可证检查的结果。
 
@@ -86,7 +86,7 @@ type Report struct {
 ```
 
 <a name="Check"></a>
-### func [Check](<https://gitee.com/olinex/zhongkui/blob/master/internal/lint/licensecheck/licensecheck.go#L133>)
+### func [Check](<https://gitee.com/olinex/zhongkui/blob/master/internal/lint/licensecheck/licensecheck.go#L135>)
 
 ```go
 func Check(ctx context.Context, opts Options) (Report, error)
@@ -95,7 +95,7 @@ func Check(ctx context.Context, opts Options) (Report, error)
 Check 执行完整检查：先检查 Go 运行时模块，再检查 Web 生产依赖。 Web 检查缺少 pnpm 时，RequireWeb 决定失败还是跳过。
 
 <a name="Violation"></a>
-## type [Violation](<https://gitee.com/olinex/zhongkui/blob/master/internal/lint/licensecheck/licensecheck.go#L38-L47>)
+## type [Violation](<https://gitee.com/olinex/zhongkui/blob/master/internal/lint/licensecheck/licensecheck.go#L40-L49>)
 
 Violation 描述一个不合规或无法判定的依赖。
 

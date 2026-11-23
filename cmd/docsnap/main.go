@@ -6,8 +6,8 @@
 //
 // 用法：
 //
-//	make docs        # 生成文档与 RAG 快照
-//	make docs-check  # 只校验、不写盘
+//	make docs              # 生成文档与 RAG 快照
+//	scripts/check.sh docs  # 只校验、不写盘
 package main
 
 import (

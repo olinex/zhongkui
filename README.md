@@ -133,11 +133,11 @@ go run cmd/zki/main.go run worker
 ## 构建与测试
 
 ```bash
-make build       # 编译到 bin/zki
-make lint        # 注释完备性检查
-make test        # 单元测试
-make docs-check  # 校验生成文档与代码声明是否一致
-make ci          # 以上检查的合集
+make build                  # 编译到 bin/zki
+scripts/check.sh lint       # 注释完备性检查
+scripts/check.sh test       # 单元测试
+scripts/check.sh docs       # 校验生成文档与代码声明是否一致
+scripts/ci.sh               # 以上检查与配置漂移检查的合集
 
 scripts/dist.sh v1.2.3   # 打包 Release：两架构二进制 + 管理端 + 文档站
 ```

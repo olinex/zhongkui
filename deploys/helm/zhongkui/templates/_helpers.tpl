@@ -84,6 +84,10 @@ source = 'config'
 parent_secret_key = '<from-secret>'
 password_book_path = {{ printf "%s/%s" $cryptoMount .Values.crypto.passwordBookFile | toJson }}
 
+[crypto.kms]
+command = []
+timeout = '10s'
+
 [api]
 host = '0.0.0.0'
 port = 8080

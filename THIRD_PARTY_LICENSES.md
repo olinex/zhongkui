@@ -10,7 +10,7 @@
 - 义务集中在“分发方”（发布二进制或前端静态资源的场景）：保留版权与许可证声明；若修改了 MPL/EPL 组件，需按原许可证公开修改部分；提供对应版本的源码获取方式。
 - 双许可组件已选择宽松分支：`dompurify` 按 Apache-2.0、`type-fest` 按 MIT 使用；`@bufbuild/protobuf` 同时遵守 Apache-2.0 与 BSD-3-Clause。
 - 本项目自身仍为 Apache-2.0；第三方组件的许可不会传染到项目代码或用户代码。
-- 仓库已通过 `make license-check` 在 CI 中强制校验：出现 GPL/AGPL/LGPL/SSPL/非商业或未知许可证时，构建会失败。
+- 仓库已通过 `scripts/check.sh license` 在 CI 中强制校验：出现 GPL/AGPL/LGPL/SSPL/非商业或未知许可证时，构建会失败。
 
 ## 1. 范围与口径
 
@@ -2143,7 +2143,7 @@ For more information, please refer to <http://unlicense.org>
 
 ```bash
 # 自动门禁：Go 运行时依赖 + Web 生产依赖
-make license-check
+scripts/check.sh license
 
 # 手动核对辅助：列出链接进 zki 的模块
 go list -deps -f '{{with .Module}}{{.Path}} {{.Version}}{{end}}' ./cmd/zki | sort -u
