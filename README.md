@@ -101,11 +101,17 @@ scripts/install-tools.sh all
 scripts/dev-containers.sh start
 scripts/dev-doctor.sh                # 检查工具链、容器与依赖端口是否就绪
 
-# 2. 执行数据库迁移并创建管理员
+# 2. 生成配置与本地密钥（再按教程替换数据库口令与 S3 凭证）
+go run cmd/zki/main.go create default-config -o config.toml
+mkdir -p certs
+go run cmd/zki/main.go create password-book -o certs/password-book.bin
+go run cmd/zki/main.go create tls --name test --dir-path ./certs --ttl 8760h --dns-names localhost
+
+# 3. 执行数据库迁移并创建管理员
 go run cmd/zki/main.go migrate up
 go run cmd/zki/main.go create user
 
-# 3. 启动管理端与后台 worker（各开一个终端）
+# 4. 启动管理端与后台 worker（各开一个终端）
 go run cmd/zki/main.go run web
 go run cmd/zki/main.go run worker
 ```

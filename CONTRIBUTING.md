@@ -18,8 +18,14 @@ cd zhongkui
 scripts/install-tools.sh all        # 完整开发环境；只补装单项时用 base|docker|go|protobuf|ts|pcap|dev
 scripts/dev-containers.sh start     # 启动 PostgreSQL / ClickHouse / Redis / etcd / S3
 scripts/dev-doctor.sh               # 检查工具链、容器与依赖端口是否就绪
+go run cmd/zki/main.go create default-config -o config.toml   # 再替换数据库口令与 S3 凭证
+mkdir -p certs
+go run cmd/zki/main.go create password-book -o certs/password-book.bin
+go run cmd/zki/main.go create tls --name test --dir-path ./certs --ttl 8760h --dns-names localhost
 go run cmd/zki/main.go migrate up   # 执行数据库迁移
 ```
+
+网络受限导致 Go 依赖下载或校验超时时，按 [Linux 开发环境部署](docs/curated/tutorials/linux-dev.md)第 2 节配置 `GOPROXY` / `GOSUMDB` 后重试。
 
 前端：
 

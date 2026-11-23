@@ -15,6 +15,7 @@
 #   DEV_IMAGE_REGISTRY=<镜像源>          统一替换五个镜像的来源（保留原仓库路径）
 #   REDIS_IMAGE / ETCD_IMAGE / CLICKHOUSE_IMAGE / POSTGRES_IMAGE / RUSTFS_IMAGE
 #                                        精确覆盖单个镜像，优先级高于 DEV_IMAGE_REGISTRY
+#   PULL_TIMEOUT=<秒>                    单个镜像拉取超时，默认 0 表示不限制
 #
 # 退出码：0 成功；1 失败。
 set -uo pipefail
@@ -79,6 +80,34 @@ image_var() {
 	esac
 }
 
+# 单个镜像的拉取超时（秒），0 表示不限制
+PULL_TIMEOUT="${PULL_TIMEOUT:-0}"
+
+# run_with_timeout：为命令加总超时；Linux 用 timeout，macOS 用 gtimeout 或后台看门狗
+run_with_timeout() {
+	local secs=$1
+	shift
+	case "$secs" in
+	'' | *[!0-9]*) "$@" && return 0 || return $? ;;
+	0) "$@" && return 0 || return $? ;;
+	esac
+	if command -v timeout >/dev/null 2>&1; then
+		timeout "$secs" "$@"
+	elif command -v gtimeout >/dev/null 2>&1; then
+		gtimeout "$secs" "$@"
+	else
+		"$@" &
+		local pid=$!
+		(sleep "$secs"; kill -TERM "$pid" >/dev/null 2>&1) &
+		local watcher=$!
+		wait "$pid"
+		local rc=$?
+		kill "$watcher" >/dev/null 2>&1
+		wait "$watcher" 2>/dev/null
+		return $rc
+	fi
+}
+
 cmd_create_dbs() {
 	local cmd psql_cli clickhouse_cli
 	cmd=$(detect_runtime)
@@ -116,17 +145,23 @@ cmd_pull() {
 		"postgres $POSTGRES_IMAGE"
 		"rustfs $RUSTFS_IMAGE"
 	)
-	local item name img failed=0
+	local item name img failed=0 rc
 	for item in "${images[@]}"; do
 		read -r name img <<<"$item"
 		echo "=== 拉取 $name ($platform): $img ==="
-		if ! $cmd pull --platform "$platform" "$img"; then
-			echo "  !! 拉取 $name 失败；可用环境变量 $(image_var "$name") 指定加速地址或私有仓库中的同名镜像后重试" >&2
+		run_with_timeout "$PULL_TIMEOUT" $cmd pull --platform "$platform" "$img"
+		rc=$?
+		if [ "$rc" -ne 0 ]; then
+			if [ "$rc" -eq 124 ] || [ "$rc" -eq 143 ]; then
+				echo "  !! 拉取 $name 超时（PULL_TIMEOUT=${PULL_TIMEOUT}s）；可调大 PULL_TIMEOUT 或改用可达镜像源" >&2
+			else
+				echo "  !! 拉取 $name 失败；可用环境变量 $(image_var "$name") 指定加速地址或私有仓库中的同名镜像后重试" >&2
+			fi
 			failed=1
 		fi
 	done
 	if [ "$failed" -ne 0 ]; then
-		echo "存在拉取失败的镜像：请配置镜像加速器，或通过 *_IMAGE 环境变量指定可达地址。" >&2
+		echo "存在拉取失败的镜像：请用 DEV_IMAGE_REGISTRY 或 *_IMAGE 指定可达地址；网络较慢时可调大 PULL_TIMEOUT（0 表示不限时）。" >&2
 		return 1
 	fi
 }
@@ -233,7 +268,7 @@ cmd_remove() {
 }
 
 usage() {
-	sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'
+	sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 case "${1:-}" in

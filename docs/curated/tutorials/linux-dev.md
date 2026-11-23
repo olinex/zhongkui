@@ -39,13 +39,25 @@ scripts/install-tools.sh all
 | `pcap` | libpcap 开发库（采集端） |
 | `dev` | asynq、pkgsite、goconvey 等辅助工具 |
 
-> 受限网络下，Go 工具安装可能因 `sum.golang.org` 不可达而失败。脚本默认使用与镜像构建一致的模块代理，也可用 `GOPROXY` / `GOSUMDB` 环境变量覆盖后重试，例如 `GOPROXY=https://goproxy.cn,direct GOSUMDB=sum.golang.google.cn scripts/install-tools.sh protobuf`。
+> 受限网络下，Go 工具安装可能因 `sum.golang.org` 不可达而失败。脚本会自动使用与镜像构建一致的模块代理，也可用 `GOPROXY` / `GOSUMDB` 环境变量覆盖，例如 `GOPROXY=https://goproxy.cn,direct GOSUMDB=sum.golang.google.cn scripts/install-tools.sh protobuf`。
 
-只补装某一项时执行对应子命令，例如 `scripts/install-tools.sh ts`。安装完成后重新登录（或执行 `. /etc/profile.d/go.sh`），使 Go 的 PATH 与 docker 组生效，然后检查工具链：
+只补装某一项时执行对应子命令，例如 `scripts/install-tools.sh ts`。脚本会把 `go` / `gofmt` 链接到 `/usr/local/bin`，当前 shell 可直接使用；`docker` 组需重新登录后生效。随后检查工具链：
 
 ```bash
 scripts/dev-doctor.sh --tools-only
 ```
+
+### Go 模块代理（受限网络）
+
+脚本只在自身执行期间使用内置代理；项目后续的 `go run`、`go build`、`go test` 仍读取 Go 自己的配置。安装完成后建议把同一组代理写入 Go 配置，一次设置长期生效：
+
+```bash
+go env -w GOPROXY=https://goproxy.cn,direct
+go env -w GOSUMDB=sum.golang.google.cn
+go env GOPROXY GOSUMDB   # 复核
+```
+
+地址可替换为团队或云厂商提供的模块代理；恢复默认用 `go env -u GOPROXY GOSUMDB`。`scripts/install-tools.sh` 会尊重 `go env -w` 已配置的非默认值，不会覆盖。
 
 所有命令都经同一入口 `cmd/zki/main.go` 暴露。下文用 `go run cmd/zki/main.go {子命令}` 表示未安装二进制时的执行方式；执行 `make build` 后即可改用生成的 `bin/zki` 直接替换该前缀。
 
@@ -75,7 +87,13 @@ scripts/dev-containers.sh start
 
 `DEV_IMAGE_REGISTRY` 可带路径前缀（如 `registry.example.com/mirror`）。若镜像源不代理 `quay.io`（etcd），再单独设置 `ETCD_IMAGE`。需要精确覆盖单个镜像时仍可用 `REDIS_IMAGE`、`ETCD_IMAGE`、`CLICKHOUSE_IMAGE`、`POSTGRES_IMAGE`、`RUSTFS_IMAGE`，其优先级高于 `DEV_IMAGE_REGISTRY`。
 
-也可以不改脚本、直接给容器运行时配置 registry mirror（Docker：`/etc/docker/daemon.json` 的 `registry-mirrors`；nerdctl/containerd：`hosts.toml`）后拉取。任一镜像拉取失败时脚本以非零退出码结束。
+单个镜像的拉取默认不限制时长；网络较慢又希望避免长时间挂起时，可设置 `PULL_TIMEOUT=<秒>`（超时后该镜像记为失败，脚本以非零退出码结束）：
+
+```bash
+PULL_TIMEOUT=600 scripts/dev-containers.sh pull
+```
+
+也可以不改脚本、直接给容器运行时配置 registry mirror（Docker：`/etc/docker/daemon.json` 的 `registry-mirrors`；nerdctl/containerd：`hosts.toml`）后拉取。
 
 容器启动后执行全量检查：
 
@@ -87,16 +105,47 @@ scripts/dev-doctor.sh
 
 ## 4. 准备配置
 
-程序通过 Viper 读取名为 `config` 的 TOML 文件，搜索路径依次为 `/etc/zhongkui`、当前目录与上级目录；也可用全局 `--config` / `-c` 直接指定文件路径。关键在于各依赖段要与本地容器对齐：
+程序通过 Viper 读取名为 `config` 的 TOML 文件，搜索路径依次为 `/etc/zhongkui`、当前目录与上级目录；也可用全局 `--config` / `-c` 指定文件。仓库已将 `config.toml` 加入 `.gitignore`，本地配置不会误提交。
+
+先生成带完整字段注释的默认配置（bootstrap 命令，不需要已有配置；目标文件已存在时加 `-f` 覆盖）：
+
+```bash
+go run cmd/zki/main.go create default-config -o config.toml
+```
+
+再按默认配置引用的路径生成开发密钥材料：
+
+```bash
+mkdir -p certs
+go run cmd/zki/main.go create password-book -o certs/password-book.bin
+chmod 600 certs/password-book.bin
+go run cmd/zki/main.go create tls --name test --dir-path ./certs --ttl 8760h --dns-names localhost
+```
+
+最后把与本地依赖容器相关的占位值改为实际值，其余保持默认：
+
+| 配置项 | 修改为 |
+| --- | --- |
+| `[crypto].parent_secret_key` | 32 字节以上随机值，例如 `openssl rand -hex 32` 的输出 |
+| `[database.core].dsn` | `password=root_password`（库名保持 `postgres`） |
+| `[database.raw].dsn` | `default:root_password@127.0.0.1:9000`（库名保持 `default`） |
+| `[s3].accessKey` / `secretKey` | `rustfsadmin` / `rustfsadmin` |
+
+各配置段的作用：
 
 - `[api]`：管理端 HTTP 服务的监听地址与端口。
 - `[database.core]` 与 `[database.raw]`：分别指向 PostgreSQL 与 ClickHouse。
-- `[redis.cache]`、`[redis.pipeline]`：缓存与任务队列，须指向容器暴露的 Redis。
-- `[etcd]`：规则与配置变更广播。
-- `[s3]`：抓包快照的对象存储。
-- `[grpc.server.reporter]` 与 `[grpc.client.reporter]`：采集端与 Reporter 服务之间的通信。
+- `[redis.cache]`、`[redis.pipeline]`：缓存与任务队列，默认指向 `localhost:6379`。
+- `[etcd]`：规则与配置变更广播，默认 `127.0.0.1:2379`。
+- `[s3]`：抓包快照的对象存储，默认 `127.0.0.1:9002`、桶 `capture`。
+- `[grpc.server.reporter]` 与 `[grpc.client.reporter]`：采集端与 Reporter 服务之间的通信；仅在运行 `capture` 时需要补全客户端 `accessKeyID` / `accessKeySecret`。
 
-接口语言由环境变量 `ZKI_LANG` 控制（`zh-Hans` 或 `en`，默认 `zh-Hans`）。可用 `describe config` 打印全部配置项及其说明（说明即配置项的 `comment` tag），用 `describe deps` 探测核心外部依赖的连通性，避免带着错误配置启动。
+SMTP、Reporter 凭证等占位仅在启用对应功能时填写。接口语言由环境变量 `ZKI_LANG` 控制（`zh-Hans` 或 `en`，默认 `zh-Hans`）。配置改完后先复核字段含义与依赖连通性，避免带着错误配置启动：
+
+```bash
+go run cmd/zki/main.go describe config
+go run cmd/zki/main.go describe deps
+```
 
 ## 5. 初始化数据库与管理员
 

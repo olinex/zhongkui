@@ -17,10 +17,25 @@ set -uo pipefail
 
 GO_VERSION="${GO_VERSION:-1.27.3}"
 
-# Go 模块代理与校验库：与 deploys/containers/normal.Dockerfile 保持一致；
-# 网络受限时默认走可达镜像，可用同名环境变量覆盖。
-export GOPROXY="${GOPROXY:-https://goproxy.cn,https://mirrors.aliyun.com/goproxy/,direct}"
-export GOSUMDB="${GOSUMDB:-sum.golang.google.cn}"
+# Go 模块代理与校验库：与 deploys/containers/normal.Dockerfile 保持一致。
+# 优先级：显式环境变量 > go env 中已配置的非默认值 > 脚本内置镜像。
+GO_DEFAULT_PROXY="https://proxy.golang.org,direct"
+GO_MIRROR_PROXY="https://goproxy.cn,https://mirrors.aliyun.com/goproxy/,direct"
+GO_DEFAULT_SUMDB="sum.golang.org"
+GO_MIRROR_SUMDB="sum.golang.google.cn"
+
+resolve_go_env() {
+	local key=$1 default=$2 mirror=$3 current
+	current=$(go env "$key" 2>/dev/null || true)
+	if [ -z "$current" ] || [ "$current" = "$default" ]; then
+		echo "$mirror"
+	else
+		echo "$current"
+	fi
+}
+
+export GOPROXY="${GOPROXY:-$(resolve_go_env GOPROXY "$GO_DEFAULT_PROXY" "$GO_MIRROR_PROXY")}"
+export GOSUMDB="${GOSUMDB:-$(resolve_go_env GOSUMDB "$GO_DEFAULT_SUMDB" "$GO_MIRROR_SUMDB")}"
 
 # 提权命令前缀；TARGET_USER 为实际使用开发环境的用户（sudo 场景下取 SUDO_USER）
 if [ "$(id -u)" -eq 0 ]; then
@@ -171,6 +186,9 @@ cmd_go() {
 			rm -rf "$tmp"
 			echo 'export PATH=$PATH:/usr/local/go/bin' | $SUDO tee /etc/profile.d/go.sh >/dev/null
 		fi
+		# 软链到 /usr/local/bin：/etc/profile.d 只对登录 shell 生效，软链保证当前 shell 与非登录 shell 立即可用
+		$SUDO ln -sf /usr/local/go/bin/go /usr/local/bin/go
+		$SUDO ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt
 		export PATH="$PATH:/usr/local/go/bin"
 		go version
 		;;
