@@ -4,7 +4,7 @@
 // 支持从主密钥（master key）派生出多个子密钥。主要组件包括：
 //
 //   - PasswordBook: 密码本，提供用于密钥派生的盐值数据
-//   - SecretKeyProvider: 主密钥提供者接口，支持从配置文件或 KMS 获取主密钥
+//   - SecretKeyProvider: 主密钥提供者接口，支持从配置文件或通过外部 KMS 命令获取主密钥
 //   - KeyDerivation: 密钥派生器，使用 HKDF-SHA256 从主密钥和密码本派生子密钥
 //
 // 密钥派生流程：
@@ -19,6 +19,8 @@
 package key
 
 import (
+	"time"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
 	"zhongkuisec.com/zhongkui/internal/pkg/config"
@@ -43,7 +45,7 @@ type Config struct {
 	// Source 主密钥来源
 	// 可选值：
 	//   - "config": 从配置文件的 ParentSecretKey 字段读取（不推荐用于生产）
-	//   - "kms": 从密钥管理服务获取（推荐用于生产环境）
+	//   - "kms": 执行 KMS 命令获取（推荐用于生产环境）
 	// 默认值："config"
 	Source string `mapstructure:"source" default:"config" binding:"oneof=config kms" comment:"主密钥来源：config（配置文件）或 kms（密钥管理服务）"`
 
@@ -57,6 +59,21 @@ type Config struct {
 	// 为空时使用内置的默认密码本（不推荐用于生产）
 	// 可通过 'zki create password-book' 命令生成新的密码本
 	PasswordBookPath string `mapstructure:"password_book_path" comment:"密码本文件路径，用于提供密钥派生的盐值"`
+
+	// KMS KMS 主密钥获取配置（仅当 Source="kms" 时生效）
+	KMS KMSConfig `mapstructure:"kms" comment:"KMS 主密钥获取配置（仅当 source 为 kms 时生效）"`
+}
+
+// KMSConfig 定义通过外部命令从 KMS 获取主密钥的配置。
+//
+// 该方式不绑定具体厂商：可对接 aws/aliyun/vault 等 KMS CLI，也可指向自定义取密钥脚本。
+// 命令的标准输出（去掉首尾空白）即主密钥明文；进程启动后首次取值时执行一次并缓存在内存中。
+type KMSConfig struct {
+	// Command 获取主密钥的外部命令及其参数（argv 形式，不经过 shell）
+	Command []string `mapstructure:"command" comment:"获取主密钥的外部命令（argv 形式，标准输出为主密钥明文，仅当 source 为 kms 时使用）"`
+
+	// Timeout 命令执行超时时间
+	Timeout time.Duration `mapstructure:"timeout" default:"10s" comment:"KMS 命令执行超时时间"`
 }
 
 // DescribeConfig 返回配置项的描述信息，用于生成配置文档

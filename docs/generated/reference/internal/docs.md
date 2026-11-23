@@ -243,7 +243,7 @@ type Entry struct {
 ```
 
 <a name="Curated"></a>
-### func [Curated](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L595>)
+### func [Curated](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L609>)
 
 ```go
 func Curated() []Entry
@@ -252,7 +252,7 @@ func Curated() []Entry
 Curated 返回所有策展条目（SourceCurated）。
 
 <a name="Generated"></a>
-### func [Generated](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L583>)
+### func [Generated](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L597>)
 
 ```go
 func Generated() []Entry

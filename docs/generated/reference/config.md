@@ -50,6 +50,9 @@
 | `api.secure.strictTransportSecurity` | `string` | `max-age=31536000; includeSubDomains; preload` | 强制浏览器仅通过 HTTPS 访问，HSTS 策略 |
 | `api.secure.xssProtection` | `string` | `1; mode=block` | 浏览器内置 XSS 过滤器行为，1; mode=block 表示检测到攻击时阻止渲染 |
 | `api.trustedProxies` | `slice` | `[]` | 受信代理 IP / 网段列表，默认空表示不信任任何代理（ClientIP 退化为 TCP 对端地址），反向代理部署时须显式填入代理网段 |
+| `crypto.kms` | `struct` | `-` | KMS 主密钥获取配置（仅当 source 为 kms 时生效） |
+| `crypto.kms.command` | `slice` | `-` | 获取主密钥的外部命令（argv 形式，标准输出为主密钥明文，仅当 source 为 kms 时使用） |
+| `crypto.kms.timeout` | `int64` | `10s` | KMS 命令执行超时时间 |
 | `crypto.parent_secret_key` | `string` | `-` | 主密钥明文值（仅当 source 为 config 时使用） |
 | `crypto.password_book_path` | `string` | `-` | 密码本文件路径，用于提供密钥派生的盐值 |
 | `crypto.source` | `string` | `config` | 主密钥来源：config（配置文件）或 kms（密钥管理服务） |

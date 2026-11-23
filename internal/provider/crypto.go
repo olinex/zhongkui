@@ -16,7 +16,7 @@ func newKeyDerivationProvider() do.Provider[*key.KeyDerivation] {
 			return nil, errors.WithStack(err)
 		} else if pb, err := key.LoadPasswordBook(cfg.PasswordBookPath); err != nil {
 			return nil, errors.WithStack(err)
-		} else if sp, err := key.NewSecretKeyProvider(cfg.Source, cfg.ParentSecretKey); err != nil {
+		} else if sp, err := key.NewSecretKeyProvider(*cfg); err != nil {
 			return nil, errors.WithStack(err)
 		} else {
 			kd := key.NewKeyDerivation(sp, pb)

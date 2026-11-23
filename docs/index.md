@@ -56,6 +56,7 @@
 - [如何编写一次数据库迁移](curated/how-to/write-migration.md) — 新增一次向前/向后兼容的数据库迁移脚本。（操作指南；策展）
 - [如何新增枚举类并生成绑定](curated/how-to/add-enum-class.md) — 在枚举注册表中新增枚举类并生成前后端绑定。（操作指南；策展）
 - [如何新增一个管理端页面](curated/how-to/frontend-add-page.md) — 说明新增管理端页面时的路由、视图与 API 接入步骤。（操作指南；策展）
+- [如何接入 KMS 获取主密钥](curated/how-to/configure-kms.md) — 用通用外部命令从 KMS 获取主密钥，替换配置文件中的明文父密钥，并完成验证与回滚。（操作指南；策展）
 
 ## 参考
 
@@ -96,6 +97,7 @@
 - [如何接入新的数据源插件](curated/how-to/add-datasource-plugin.md) — 实现数据源接口并注册一个新的数据源插件。
 - [如何新增通知渠道与模板](curated/how-to/add-notify-channel.md) — 扩展通知渠道类型并维护对应的多语言模板。
 - [如何编写一次数据库迁移](curated/how-to/write-migration.md) — 新增一次向前/向后兼容的数据库迁移脚本。
+- [如何接入 KMS 获取主密钥](curated/how-to/configure-kms.md) — 用通用外部命令从 KMS 获取主密钥，替换配置文件中的明文父密钥，并完成验证与回滚。
 
 ### 研发
 
@@ -124,4 +126,5 @@
 - [如何编写一次数据库迁移](curated/how-to/write-migration.md) — 新增一次向前/向后兼容的数据库迁移脚本。
 - [如何新增枚举类并生成绑定](curated/how-to/add-enum-class.md) — 在枚举注册表中新增枚举类并生成前后端绑定。
 - [如何新增一个管理端页面](curated/how-to/frontend-add-page.md) — 说明新增管理端页面时的路由、视图与 API 接入步骤。
+- [如何接入 KMS 获取主密钥](curated/how-to/configure-kms.md) — 用通用外部命令从 KMS 获取主密钥，替换配置文件中的明文父密钥，并完成验证与回滚。
 

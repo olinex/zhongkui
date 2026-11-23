@@ -576,6 +576,20 @@ func Registry() []Entry {
 			Output:        "curated/how-to/frontend-add-page.md",
 			NarrativeOnly: true,
 		},
+		{
+			Category:      CategoryHowTo,
+			Section:       SectionGuides,
+			Order:         70,
+			Title:         "如何接入 KMS 获取主密钥",
+			Summary:       "用通用外部命令从 KMS 获取主密钥，替换配置文件中的明文父密钥，并完成验证与回滚。",
+			Roles:         []Role{RoleOps, RoleDev},
+			Scene:         "生产环境启动时出现父密钥警告、需要把主密钥来源从配置文件切换到 KMS 时阅读。",
+			Owner:         "@olinex",
+			Source:        SourceCurated,
+			AiIngest:      IngestCurated,
+			Output:        "curated/how-to/configure-kms.md",
+			NarrativeOnly: true,
+		},
 	}
 }
 

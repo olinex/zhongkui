@@ -13,8 +13,9 @@
 - [type ConfigFileSecretKeyProvider](<#ConfigFileSecretKeyProvider>)
   - [func NewConfigFileSecretKeyProvider\(parentSecretKey string\) \*ConfigFileSecretKeyProvider](<#NewConfigFileSecretKeyProvider>)
   - [func \(p \*ConfigFileSecretKeyProvider\) GetSecretKey\(\) \(\[\]byte, error\)](<#ConfigFileSecretKeyProvider.GetSecretKey>)
+- [type KMSConfig](<#KMSConfig>)
 - [type KMSSecretKeyProvider](<#KMSSecretKeyProvider>)
-  - [func NewKMSSecretKeyProvider\(\) \*KMSSecretKeyProvider](<#NewKMSSecretKeyProvider>)
+  - [func NewKMSSecretKeyProvider\(command \[\]string, timeout time.Duration\) \(\*KMSSecretKeyProvider, error\)](<#NewKMSSecretKeyProvider>)
   - [func \(p \*KMSSecretKeyProvider\) GetSecretKey\(\) \(\[\]byte, error\)](<#KMSSecretKeyProvider.GetSecretKey>)
 - [type KeyDerivation](<#KeyDerivation>)
   - [func GetKeyDerivation\(\) \(\*KeyDerivation, error\)](<#GetKeyDerivation>)
@@ -26,7 +27,7 @@
   - [func \(p \*PasswordBook\) Bytes\(\) \[\]byte](<#PasswordBook.Bytes>)
   - [func \(p \*PasswordBook\) Len\(\) int](<#PasswordBook.Len>)
 - [type SecretKeyProvider](<#SecretKeyProvider>)
-  - [func NewSecretKeyProvider\(source string, parentSecretKey string\) \(SecretKeyProvider, error\)](<#NewSecretKeyProvider>)
+  - [func NewSecretKeyProvider\(cfg Config\) \(SecretKeyProvider, error\)](<#NewSecretKeyProvider>)
 
 
 ## Constants
@@ -39,7 +40,7 @@ const (
     // 适用于开发环境，生产环境应使用 KMS
     CryptoSourceConfig = "config"
 
-    // CryptoSourceKms 从密钥管理服务获取主密钥
+    // CryptoSourceKms 通过外部 KMS 命令获取主密钥
     // 推荐用于生产环境，提供更高的安全性
     CryptoSourceKms = "kms"
 )
@@ -78,7 +79,7 @@ var (
 ```
 
 <a name="DescribeConfig"></a>
-## func [DescribeConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/config.go#L63>)
+## func [DescribeConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/config.go#L80>)
 
 ```go
 func DescribeConfig() config.ConfigDescriptions
@@ -103,7 +104,7 @@ InitGlobalKeyDerivation 初始化全局唯一的密钥派生器实例。
 - passwordBook: 密码本
 
 <a name="Config"></a>
-## type [Config](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/config.go#L42-L60>)
+## type [Config](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/config.go#L44-L65>)
 
 Config 定义密钥管理相关的配置项。
 
@@ -124,7 +125,7 @@ type Config struct {
     // Source 主密钥来源
     // 可选值：
     //   - "config": 从配置文件的 ParentSecretKey 字段读取（不推荐用于生产）
-    //   - "kms": 从密钥管理服务获取（推荐用于生产环境）
+    //   - "kms": 执行 KMS 命令获取（推荐用于生产环境）
     // 默认值："config"
     Source string `mapstructure:"source" default:"config" binding:"oneof=config kms" comment:"主密钥来源：config（配置文件）或 kms（密钥管理服务）"`
 
@@ -138,11 +139,14 @@ type Config struct {
     // 为空时使用内置的默认密码本（不推荐用于生产）
     // 可通过 'zki create password-book' 命令生成新的密码本
     PasswordBookPath string `mapstructure:"password_book_path" comment:"密码本文件路径，用于提供密钥派生的盐值"`
+
+    // KMS KMS 主密钥获取配置（仅当 Source="kms" 时生效）
+    KMS KMSConfig `mapstructure:"kms" comment:"KMS 主密钥获取配置（仅当 source 为 kms 时生效）"`
 }
 ```
 
 <a name="ExtractConfig"></a>
-### func [ExtractConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/config.go#L75>)
+### func [ExtractConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/config.go#L92>)
 
 ```go
 func ExtractConfig(viper *viper.Viper, validate *validator.Validate) (*Config, error)
@@ -160,7 +164,7 @@ ExtractConfig 从 viper 实例中提取密钥配置
 - error: 配置提取或验证失败时返回错误
 
 <a name="ConfigFileSecretKeyProvider"></a>
-## type [ConfigFileSecretKeyProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L53-L59>)
+## type [ConfigFileSecretKeyProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L58-L64>)
 
 ConfigFileSecretKeyProvider 从配置文件读取主密钥的提供者。
 
@@ -179,7 +183,7 @@ type ConfigFileSecretKeyProvider struct {
 ```
 
 <a name="NewConfigFileSecretKeyProvider"></a>
-### func [NewConfigFileSecretKeyProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L68>)
+### func [NewConfigFileSecretKeyProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L73>)
 
 ```go
 func NewConfigFileSecretKeyProvider(parentSecretKey string) *ConfigFileSecretKeyProvider
@@ -196,7 +200,7 @@ NewConfigFileSecretKeyProvider 创建从配置文件读取主密钥的提供者�
 - \*ConfigFileSecretKeyProvider: 提供者实例
 
 <a name="ConfigFileSecretKeyProvider.GetSecretKey"></a>
-### func \(\*ConfigFileSecretKeyProvider\) [GetSecretKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L79>)
+### func \(\*ConfigFileSecretKeyProvider\) [GetSecretKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L84>)
 
 ```go
 func (p *ConfigFileSecretKeyProvider) GetSecretKey() ([]byte, error)
@@ -211,51 +215,76 @@ GetSecretKey 返回配置文件中的主密钥。
 - \[\]byte: 主密钥字节数组
 - error: 主密钥为空时返回错误
 
-<a name="KMSSecretKeyProvider"></a>
-## type [KMSSecretKeyProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L97>)
+<a name="KMSConfig"></a>
+## type [KMSConfig](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/config.go#L71-L77>)
 
-KMSSecretKeyProvider 从 KMS 服务获取主密钥的提供者。
+KMSConfig 定义通过外部命令从 KMS 获取主密钥的配置。
 
-KMS（Key Management Service）是专业的密钥管理服务，提供：
-
-- 硬件级别的安全保护
-- 密钥轮换和版本管理
-- 审计日志和访问控制
-
-注意：当前实现尚未完成，调用 GetSecretKey 会返回错误。
+该方式不绑定具体厂商：可对接 aws/aliyun/vault 等 KMS CLI，也可指向自定义取密钥脚本。 命令的标准输出（去掉首尾空白）即主密钥明文；进程启动后首次取值时执行一次并缓存在内存中。
 
 ```go
-type KMSSecretKeyProvider struct{}
+type KMSConfig struct {
+    // Command 获取主密钥的外部命令及其参数（argv 形式，不经过 shell）
+    Command []string `mapstructure:"command" comment:"获取主密钥的外部命令（argv 形式，标准输出为主密钥明文，仅当 source 为 kms 时使用）"`
+
+    // Timeout 命令执行超时时间
+    Timeout time.Duration `mapstructure:"timeout" default:"10s" comment:"KMS 命令执行超时时间"`
+}
+```
+
+<a name="KMSSecretKeyProvider"></a>
+## type [KMSSecretKeyProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L106-L121>)
+
+KMSSecretKeyProvider 通过外部命令从 KMS 获取主密钥的提供者。
+
+该实现不绑定具体厂商：命令可以是 aws/aliyun/vault 等 KMS CLI，也可以是封装好的 取密钥脚本。命令的标准输出（去掉首尾空白）即主密钥明文。
+
+特性：
+
+- 命令以 argv 形式执行，不经过 shell，避免注入；
+- 受超时时间约束，避免启动被 KMS 长时间阻塞；
+- 首次取值后缓存结果（含错误），后续派生密钥不再重复执行命令。
+
+```go
+type KMSSecretKeyProvider struct {
+    // contains filtered or unexported fields
+}
 ```
 
 <a name="NewKMSSecretKeyProvider"></a>
-### func [NewKMSSecretKeyProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L103>)
+### func [NewKMSSecretKeyProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L132>)
 
 ```go
-func NewKMSSecretKeyProvider() *KMSSecretKeyProvider
+func NewKMSSecretKeyProvider(command []string, timeout time.Duration) (*KMSSecretKeyProvider, error)
 ```
 
 NewKMSSecretKeyProvider 创建 KMS 主密钥提供者。
 
+参数：
+
+- command: 获取主密钥的外部命令及其参数（argv 形式）
+- timeout: 命令执行超时时间，非正数时使用默认值 10s
+
 返回值：
 
 - \*KMSSecretKeyProvider: 提供者实例
+- error: command 为空时返回错误
 
 <a name="KMSSecretKeyProvider.GetSecretKey"></a>
-### func \(\*KMSSecretKeyProvider\) [GetSecretKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L114>)
+### func \(\*KMSSecretKeyProvider\) [GetSecretKey](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L149>)
 
 ```go
 func (p *KMSSecretKeyProvider) GetSecretKey() ([]byte, error)
 ```
 
-GetSecretKey 从 KMS 服务获取主密钥。
+GetSecretKey 获取主密钥。
 
-当前实现返回错误，提示 KMS 尚未实现。
+首次调用时执行外部命令并缓存结果（成功或失败），后续调用直接返回缓存。
 
 返回值：
 
-- \[\]byte: 主密钥字节数组（当前不会返回）
-- error: 总是返回"未实现"错误
+- \[\]byte: 主密钥字节数组
+- error: 命令执行失败、超时或输出为空时返回错误
 
 <a name="KeyDerivation"></a>
 ## type [KeyDerivation](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/keyderivation.go#L47-L53>)
@@ -453,7 +482,7 @@ func (p *PasswordBook) Len() int
 Len 返回密码本的长度（字节数）
 
 <a name="SecretKeyProvider"></a>
-## type [SecretKeyProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L35-L42>)
+## type [SecretKeyProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L40-L47>)
 
 SecretKeyProvider 定义主密钥提供者接口。
 
@@ -474,28 +503,28 @@ type SecretKeyProvider interface {
 ```
 
 <a name="NewSecretKeyProvider"></a>
-### func [NewSecretKeyProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L135>)
+### func [NewSecretKeyProvider](<https://gitee.com/olinex/zhongkui/blob/master/internal/pkg/crypto/key/provider.go#L200>)
 
 ```go
-func NewSecretKeyProvider(source string, parentSecretKey string) (SecretKeyProvider, error)
+func NewSecretKeyProvider(cfg Config) (SecretKeyProvider, error)
 ```
 
 NewSecretKeyProvider 根据来源创建对应的主密钥提供者。
 
 参数：
 
-- source: 主密钥来源，必须是 "config" 或 "kms"
-- parentSecretKey: 当 source 为 "config" 时，提供主密钥明文
+- cfg: 密钥管理配置，Source 决定具体实现
 
 返回值：
 
 - SecretKeyProvider: 对应的提供者实例
-- error: 来源无效时返回错误
+- error: 来源无效或 KMS 命令未配置时返回错误
 
 示例：
 
 ```
-provider, err := NewSecretKeyProvider("config", "my-secret-key")
+cfg := Config{Source: CryptoSourceConfig, ParentSecretKey: "my-secret-key"}
+provider, err := NewSecretKeyProvider(cfg)
 if err != nil {
     return errors.WithStack(err)
 }

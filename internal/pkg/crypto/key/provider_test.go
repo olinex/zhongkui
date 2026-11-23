@@ -1,7 +1,11 @@
 package key
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 )
 
 // ---------------------------------------------------------------------------
@@ -49,12 +53,113 @@ func TestConfigFileSecretKeyProvider_GetSecretKey_MultipleCalls(t *testing.T) {
 // KMSSecretKeyProvider 测试
 // ---------------------------------------------------------------------------
 
-func TestKMSSecretKeyProvider_GetSecretKey_ReturnsError(t *testing.T) {
-	provider := NewKMSSecretKeyProvider()
+func TestKMSSecretKeyProvider_GetSecretKey(t *testing.T) {
+	provider, err := NewKMSSecretKeyProvider([]string{"sh", "-c", `printf 'kms-secret-key'`}, time.Second)
+	if err != nil {
+		t.Fatalf("NewKMSSecretKeyProvider() returned error: %v", err)
+	}
 
-	_, err := provider.GetSecretKey()
+	key, err := provider.GetSecretKey()
+	if err != nil {
+		t.Fatalf("GetSecretKey() returned error: %v", err)
+	}
+	if string(key) != "kms-secret-key" {
+		t.Fatalf("GetSecretKey() returned %q, want %q", key, "kms-secret-key")
+	}
+}
+
+func TestKMSSecretKeyProvider_TrimsWhitespace(t *testing.T) {
+	provider, err := NewKMSSecretKeyProvider([]string{"sh", "-c", `printf 'kms-secret-key\n\n'`}, time.Second)
+	if err != nil {
+		t.Fatalf("NewKMSSecretKeyProvider() returned error: %v", err)
+	}
+
+	key, err := provider.GetSecretKey()
+	if err != nil {
+		t.Fatalf("GetSecretKey() returned error: %v", err)
+	}
+	if string(key) != "kms-secret-key" {
+		t.Fatalf("GetSecretKey() returned %q, want %q", key, "kms-secret-key")
+	}
+}
+
+func TestKMSSecretKeyProvider_NonZeroExit(t *testing.T) {
+	provider, err := NewKMSSecretKeyProvider([]string{"sh", "-c", `echo 'kms unavailable' >&2; exit 3`}, time.Second)
+	if err != nil {
+		t.Fatalf("NewKMSSecretKeyProvider() returned error: %v", err)
+	}
+
+	_, err = provider.GetSecretKey()
 	if err == nil {
-		t.Fatal("expected error from KMS provider (not implemented), got nil")
+		t.Fatal("expected error for non-zero exit, got nil")
+	}
+	if !strings.Contains(err.Error(), "kms unavailable") {
+		t.Fatalf("error %q does not contain stderr output", err)
+	}
+}
+
+func TestKMSSecretKeyProvider_EmptyOutput(t *testing.T) {
+	provider, err := NewKMSSecretKeyProvider([]string{"sh", "-c", "true"}, time.Second)
+	if err != nil {
+		t.Fatalf("NewKMSSecretKeyProvider() returned error: %v", err)
+	}
+
+	_, err = provider.GetSecretKey()
+	if err == nil {
+		t.Fatal("expected error for empty output, got nil")
+	}
+}
+
+func TestKMSSecretKeyProvider_CachesResult(t *testing.T) {
+	counter := filepath.Join(t.TempDir(), "count")
+	script := "printf x >> " + counter + "; printf 'kms-secret-key'"
+	provider, err := NewKMSSecretKeyProvider([]string{"sh", "-c", script}, time.Second)
+	if err != nil {
+		t.Fatalf("NewKMSSecretKeyProvider() returned error: %v", err)
+	}
+
+	first, err := provider.GetSecretKey()
+	if err != nil {
+		t.Fatalf("first GetSecretKey() returned error: %v", err)
+	}
+	second, err := provider.GetSecretKey()
+	if err != nil {
+		t.Fatalf("second GetSecretKey() returned error: %v", err)
+	}
+	if string(first) != string(second) {
+		t.Fatalf("cached key mismatch: first %q, second %q", first, second)
+	}
+
+	data, err := os.ReadFile(counter)
+	if err != nil {
+		t.Fatalf("read counter failed: %v", err)
+	}
+	if len(data) != 1 {
+		t.Fatalf("command executed %d times, want 1", len(data))
+	}
+}
+
+func TestKMSSecretKeyProvider_Timeout(t *testing.T) {
+	provider, err := NewKMSSecretKeyProvider([]string{"sh", "-c", "exec sleep 2"}, 50*time.Millisecond)
+	if err != nil {
+		t.Fatalf("NewKMSSecretKeyProvider() returned error: %v", err)
+	}
+
+	_, err = provider.GetSecretKey()
+	if err == nil {
+		t.Fatal("expected timeout error, got nil")
+	}
+	if !strings.Contains(err.Error(), "timed out") {
+		t.Fatalf("error %q does not mention timeout", err)
+	}
+}
+
+func TestNewKMSSecretKeyProvider_EmptyCommand(t *testing.T) {
+	if _, err := NewKMSSecretKeyProvider(nil, time.Second); err == nil {
+		t.Fatal("expected error for nil command, got nil")
+	}
+	if _, err := NewKMSSecretKeyProvider([]string{}, time.Second); err == nil {
+		t.Fatal("expected error for empty command, got nil")
 	}
 }
 
@@ -63,7 +168,7 @@ func TestKMSSecretKeyProvider_GetSecretKey_ReturnsError(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestNewSecretKeyProvider_Config(t *testing.T) {
-	provider, err := NewSecretKeyProvider(CryptoSourceConfig, "test-key")
+	provider, err := NewSecretKeyProvider(Config{Source: CryptoSourceConfig, ParentSecretKey: "test-key"})
 	if err != nil {
 		t.Fatalf("NewSecretKeyProvider() returned error: %v", err)
 	}
@@ -78,7 +183,13 @@ func TestNewSecretKeyProvider_Config(t *testing.T) {
 }
 
 func TestNewSecretKeyProvider_KMS(t *testing.T) {
-	provider, err := NewSecretKeyProvider(CryptoSourceKms, "")
+	provider, err := NewSecretKeyProvider(Config{
+		Source: CryptoSourceKms,
+		KMS: KMSConfig{
+			Command: []string{"sh", "-c", `printf 'kms-secret-key'`},
+			Timeout: time.Second,
+		},
+	})
 	if err != nil {
 		t.Fatalf("NewSecretKeyProvider() returned error: %v", err)
 	}
@@ -90,17 +201,32 @@ func TestNewSecretKeyProvider_KMS(t *testing.T) {
 	if _, ok := provider.(*KMSSecretKeyProvider); !ok {
 		t.Fatal("expected *KMSSecretKeyProvider")
 	}
+
+	key, err := provider.GetSecretKey()
+	if err != nil {
+		t.Fatalf("GetSecretKey() returned error: %v", err)
+	}
+	if string(key) != "kms-secret-key" {
+		t.Fatalf("GetSecretKey() returned %q, want %q", key, "kms-secret-key")
+	}
+}
+
+func TestNewSecretKeyProvider_KMSWithoutCommand(t *testing.T) {
+	_, err := NewSecretKeyProvider(Config{Source: CryptoSourceKms})
+	if err == nil {
+		t.Fatal("expected error for kms source without command, got nil")
+	}
 }
 
 func TestNewSecretKeyProvider_InvalidSource(t *testing.T) {
-	_, err := NewSecretKeyProvider("invalid-source", "key")
+	_, err := NewSecretKeyProvider(Config{Source: "invalid-source", ParentSecretKey: "key"})
 	if err == nil {
 		t.Fatal("expected error for invalid source, got nil")
 	}
 }
 
 func TestNewSecretKeyProvider_EmptySource(t *testing.T) {
-	_, err := NewSecretKeyProvider("", "key")
+	_, err := NewSecretKeyProvider(Config{Source: "", ParentSecretKey: "key"})
 	if err == nil {
 		t.Fatal("expected error for empty source, got nil")
 	}
@@ -126,39 +252,44 @@ func TestCryptoSourceConstants(t *testing.T) {
 func TestSecretKeyProvider_Integration(t *testing.T) {
 	testCases := []struct {
 		name      string
-		source    string
-		parentKey string
+		cfg       Config
 		newErr    bool // NewSecretKeyProvider 返回错误
 		getKeyErr bool // GetSecretKey 返回错误
 	}{
 		{
-			name:      "valid config source",
-			source:    CryptoSourceConfig,
-			parentKey: "my-secret-key",
+			name: "valid config source",
+			cfg:  Config{Source: CryptoSourceConfig, ParentSecretKey: "my-secret-key"},
 		},
 		{
 			name:      "empty config key",
-			source:    CryptoSourceConfig,
-			parentKey: "",
+			cfg:       Config{Source: CryptoSourceConfig},
 			getKeyErr: true,
 		},
 		{
-			name:      "kms source (not implemented)",
-			source:    CryptoSourceKms,
-			parentKey: "",
-			getKeyErr: true,
+			name:   "kms source without command",
+			cfg:    Config{Source: CryptoSourceKms},
+			newErr: true,
 		},
 		{
-			name:      "invalid source",
-			source:    "invalid",
-			parentKey: "key",
-			newErr:    true,
+			name: "kms source with command",
+			cfg: Config{
+				Source: CryptoSourceKms,
+				KMS: KMSConfig{
+					Command: []string{"sh", "-c", `printf 'kms-secret-key'`},
+					Timeout: time.Second,
+				},
+			},
+		},
+		{
+			name:   "invalid source",
+			cfg:    Config{Source: "invalid", ParentSecretKey: "key"},
+			newErr: true,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			provider, err := NewSecretKeyProvider(tc.source, tc.parentKey)
+			provider, err := NewSecretKeyProvider(tc.cfg)
 			if tc.newErr {
 				if err == nil {
 					t.Fatal("expected error from NewSecretKeyProvider, got nil")

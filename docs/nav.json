@@ -350,6 +350,18 @@
             "研发"
           ],
           "owner": "@olinex"
+        },
+        {
+          "title": "如何接入 KMS 获取主密钥",
+          "summary": "用通用外部命令从 KMS 获取主密钥，替换配置文件中的明文父密钥，并完成验证与回滚。",
+          "output": "curated/how-to/configure-kms.md",
+          "category": "操作指南",
+          "source": "策展",
+          "roles": [
+            "运维",
+            "研发"
+          ],
+          "owner": "@olinex"
         }
       ]
     },
