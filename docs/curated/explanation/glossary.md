@@ -27,7 +27,7 @@
 | 对象存储 | S3 | 存放抓包快照与大字段（如报文体） | 配置段 `[s3]` |
 | Reporter | reporter | 接收采集端上报并落库的 gRPC 服务 | `internal/reporter` |
 | 传输模型 | transport model | 可被标签规则处理的目标模型，如 `HttpTransport` | `internal/models/network` |
-| 输入文档 | input document | 规则实际看到的模型投影；加密字段为空串 | `internal/tagengine` |
+| 输入文档 | input document | 规则实际看到的模型投影；敏感字段被剔除，需用 `crypto.reveal` 获取明文 | `internal/tagengine` |
 | 指纹 | fingerprint | 从流量中提取的可用于识别与匹配的特征 | `internal/network/detectors` |
 
 ## 3. 标签与告警

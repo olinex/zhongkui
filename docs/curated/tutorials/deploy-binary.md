@@ -400,7 +400,7 @@ sudo -u zki zki --config /etc/zhongkui/config.toml describe deps
 
 ## 10. 下一步
 
-部署完成后，按[教程：看到你的第一条风险告警](first-alert.md)编写第一条 Rego 规则并验证告警链路。
+部署完成后，从[教程第 0 章：教程总览与系列路线](00-roadmap.md)开始，按推荐路线依次完成流量接入、标签规则与告警链路。
 
 ## 11. 接入 OpenTelemetry（可选）
 
@@ -444,10 +444,11 @@ OTEL_PROVIDER=stdout
 sudo -u zki zki --config /etc/zhongkui/config.toml create access-key \
   -u zkadmin -d "capture client" --enabled --ttl 8760h
 
-# 创建采集器记录；device 替换为真实网卡
+# 创建采集器记录；device 与 BPF 表达式按真实网卡与流量调整
 sudo -u zki zki --config /etc/zhongkui/config.toml create capturer \
   --namespace default --name test --version v1d \
-  --device eth0 --snap-len 1600 --promisc --enabled
+  --device eth0 --bpf-expr 'tcp port 80 or tcp port 443' \
+  --snap-len 1600 --read-timeout 5000 --promisc --enabled
 ```
 
 确认配置中的 `[capture.resource]` 与上面一致，并把访问密钥填入 `[grpc.client.reporter.auth]`：

@@ -337,6 +337,8 @@ type indexItem struct {
 	Output string
 	// Category Diátaxis 分类标签。
 	Category string
+	// Group 侧边栏父分类；为空表示直接挂在分区下。
+	Group string
 	// Source 来源标签。
 	Source string
 	// Roles 角色标签。
@@ -442,6 +444,7 @@ func sectionItems(section Section) []indexItem {
 			Summary:  entry.Summary,
 			Output:   entry.Output,
 			Category: entry.Category.Label(),
+			Group:    entry.Group,
 			Source:   source,
 			Roles:    roles,
 			Owner:    entry.Owner,
@@ -467,7 +470,7 @@ func indexDocument(refs []refPackage) string {
 	b.WriteString("| 用二进制部署到 Linux | [Linux 二进制部署](curated/tutorials/deploy-binary.md) |\n")
 	b.WriteString("| 用 Docker Compose 部署 | [Docker Compose 部署](curated/tutorials/deploy-docker-compose.md) |\n")
 	b.WriteString("| 部署到 Kubernetes | [Kubernetes Helm 部署](curated/tutorials/deploy-helm.md) |\n")
-	b.WriteString("| 想把第一条告警跑通 | [教程：看到你的第一条风险告警](curated/tutorials/first-alert.md) |\n")
+	b.WriteString("| 想从接入流量走到 AI 共创 | [教程第 0 章：教程总览与系列路线](curated/tutorials/00-roadmap.md) |\n")
 	b.WriteString("| 理解系统如何组成 | [系统总览](curated/explanation/system-overview.md) |\n")
 	b.WriteString("| 查某个字段或实体 | [领域模型](curated/explanation/domain-model.md) / [术语表](curated/explanation/glossary.md) |\n")
 	b.WriteString("| 查接口、表、枚举、配置 | [参考索引](generated/reference/index.md) |\n")
@@ -539,6 +542,8 @@ type navItem struct {
 	Output string `json:"output"`
 	// Category Diátaxis 分类。
 	Category string `json:"category"`
+	// Group 侧边栏父分类；为空表示直接挂在分区下。
+	Group string `json:"group,omitempty"`
 	// Source 来源（生成或策展）。
 	Source string `json:"source"`
 	// Roles 角色标签。
@@ -570,6 +575,7 @@ func navDocument() string {
 				Summary:  item.Summary,
 				Output:   item.Output,
 				Category: item.Category,
+				Group:    item.Group,
 				Source:   item.Source,
 				Roles:    item.Roles,
 				Owner:    item.Owner,

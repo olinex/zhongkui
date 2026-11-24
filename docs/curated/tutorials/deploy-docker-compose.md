@@ -290,7 +290,7 @@ OTEL_EXPORTER_OTLP_HEADERS=uptrace-dsn=http://<token>@<host>:14318?grpc=4317
 1. 登录后确认命名空间（默认 `default`）。
 2. 查看流量页面；没有数据说明采集端未接入。
 3. 配置通知渠道与通知组（可选）。
-4. 按教程编写第一条规则：[看到你的第一条风险告警](first-alert.md)。
+4. 从教程开始接入与验证：[第 0 章：教程总览与系列路线](00-roadmap.md)。
 
 ## 11. 升级
 

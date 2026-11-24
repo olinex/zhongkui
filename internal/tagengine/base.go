@@ -1,7 +1,7 @@
 // Package tagengine 提供基于 Open Policy Agent（OPA）的标签识别引擎，以及基于标签聚合统计的
 // 标签事件识别能力。
 //
-// 面向使用者的规则编写与告警验证步骤见 docs/curated/tutorials/first-alert.md；本包注释只描述
+// 面向使用者的规则编写与告警验证步骤见 docs/curated/tutorials/03-first-tag.md；本包注释只描述
 // 引擎职责、规则契约与边界。
 package tagengine
 

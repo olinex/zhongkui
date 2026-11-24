@@ -172,4 +172,4 @@ go run cmd/zki/main.go describe deps
 ## 8. 下一步
 
 - 生产部署：按环境选择 [Linux 二进制部署](deploy-binary.md)、[Docker Compose 部署](deploy-docker-compose.md) 或 [Kubernetes Helm 部署](deploy-helm.md)。
-- 功能验证：按[教程：看到你的第一条风险告警](first-alert.md)编写第一条 Rego 规则并确认告警链路。
+- 功能验证：从[教程第 0 章：教程总览与系列路线](00-roadmap.md)开始，按推荐路线依次完成流量接入、标签规则与告警链路。

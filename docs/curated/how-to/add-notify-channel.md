@@ -6,6 +6,8 @@
 
 扩展通知渠道类型并维护对应的多语言模板。
 
+**适用角色**：研发、开源贡献者。普通使用者（运维/安全运营）只需按[教程第 6 章：接入告警渠道](../tutorials/06-alert-channel.md)配置已有渠道、目标与通知组，无需阅读本文。
+
 本文件定义消息事件模板注册表（event template registry）。注册表仅声明每个事件 （Event）支持的模板键（Template）、渠道类型（Channels）与语言（Languages）等元数据， 不承载具体标题/正文内容——各语言默认模板标题/正文已迁至翻译包 i18n 键 `notify.{template}.title` / `notify.{template}.content`（见 internal/pkg/translate/locales）。 发送消息渲染时，若命名空间下无对应持久化模板行，回退到该 i18n 默认模板。
 
 包内文件分工：template.go（事件模板注册表与元信息）、service.go（通知服务、渲染与发送去重）、 enum.go（把通知事件注册为枚举类 notificationEvent）。

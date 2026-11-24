@@ -207,7 +207,7 @@ func (c Category) Valid() bool
 Valid 报告该分类是否为已注册的合法分类。
 
 <a name="Entry"></a>
-## type [Entry](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L126-L153>)
+## type [Entry](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L126-L155>)
 
 Entry 表示一条已登记文档条目。
 
@@ -217,6 +217,8 @@ type Entry struct {
     Category Category
     // Section 是条目的导航分区。
     Section Section
+    // Group 是分区内的侧边栏父分类，用于把同主题条目收拢到可折叠分组；为空表示直接挂在分区下。
+    Group string
     // Order 是分区内的展示顺序，同一分区内唯一。
     Order int
     // Title 是条目标题。
@@ -243,7 +245,7 @@ type Entry struct {
 ```
 
 <a name="Curated"></a>
-### func [Curated](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L609>)
+### func [Curated](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L836>)
 
 ```go
 func Curated() []Entry
@@ -252,7 +254,7 @@ func Curated() []Entry
 Curated 返回所有策展条目（SourceCurated）。
 
 <a name="Generated"></a>
-### func [Generated](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L597>)
+### func [Generated](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L824>)
 
 ```go
 func Generated() []Entry
@@ -261,7 +263,7 @@ func Generated() []Entry
 Generated 返回所有由代码声明派生的条目（SourceComment）。
 
 <a name="Registry"></a>
-### func [Registry](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L157>)
+### func [Registry](<https://gitee.com/olinex/zhongkui/blob/master/internal/docs/registry.go#L159>)
 
 ```go
 func Registry() []Entry

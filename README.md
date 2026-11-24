@@ -123,7 +123,7 @@ go run cmd/zki/main.go run worker
 ## 文档
 
 - 文档总目录：[docs/index.md](docs/index.md)
-- 开始使用：[Linux 开发环境部署](docs/curated/tutorials/linux-dev.md) · [Linux 二进制部署](docs/curated/tutorials/deploy-binary.md) · [Docker Compose 部署](docs/curated/tutorials/deploy-docker-compose.md) · [Kubernetes Helm 部署](docs/curated/tutorials/deploy-helm.md) · [教程：第一条风险告警](docs/curated/tutorials/first-alert.md)
+- 开始使用：[Linux 开发环境部署](docs/curated/tutorials/linux-dev.md) · [Linux 二进制部署](docs/curated/tutorials/deploy-binary.md) · [Docker Compose 部署](docs/curated/tutorials/deploy-docker-compose.md) · [Kubernetes Helm 部署](docs/curated/tutorials/deploy-helm.md) · [教程：从接入流量到 AI 共创（第 0 章起）](docs/curated/tutorials/00-roadmap.md)
 - 核心概念：[系统总览](docs/curated/explanation/system-overview.md) · [领域模型](docs/curated/explanation/domain-model.md) · [术语表](docs/curated/explanation/glossary.md)
 - 操作指南：[故障排查](docs/curated/how-to/troubleshooting.md) · [数据源插件](docs/curated/how-to/add-datasource-plugin.md) · [通知渠道](docs/curated/how-to/add-notify-channel.md)
 - 参考：[参考索引](docs/generated/reference/index.md)

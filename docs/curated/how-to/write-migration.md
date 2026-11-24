@@ -6,6 +6,8 @@
 
 新增一次向前/向后兼容的数据库迁移脚本。
 
+**适用角色**：研发、开源贡献者。普通使用者（安全运营/运维）无需阅读；只有修改代码或数据库结构时才需要编写迁移。
+
 包内文件分工：migrate.go（Migrator 与 goose 执行器封装、版本升降级与状态表格）、 config.go（Config 及其链式配置）、check.go（模型声明 vs 数据库结构校验）、diff.go （两套结构差异比对）、dryrun.go（迁移演练）、tempdb.go（临时库生命周期）。CLI 入口在 internal/cmd/migrate.go。
 
 ## 一、机制概览

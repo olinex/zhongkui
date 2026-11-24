@@ -13,7 +13,7 @@
 | 用二进制部署到 Linux | [Linux 二进制部署](curated/tutorials/deploy-binary.md) |
 | 用 Docker Compose 部署 | [Docker Compose 部署](curated/tutorials/deploy-docker-compose.md) |
 | 部署到 Kubernetes | [Kubernetes Helm 部署](curated/tutorials/deploy-helm.md) |
-| 想把第一条告警跑通 | [教程：看到你的第一条风险告警](curated/tutorials/first-alert.md) |
+| 想从接入流量走到 AI 共创 | [教程第 0 章：教程总览与系列路线](curated/tutorials/00-roadmap.md) |
 | 理解系统如何组成 | [系统总览](curated/explanation/system-overview.md) |
 | 查某个字段或实体 | [领域模型](curated/explanation/domain-model.md) / [术语表](curated/explanation/glossary.md) |
 | 查接口、表、枚举、配置 | [参考索引](generated/reference/index.md) |
@@ -25,7 +25,20 @@
 - [Linux 二进制部署](curated/tutorials/deploy-binary.md) — 下载 Release 包，在 Linux 上用二进制、systemd 与 nginx 完成可长期运行的部署。（教程；策展）
 - [Docker Compose 部署](curated/tutorials/deploy-docker-compose.md) — 用 Docker Compose 在单机拉起 zhongkui 与全部依赖，并完成首次登录。（教程；策展）
 - [Kubernetes Helm 部署](curated/tutorials/deploy-helm.md) — 用 Helm 在 Kubernetes 部署 zhongkui，并连接外部数据库、缓存与对象存储。（教程；策展）
-- [教程：看到你的第一条风险告警](curated/tutorials/first-alert.md) — 编写一条 rego 规则、触发标签窗口统计，收到第一封风险告警。（教程；策展）
+- [第 0 章：教程总览与系列路线](curated/tutorials/00-roadmap.md) — 说明系列 13 章的依赖顺序、两条推荐路线与阅读前的整体准备。（教程；策展）
+- [第 1 章：接入流量](curated/tutorials/01-ingest-traffic.md) — 从创建访问密钥与采集器到启动采集端，让真实网络流量进入平台并在流量审计中可见。（教程；策展）
+- [第 2 章：Rego 规则讲解](curated/tutorials/02-rego-basics.md) — 讲清平台标签规则的契约、输入文档、内置函数与四层校验，能读懂并校验一条规则。（教程；策展）
+- [第 3 章：实现你的第一个标签](curated/tutorials/03-first-tag.md) — 在标签规则页新建、校验并用 dry-run 验证第一条规则，让流量记录打上自定义标签。（教程；策展）
+- [第 4 章：告警事件如何产生](curated/tutorials/04-tag-event-lifecycle.md) — 说明标签如何按窗口聚合成事件、如何抑制与流转，最终变成可投递的风险告警。（教程；策展）
+- [第 5 章：实现你的第一个风险规则](curated/tutorials/05-first-risk-rule.md) — 配置标签事件规则的条件、窗口与阈值，看到第一条状态为 alerting 的风险告警。（教程；策展）
+- [第 6 章：接入告警渠道](curated/tutorials/06-alert-channel.md) — 配置邮件或 Webhook 通知渠道、目标与通知组，并绑定到标签事件规则。（教程；策展）
+- [第 7 章：第三方数据源查询](curated/tutorials/07-datasource-query.md) — 登记第三方数据源，并在 Rego 中用 sqlite.query 关联外部数据完成打标。（教程；策展）
+- [第 8 章：如何接入 AI](curated/tutorials/08-ai-setup.md) — 在 LLM 配置中登记对话与向量化模型、绑定档位，启用 AI 助手。（教程；策展）
+- [第 9 章：用 AI 助手分析数据](curated/tutorials/09-ai-analyze-data.md) — 用 AI 助手以自然语言查询流量、标签与告警，并核对引用来源与审批动作。（教程；策展）
+- [第 10 章：与 AI 助手共创 Rego 规则](curated/tutorials/10-ai-cocreate-rego.md) — 用内置共创技能澄清风险场景、起草并验证 Rego 规则，经审批写入标签规则。（教程；策展）
+- [第 11 章：周期性报告讲解](curated/tutorials/11-periodic-report.md) — 理解报告技能、计划与运行记录，创建并手动执行一次周期性报告。（教程；策展）
+- [第 12 章：与 AI 助手共创周期性报告](curated/tutorials/12-ai-cocreate-periodic-report.md) — 用内置共创技能访谈报告画像，生成报告技能并排入周期计划。（教程；策展）
+- [第 13 章：命名空间、用户、权限与用户组](curated/tutorials/13-namespace-user-permission.md) — 创建命名空间与用户，用用户组和 RBAC 策略完成多租户隔离与授权。（教程；策展）
 
 ## 核心概念
 
@@ -34,6 +47,7 @@
 - [术语表](curated/explanation/glossary.md) — 统一项目术语、英文名、代码位置与常见误解。（解释；策展）
 - [采集架构：wire/XDP、快照与上报](generated/explanation/capture-architecture.md) — 说明采集侧的 wire/XDP 抓包、快照生成与上报链路。（解释；生成）
 - [网络指纹与 TCP 检测原理](generated/explanation/network-detection.md) — 解释网络指纹的计算方式与 TCP 流检测原理。（解释；生成）
+- [XDP/BPF 设计说明](curated/kernel/xdp_bpf_design.md) — 说明内核侧 XDP/BPF 程序的设计与数据交互方式。（解释；策展）
 - [流水线与调度](generated/explanation/pipeline.md) — 说明流水线的阶段划分与调度协作方式。（解释；生成）
 - [异步任务与队列](generated/explanation/async-worker.md) — 说明基于队列的异步任务调度与执行模型。（解释；生成）
 - [数据源插件体系与 sqlite vtab](generated/explanation/datasource-plugin.md) — 说明数据源插件体系与 sqlite 虚拟表机制的配合方式。（解释；生成）
@@ -45,18 +59,17 @@
 - [依赖注入与生命周期](generated/explanation/dependency-injection.md) — 说明 samber/do 依赖注入三层模式与资源生命周期管理。（解释；生成）
 - [前端设计体系分层](curated/explanation/frontend-design-system.md) — 说明前端样式体系的分层与设计令牌组织方式。（解释；策展）
 - [前端功能开关与不可用态](curated/explanation/frontend-feature-flags.md) — 说明前端功能开关的接入方式与不可用态呈现约定。（解释；策展）
-- [XDP/BPF 设计说明](curated/kernel/xdp_bpf_design.md) — 说明内核侧 XDP/BPF 程序的设计与数据交互方式。（解释；策展）
 - [文档体系架构与执行规划](curated/explanation/documentation-architecture.md) — 说明文档大纲、生成与策展的来源隔离、事实投影、AI 上下文分层与开源治理。（解释；策展）
 
 ## 操作指南
 
-- [故障排查：启动、采集、标签、通知与检索](curated/how-to/troubleshooting.md) — 按症状定位常见故障，并给出验证与恢复步骤。（操作指南；策展）
-- [如何接入新的数据源插件](curated/how-to/add-datasource-plugin.md) — 实现数据源接口并注册一个新的数据源插件。（操作指南；策展）
-- [如何新增通知渠道与模板](curated/how-to/add-notify-channel.md) — 扩展通知渠道类型并维护对应的多语言模板。（操作指南；策展）
-- [如何编写一次数据库迁移](curated/how-to/write-migration.md) — 新增一次向前/向后兼容的数据库迁移脚本。（操作指南；策展）
-- [如何新增枚举类并生成绑定](curated/how-to/add-enum-class.md) — 在枚举注册表中新增枚举类并生成前后端绑定。（操作指南；策展）
-- [如何新增一个管理端页面](curated/how-to/frontend-add-page.md) — 说明新增管理端页面时的路由、视图与 API 接入步骤。（操作指南；策展）
+- [故障排查：启动、采集、标签、通知与检索](curated/how-to/troubleshooting.md) — 按症状定位跨组件故障，并给出验证与恢复步骤；基础操作先按教程对应章节验证。（操作指南；策展）
 - [如何接入 KMS 获取主密钥](curated/how-to/configure-kms.md) — 用通用外部命令从 KMS 获取主密钥，替换配置文件中的明文父密钥，并完成验证与回滚。（操作指南；策展）
+- [如何接入新的数据源插件](curated/how-to/add-datasource-plugin.md) — 实现数据源接口并注册一个新的数据源插件；面向研发与开源贡献者。（操作指南；策展）
+- [如何新增通知渠道与模板](curated/how-to/add-notify-channel.md) — 扩展通知渠道类型并维护对应的多语言模板；面向研发与开源贡献者。（操作指南；策展）
+- [如何编写一次数据库迁移](curated/how-to/write-migration.md) — 新增一次向前/向后兼容的数据库迁移脚本；面向研发与开源贡献者。（操作指南；策展）
+- [如何新增枚举类并生成绑定](curated/how-to/add-enum-class.md) — 在枚举注册表中新增枚举类并生成前后端绑定；面向研发与开源贡献者。（操作指南；策展）
+- [如何新增一个管理端页面](curated/how-to/frontend-add-page.md) — 说明新增管理端页面时的路由、视图与 API 接入步骤；面向研发与开源贡献者。（操作指南；策展）
 
 ## 参考
 
@@ -74,6 +87,9 @@
 
 - [术语表](curated/explanation/glossary.md) — 统一项目术语、英文名、代码位置与常见误解。
 - [前端功能开关与不可用态](curated/explanation/frontend-feature-flags.md) — 说明前端功能开关的接入方式与不可用态呈现约定。
+- [第 0 章：教程总览与系列路线](curated/tutorials/00-roadmap.md) — 说明系列 13 章的依赖顺序、两条推荐路线与阅读前的整体准备。
+- [第 8 章：如何接入 AI](curated/tutorials/08-ai-setup.md) — 在 LLM 配置中登记对话与向量化模型、绑定档位，启用 AI 助手。
+- [第 13 章：命名空间、用户、权限与用户组](curated/tutorials/13-namespace-user-permission.md) — 创建命名空间与用户，用用户组和 RBAC 策略完成多租户隔离与授权。
 
 ### 安全运营
 
@@ -81,8 +97,18 @@
 - [领域模型：实体、关系与生命周期](curated/explanation/domain-model.md) — 说明多租户下的核心实体、实体关系、生命周期与存储归属。
 - [术语表](curated/explanation/glossary.md) — 统一项目术语、英文名、代码位置与常见误解。
 - [网络指纹与 TCP 检测原理](generated/explanation/network-detection.md) — 解释网络指纹的计算方式与 TCP 流检测原理。
-- [教程：看到你的第一条风险告警](curated/tutorials/first-alert.md) — 编写一条 rego 规则、触发标签窗口统计，收到第一封风险告警。
-- [故障排查：启动、采集、标签、通知与检索](curated/how-to/troubleshooting.md) — 按症状定位常见故障，并给出验证与恢复步骤。
+- [第 0 章：教程总览与系列路线](curated/tutorials/00-roadmap.md) — 说明系列 13 章的依赖顺序、两条推荐路线与阅读前的整体准备。
+- [第 2 章：Rego 规则讲解](curated/tutorials/02-rego-basics.md) — 讲清平台标签规则的契约、输入文档、内置函数与四层校验，能读懂并校验一条规则。
+- [第 3 章：实现你的第一个标签](curated/tutorials/03-first-tag.md) — 在标签规则页新建、校验并用 dry-run 验证第一条规则，让流量记录打上自定义标签。
+- [第 4 章：告警事件如何产生](curated/tutorials/04-tag-event-lifecycle.md) — 说明标签如何按窗口聚合成事件、如何抑制与流转，最终变成可投递的风险告警。
+- [第 5 章：实现你的第一个风险规则](curated/tutorials/05-first-risk-rule.md) — 配置标签事件规则的条件、窗口与阈值，看到第一条状态为 alerting 的风险告警。
+- [第 6 章：接入告警渠道](curated/tutorials/06-alert-channel.md) — 配置邮件或 Webhook 通知渠道、目标与通知组，并绑定到标签事件规则。
+- [第 7 章：第三方数据源查询](curated/tutorials/07-datasource-query.md) — 登记第三方数据源，并在 Rego 中用 sqlite.query 关联外部数据完成打标。
+- [第 9 章：用 AI 助手分析数据](curated/tutorials/09-ai-analyze-data.md) — 用 AI 助手以自然语言查询流量、标签与告警，并核对引用来源与审批动作。
+- [第 10 章：与 AI 助手共创 Rego 规则](curated/tutorials/10-ai-cocreate-rego.md) — 用内置共创技能澄清风险场景、起草并验证 Rego 规则，经审批写入标签规则。
+- [第 11 章：周期性报告讲解](curated/tutorials/11-periodic-report.md) — 理解报告技能、计划与运行记录，创建并手动执行一次周期性报告。
+- [第 12 章：与 AI 助手共创周期性报告](curated/tutorials/12-ai-cocreate-periodic-report.md) — 用内置共创技能访谈报告画像，生成报告技能并排入周期计划。
+- [故障排查：启动、采集、标签、通知与检索](curated/how-to/troubleshooting.md) — 按症状定位跨组件故障，并给出验证与恢复步骤；基础操作先按教程对应章节验证。
 
 ### 运维
 
@@ -93,10 +119,11 @@
 - [Linux 二进制部署](curated/tutorials/deploy-binary.md) — 下载 Release 包，在 Linux 上用二进制、systemd 与 nginx 完成可长期运行的部署。
 - [Docker Compose 部署](curated/tutorials/deploy-docker-compose.md) — 用 Docker Compose 在单机拉起 zhongkui 与全部依赖，并完成首次登录。
 - [Kubernetes Helm 部署](curated/tutorials/deploy-helm.md) — 用 Helm 在 Kubernetes 部署 zhongkui，并连接外部数据库、缓存与对象存储。
-- [故障排查：启动、采集、标签、通知与检索](curated/how-to/troubleshooting.md) — 按症状定位常见故障，并给出验证与恢复步骤。
-- [如何接入新的数据源插件](curated/how-to/add-datasource-plugin.md) — 实现数据源接口并注册一个新的数据源插件。
-- [如何新增通知渠道与模板](curated/how-to/add-notify-channel.md) — 扩展通知渠道类型并维护对应的多语言模板。
-- [如何编写一次数据库迁移](curated/how-to/write-migration.md) — 新增一次向前/向后兼容的数据库迁移脚本。
+- [第 0 章：教程总览与系列路线](curated/tutorials/00-roadmap.md) — 说明系列 13 章的依赖顺序、两条推荐路线与阅读前的整体准备。
+- [第 1 章：接入流量](curated/tutorials/01-ingest-traffic.md) — 从创建访问密钥与采集器到启动采集端，让真实网络流量进入平台并在流量审计中可见。
+- [第 6 章：接入告警渠道](curated/tutorials/06-alert-channel.md) — 配置邮件或 Webhook 通知渠道、目标与通知组，并绑定到标签事件规则。
+- [第 8 章：如何接入 AI](curated/tutorials/08-ai-setup.md) — 在 LLM 配置中登记对话与向量化模型、绑定档位，启用 AI 助手。
+- [故障排查：启动、采集、标签、通知与检索](curated/how-to/troubleshooting.md) — 按症状定位跨组件故障，并给出验证与恢复步骤；基础操作先按教程对应章节验证。
 - [如何接入 KMS 获取主密钥](curated/how-to/configure-kms.md) — 用通用外部命令从 KMS 获取主密钥，替换配置文件中的明文父密钥，并完成验证与回滚。
 
 ### 研发
@@ -106,6 +133,7 @@
 - [术语表](curated/explanation/glossary.md) — 统一项目术语、英文名、代码位置与常见误解。
 - [采集架构：wire/XDP、快照与上报](generated/explanation/capture-architecture.md) — 说明采集侧的 wire/XDP 抓包、快照生成与上报链路。
 - [网络指纹与 TCP 检测原理](generated/explanation/network-detection.md) — 解释网络指纹的计算方式与 TCP 流检测原理。
+- [XDP/BPF 设计说明](curated/kernel/xdp_bpf_design.md) — 说明内核侧 XDP/BPF 程序的设计与数据交互方式。
 - [流水线与调度](generated/explanation/pipeline.md) — 说明流水线的阶段划分与调度协作方式。
 - [异步任务与队列](generated/explanation/async-worker.md) — 说明基于队列的异步任务调度与执行模型。
 - [数据源插件体系与 sqlite vtab](generated/explanation/datasource-plugin.md) — 说明数据源插件体系与 sqlite 虚拟表机制的配合方式。
@@ -117,14 +145,16 @@
 - [依赖注入与生命周期](generated/explanation/dependency-injection.md) — 说明 samber/do 依赖注入三层模式与资源生命周期管理。
 - [前端设计体系分层](curated/explanation/frontend-design-system.md) — 说明前端样式体系的分层与设计令牌组织方式。
 - [前端功能开关与不可用态](curated/explanation/frontend-feature-flags.md) — 说明前端功能开关的接入方式与不可用态呈现约定。
-- [XDP/BPF 设计说明](curated/kernel/xdp_bpf_design.md) — 说明内核侧 XDP/BPF 程序的设计与数据交互方式。
 - [文档体系架构与执行规划](curated/explanation/documentation-architecture.md) — 说明文档大纲、生成与策展的来源隔离、事实投影、AI 上下文分层与开源治理。
 - [Linux 开发环境部署](curated/tutorials/linux-dev.md) — 安装工具链、启动本地依赖容器，并用源码运行 web/worker，用于开发与调试。
-- [故障排查：启动、采集、标签、通知与检索](curated/how-to/troubleshooting.md) — 按症状定位常见故障，并给出验证与恢复步骤。
-- [如何接入新的数据源插件](curated/how-to/add-datasource-plugin.md) — 实现数据源接口并注册一个新的数据源插件。
-- [如何新增通知渠道与模板](curated/how-to/add-notify-channel.md) — 扩展通知渠道类型并维护对应的多语言模板。
-- [如何编写一次数据库迁移](curated/how-to/write-migration.md) — 新增一次向前/向后兼容的数据库迁移脚本。
-- [如何新增枚举类并生成绑定](curated/how-to/add-enum-class.md) — 在枚举注册表中新增枚举类并生成前后端绑定。
-- [如何新增一个管理端页面](curated/how-to/frontend-add-page.md) — 说明新增管理端页面时的路由、视图与 API 接入步骤。
-- [如何接入 KMS 获取主密钥](curated/how-to/configure-kms.md) — 用通用外部命令从 KMS 获取主密钥，替换配置文件中的明文父密钥，并完成验证与回滚。
+- [第 0 章：教程总览与系列路线](curated/tutorials/00-roadmap.md) — 说明系列 13 章的依赖顺序、两条推荐路线与阅读前的整体准备。
+- [第 2 章：Rego 规则讲解](curated/tutorials/02-rego-basics.md) — 讲清平台标签规则的契约、输入文档、内置函数与四层校验，能读懂并校验一条规则。
+- [第 7 章：第三方数据源查询](curated/tutorials/07-datasource-query.md) — 登记第三方数据源，并在 Rego 中用 sqlite.query 关联外部数据完成打标。
+- [第 10 章：与 AI 助手共创 Rego 规则](curated/tutorials/10-ai-cocreate-rego.md) — 用内置共创技能澄清风险场景、起草并验证 Rego 规则，经审批写入标签规则。
+- [故障排查：启动、采集、标签、通知与检索](curated/how-to/troubleshooting.md) — 按症状定位跨组件故障，并给出验证与恢复步骤；基础操作先按教程对应章节验证。
+- [如何接入新的数据源插件](curated/how-to/add-datasource-plugin.md) — 实现数据源接口并注册一个新的数据源插件；面向研发与开源贡献者。
+- [如何新增通知渠道与模板](curated/how-to/add-notify-channel.md) — 扩展通知渠道类型并维护对应的多语言模板；面向研发与开源贡献者。
+- [如何编写一次数据库迁移](curated/how-to/write-migration.md) — 新增一次向前/向后兼容的数据库迁移脚本；面向研发与开源贡献者。
+- [如何新增枚举类并生成绑定](curated/how-to/add-enum-class.md) — 在枚举注册表中新增枚举类并生成前后端绑定；面向研发与开源贡献者。
+- [如何新增一个管理端页面](curated/how-to/frontend-add-page.md) — 说明新增管理端页面时的路由、视图与 API 接入步骤；面向研发与开源贡献者。
 

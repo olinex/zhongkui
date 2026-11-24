@@ -13,6 +13,8 @@ interface NavItem {
   summary: string;
   output: string;
   category: string;
+  /** 侧边栏父分类；为空表示直接挂在分区下。 */
+  group?: string;
   source: string;
   roles: string[];
   owner: string;
@@ -54,12 +56,31 @@ function sidebarOf(): DefaultTheme.SidebarItem[] {
   const groups: DefaultTheme.SidebarItem[] = nav.sections.map((section) => ({
     text: section.label,
     collapsed: section.key === "reference",
-    items: section.items.map((item) => ({
-      text: item.title,
-      link: linkOf(item.output),
-    })),
+    items: itemsOf(section.items),
   }));
   return [{ text: "文档总目录", link: "/" }, ...groups];
+}
+
+// itemsOf 把连续同名的 group 条目收拢为一个父分类，其余条目直接挂在分区下。
+// 分组依据完全来自 nav.json，避免在站点配置里维护第二份导航清单。
+function itemsOf(items: NavItem[]): DefaultTheme.SidebarItem[] {
+  const out: DefaultTheme.SidebarItem[] = [];
+  let i = 0;
+  while (i < items.length) {
+    const current = items[i];
+    if (!current.group) {
+      out.push({ text: current.title, link: linkOf(current.output) });
+      i += 1;
+      continue;
+    }
+    const children: DefaultTheme.SidebarItem[] = [];
+    while (i < items.length && items[i].group === current.group) {
+      children.push({ text: items[i].title, link: linkOf(items[i].output) });
+      i += 1;
+    }
+    out.push({ text: current.group, collapsed: children.length > 8, items: children });
+  }
+  return out;
 }
 
 // VitePress 会给内部链接套上 base（/docs/ 下 "/" 会变成 "/docs/"），且仅凭

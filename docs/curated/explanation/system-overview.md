@@ -75,7 +75,7 @@ zhongkui 是一个多租户的网络流量采集与分析平台：采集端抓�
 - **命名空间是租户边界**：配置、规则、数据源、通知、AI 文档与记忆都按命名空间隔离。
 - **系统命名空间**：代码声明的公共知识（接口目录、生成文档）写入内置系统命名空间，对所有租户只读可见；该命名空间禁止删除。
 - **认证与授权**：管理端统一鉴权，接口级授权由策略中间件执行；AI 工具调用不绕过这套边界。
-- **规则输入脱敏**：加密字段在进入 Rego 输入文档时序列化为空串，规则无法读取明文。
+- **规则输入脱敏**：敏感字段在进入 Rego 输入文档前被剔除，规则只能通过 `crypto.reveal` 获取明文，无法直接读取。
 
 ## 6. 代码地图
 
@@ -103,7 +103,7 @@ zhongkui 是一个多租户的网络流量采集与分析平台：采集端抓�
 
 - [领域模型：实体、关系与生命周期](domain-model.md)
 - [采集架构：wire/XDP、快照与上报](../../generated/explanation/capture-architecture.md)
-- [教程：看到你的第一条风险告警](../tutorials/first-alert.md)
+- [教程第 0 章：教程总览与系列路线](../tutorials/00-roadmap.md)
 - [异步任务与队列](../../generated/explanation/async-worker.md)
 - [管理端分层与视图 In/Out 解耦](../../generated/explanation/manager-layering.md)
 - [依赖注入与生命周期](../../generated/explanation/dependency-injection.md)

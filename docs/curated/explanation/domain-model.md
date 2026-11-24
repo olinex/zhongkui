@@ -52,7 +52,7 @@
 - 事件规则引用标签规则与通知组；规则变更后，新产生的事件记录使用新版本。
 - 事件记录与命中明细是审计与溯源的基础，不随规则删除而删除。
 
-参考：[tag 模型参考](../../generated/reference/internal/models/tag.md)、[教程：看到你的第一条风险告警](../tutorials/first-alert.md)
+参考：[tag 模型参考](../../generated/reference/internal/models/tag.md)、[教程第 0 章：教程总览与系列路线](../tutorials/00-roadmap.md)
 
 ## 4. 通知
 
@@ -109,7 +109,8 @@ Namespace 1 ── n AgentMemory
 
 ## 8. 字段查哪里
 
-- 表结构与字段含义：`docs/generated/reference/internal/models/<域>.md`（当前为包级参考；按表拆分的字段页在 P1 生成）。
-- 接口入参/出参：`docs/generated/reference/api/`（P1 生成）。
-- 枚举取值：`docs/generated/reference/enums.md`（P1 生成）。
-- 配置项：`docs/generated/reference/config.md`（P1 生成）。
+- 表结构与字段含义：`docs/generated/reference/internal/models/<域>.md`（当前为包级参考）。
+- 接口入参/出参：`docs/generated/reference/api/index.md`。
+- 枚举取值：`docs/generated/reference/enums.md`。
+- 配置项：`docs/generated/reference/config.md`。
+- CLI 子命令与参数：`docs/generated/reference/cli.md`。

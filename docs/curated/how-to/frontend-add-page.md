@@ -4,6 +4,8 @@
 > 责任人：@olinex
 > 依据：`web/src/pages`、`internal/manager/views`
 
+**适用角色**：研发、开源贡献者（含定制化前端开发）。普通使用者无需阅读；新增页面属于代码级定制开发。
+
 本指南说明在 `web/`（Vue 3 + Vuetify 3 + TypeScript）中新增一个管理端页面时需要触碰的文件与次序。以现有列表页为模板（如 `web/src/pages/[language]/notification/group.vue`）最省事——它的路由、视图、API、store、校验、i18n 六处都已就位，照着补齐即可。
 
 ## 步骤
